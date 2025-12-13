@@ -138,6 +138,14 @@ export default function BookingPage() {
     const [isAgreed, setIsAgreed] = useState(false)
     const [slipFile, setSlipFile] = useState(null)
     const [submitting, setSubmitting] = useState(false)
+    const [isDateFocused, setIsDateFocused] = useState(false) // New: Control Date Input Display
+
+    // Helper: Format YYYY-MM-DD to DD/MM/YYYY
+    const formatDateDisplay = (isoDate) => {
+        if (!isoDate) return ''
+        const [y, m, d] = isoDate.split('-')
+        return `${d}/${m}/${y}`
+    }
 
     useEffect(() => {
         const load = async () => {
@@ -360,10 +368,10 @@ export default function BookingPage() {
                 `}
             >
                 {/* Background */}
-                <div className={`absolute inset - 0 w - full h - full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'} `} style={{ backgroundColor: bgColor, border: `2px solid ${borderColor} ` }} />
+                <div className={`absolute inset-0 w-full h-full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'} `} style={{ backgroundColor: bgColor, border: `2px solid ${borderColor} ` }} />
 
                 {/* Content */}
-                <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${- rotation}deg)` }}>
+                <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${-rotation}deg)` }}>
                     {isBooked ? (
                         <>
                             <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>Full</span>
@@ -408,7 +416,7 @@ export default function BookingPage() {
                 </button>
                 <div className="flex gap-1">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className={`h - 1 w - 8 rounded - full transition - all duration - 500 ${i <= step ? 'bg-black' : 'bg-gray-200'} `} />
+                        <div key={i} className={`h-1 w-8 rounded-full transition-all duration-500 ${i <= step ? 'bg-black' : 'bg-gray-200'} `} />
                     ))}
                 </div>
             </div>
@@ -430,15 +438,17 @@ export default function BookingPage() {
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">{t('date')}</label>
                                     <div className="relative">
                                         <input
-                                            type="text"
-                                            onFocus={(e) => e.target.type = 'date'}
-                                            onBlur={(e) => { if (!e.target.value) e.target.type = 'text' }}
+                                            type={isDateFocused || !date ? 'date' : 'text'}
                                             placeholder="วว/ดด/ปปปป"
-                                            value={date}
+                                            value={isDateFocused ? date : formatDateDisplay(date)}
+                                            onFocus={() => setIsDateFocused(true)}
+                                            onBlur={() => setIsDateFocused(false)}
                                             onChange={e => setDate(e.target.value)}
-                                            className="w-full text-lg font-bold border-b border-gray-200 py-2 outline-none focus:border-black bg-transparent placeholder-gray-300"
+                                            className={`w-full text-lg font-bold border-b border-gray-200 py-2 outline-none focus:border-black bg-transparent placeholder-gray-300 ${!isDateFocused && date ? 'font-mono tracking-wider' : ''}`}
                                         />
                                         {!date && <span className="absolute right-0 top-2 pointer-events-none text-gray-400"><ListIcon size={16} /></span>}
+                                        {/* Show Calendar Icon if date is selected and not focused (for aesthetic matching design) */}
+                                        {date && !isDateFocused && <span className="absolute right-0 top-2 pointer-events-none text-black"><ListIcon size={20} /></span>}
                                     </div>
                                 </div>
 
@@ -488,7 +498,7 @@ export default function BookingPage() {
                                                     key={tm}
                                                     onClick={() => !isDisabled && setTime(tm)}
                                                     disabled={isDisabled}
-                                                    className={`py - 2 rounded - lg text - sm font - bold transition - all ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')} `}
+                                                    className={`py-2 rounded-lg text-sm font-bold transition-all ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')} `}
                                                 >
                                                     {tm}
                                                 </button>
@@ -607,7 +617,7 @@ export default function BookingPage() {
                                 )}
                             </AnimatePresence>
 
-                            <div className={`flex - 1 overflow - hidden relative rounded - 3xl border - 2 border - gray - 100 bg - [#f0f0f0] transition - all duration - 500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''} `}>
+                            <div className={`flex-1 overflow-hidden relative rounded-3xl border-2 border-gray-100 bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''} `}>
                                 <TransformWrapper
                                     initialScale={0.9}
                                     minScale={0.2}
@@ -711,7 +721,7 @@ export default function BookingPage() {
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto pr-1">
-                                        <div className={`grid gap - 3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'} `}>
+                                        <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'} `}>
                                             {filteredMenu.map(item => (
                                                 <MenuCard key={item.id} item={item} mode={viewMode} onAdd={addToCart} onRemove={removeFromCart} qty={cart.find(c => c.id === item.id)?.qty || 0} t={t} />
                                             ))}
