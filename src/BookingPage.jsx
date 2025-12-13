@@ -402,100 +402,87 @@ export default function BookingPage() {
                     {step === 2 && (
                         <motion.div
                             key="step2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit"
-                            className="h-full flex flex-col"
+                            className="h-full flex flex-col relative"
                         >
-                            <Header title={t('selectSeat')} subtitle={t('stepSeat')} />
-
-                            {/* --- Expanded Fullscreen Overlay --- */}
-                            {isExpanded && (
-                                <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4">
-                                    <div className="w-full max-w-4xl h-[80vh] bg-white rounded-3xl overflow-hidden relative shadow-2xl flex flex-col">
-                                        <div className="absolute top-4 right-4 z-50 flex gap-2">
-                                            <button onClick={() => setIsExpanded(false)} className="bg-black/50 hover:bg-black text-white p-2 rounded-full transition-colors"><X size={24} /></button>
-                                        </div>
-
-                                        <TransformWrapper initialScale={1} minScale={0.5} maxScale={3} centerOnInit={true}>
-                                            {({ zoomIn, zoomOut, resetTransform }) => (
-                                                <>
-                                                    <div className="absolute top-4 left-4 z-40 bg-white/80 p-2 rounded-lg backdrop-blur shadow flex flex-col gap-2">
-                                                        <button onClick={() => zoomIn()} className="p-2 hover:bg-gray-100 rounded-md"><ZoomIn size={20} /></button>
-                                                        <button onClick={() => zoomOut()} className="p-2 hover:bg-gray-100 rounded-md"><ZoomOut size={20} /></button>
-                                                    </div>
-                                                    <TransformComponent wrapperClass="w-full h-full bg-[#1a1a1a]" contentClass="w-full h-full flex items-center justify-center">
-                                                        <div
-                                                            className="relative"
-                                                            style={{
-                                                                width: '1000px', // Fixed Reference Size matching Admin
-                                                                height: '750px',
-                                                                backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
-                                                                backgroundSize: 'cover',
-                                                                backgroundColor: '#f5f5f5'
-                                                            }}
-                                                        >
-                                                            {tables.map(t => renderTable(t))}
-                                                        </div>
-                                                    </TransformComponent>
-                                                </>
-                                            )}
-                                        </TransformWrapper>
-
-                                        <div className="bg-white p-4 text-center border-t border-gray-100 z-10">
-                                            <p className="text-sm font-bold text-gray-500">Tap to select a table</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* --- Preview Card --- */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative flex-1 min-h-[400px] flex flex-col">
-                                <div className="flex-1 relative bg-gray-50 overflow-hidden group cursor-pointer" onClick={() => setIsExpanded(true)}>
-                                    {/* Preview Content (Unscaled or simplified) */}
-                                    <div className="absolute inset-0 bg-cover bg-center opacity-50 grayscale" style={{ backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined }} />
-
-                                    {tables.map(table => {
-                                        // Simplified logic for preview
-                                        const isBooked = bookedTableIds.includes(table.id)
-                                        const isSelected = selectedTable?.id === table.id
-                                        const rotation = table.rotation || 0
-                                        const styles = {
-                                            left: `${table.pos_x}%`, top: `${table.pos_y}%`,
-                                            width: `${table.width}%`, height: `${table.height}%`,
-                                            transform: `rotate(${rotation}deg)`,
-                                            position: 'absolute'
-                                        }
-
-                                        // Simple colored box for preview
-                                        return (
-                                            <div key={table.id} style={styles} className={`border flex items-center justify-center transition-all ${isBooked ? 'bg-red-500/50' : (isSelected ? 'bg-black' : 'bg-white/80')} ${table.shape === 'circle' ? 'rounded-full' : 'rounded-sm'}`}>
-                                                {/* No text in preview to keep it clean, or tiny text */}
-                                            </div>
-                                        )
-                                    })}
-
-                                    {/* Overlay Helper */}
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center pointer-events-none">
-                                        <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg flex items-center gap-2 scale-95 group-hover:scale-110 transition-transform">
-                                            <Maximize size={16} /> Tap to Expand View
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 bg-white border-t border-gray-100 flex justify-between items-center text-xs">
-                                    <div className="font-bold flex flex-col">
-                                        <span>{selectedTable ? `${t('selected')}: ${selectedTable.table_name}` : t('pleaseTapTable')}</span>
-                                        {selectedTable && <span className="text-gray-400 font-normal">{selectedTable.capacity} Seats</span>}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-white border border-gray-400 rounded-full" /> Avail</span>
-                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-red-500 rounded-full" /> Full</span>
-                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-black rounded-full" /> Your</span>
-                                    </div>
-                                </div>
+                            <div className="absolute top-0 left-0 z-10 w-full flex justify-between items-center bg-white/5 pb-4">
+                                <Header title={t('selectTable')} subtitle={`${date} @ ${time} (${pax} Pax)`} />
+                                <button onClick={() => setIsExpanded(!isExpanded)} className="bg-white p-2 rounded-full shadow-sm text-black">
+                                    {isExpanded ? <Minimize size={20} /> : <Maximize size={20} />}
+                                </button>
                             </div>
 
-                            <button onClick={nextStep} disabled={!selectedTable} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-8 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2">
-                                {t('orderFood')} <ArrowRight size={18} />
-                            </button>
+                            <div className={`flex-1 overflow-hidden relative rounded-3xl border-2 border-gray-100 bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
+                                <TransformWrapper
+                                    initialScale={1}
+                                    minScale={0.5}
+                                    maxScale={3}
+                                    centerOnInit={true}
+                                    panning={{ velocityDisabled: true }} // Fix sticky feel
+                                    doubleClick={{ disabled: true }}
+                                >
+                                    {({ zoomIn, zoomOut, resetTransform }) => (
+                                        <>
+                                            <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
+                                                <button onClick={() => zoomIn()} className="bg-white p-2 rounded-lg shadow-sm"><ZoomIn size={20} /></button>
+                                                <button onClick={() => zoomOut()} className="bg-white p-2 rounded-lg shadow-sm"><ZoomOut size={20} /></button>
+                                            </div>
+                                            <TransformComponent
+                                                wrapperClass="w-full h-full"
+                                                contentStyle={{ width: '100%', height: '100%', touchAction: 'none' }} // Touch fix
+                                            >
+                                                <div
+                                                    className="relative w-[1000px] h-[750px] bg-white shadow-xl origin-center"
+                                                    style={{
+                                                        backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
+                                                        backgroundSize: 'cover',
+                                                        backgroundPosition: 'center',
+                                                    }}
+                                                    onClick={() => setSelectedTable(null)} // Click empty space to deselect
+                                                >
+                                                    {tables.map(table => renderTable(table))}
+                                                </div>
+                                            </TransformComponent>
+                                        </>
+                                    )}
+                                </TransformWrapper>
+
+                                {/* --- Float Card (Table Detail) --- */}
+                                <AnimatePresence>
+                                    {selectedTable && (
+                                        <motion.div
+                                            initial={{ y: 100, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: 100, opacity: 0 }}
+                                            className="absolute bottom-4 left-4 right-4 bg-white rounded-2xl shadow-2xl p-4 border border-gray-100 z-30 flex gap-4 items-center"
+                                        >
+                                            {/* Table Image */}
+                                            {selectedTable.image_url ? (
+                                                <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden cursor-pointer" onClick={() => window.open(selectedTable.image_url, '_blank')}>
+                                                    <img src={selectedTable.image_url} className="w-full h-full object-cover" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300">
+                                                    <Image size={32} />
+                                                </div>
+                                            )}
+
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="font-bold text-xl">{selectedTable.table_name}</h3>
+                                                        <p className="text-gray-500 text-sm">{selectedTable.capacity} Seats</p>
+                                                    </div>
+                                                    <button onClick={() => setSelectedTable(null)} className="text-gray-400 hover:text-black"><X size={20} /></button>
+                                                </div>
+
+                                                <button onClick={nextStep} className="mt-3 w-full bg-black text-white py-2 rounded-lg font-bold text-sm shadow-lg flex items-center justify-center gap-2">
+                                                    Confirm Selection <ArrowRight size={16} />
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </motion.div>
                     )}
 

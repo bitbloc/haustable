@@ -235,6 +235,26 @@ export default function AdminTableEditor() {
         }
     };
 
+    const handleUploadTableImage = async (file) => {
+        if (!file || !selectedTable) return;
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `table-images/${selectedTable.id}-${Date.now()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+                .from('public-assets')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName);
+            handleUpdateTable(selectedTable.id, 'image_url', publicUrl);
+            alert('Image Uploaded!');
+        } catch (error) {
+            console.error('Upload Error:', error);
+            alert('Upload Failed: ' + error.message);
+        }
+    };
+
     const handleDeleteTable = async (id) => {
         if (!confirm('ยืนยันที่จะลบโต๊ะนี้?')) return;
         setTables(prev => prev.filter(t => t.id !== id));
@@ -396,6 +416,29 @@ export default function AdminTableEditor() {
                                                 <input type="range" min="2" max="50" value={selectedTable.height} onChange={(e) => handleUpdateTable(selectedTable.id, 'height', parseInt(e.target.value))} className="flex-1 accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
                                                 <span className="text-xs font-mono w-8 text-right">{selectedTable.height}%</span>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2 border-t border-gray-700/50">
+                                        <label className="text-sm text-secondaryText mb-3 block font-semibold">Real Table Image (รูปจริง)</label>
+                                        <div className="flex flex-col gap-3">
+                                            {selectedTable.image_url ? (
+                                                <div className="relative group rounded-xl overflow-hidden aspect-video border border-gray-700">
+                                                    <img src={selectedTable.image_url} className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <label className="cursor-pointer bg-white text-black px-3 py-1.5 rounded-full text-xs font-bold">
+                                                            Change
+                                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadTableImage(e.target.files[0])} />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <label className="cursor-pointer bg-black border border-dashed border-gray-700 hover:border-primary rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all group">
+                                                    <Upload size={20} className="text-gray-400 group-hover:text-primary" />
+                                                    <span className="text-xs text-gray-500 group-hover:text-primary">Upload Photo</span>
+                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadTableImage(e.target.files[0])} />
+                                                </label>
+                                            )}
                                         </div>
                                     </div>
 

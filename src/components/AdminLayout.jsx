@@ -44,7 +44,23 @@ export default function AdminLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#000000] text-white font-sans flex">
+        <div className="min-h-screen bg-[#000000] text-white font-sans flex flex-col md:flex-row">
+            {/* --- Mobile Navigation (Top Bar) --- */}
+            <nav className="md:hidden sticky top-0 z-50 bg-[#111] border-b border-white/10 p-2 overflow-x-auto flex gap-2 no-scrollbar">
+                {menuItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                        <Link key={item.path} to={item.path} className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${isActive ? 'bg-[#DFFF00] text-black' : 'text-gray-400 bg-white/5'}`}>
+                            <item.icon size={16} />
+                            <span>{item.label}</span>
+                        </Link>
+                    )
+                })}
+                <button onClick={handleLogout} className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap text-red-400 bg-red-900/10 border border-red-900/20">
+                    <LogOut size={16} />
+                </button>
+            </nav>
+
             {/* Sidebar สไตล์ Dieter Rams: เรียบ ง่าย ชัดเจน */}
             <aside className="w-64 bg-[#111] border-r border-white/10 hidden md:flex flex-col p-6 fixed h-full z-50">
                 <h1 className="text-xl font-bold tracking-tight mb-10 text-white">
