@@ -11,6 +11,7 @@ import PickupPage from './PickupPage'
 import AdminSettings from './AdminSettings'
 import AdminTableEditor from './AdminTableEditor'
 import AdminMenu from './AdminMenu'
+import AdminMembers from './AdminMembers' // NEW
 import AdminLayout from './components/AdminLayout'
 
 import Home from './Home'
@@ -133,6 +134,7 @@ function App() {
         {/* Admin Routes (with Full Screen Admin Layout) */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="members" element={<AdminMembers />} />
           <Route path="menu" element={<AdminMenu />} />
           <Route path="editor" element={<AdminTableEditor />} />
           <Route path="settings" element={<AdminSettings />} />
