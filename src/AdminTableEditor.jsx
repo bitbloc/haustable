@@ -5,7 +5,7 @@ import PageTransition from './components/PageTransition';
 import { DndContext, useDraggable, useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { Save, Plus, Trash2, Edit, X, ZoomIn, ZoomOut, Maximize, RotateCw } from 'lucide-react';
+import { Save, Plus, Trash2, Edit, X, ZoomIn, ZoomOut, Maximize, RotateCw, Upload } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 // Component โต๊ะที่ลากได้

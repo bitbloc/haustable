@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, LayoutGrid, List as ListIcon, Search, Maximize, X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, LayoutGrid, List as ListIcon, Search, Maximize, Minimize, X, ZoomIn, ZoomOut, RotateCw, Image } from 'lucide-react'
 import { useLanguage } from './context/LanguageContext'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 
