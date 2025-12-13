@@ -404,9 +404,19 @@ export default function BookingPage() {
                             key="step2" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit"
                             className="h-full flex flex-col relative"
                         >
-                            <div className="absolute top-0 left-0 z-10 w-full flex justify-between items-center bg-white/5 pb-4">
-                                <Header title={t('selectTable')} subtitle={`${date} @ ${time} (${pax} Pax)`} />
-                                <button onClick={() => setIsExpanded(!isExpanded)} className="bg-white p-2 rounded-full shadow-sm text-black">
+                            {/* Top Controls Overlay */}
+                            <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
+                                {/* Info Card */}
+                                <div className="bg-white/90 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-white/50 pointer-events-auto">
+                                    <h2 className="text-lg font-bold text-black leading-none">{t('selectTable')}</h2>
+                                    <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">
+                                        <span className="bg-gray-100 px-2 py-1 rounded-md">{date}</span>
+                                        <span className="bg-gray-100 px-2 py-1 rounded-md">{time}</span>
+                                        <span className="bg-black text-white px-2 py-1 rounded-md">{pax} Pax</span>
+                                    </div>
+                                </div>
+
+                                <button onClick={() => setIsExpanded(!isExpanded)} className="bg-white p-3 rounded-full shadow-lg text-black pointer-events-auto hover:bg-gray-50 transition-colors">
                                     {isExpanded ? <Minimize size={20} /> : <Maximize size={20} />}
                                 </button>
                             </div>
@@ -422,16 +432,17 @@ export default function BookingPage() {
                                 >
                                     {({ zoomIn, zoomOut, resetTransform }) => (
                                         <>
-                                            <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
-                                                <button onClick={() => zoomIn()} className="bg-white p-2 rounded-lg shadow-sm"><ZoomIn size={20} /></button>
-                                                <button onClick={() => zoomOut()} className="bg-white p-2 rounded-lg shadow-sm"><ZoomOut size={20} /></button>
+                                            <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
+                                                <button onClick={() => zoomIn()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><ZoomIn size={20} /></button>
+                                                <button onClick={() => zoomOut()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><ZoomOut size={20} /></button>
+                                                <button onClick={() => resetTransform()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><RotateCw size={20} /></button>
                                             </div>
                                             <TransformComponent
                                                 wrapperClass="w-full h-full"
                                                 contentStyle={{ width: '100%', height: '100%', touchAction: 'none' }} // Touch fix
                                             >
                                                 <div
-                                                    className="relative w-[1000px] h-[750px] bg-transparent origin-center"
+                                                    className="relative w-[1000px] aspect-video bg-transparent origin-center shadow-2xl"
                                                     style={{
                                                         backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
                                                         backgroundSize: 'contain',
