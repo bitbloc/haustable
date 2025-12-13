@@ -122,13 +122,12 @@ export default function AuthModal({ isOpen, onClose }) {
                         <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
                             <Check size={40} />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-4">{t('verifyEmail')}</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">{t('accountReady') || "Account Ready"}</h2>
                         <p className="text-gray-400 mb-8 leading-relaxed">
-                            {t('emailSentTo')} <br /><span className="text-white font-bold">{email}</span>.<br />
-                            {t('checkInbox')}
+                            {t('readyDesc') || "After registration you can use immediately."}
                         </p>
                         <button onClick={() => setView('login')} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:opacity-90 transition-opacity">
-                            {t('backToLogin')}
+                            {t('loginBtn')}
                         </button>
                     </div>
                 ) : (

@@ -37,7 +37,13 @@ export default function Home() {
 
             // Check User
             const { data: { session } } = await supabase.auth.getSession()
-            setUser(session?.user || null)
+            if (session?.user) {
+                setUser(session.user)
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+                if (profile) setSettings(prev => ({ ...prev, role: profile.role }))
+            } else {
+                setUser(null)
+            }
         }
         load()
         const interval = setInterval(() => { if (settings) setStatus(checkShopStatus(settings)) }, 60000)
@@ -68,10 +74,16 @@ export default function Home() {
                 {user ? (
                     <div className="flex items-center gap-3 bg-white pl-4 pr-2 py-2 rounded-full shadow-sm border border-gray-200">
                         <span className="text-xs font-bold truncate max-w-[100px] text-black">{user.user_metadata.full_name || 'User'}</span>
-                        <Link to="/admin" className="bg-gray-100 hover:bg-gray-200 text-black px-3 py-1.5 rounded-full text-xs font-bold transition-colors">
-                            Admin
-                        </Link>
-                        <button onClick={handleLogout} className="bg-black text-white px-3 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform">
+                        {settings?.role === 'admin' ? (
+                            <Link to="/admin" className="bg-black text-white px-3 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform shadow-lg">
+                                Admin
+                            </Link>
+                        ) : (
+                            <span className="bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full text-xs font-bold">
+                                Member
+                            </span>
+                        )}
+                        <button onClick={handleLogout} className="bg-gray-100 text-black px-3 py-1.5 rounded-full text-xs font-bold hover:bg-black hover:text-white transition-colors">
                             L
                         </button>
                     </div>
