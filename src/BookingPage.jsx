@@ -183,7 +183,19 @@ export default function BookingPage() {
         }
         load()
     }, [])
-    const nextStep = () => { setDirection(1); setStep(s => s + 1) }
+    // Reset Time when Date changes (Enforce Sequential Flow)
+    useEffect(() => {
+        setTime(null)
+    }, [date])
+
+    const nextStep = () => {
+        if (!date || !time) {
+            alert("กรุณาเลือกวันและเวลาให้ครบถ้วน")
+            return
+        }
+        setDirection(1)
+        setStep(s => s + 1)
+    }
     const prevStep = () => { setDirection(-1); setStep(s => s - 1) }
 
     // Fetch Booked Tables on Step Change (Enter Floorplan)
@@ -453,8 +465,11 @@ export default function BookingPage() {
                                 </div>
 
                                 {/* Time */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('timeSlot')}</label>
+                                <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity duration-300 ${!date ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <label className="text-xs font-bold text-gray-400 uppercase">{t('timeSlot')}</label>
+                                        {!date && <span className="text-xs text-red-400 font-bold">(กรุณาเลือกวันที่ก่อน)</span>}
+                                    </div>
 
                                     <div className="grid grid-cols-4 gap-3">
                                         {bookingTimeSlots.map(tm => {
@@ -491,7 +506,7 @@ export default function BookingPage() {
                                 </div>
 
                                 {/* Pax */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                                <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity duration-300 ${!time ? 'opacity-50 pointer-events-none' : ''}`}>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('guests')}</label>
                                     <div className="flex items-center gap-4">
                                         <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200">-</button>
