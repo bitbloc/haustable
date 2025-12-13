@@ -462,10 +462,10 @@ export default function BookingPage() {
                                             </div>
                                             <TransformComponent
                                                 wrapperClass="w-full h-full flex items-center justify-center bg-[#f0f0f0]"
-                                                contentStyle={{ width: '100%', height: '100%' }}
+                                                contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                             >
                                                 <div
-                                                    className="relative w-full max-w-[1200px] aspect-video bg-white shadow-2xl origin-center"
+                                                    className="relative w-full max-w-[1000px] aspect-video bg-white shadow-2xl origin-center"
                                                     style={{
                                                         backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
                                                         backgroundSize: '100% 100%',
