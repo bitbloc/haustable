@@ -431,10 +431,11 @@ export default function BookingPage() {
                                                 contentStyle={{ width: '100%', height: '100%', touchAction: 'none' }} // Touch fix
                                             >
                                                 <div
-                                                    className="relative w-[1000px] h-[750px] bg-white shadow-xl origin-center"
+                                                    className="relative w-[1000px] h-[750px] bg-transparent origin-center"
                                                     style={{
                                                         backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
-                                                        backgroundSize: 'cover',
+                                                        backgroundSize: 'contain',
+                                                        backgroundRepeat: 'no-repeat',
                                                         backgroundPosition: 'center',
                                                     }}
                                                     onClick={() => setSelectedTable(null)} // Click empty space to deselect
@@ -450,10 +451,11 @@ export default function BookingPage() {
                                 <AnimatePresence>
                                     {selectedTable && (
                                         <motion.div
-                                            initial={{ y: 100, opacity: 0 }}
-                                            animate={{ y: 0, opacity: 1 }}
-                                            exit={{ y: 100, opacity: 0 }}
-                                            className="absolute bottom-4 left-4 right-4 bg-white rounded-2xl shadow-2xl p-4 border border-gray-100 z-30 flex gap-4 items-center"
+                                            initial={{ y: 100, opacity: 0, scale: 0.9 }}
+                                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                                            exit={{ y: 100, opacity: 0, scale: 0.9 }}
+                                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 bg-white/85 backdrop-blur-xl rounded-3xl shadow-2xl p-5 border border-white/40 z-30 flex gap-4 items-center ring-1 ring-black/5"
                                         >
                                             {/* Table Image */}
                                             {selectedTable.image_url ? (
