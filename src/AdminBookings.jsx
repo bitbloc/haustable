@@ -15,20 +15,46 @@ export default function AdminBookings() {
     const fetchBookings = async () => {
         setLoading(true)
         try {
-            const { data, error } = await supabase
+            // 1. Fetch Bookings + Table Info
+            // Note: tables_layout join usually works as it is a standard public table.
+            const { data: bookingsData, error: bookingsError } = await supabase
                 .from('bookings')
                 .select(`
                     *,
-                    profiles:user_id (id, full_name, email, phone_number),
                     tables_layout (table_name)
                 `)
-                .order('booking_time', { ascending: false }) // Newest first
+                .order('booking_time', { ascending: false })
 
-            if (error) throw error
-            setBookings(data || [])
+            if (bookingsError) throw bookingsError
+
+            // 2. Fetch Profiles Manually (to avoid FK issues with auth.users)
+            const userIds = [...new Set(bookingsData.map(b => b.user_id).filter(Boolean))]
+            let profilesMap = {}
+
+            if (userIds.length > 0) {
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, email, phone_number')
+                    .in('id', userIds)
+
+                if (profilesError) {
+                    console.error('Profile fetch error:', profilesError)
+                    // Don't throw, just show IDs
+                } else {
+                    profilesData.forEach(p => { profilesMap[p.id] = p })
+                }
+            }
+
+            // 3. Merge
+            const merged = bookingsData.map(b => ({
+                ...b,
+                profiles: profilesMap[b.user_id] || null
+            }))
+
+            setBookings(merged)
         } catch (err) {
             console.error(err)
-            alert('Error fetching bookings')
+            alert('Error fetching bookings: ' + err.message)
         } finally {
             setLoading(false)
         }
