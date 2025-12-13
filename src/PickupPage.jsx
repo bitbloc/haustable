@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LayoutGrid, List as ListIcon, Search, Check, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from './context/LanguageContext'
+import { getThaiDate, toThaiISO } from './utils/timeUtils'
 
 // --- Components ---
 const ViewToggle = ({ mode, setMode }) => (
@@ -161,8 +162,8 @@ export default function PickupPage() {
             const { data: { user } } = await supabase.auth.getUser()
 
             // Construct Booking Time (Today + Time)
-            const today = new Date().toISOString().split('T')[0]
-            const bookingDateTime = `${today} ${pickupTime}:00`
+            const today = getThaiDate() // YYYY-MM-DD in Thai time
+            const bookingDateTime = toThaiISO(today, pickupTime) // +07:00
 
             // Upload Slip
             const fileExt = slipFile.name.split('.').pop()

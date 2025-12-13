@@ -4,6 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import { Check, X, Image, Settings, Move, RotateCcw } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { Link } from 'react-router-dom'
+import { formatThaiTime, formatThaiTimeOnly, formatThaiDateOnly } from './utils/timeUtils'
 
 export default function AdminDashboard() {
     const [bookings, setBookings] = useState([])
@@ -114,13 +115,10 @@ export default function AdminDashboard() {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <div className="text-lg font-bold text-white">
-                                        {booking.booking_type === 'pickup'
-                                            ? new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                                            : new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                                        }
+                                        {formatThaiTimeOnly(booking.booking_time)}
                                     </div>
                                     <div className="text-xs text-secondaryText">
-                                        {new Date(booking.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                        {formatThaiDateOnly(booking.booking_time)}
                                         {booking.booking_type === 'dine_in' && ` • โต๊ะ ${booking.tables_layout?.table_name || '-'}`}
                                     </div>
                                 </div>
@@ -199,8 +197,8 @@ export default function AdminDashboard() {
                                     <tr key={booking.id} className="hover:bg-bgDark/50 transition-colors">
                                         <td className="p-4 text-white">
                                             {booking.booking_type === 'pickup'
-                                                ? new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                                                : new Date(booking.booking_time).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
+                                                ? formatThaiTimeOnly(booking.booking_time)
+                                                : formatThaiTime(booking.booking_time)
                                             }
                                         </td>
                                         <td className="p-4 text-white">

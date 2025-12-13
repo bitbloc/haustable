@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, LayoutGrid, List as ListIcon, Search, Maximize, Minimize, X, ZoomIn, ZoomOut, RotateCw, Image } from 'lucide-react'
 import { useLanguage } from './context/LanguageContext'
+import { toThaiISO } from './utils/timeUtils'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 
 // --- Animation Variants ---
@@ -210,7 +211,7 @@ export default function BookingPage() {
 
             // Prepare correct timestamp (Local -> UTC) for both Check and Insert
             // Use ISO string to ensure 7+ hours are handled correctly by Supabase timestamptz
-            const bookingDateTime = new Date(`${date}T${time}:00`).toISOString()
+            const bookingDateTime = toThaiISO(date, time)
 
             // --- DOUBLE CHECK AVAILABILITY ---
             // Prevent Race Condition: Check one last time before insert
