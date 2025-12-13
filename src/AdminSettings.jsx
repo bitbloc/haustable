@@ -216,6 +216,7 @@ export default function AdminSettings() {
                         </div>
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'payment_qr_url', setUploadingQr)} />
                     </label>
+                    <p className="text-[10px] text-gray-500 mt-2 text-center">Recommended: Square image (1:1), JPG/PNG, Max 500KB</p>
                 </div>
 
                 {/* Floor Plan Section */}
@@ -234,6 +235,7 @@ export default function AdminSettings() {
                         </div>
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'floorplan_url', setUploadingFloor)} />
                     </label>
+                    <p className="text-[10px] text-gray-500 mt-2 text-center">Recommended: Landscape (16:9), High resolution, Max 2MB</p>
                 </div>
 
             </div>

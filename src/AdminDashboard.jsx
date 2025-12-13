@@ -100,8 +100,82 @@ export default function AdminDashboard() {
                     </button>
                 </div>
 
-                {/* ตารางข้อมูล */}
-                <div className="bg-cardDark rounded-3xl shadow overflow-hidden border border-gray-800">
+                {/* --- Display Switch: Mobile Cards vs Desktop Table --- */}
+
+                {/* 1. Mobile Card View (< md) */}
+                <div className="md:hidden space-y-4">
+                    {loading ? (
+                        <div className="text-center text-secondaryText py-10">Loading...</div>
+                    ) : filteredBookings.length === 0 ? (
+                        <div className="text-center text-secondaryText py-10 bg-cardDark rounded-2xl border border-gray-800">ไม่มีรายการในหมวดหมู่นี้</div>
+                    ) : filteredBookings.map((booking) => (
+                        <div key={booking.id} className="bg-cardDark p-5 rounded-2xl border border-gray-800 shadow-sm flex flex-col gap-3">
+                            {/* Header: Time & Status */}
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="text-lg font-bold text-white">
+                                        {booking.booking_type === 'pickup'
+                                            ? new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                                            : new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                                        }
+                                    </div>
+                                    <div className="text-xs text-secondaryText">
+                                        {new Date(booking.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                        {booking.booking_type === 'dine_in' && ` • โต๊ะ ${booking.tables_layout?.table_name || '-'}`}
+                                    </div>
+                                </div>
+                                {getStatusBadge(booking.status)}
+                            </div>
+
+                            {/* Customer Info */}
+                            <div className="bg-bgDark/50 p-3 rounded-xl border border-white/5">
+                                <div className="font-bold text-white">
+                                    {booking.booking_type === 'pickup' ? booking.pickup_contact_name : (booking.profiles?.display_name || 'Guest')}
+                                </div>
+                                <div className="text-xs text-secondaryText">
+                                    {booking.booking_type === 'pickup' ? booking.pickup_contact_phone : booking.profiles?.phone_number}
+                                </div>
+                                {booking.customer_note && <div className="mt-2 text-xs text-[#DFFF00] border-t border-white/10 pt-1">{booking.customer_note}</div>}
+                            </div>
+
+                            {/* Order Items */}
+                            <div className="text-sm text-secondaryText pl-2 border-l-2 border-gray-700">
+                                {booking.order_items.map((item, i) => (
+                                    <div key={i} className="flex justify-between">
+                                        <span>{item.menu_items?.name} x{item.quantity}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer: Total & Actions */}
+                            <div className="flex justify-between items-center pt-2 border-t border-gray-800 mt-1">
+                                <div className="font-mono font-bold text-xl text-primary">{booking.total_amount.toLocaleString()}.-</div>
+                                <div className="flex gap-2">
+                                    {/* Slip Link */}
+                                    {booking.payment_slip_url && (
+                                        <a href={`https://lnamnqgqtslqulhchiua.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="bg-gray-700 p-2 rounded-lg text-white">
+                                            <Image size={16} />
+                                        </a>
+                                    )}
+
+                                    {/* Actions */}
+                                    {booking.status === 'pending' && (
+                                        <>
+                                            <button onClick={() => updateStatus(booking.id, 'confirmed')} className="bg-green-600 text-white p-2 rounded-lg"><Check size={16} /></button>
+                                            <button onClick={() => updateStatus(booking.id, 'cancelled')} className="bg-red-600 text-white p-2 rounded-lg"><X size={16} /></button>
+                                        </>
+                                    )}
+                                    {booking.status === 'confirmed' && (
+                                        <button onClick={() => updateStatus(booking.id, 'completed')} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Finish</button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* 2. Desktop Table View (>= md) */}
+                <div className="hidden md:block bg-cardDark rounded-3xl shadow overflow-hidden border border-gray-800">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-bgDark/50 text-secondaryText uppercase text-xs">

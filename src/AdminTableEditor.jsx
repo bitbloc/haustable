@@ -262,10 +262,10 @@ export default function AdminTableEditor() {
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[600px] h-[80vh]">
+                <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[500px] lg:min-h-[600px] h-auto lg:h-[80vh]">
 
                     {/* --- Main Editor Area (Unlimited Workspace) --- */}
-                    <div className="flex-1 relative overflow-hidden rounded-3xl border-2 border-gray-800 bg-[#0f0f0f] shadow-inner flex flex-col">
+                    <div className="flex-1 w-full lg:w-auto h-[50vh] lg:h-auto relative overflow-hidden rounded-3xl border-2 border-gray-800 bg-[#0f0f0f] shadow-inner flex flex-col order-1 lg:order-1">
                         <TransformWrapper
                             initialScale={0.8}
                             minScale={0.2}
