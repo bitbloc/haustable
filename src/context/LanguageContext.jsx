@@ -69,6 +69,26 @@ const translations = {
         table: 'โต๊ะ',
         minCondition: 'หากไม่มารับภายใน 90 นาที ออเดอร์จะถูกยกเลิก',
 
+        // Auth
+        welcomeBack: 'ยินดีต้อนรับกลับ',
+        createAccount: 'สร้างบัญชีใหม่',
+        loginDesc: 'เข้าสู่ระบบเพื่อสั่งอาหาร',
+        joinDesc: 'สมัครสมาชิกเพื่อสั่งจองได้สะดวกรวดเร็ว',
+        emailAddr: 'อีเมล',
+        password: 'รหัสผ่าน',
+        passwordConfirm: 'ยืนยันรหัสผ่าน',
+        humanCheck: 'ยืนยันตัวตน: ผลบวกของ',
+        dontHaveAcc: 'ยังไม่มีบัญชี?',
+        signUp: 'สมัครสมาชิก',
+        alreadyHave: 'มีบัญชีอยู่แล้ว?',
+        loginBtn: 'เข้าสู่ระบบ',
+        verifyEmail: 'กรุณายืนยันอีเมล',
+        emailSentTo: 'ระบบได้ส่งลิงก์ยืนยันไปที่',
+        checkInbox: 'โปรดตรวจสอบกล่องจดหมายเพื่อเปิดใช้งานบัญชี',
+        backToLogin: 'กลับไปหน้าเข้าสู่ระบบ',
+        continueGoogle: 'ดำเนินการต่อด้วย Google',
+        orEmail: 'หรือ อีเมล',
+
         // Admin
         adminDashboard: 'จัดการการจอง',
         status: 'สถานะ',
@@ -139,6 +159,26 @@ const translations = {
         pleaseTapTable: 'Please tap a table',
         table: 'Table',
         minCondition: 'Order will be cancelled without refund if not picked up within 90 minutes.',
+
+        // Auth
+        welcomeBack: 'Welcome Back',
+        createAccount: 'Create Account',
+        loginDesc: 'Login to continue ordering',
+        joinDesc: 'Join us to order faster',
+        emailAddr: 'Email Address',
+        password: 'Password',
+        passwordConfirm: 'Confirm Password',
+        humanCheck: 'Human Check: What is',
+        dontHaveAcc: "Don't have an account?",
+        signUp: 'Sign up',
+        alreadyHave: 'Already have an account?',
+        loginBtn: 'Log in',
+        verifyEmail: 'Verify Your Email',
+        emailSentTo: "We've sent a confirmation link to",
+        checkInbox: 'Please check your inbox (and spam) to activate your account.',
+        backToLogin: 'Back to Login',
+        continueGoogle: 'Continue with Google',
+        orEmail: 'OR EMAIL',
 
         // Admin
         adminDashboard: 'Admin Dashboard',
