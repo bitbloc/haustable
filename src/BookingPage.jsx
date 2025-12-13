@@ -438,7 +438,7 @@ export default function BookingPage() {
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">{t('date')}</label>
                                     <div className="relative">
                                         <input
-                                            type={isDateFocused || !date ? 'date' : 'text'}
+                                            type={isDateFocused ? 'date' : 'text'}
                                             placeholder="วว/ดด/ปปปป"
                                             value={isDateFocused ? date : formatDateDisplay(date)}
                                             onFocus={() => setIsDateFocused(true)}
@@ -455,7 +455,7 @@ export default function BookingPage() {
                                 {/* Time */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('timeSlot')}</label>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('timeSlot')}</label>
+
                                     <div className="grid grid-cols-4 gap-3">
                                         {bookingTimeSlots.map(tm => {
                                             // Advance Booking Logic
