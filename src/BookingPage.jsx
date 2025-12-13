@@ -169,6 +169,27 @@ export default function BookingPage() {
     const nextStep = () => { setDirection(1); setStep(s => s + 1) }
     const prevStep = () => { setDirection(-1); setStep(s => s - 1) }
 
+    // Fetch Booked Tables on Step Change (Enter Floorplan)
+    useEffect(() => {
+        if (step === 2 && date && time) {
+            const fetchAvailability = async () => {
+                const bookingDateTime = toThaiISO(date, time)
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select('table_id')
+                    .eq('booking_time', bookingDateTime)
+                    .in('status', ['pending', 'confirmed'])
+
+                if (error) {
+                    console.error('Error fetching availability:', error)
+                } else {
+                    setBookedTableIds(data.map(b => b.table_id))
+                }
+            }
+            fetchAvailability()
+        }
+    }, [step, date, time])
+
     // Cart Logic
     const addToCart = (item) => {
         setCart(prev => {
