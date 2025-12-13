@@ -208,7 +208,9 @@ export default function BookingPage() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('Please Login')
 
-            const bookingDateTime = `${date} ${time}:00`
+            // Prepare correct timestamp (Local -> UTC) for both Check and Insert
+            // Use ISO string to ensure 7+ hours are handled correctly by Supabase timestamptz
+            const bookingDateTime = new Date(`${date}T${time}:00`).toISOString()
 
             // --- DOUBLE CHECK AVAILABILITY ---
             // Prevent Race Condition: Check one last time before insert

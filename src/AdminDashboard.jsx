@@ -153,7 +153,7 @@ export default function AdminDashboard() {
                                 <div className="flex gap-2">
                                     {/* Slip Link */}
                                     {booking.payment_slip_url && (
-                                        <a href={`https://lnamnqgqtslqulhchiua.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="bg-gray-700 p-2 rounded-lg text-white">
+                                        <a href={`https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="bg-gray-700 p-2 rounded-lg text-white">
                                             <Image size={16} />
                                         </a>
                                     )}
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
                                         </td>
                                         <td className="p-4">
                                             {booking.payment_slip_url ? (
-                                                <a href={`https://lnamnqgqtslqulhchiua.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                                                <a href={`https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
                                                     <Image size={16} /> ดูสลิป
                                                 </a>
                                             ) : '-'}
