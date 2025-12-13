@@ -113,18 +113,49 @@ const KineticText = ({
     const smoothMouseY = useSpring(mouseY, { damping: 20, stiffness: 150 });
 
     useEffect(() => {
+        // Desktop: Mouse Move
         const handleMouseMove = (e) => {
             mouseX.set(e.clientX);
             mouseY.set(e.clientY);
         };
-        const handleMouseLeave = () => {
-            // Reset or keep last pos? Resetting usually feels cleaner for "area" effects
-            // mouseX.set(0); 
-            // mouseY.set(0);
+
+        // Mobile: Gyroscope (Device Orientation)
+        const handleOrientation = (e) => {
+            // Check if sensor data is available
+            if (e.gamma === null || e.beta === null) return;
+
+            // Gamma: Left to Right tilt (-90 to 90)
+            // Beta: Front to Back tilt (-180 to 180). Normal holding pos is around 45deg (upright-ish)
+
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+
+            // Sensitivity multiplier
+            const amp = 15;
+
+            // Calc virtual X offset based on Gamma (Tilt L/R)
+            // If gamma is 0 (flat), offset is 0. If -20 (left), move left.
+            const offsetX = e.gamma * amp;
+
+            // Calc virtual Y offset based on Beta (Tilt F/B)
+            // We subtract 45 to center the effect around a natural holding angle
+            const offsetY = (e.beta - 45) * amp;
+
+            // Clamp values to screen bounds (optional, but keeps it sane)
+            const targetX = Math.min(Math.max(centerX + offsetX, 0), window.innerWidth);
+            const targetY = Math.min(Math.max(centerY + offsetY, 0), window.innerHeight);
+
+            mouseX.set(targetX);
+            mouseY.set(targetY);
         };
 
         window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
+        window.addEventListener('deviceorientation', handleOrientation);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('deviceorientation', handleOrientation);
+        };
     }, [mouseX, mouseY]);
 
 
