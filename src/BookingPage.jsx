@@ -463,32 +463,15 @@ export default function BookingPage() {
                                             if (date) {
                                                 const now = new Date()
                                                 const [hours, minutes] = tm.split(':').map(Number)
-                                                // Create a date object for this slot
-                                                const slotDate = new Date(date)
-                                                slotDate.setHours(hours, minutes, 0, 0)
+                                                const [year, month, day] = date.split('-').map(Number)
+                                                // Create local date object for the selected slot
+                                                const slotDate = new Date(year, month - 1, day, hours, minutes)
 
-                                                // If 'date' string implies UTC? No, usually local browser Parse.
-                                                // new Date('2025-12-20') is UTC 00:00 usually or local?
-                                                // Simplest: Compare timestamps if date is TODAY.
-                                                const todayStr = now.toLocaleDateString('en-CA') // YYYY-MM-DD
+                                                // Minimum required time (Current time + minAdvanceHours)
+                                                const minTime = new Date(now.getTime() + (minAdvanceHours * 60 * 60 * 1000))
 
-                                                if (date === todayStr) {
-                                                    // It is today. Check time.
-                                                    // Need (CurrentTime + MinAdvance) <= SlotTime
-                                                    const minTime = now.getTime() + (minAdvanceHours * 60 * 60 * 1000)
-
-                                                    // Fix: new Date(date) might be midnight UTC.
-                                                    // Construct slot time relative to NOW's day?
-                                                    // Safe approach: Parse the slot date/time in local component
-                                                    const checkDate = new Date()
-                                                    // checkDate is Now. We want to set it to target time.
-                                                    checkDate.setHours(hours, minutes, 0, 0)
-
-                                                    if (checkDate.getTime() < minTime) {
-                                                        isDisabled = true
-                                                    }
-                                                } else if (new Date(date) < new Date(todayStr)) {
-                                                    // Past date selection (if datepicker allows)
+                                                // Log for debugging (optional) or just check
+                                                if (slotDate < minTime) {
                                                     isDisabled = true
                                                 }
                                             }
