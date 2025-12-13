@@ -8,7 +8,8 @@ export default function AdminSettings() {
         opening_time: '10:00',
         closing_time: '20:00',
         floorplan_url: '',
-        payment_qr_url: ''
+        payment_qr_url: '',
+        booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00' // Default Value
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now()) // ตัวแก้ Cache รูป
@@ -133,6 +134,8 @@ export default function AdminSettings() {
                                 await handleSave('announcement_detail', settings.announcement_detail)
                                 await handleSave('booking_min_spend', settings.booking_min_spend)
                                 await handleSave('booking_min_advance_hours', settings.booking_min_advance_hours)
+                                await handleSave('booking_min_advance_hours', settings.booking_min_advance_hours)
+                                await handleSave('booking_time_slots', settings.booking_time_slots)
                                 await handleSave('policy_dine_in', settings.policy_dine_in)
                                 await handleSave('policy_pickup', settings.policy_pickup)
                                 alert('บันทึกการตั้งค่าเรียบร้อย!')
@@ -184,6 +187,17 @@ export default function AdminSettings() {
                                 onChange={(e) => setSettings(prev => ({ ...prev, booking_min_advance_hours: e.target.value }))}
                                 placeholder="e.g. 2"
                                 className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs text-[#DFFF00] font-bold mb-1">Service Time Slots (Comma separated)</label>
+                            <input
+                                type="text"
+                                value={settings.booking_time_slots || ''}
+                                onChange={(e) => setSettings(prev => ({ ...prev, booking_time_slots: e.target.value }))}
+                                placeholder="e.g. 11:00, 12:00, 13:00"
+                                className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand font-mono"
                             />
                         </div>
 

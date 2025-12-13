@@ -112,7 +112,10 @@ export default function BookingPage() {
     const [policyNote, setPolicyNote] = useState('') // New
     const [minSpend, setMinSpend] = useState(0) // New
     const [minAdvanceHours, setMinAdvanceHours] = useState(2) // Default 2 hours based on user request
+    const [bookingTimeSlots, setBookingTimeSlots] = useState([]) // New: Configurable Slots
     const [previewImage, setPreviewImage] = useState(null) // Lightbox State
+    const [showLargeGroupModal, setShowLargeGroupModal] = useState(false) // New: Modal State
+    const [availabilityTooltip, setAvailabilityTooltip] = useState(null) // New: Tooltip State { x, y, time }
 
     // Selection
     const [date, setDate] = useState('')
@@ -150,6 +153,12 @@ export default function BookingPage() {
                 if (map.policy_dine_in) setPolicyNote(map.policy_dine_in)
                 if (map.booking_min_spend) setMinSpend(parseInt(map.booking_min_spend))
                 if (map.booking_min_advance_hours) setMinAdvanceHours(Number(map.booking_min_advance_hours))
+                if (map.booking_time_slots) {
+                    setBookingTimeSlots(map.booking_time_slots.split(',').map(s => s.trim()))
+                } else {
+                    // Default Fallback
+                    setBookingTimeSlots(['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'])
+                }
             }
 
             // 2. Load Menu
@@ -271,9 +280,11 @@ export default function BookingPage() {
                 table_id: selectedTable.id,
                 total_amount: cartTotal,
                 payment_slip_url: fileName,
+                payment_slip_url: fileName,
                 pickup_contact_name: contactName,
                 pickup_contact_phone: contactPhone,
-                customer_note: customerNoteContent
+                customer_note: customerNoteContent,
+                pax: pax // NEW: Insert into pax column
             }).select().single()
 
             if (bookingError) throw bookingError
@@ -336,13 +347,31 @@ export default function BookingPage() {
                     ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
                     ${isBooked ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95 cursor-pointer'}
                     ${isSelected ? 'z-20 ring-4 ring-black/20' : ''}
+        return (
+            <button
+                key={table.id}
+                disabled={false} // Allow click for Tooltip
+                onClick={(e) => {
+                    e.stopPropagation()
+                    if (isBooked) {
+                        checkTableAvailability(table.id, e)
+                    } else {
+                        setSelectedTable(table)
+                        if (isExpanded) setIsExpanded(false)
+                    }
+                }}
+                style={baseStyle}
+                className={`transition-all duration-300 flex flex-col items-center justify-center shadow-md
+                ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
+                ${isBooked ? 'opacity-50 cursor-not-allowed bg-gray-300 contrast-50' : 'hover:scale-105 active:scale-95 cursor-pointer'}
+                ${isSelected ? 'z-20 ring-4 ring-black/20' : ''}
                 `}
             >
                 {/* Background */}
-                <div className={`absolute inset-0 w-full h-full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}`} style={{ backgroundColor: bgColor, border: `2px solid ${borderColor}` }} />
+                <div className={`absolute inset - 0 w - full h - full ${ table.shape === 'circle' ? 'rounded-full' : 'rounded-lg' } `} style={{ backgroundColor: bgColor, border: `2px solid ${ borderColor } ` }} />
 
                 {/* Content */}
-                <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${-rotation}deg)` }}>
+                <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${- rotation}deg)` }}>
                     {isBooked ? (
                         <>
                             <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>Full</span>
@@ -356,6 +385,20 @@ export default function BookingPage() {
                     )}
                 </div>
             </button>
+        )
+    }
+
+    // Tooltip Component
+    const Tooltip = () => {
+        if (!availabilityTooltip) return null
+        return (
+            <div 
+                className="fixed z-50 bg-black text-white text-xs px-3 py-1 rounded-full shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
+                style={{ left: availabilityTooltip.x, top: availabilityTooltip.y }}
+            >
+                {availabilityTooltip.loading ? 'Checking...' : availabilityTooltip.text}
+                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
+            </div>
         )
     }
 
@@ -373,7 +416,7 @@ export default function BookingPage() {
                 </button>
                 <div className="flex gap-1">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className={`h-1 w-8 rounded-full transition-all duration-500 ${i <= step ? 'bg-black' : 'bg-gray-200'}`} />
+                        <div key={i} className={`h - 1 w - 8 rounded - full transition - all duration - 500 ${ i <= step ? 'bg-black' : 'bg-gray-200' } `} />
                     ))}
                 </div>
             </div>
@@ -393,14 +436,26 @@ export default function BookingPage() {
                                 {/* Date */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">{t('date')}</label>
-                                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full text-lg font-bold border-b border-gray-200 py-2 outline-none focus:border-black bg-transparent" />
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            onFocus={(e) => e.target.type = 'date'}
+                                            onBlur={(e) => { if (!e.target.value) e.target.type = 'text' }}
+                                            placeholder="วว/ดด/ปปปป"
+                                            value={date}
+                                            onChange={e => setDate(e.target.value)}
+                                            className="w-full text-lg font-bold border-b border-gray-200 py-2 outline-none focus:border-black bg-transparent placeholder-gray-300"
+                                        />
+                                        {!date && <span className="absolute right-0 top-2 pointer-events-none text-gray-400"><ListIcon size={16} /></span>}
+                                    </div>
                                 </div>
 
                                 {/* Time */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('timeSlot')}</label>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('timeSlot')}</label>
                                     <div className="grid grid-cols-4 gap-3">
-                                        {['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'].map(tm => {
+                                        {bookingTimeSlots.map(tm => {
                                             // Advance Booking Logic
                                             let isDisabled = false
                                             if (date) {
@@ -441,7 +496,7 @@ export default function BookingPage() {
                                                     key={tm}
                                                     onClick={() => !isDisabled && setTime(tm)}
                                                     disabled={isDisabled}
-                                                    className={`py-2 rounded-lg text-sm font-bold transition-all ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')}`}
+                                                    className={`py - 2 rounded - lg text - sm font - bold transition - all ${ time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100') } `}
                                                 >
                                                     {tm}
                                                 </button>
@@ -456,10 +511,55 @@ export default function BookingPage() {
                                     <div className="flex items-center gap-4">
                                         <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200">-</button>
                                         <span className="text-2xl font-bold w-10 text-center">{pax}</span>
-                                        <button onClick={() => setPax(pax + 1)} className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold hover:bg-gray-800">+</button>
+                                        <button
+                                            onClick={() => {
+                                                if (pax >= 10) {
+                                                    setShowLargeGroupModal(true)
+                                                } else {
+                                                    setPax(pax + 1)
+                                                }
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold hover:bg-gray-800"
+                                        >
+                                            +
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* NEW: Large Group Modal */}
+                            <AnimatePresence>
+                                {showLargeGroupModal && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
+                                        onClick={() => setShowLargeGroupModal(false)}
+                                    >
+                                        <motion.div
+                                            initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+                                            className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center space-y-4"
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                                <span className="text-2xl">👨‍👩‍👧‍👦</span>
+                                            </div>
+                                            <h3 className="text-xl font-bold text-gray-900">Bookings Over 10 People</h3>
+                                            <p className="text-gray-500 text-sm">
+                                                สำหรับหมู่คณะมากกว่า 10 ท่าน กรุณาติดต่อทางร้านโดยตรงเพื่อจัดเตรียมที่นั่งพิเศษ
+                                            </p>
+                                            <div className="flex flex-col gap-2 pt-2">
+                                                <a href="tel:0961424663" className="bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                                                    📞 โทร 096-142-4663
+                                                </a>
+                                                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors">
+                                                    FB: ร้านในบ้าน นตรพนม
+                                                </a>
+                                            </div>
+                                            <button onClick={() => setShowLargeGroupModal(false)} className="text-gray-400 text-xs hover:text-black mt-2">Close</button>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             <button onClick={nextStep} disabled={!date || !time} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-8 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2">
                                 {t('selectTable')} <ArrowRight size={18} />
@@ -490,6 +590,9 @@ export default function BookingPage() {
                                 </button>
                             </div>
 
+                            {/* Tooltip Overlay */}
+                            <Tooltip />
+
                             {/* Image Lightbox Overlay */}
                             <AnimatePresence>
                                 {previewImage && (
@@ -512,7 +615,7 @@ export default function BookingPage() {
                                 )}
                             </AnimatePresence>
 
-                            <div className={`flex-1 overflow-hidden relative rounded-3xl border-2 border-gray-100 bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
+                            <div className={`flex - 1 overflow - hidden relative rounded - 3xl border - 2 border - gray - 100 bg - [#f0f0f0] transition - all duration - 500 ${ isExpanded ? 'fixed inset-0 z-50 rounded-none' : '' } `}>
                                 <TransformWrapper
                                     initialScale={0.9}
                                     minScale={0.2}
@@ -535,7 +638,7 @@ export default function BookingPage() {
                                                 <div
                                                     className="relative w-[1000px] aspect-video bg-white shadow-2xl origin-center"
                                                     style={{
-                                                        backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
+                                                        backgroundImage: floorplanUrl ? `url(${ floorplanUrl })` : undefined,
                                                         backgroundSize: '100% 100%',
                                                         backgroundRepeat: 'no-repeat',
                                                     }}
@@ -616,7 +719,7 @@ export default function BookingPage() {
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto pr-1">
-                                        <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                        <div className={`grid gap - 3 ${ viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1' } `}>
                                             {filteredMenu.map(item => (
                                                 <MenuCard key={item.id} item={item} mode={viewMode} onAdd={addToCart} onRemove={removeFromCart} qty={cart.find(c => c.id === item.id)?.qty || 0} t={t} />
                                             ))}
@@ -639,7 +742,7 @@ export default function BookingPage() {
                                         onClick={() => {
                                             // Pre-check Min Spend
                                             if (minSpend > 0 && cartTotal < (minSpend * pax)) {
-                                                alert(`ยอดขั้นต่ำต่อท่านคือ ${minSpend}.- (รวม ${minSpend * pax}.-)\nกรุณาสั่งอาหารเพิ่มอีก ${(minSpend * pax) - cartTotal}.-`)
+                                                alert(`ยอดขั้นต่ำต่อท่านคือ ${ minSpend }.- (รวม ${ minSpend * pax }.-) \nกรุณาสั่งอาหารเพิ่มอีก ${ (minSpend * pax) - cartTotal }.-`)
                                                 return
                                             }
                                             setIsCheckoutMode(true)
