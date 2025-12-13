@@ -310,6 +310,13 @@ export default function BookingPage() {
         }
     }
 
+    // Helper to check table availability (STUB)
+    const checkTableAvailability = (tableId, e) => {
+        // TODO: Implement actual availability checking logic
+        console.log("Checking availability for table", tableId);
+        alert("This table is already booked.");
+    }
+
     // Helper to render a table button
     const renderTable = (table) => {
         const isBooked = bookedTableIds.includes(table.id)
@@ -331,22 +338,7 @@ export default function BookingPage() {
         let textColor = (isBooked || isSelected || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) ? 'white' : 'black'
         let borderColor = isSelected ? 'white' : 'transparent'
 
-        return (
-            <button
-                key={table.id}
-                disabled={isBooked}
-                onClick={(e) => {
-                    e.stopPropagation()
-                    if (!isBooked) {
-                        setSelectedTable(table)
-                        if (isExpanded) setIsExpanded(false) // Option: close on select
-                    }
-                }}
-                style={baseStyle}
-                className={`transition-all duration-300 flex flex-col items-center justify-center shadow-md
-                    ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
-                    ${isBooked ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95 cursor-pointer'}
-                    ${isSelected ? 'z-20 ring-4 ring-black/20' : ''}
+
         return (
             <button
                 key={table.id}
@@ -368,7 +360,7 @@ export default function BookingPage() {
                 `}
             >
                 {/* Background */}
-                <div className={`absolute inset - 0 w - full h - full ${ table.shape === 'circle' ? 'rounded-full' : 'rounded-lg' } `} style={{ backgroundColor: bgColor, border: `2px solid ${ borderColor } ` }} />
+                <div className={`absolute inset - 0 w - full h - full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'} `} style={{ backgroundColor: bgColor, border: `2px solid ${borderColor} ` }} />
 
                 {/* Content */}
                 <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${- rotation}deg)` }}>
@@ -392,7 +384,7 @@ export default function BookingPage() {
     const Tooltip = () => {
         if (!availabilityTooltip) return null
         return (
-            <div 
+            <div
                 className="fixed z-50 bg-black text-white text-xs px-3 py-1 rounded-full shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
                 style={{ left: availabilityTooltip.x, top: availabilityTooltip.y }}
             >
@@ -416,7 +408,7 @@ export default function BookingPage() {
                 </button>
                 <div className="flex gap-1">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className={`h - 1 w - 8 rounded - full transition - all duration - 500 ${ i <= step ? 'bg-black' : 'bg-gray-200' } `} />
+                        <div key={i} className={`h - 1 w - 8 rounded - full transition - all duration - 500 ${i <= step ? 'bg-black' : 'bg-gray-200'} `} />
                     ))}
                 </div>
             </div>
@@ -496,7 +488,7 @@ export default function BookingPage() {
                                                     key={tm}
                                                     onClick={() => !isDisabled && setTime(tm)}
                                                     disabled={isDisabled}
-                                                    className={`py - 2 rounded - lg text - sm font - bold transition - all ${ time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100') } `}
+                                                    className={`py - 2 rounded - lg text - sm font - bold transition - all ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')} `}
                                                 >
                                                     {tm}
                                                 </button>
@@ -615,7 +607,7 @@ export default function BookingPage() {
                                 )}
                             </AnimatePresence>
 
-                            <div className={`flex - 1 overflow - hidden relative rounded - 3xl border - 2 border - gray - 100 bg - [#f0f0f0] transition - all duration - 500 ${ isExpanded ? 'fixed inset-0 z-50 rounded-none' : '' } `}>
+                            <div className={`flex - 1 overflow - hidden relative rounded - 3xl border - 2 border - gray - 100 bg - [#f0f0f0] transition - all duration - 500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''} `}>
                                 <TransformWrapper
                                     initialScale={0.9}
                                     minScale={0.2}
@@ -638,7 +630,7 @@ export default function BookingPage() {
                                                 <div
                                                     className="relative w-[1000px] aspect-video bg-white shadow-2xl origin-center"
                                                     style={{
-                                                        backgroundImage: floorplanUrl ? `url(${ floorplanUrl })` : undefined,
+                                                        backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
                                                         backgroundSize: '100% 100%',
                                                         backgroundRepeat: 'no-repeat',
                                                     }}
@@ -719,7 +711,7 @@ export default function BookingPage() {
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto pr-1">
-                                        <div className={`grid gap - 3 ${ viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1' } `}>
+                                        <div className={`grid gap - 3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'} `}>
                                             {filteredMenu.map(item => (
                                                 <MenuCard key={item.id} item={item} mode={viewMode} onAdd={addToCart} onRemove={removeFromCart} qty={cart.find(c => c.id === item.id)?.qty || 0} t={t} />
                                             ))}
@@ -742,7 +734,7 @@ export default function BookingPage() {
                                         onClick={() => {
                                             // Pre-check Min Spend
                                             if (minSpend > 0 && cartTotal < (minSpend * pax)) {
-                                                alert(`ยอดขั้นต่ำต่อท่านคือ ${ minSpend }.- (รวม ${ minSpend * pax }.-) \nกรุณาสั่งอาหารเพิ่มอีก ${ (minSpend * pax) - cartTotal }.-`)
+                                                alert(`ยอดขั้นต่ำต่อท่านคือ ${minSpend}.- (รวม ${minSpend * pax}.-) \nกรุณาสั่งอาหารเพิ่มอีก ${(minSpend * pax) - cartTotal}.-`)
                                                 return
                                             }
                                             setIsCheckoutMode(true)
