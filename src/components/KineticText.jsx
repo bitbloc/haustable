@@ -108,55 +108,94 @@ const KineticText = ({
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
 
+    // State for iOS Permission
+    const [permissionGranted, setPermissionGranted] = useState(false);
+
     // Smooth mouse using spring
     const smoothMouseX = useSpring(mouseX, { damping: 20, stiffness: 150 });
     const smoothMouseY = useSpring(mouseY, { damping: 20, stiffness: 150 });
 
     useEffect(() => {
-        // Desktop: Mouse Move
+        let animationFrame;
+        let lastInteraction = 0;
+
+        // Idle Animation Loop
+        const animateIdle = () => {
+            const now = Date.now();
+            // If no interaction for 2 seconds, assume idle
+            if (now - lastInteraction > 2000) {
+                // Idle Mode: Gentle "Breathing" / Figure-8 pattern
+                // We use a slow timer
+                const time = now / 3000;
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+
+                // Radius
+                const rx = Math.min(window.innerWidth * 0.2, 200);
+                const ry = Math.min(window.innerHeight * 0.1, 100);
+
+                // Figure-8: x = sin(t), y = sin(2t)
+                const targetX = centerX + Math.sin(time) * rx;
+                const targetY = centerY + Math.sin(time * 2) * ry;
+
+                mouseX.set(targetX);
+                mouseY.set(targetY);
+            }
+            animationFrame = requestAnimationFrame(animateIdle);
+        };
+        animationFrame = requestAnimationFrame(animateIdle);
+
+
         const handleMouseMove = (e) => {
+            lastInteraction = Date.now();
             mouseX.set(e.clientX);
             mouseY.set(e.clientY);
         };
 
-        // Mobile: Gyroscope (Device Orientation)
         const handleOrientation = (e) => {
-            // Check if sensor data is available
             if (e.gamma === null || e.beta === null) return;
 
-            // Gamma: Left to Right tilt (-90 to 90)
-            // Beta: Front to Back tilt (-180 to 180). Normal holding pos is around 45deg (upright-ish)
+            lastInteraction = Date.now();
 
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-
-            // Sensitivity multiplier
+            // Gamma: Left/Right -90 to 90
+            // Beta: Front/Back -180 to 180
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
             const amp = 15;
 
-            // Calc virtual X offset based on Gamma (Tilt L/R)
-            // If gamma is 0 (flat), offset is 0. If -20 (left), move left.
             const offsetX = e.gamma * amp;
-
-            // Calc virtual Y offset based on Beta (Tilt F/B)
-            // We subtract 45 to center the effect around a natural holding angle
             const offsetY = (e.beta - 45) * amp;
 
-            // Clamp values to screen bounds (optional, but keeps it sane)
-            const targetX = Math.min(Math.max(centerX + offsetX, 0), window.innerWidth);
-            const targetY = Math.min(Math.max(centerY + offsetY, 0), window.innerHeight);
+            const targetX = Math.min(Math.max(cx + offsetX, 0), window.innerWidth);
+            const targetY = Math.min(Math.max(cy + offsetY, 0), window.innerHeight);
 
             mouseX.set(targetX);
             mouseY.set(targetY);
         };
 
         window.addEventListener('mousemove', handleMouseMove);
+        // Only active if device supports it (implicit or permission granted)
         window.addEventListener('deviceorientation', handleOrientation);
 
         return () => {
+            cancelAnimationFrame(animationFrame);
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('deviceorientation', handleOrientation);
         };
     }, [mouseX, mouseY]);
+
+    // iOS 13+ Permission Requirement
+    const requestAccess = () => {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(response => {
+                    if (response === 'granted') {
+                        setPermissionGranted(true);
+                    }
+                })
+                .catch(e => console.log(e));
+        }
+    };
 
 
     // Reveal Animation (Scroll Trigger)
@@ -166,16 +205,12 @@ const KineticText = ({
         offset: ["start end", "center center"]
     });
 
-    // Reveal Logic: Text starts "y: 100%" (hidden down) and moves to "0%"
-    // But since it's a "Hero" text, might also want an initial load animation.
-    // Let's combine standard initial animation with scroll effects if needed.
-    // For now, simpler "in-view" trigger with framer motion `whileInView` is often more robust for specific sections.
-
     const words = text.split(" ");
 
     return (
         <motion.div
             ref={containerRef}
+            onClick={requestAccess}
             className={`cursor-default select-none relative z-10 font-[Roboto_Flex] ${className}`}
             initial="hidden"
             whileInView="visible"
