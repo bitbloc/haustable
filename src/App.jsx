@@ -134,6 +134,7 @@ function App() {
         {/* Admin Routes (with Full Screen Admin Layout) */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="bookings" element={<AdminBookings />} />
           <Route path="members" element={<AdminMembers />} />
           <Route path="menu" element={<AdminMenu />} />
           <Route path="editor" element={<AdminTableEditor />} />
