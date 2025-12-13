@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AdminLayout() {
