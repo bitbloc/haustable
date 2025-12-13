@@ -110,6 +110,7 @@ export default function BookingPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState(null) // New
     const [policyNote, setPolicyNote] = useState('') // New
     const [minSpend, setMinSpend] = useState(0) // New
+    const [minAdvanceHours, setMinAdvanceHours] = useState(2) // Default 2 hours based on user request
     const [previewImage, setPreviewImage] = useState(null) // Lightbox State
 
     // Selection
@@ -147,6 +148,7 @@ export default function BookingPage() {
                 if (map.payment_qr_url) setQrCodeUrl(`${map.payment_qr_url}?t=${Date.now()}`)
                 if (map.policy_dine_in) setPolicyNote(map.policy_dine_in)
                 if (map.booking_min_spend) setMinSpend(parseInt(map.booking_min_spend))
+                if (map.booking_min_advance_hours) setMinAdvanceHours(Number(map.booking_min_advance_hours))
             }
 
             // 2. Load Menu
@@ -374,11 +376,53 @@ export default function BookingPage() {
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('timeSlot')}</label>
                                     <div className="grid grid-cols-4 gap-3">
-                                        {['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'].map(tm => (
-                                            <button key={tm} onClick={() => setTime(tm)} className={`py-2 rounded-lg text-sm font-bold transition-all ${time === tm ? 'bg-black text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>
-                                                {tm}
-                                            </button>
-                                        ))}
+                                        {['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'].map(tm => {
+                                            // Advance Booking Logic
+                                            let isDisabled = false
+                                            if (date) {
+                                                const now = new Date()
+                                                const [hours, minutes] = tm.split(':').map(Number)
+                                                // Create a date object for this slot
+                                                const slotDate = new Date(date)
+                                                slotDate.setHours(hours, minutes, 0, 0)
+
+                                                // If 'date' string implies UTC? No, usually local browser Parse.
+                                                // new Date('2025-12-20') is UTC 00:00 usually or local?
+                                                // Simplest: Compare timestamps if date is TODAY.
+                                                const todayStr = now.toLocaleDateString('en-CA') // YYYY-MM-DD
+
+                                                if (date === todayStr) {
+                                                    // It is today. Check time.
+                                                    // Need (CurrentTime + MinAdvance) <= SlotTime
+                                                    const minTime = now.getTime() + (minAdvanceHours * 60 * 60 * 1000)
+
+                                                    // Fix: new Date(date) might be midnight UTC.
+                                                    // Construct slot time relative to NOW's day?
+                                                    // Safe approach: Parse the slot date/time in local component
+                                                    const checkDate = new Date()
+                                                    // checkDate is Now. We want to set it to target time.
+                                                    checkDate.setHours(hours, minutes, 0, 0)
+
+                                                    if (checkDate.getTime() < minTime) {
+                                                        isDisabled = true
+                                                    }
+                                                } else if (new Date(date) < new Date(todayStr)) {
+                                                    // Past date selection (if datepicker allows)
+                                                    isDisabled = true
+                                                }
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={tm}
+                                                    onClick={() => !isDisabled && setTime(tm)}
+                                                    disabled={isDisabled}
+                                                    className={`py-2 rounded-lg text-sm font-bold transition-all ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')}`}
+                                                >
+                                                    {tm}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 </div>
 
@@ -566,8 +610,20 @@ export default function BookingPage() {
                                             </div>
                                             <div className="flex items-center gap-2 font-bold text-sm">{t('next')} <ArrowRight size={16} /></div>
                                         </div>
-                                        <button onClick={() => setIsCheckoutMode(true)} className="w-full text-center text-xs text-gray-400 mt-2 hover:text-black">{t('skipFood')}</button>
                                     </div>
+                                    <button
+                                        onClick={() => {
+                                            // Pre-check Min Spend
+                                            if (minSpend > 0 && cartTotal < (minSpend * pax)) {
+                                                alert(`ยอดขั้นต่ำต่อท่านคือ ${minSpend}.- (รวม ${minSpend * pax}.-)\nกรุณาสั่งอาหารเพิ่มอีก ${(minSpend * pax) - cartTotal}.-`)
+                                                return
+                                            }
+                                            setIsCheckoutMode(true)
+                                        }}
+                                        className="w-full text-center text-xs text-gray-400 mt-2 hover:text-black"
+                                    >
+                                        {t('skipFood')} (Pay Only)
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="flex-1 overflow-y-auto">
@@ -646,6 +702,6 @@ export default function BookingPage() {
 
                 </AnimatePresence>
             </div>
-        </div>
+        </div >
     )
 }

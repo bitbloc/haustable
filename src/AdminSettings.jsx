@@ -132,6 +132,7 @@ export default function AdminSettings() {
                                 await handleSave('announcement_headline', settings.announcement_headline)
                                 await handleSave('announcement_detail', settings.announcement_detail)
                                 await handleSave('booking_min_spend', settings.booking_min_spend)
+                                await handleSave('booking_min_advance_hours', settings.booking_min_advance_hours)
                                 await handleSave('policy_dine_in', settings.policy_dine_in)
                                 await handleSave('policy_pickup', settings.policy_pickup)
                                 alert('บันทึกการตั้งค่าเรียบร้อย!')
@@ -171,6 +172,17 @@ export default function AdminSettings() {
                                 value={settings.booking_min_spend || ''}
                                 onChange={(e) => setSettings(prev => ({ ...prev, booking_min_spend: e.target.value }))}
                                 placeholder="e.g. 150"
+                                className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs text-[#DFFF00] font-bold mb-1">Min Advance Booking (Hours)</label>
+                            <input
+                                type="number"
+                                value={settings.booking_min_advance_hours || ''}
+                                onChange={(e) => setSettings(prev => ({ ...prev, booking_min_advance_hours: e.target.value }))}
+                                placeholder="e.g. 2"
                                 className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
                             />
                         </div>
