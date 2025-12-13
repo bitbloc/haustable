@@ -110,6 +110,7 @@ export default function BookingPage() {
     const [qrCodeUrl, setQrCodeUrl] = useState(null) // New
     const [policyNote, setPolicyNote] = useState('') // New
     const [minSpend, setMinSpend] = useState(0) // New
+    const [previewImage, setPreviewImage] = useState(null) // Lightbox State
 
     // Selection
     const [date, setDate] = useState('')
@@ -421,14 +422,36 @@ export default function BookingPage() {
                                 </button>
                             </div>
 
+                            {/* Image Lightbox Overlay */}
+                            <AnimatePresence>
+                                {previewImage && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                        className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+                                        onClick={() => setPreviewImage(null)}
+                                    >
+                                        <motion.div
+                                            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                                            className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center"
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md z-10">
+                                                <X size={24} />
+                                            </button>
+                                            <img src={previewImage} className="w-full h-full object-contain rounded-lg shadow-2xl" alt="Table Preview" />
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <div className={`flex-1 overflow-hidden relative rounded-3xl border-2 border-gray-100 bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
                                 <TransformWrapper
-                                    initialScale={1}
-                                    minScale={0.5}
-                                    maxScale={3}
+                                    initialScale={0.9}
+                                    minScale={0.2}
+                                    maxScale={4}
                                     centerOnInit={true}
-                                    panning={{ velocityDisabled: true }} // Fix sticky feel
-                                    doubleClick={{ disabled: true }}
+                                    limitToBounds={false}
+                                    panning={{ velocityDisabled: false }}
                                 >
                                     {({ zoomIn, zoomOut, resetTransform }) => (
                                         <>
@@ -438,18 +461,17 @@ export default function BookingPage() {
                                                 <button onClick={() => resetTransform()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><RotateCw size={20} /></button>
                                             </div>
                                             <TransformComponent
-                                                wrapperClass="w-full h-full"
-                                                contentStyle={{ width: '100%', height: '100%', touchAction: 'none' }} // Touch fix
+                                                wrapperClass="w-full h-full flex items-center justify-center bg-[#f0f0f0]"
+                                                contentStyle={{ width: '100%', height: '100%' }}
                                             >
                                                 <div
-                                                    className="relative w-[1000px] aspect-video bg-transparent origin-center shadow-2xl"
+                                                    className="relative w-full max-w-[1200px] aspect-video bg-white shadow-2xl origin-center"
                                                     style={{
                                                         backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
-                                                        backgroundSize: 'contain',
+                                                        backgroundSize: '100% 100%',
                                                         backgroundRepeat: 'no-repeat',
-                                                        backgroundPosition: 'center',
                                                     }}
-                                                    onClick={() => setSelectedTable(null)} // Click empty space to deselect
+                                                    onClick={() => setSelectedTable(null)}
                                                 >
                                                     {tables.map(table => renderTable(table))}
                                                 </div>
@@ -458,44 +480,52 @@ export default function BookingPage() {
                                     )}
                                 </TransformWrapper>
 
-                                {/* --- Float Card (Table Detail) --- */}
+                                {/* Float Card (Refactored) */}
                                 <AnimatePresence>
                                     {selectedTable && (
                                         <motion.div
-                                            initial={{ y: 100, opacity: 0, scale: 0.9 }}
-                                            animate={{ y: 0, opacity: 1, scale: 1 }}
-                                            exit={{ y: 100, opacity: 0, scale: 0.9 }}
-                                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 bg-white/85 backdrop-blur-xl rounded-3xl shadow-2xl p-5 border border-white/40 z-30 flex gap-4 items-center ring-1 ring-black/5"
+                                            initial={{ y: 50, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: 50, opacity: 0 }}
+                                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/50 z-30"
                                         >
-                                            {/* Table Image */}
-                                            {selectedTable.image_url ? (
-                                                <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden cursor-pointer" onClick={() => window.open(selectedTable.image_url, '_blank')}>
-                                                    <img src={selectedTable.image_url} className="w-full h-full object-cover" />
+                                            <div className="flex gap-4">
+                                                {/* Image Thumbnail */}
+                                                <div
+                                                    className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden cursor-zoom-in shrink-0 relative group"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (selectedTable.image_url) setPreviewImage(selectedTable.image_url);
+                                                    }}
+                                                >
+                                                    {selectedTable.image_url ? (
+                                                        <>
+                                                            <img src={selectedTable.image_url} className="w-full h-full object-cover" />
+                                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                                                <Maximize size={16} className="text-white opacity-0 group-hover:opacity-100" />
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-300"><Image size={24} /></div>
+                                                    )}
                                                 </div>
-                                            ) : (
-                                                <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-gray-300">
-                                                    <Image size={32} />
-                                                </div>
-                                            )}
 
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h3 className="font-bold text-xl">{selectedTable.table_name}</h3>
-                                                        <p className="text-gray-500 text-sm">{selectedTable.capacity} Seats</p>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start">
+                                                        <h3 className="font-bold text-lg truncate pr-2">{selectedTable.table_name}</h3>
+                                                        <button onClick={() => setSelectedTable(null)} className="text-gray-400 hover:text-black"><X size={18} /></button>
                                                     </div>
-                                                    <button onClick={() => setSelectedTable(null)} className="text-gray-400 hover:text-black"><X size={20} /></button>
+                                                    <p className="text-gray-500 text-xs mb-3">{selectedTable.capacity} Seats</p>
+                                                    <button onClick={nextStep} className="w-full bg-black text-white py-2 rounded-lg font-bold text-xs shadow-md">
+                                                        Select
+                                                    </button>
                                                 </div>
-
-                                                <button onClick={nextStep} className="mt-3 w-full bg-black text-white py-2 rounded-lg font-bold text-sm shadow-lg flex items-center justify-center gap-2">
-                                                    Confirm Selection <ArrowRight size={16} />
-                                                </button>
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
+
                         </motion.div>
                     )}
 
