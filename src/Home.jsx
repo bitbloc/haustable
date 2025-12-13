@@ -186,13 +186,32 @@ export default function Home() {
             >
                 {status.isOpen ? (
                     <>
-                        <Link to="/booking" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3">
-                            {t('bookTable')}
-                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                        <Link to="/pickup" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg hover:bg-[#1A1A1A] hover:text-[#DFFF00] transition-all flex justify-center items-center gap-3">
-                            {t('orderPickup')}
-                        </Link>
+                        {!user ? (
+                            <div className="flex flex-col gap-4 animate-fade-in">
+                                <div className="text-red-500 font-bold bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-red-200 text-sm shadow-lg">
+                                    ⚠️ กรุณา Log-in ก่อนสั่งอาหารหรือจองโต๊ะ
+                                </div>
+                                <div className="opacity-40 pointer-events-none grayscale flex flex-col gap-4">
+                                    <Link to="#" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">
+                                        {t('bookTable')}
+                                        <ArrowRight size={20} />
+                                    </Link>
+                                    <Link to="#" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">
+                                        {t('orderPickup')}
+                                    </Link>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <Link to="/booking" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3 shadow-xl shadow-black/10">
+                                    {t('bookTable')}
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                </Link>
+                                <Link to="/pickup" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg hover:bg-[#1A1A1A] hover:text-[#DFFF00] transition-all flex justify-center items-center gap-3 shadow-lg">
+                                    {t('orderPickup')}
+                                </Link>
+                            </>
+                        )}
                     </>
                 ) : (
                     <div className="bg-gray-200 text-gray-400 py-4 rounded-full font-mono text-sm flex justify-center items-center gap-2 cursor-not-allowed border border-gray-300">
