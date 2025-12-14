@@ -46,7 +46,7 @@ export default function PickupPage() {
         const fetchMenu = async () => {
             // 1. Menu
             // 1. Menu & Categories
-            const { data: m } = await supabase.from('menu_items').select('*').eq('is_available', true).order('category')
+            const { data: m } = await supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('category')
             setMenuItems(m || [])
 
             const { data: c } = await supabase.from('menu_categories').select('*').order('display_order')
