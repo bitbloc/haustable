@@ -49,8 +49,13 @@ export default function Home() {
         const interval = setInterval(() => { if (settings) setStatus(checkShopStatus(settings)) }, 60000)
 
         // Auth Listener
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setUser(session?.user || null)
+            if (session?.user) {
+                // Manually fetch role to update UI immediately
+                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+                if (profile) setSettings(prev => ({ ...prev, role: profile.role }))
+            }
         })
 
         return () => {

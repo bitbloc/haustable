@@ -146,57 +146,20 @@ const KineticText = ({
         animationFrame = requestAnimationFrame(animateIdle);
 
 
+
         const handleMouseMove = (e) => {
             lastInteraction = Date.now();
             mouseX.set(e.clientX);
             mouseY.set(e.clientY);
         };
 
-        const handleOrientation = (e) => {
-            if (e.gamma === null || e.beta === null) return;
-
-            lastInteraction = Date.now();
-
-            // Gamma: Left/Right -90 to 90
-            // Beta: Front/Back -180 to 180
-            const cx = window.innerWidth / 2;
-            const cy = window.innerHeight / 2;
-            const amp = 15;
-
-            const offsetX = e.gamma * amp;
-            const offsetY = (e.beta - 45) * amp;
-
-            const targetX = Math.min(Math.max(cx + offsetX, 0), window.innerWidth);
-            const targetY = Math.min(Math.max(cy + offsetY, 0), window.innerHeight);
-
-            mouseX.set(targetX);
-            mouseY.set(targetY);
-        };
-
         window.addEventListener('mousemove', handleMouseMove);
-        // Only active if device supports it (implicit or permission granted)
-        window.addEventListener('deviceorientation', handleOrientation);
 
         return () => {
             cancelAnimationFrame(animationFrame);
             window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('deviceorientation', handleOrientation);
         };
     }, [mouseX, mouseY]);
-
-    // iOS 13+ Permission Requirement
-    const requestAccess = () => {
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(response => {
-                    if (response === 'granted') {
-                        setPermissionGranted(true);
-                    }
-                })
-                .catch(e => console.log(e));
-        }
-    };
-
 
     // Reveal Animation (Scroll Trigger)
     // We want the text to "rise" from a line-masked state
@@ -210,7 +173,6 @@ const KineticText = ({
     return (
         <motion.div
             ref={containerRef}
-            onClick={requestAccess}
             className={`cursor-default select-none relative z-10 font-[Roboto_Flex] ${className}`}
             initial="hidden"
             whileInView="visible"

@@ -458,7 +458,7 @@ export default function BookingPage() {
                                     <div className="relative">
                                         <input
                                             type={isDateFocused ? 'date' : 'text'}
-                                            placeholder="วว/ดด/ปปปป"
+                                            placeholder="กรุณาเลือกวันจอง"
                                             value={isDateFocused ? date : formatDateDisplay(date)}
                                             onFocus={() => setIsDateFocused(true)}
                                             onBlur={() => setIsDateFocused(false)}
