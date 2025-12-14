@@ -19,7 +19,9 @@ export default function SlipModal({ booking, type, onClose }) {
             const canvas = await html2canvas(slipRef.current, {
                 scale: 2, // Better quality
                 backgroundColor: '#ffffff',
-                logging: false
+                logging: false,
+                useCORS: true,
+                allowTaint: true
             })
             const image = canvas.toDataURL("image/png")
 

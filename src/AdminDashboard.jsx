@@ -178,7 +178,12 @@ export default function AdminDashboard() {
                                 <div className="font-mono font-bold text-xl text-primary">{booking.total_amount.toLocaleString()}.-</div>
                                 <div className="flex gap-2">
                                     {booking.payment_slip_url && (
-                                        <a href={booking.payment_slip_url} target="_blank" rel="noreferrer" className="p-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600">
+                                        <a
+                                            href={supabase.storage.from('slips').getPublicUrl(booking.payment_slip_url).data.publicUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="p-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600"
+                                        >
                                             <Image size={18} />
                                         </a>
                                     )}
@@ -260,7 +265,12 @@ export default function AdminDashboard() {
                                     </td>
                                     <td className="p-4">
                                         {booking.payment_slip_url ? (
-                                            <a href={booking.payment_slip_url} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs">
+                                            <a
+                                                href={supabase.storage.from('slips').getPublicUrl(booking.payment_slip_url).data.publicUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs"
+                                            >
                                                 <Image size={14} /> View
                                             </a>
                                         ) : (
