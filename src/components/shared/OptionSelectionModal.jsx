@@ -124,11 +124,11 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300">No Image</div>
                     )}
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-md">
-                        <X size={20} />
+                    <button onClick={onClose} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md shadow-lg z-20">
+                        <X size={24} />
                     </button>
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                        <h3 className="text-xl font-bold text-white">{item.name}</h3>
+                        <h3 className="text-xl font-bold text-white pr-12">{item.name}</h3>
                         <p className="text-gray-300 text-sm">{item.description}</p>
                     </div>
                 </div>

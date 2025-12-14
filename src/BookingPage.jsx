@@ -57,6 +57,8 @@ export default function BookingPage() {
 
     // Menu & Cart
     const [menuItems, setMenuItems] = useState([])
+    const [categories, setCategories] = useState([])
+    const [activeCategory, setActiveCategory] = useState('All')
     const [cart, setCart] = useState([])
     const [viewMode, setViewMode] = useState('grid')
     const [searchTerm, setSearchTerm] = useState('')
@@ -116,7 +118,14 @@ export default function BookingPage() {
                 `)
                 .eq('is_available', true)
                 .order('category')
+                .order('category')
             setMenuItems(m || [])
+
+            // 2.1 Load Categories
+            const { data: c } = await supabase.from('menu_categories').select('*').order('display_order', { ascending: true })
+            if (c) setCategories(c)
+            // Set default active if needed (or 'All')
+            if (c && c.length > 0) setActiveCategory(c[0].name)
 
             // 3. User Info
             const { data: { user } } = await supabase.auth.getUser()
@@ -215,7 +224,27 @@ export default function BookingPage() {
     }
 
     const cartTotal = cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
-    const filteredMenu = menuItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+
+
+    // Filter Menu
+    const getFilteredMenu = () => {
+        let items = menuItems
+        if (activeCategory !== 'All') {
+            // For compatibility with old schema (string) and new schema (relation)
+            // We prioritize category_id if available, else category name string
+            const catObj = categories.find(c => c.name === activeCategory)
+            if (catObj) {
+                items = items.filter(i => i.category_id === catObj.id || i.category === activeCategory)
+            } else {
+                items = items.filter(i => i.category === activeCategory)
+            }
+        }
+        if (searchTerm) {
+            items = items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        }
+        return items
+    }
+    const filteredMenu = getFilteredMenu()
 
     // Submit Logic
     const handleSubmit = async () => {
@@ -688,19 +717,55 @@ export default function BookingPage() {
 
                             {!isCheckoutMode ? (
                                 <div className="flex-1 flex flex-col min-h-0">
-                                    <div className="flex justify-between items-end mb-4 shrink-0">
-                                        <div className="relative flex-1 mr-4">
-                                            <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                                            <input type="text" placeholder={t('searchMenu')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:border-black" />
+
+                                    {/* Sticky Header: Search & Categories */}
+                                    <div className="sticky top-0 bg-[#F8F8F8] z-30 pt-1 pb-4 space-y-3 shrink-0">
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                                <input
+                                                    type="text"
+                                                    placeholder={t('searchMenu') || "Search menu..."}
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                    className="w-full bg-white pl-9 pr-4 py-2.5 rounded-xl border border-gray-100 shadow-sm focus:ring-1 focus:ring-black outline-none text-sm"
+                                                />
+                                            </div>
+                                            <ViewToggle mode={viewMode} setMode={setViewMode} />
                                         </div>
-                                        <ViewToggle mode={viewMode} setMode={setViewMode} />
+
+                                        {/* Category Tabs */}
+                                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-2 px-2">
+                                            <button
+                                                onClick={() => setActiveCategory('All')}
+                                                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === 'All' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                            >
+                                                All
+                                            </button>
+                                            {categories.map(cat => (
+                                                <button
+                                                    key={cat.id}
+                                                    onClick={() => setActiveCategory(cat.name)}
+                                                    className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat.name ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                                >
+                                                    {cat.name}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto pr-1">
+                                    {/* Menu List */}
+                                    <div className="flex-1 overflow-y-auto pr-1 pb-4">
                                         <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'} `}>
                                             {filteredMenu.map(item => (
                                                 <MenuCard key={item.id} item={item} mode={viewMode} onAdd={addToCart} onRemove={removeFromCart} qty={cart.find(c => c.id === item.id)?.qty || 0} t={t} />
                                             ))}
+                                            {filteredMenu.length === 0 && (
+                                                <div className="col-span-full py-12 text-center text-gray-400 text-sm flex flex-col items-center">
+                                                    <span className="bg-gray-200 p-3 rounded-full mb-2"><Search size={20} /></span>
+                                                    No menu items found
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

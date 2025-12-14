@@ -1,6 +1,6 @@
 
 import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { Plus, Star } from 'lucide-react'
 
 // Using Lucide 'Plus' instead of custom SVG for better consistency if possible, 
 // but sticking to the custom one to preserve exact look if preferred. 
@@ -28,8 +28,16 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
                 )}
 
                 {mode !== 'list' && qty > 0 && (
-                    <div className="absolute top-2 right-2 bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">
+                    <div className="absolute top-2 right-2 bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
                         {qty}
+                    </div>
+                )}
+                {/* Clickable Overlay */}
+                <div className="absolute inset-0 cursor-pointer" onClick={() => onAdd(item)}></div>
+
+                {item.is_recommended && (
+                    <div className="absolute top-2 left-2 bg-[#DFFF00] text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm z-10">
+                        <Star size={10} fill="currentColor" /> Recommended
                     </div>
                 )}
             </div>
@@ -51,7 +59,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
                             onClick={() => onAdd(item)}
                             className="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-90 transition-transform flex items-center gap-1 shadow-lg hover:bg-gray-800"
                         >
-                            Customize
+                            <Plus size={14} /> Customize
                         </button>
                     ) : (
                         qty === 0 ? (
