@@ -30,7 +30,7 @@ create table if not exists option_choices (
 
 -- 4. Create Link Table (Menu Items <-> Option Groups)
 create table if not exists menu_item_options (
-  menu_item_id uuid references menu_items(id) on delete cascade,
+  menu_item_id bigint references menu_items(id) on delete cascade,
   option_group_id uuid references option_groups(id) on delete cascade,
   display_order int default 0,
   primary key (menu_item_id, option_group_id)

@@ -10,7 +10,7 @@ import AdminDashboard from './AdminDashboard'
 import PickupPage from './PickupPage'
 import AdminSettings from './AdminSettings'
 import AdminTableEditor from './AdminTableEditor'
-import AdminMenu from './AdminMenu'
+import AdminMenu from './admin/AdminMenuPage'
 import AdminBookings from './AdminBookings' // NEW
 import AdminMembers from './AdminMembers' // NEW
 import AdminLayout from './components/AdminLayout'
