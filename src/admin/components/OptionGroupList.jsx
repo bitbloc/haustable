@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { Plus, Edit2, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Edit2, Trash2, Check, X, ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function OptionGroupList() {
@@ -18,6 +18,9 @@ export default function OptionGroupList() {
         min_selection: 0,
         max_selection: 1
     })
+
+    // Selection Limit Mode: '1', 'limit', 'unlimited'
+    const [limitMode, setLimitMode] = useState('1')
 
     // Choices for the current group being edited
     const [choices, setChoices] = useState([])
@@ -43,6 +46,15 @@ export default function OptionGroupList() {
 
     const handleEdit = (group) => {
         setEditingGroup(group)
+
+        // Determine Limit Mode
+        let mode = '1'
+        if (group.max_selection === 1) mode = '1'
+        else if (group.max_selection > 1) mode = 'limit'
+        else if (group.max_selection === 0) mode = 'unlimited' // Assuming 0 is unlimited
+
+        setLimitMode(mode)
+
         setFormData({
             name: group.name,
             is_required: group.is_required,
@@ -56,11 +68,12 @@ export default function OptionGroupList() {
 
     const handleCreate = () => {
         setEditingGroup(null)
+        setLimitMode('1')
         setFormData({
             name: '',
-            is_required: false,
-            selection_type: 'single', // or 'multiple'
-            min_selection: 0,
+            is_required: true, // Default to required as per commonly used
+            selection_type: 'single',
+            min_selection: 1,
             max_selection: 1
         })
         setChoices([])
@@ -68,7 +81,7 @@ export default function OptionGroupList() {
     }
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this option group?')) return
+        if (!confirm('ยืนยันการลบกลุ่มตัวเลือกนี้? (Are you sure?)')) return
         const { error } = await supabase.from('option_groups').delete().eq('id', id)
         if (!error) fetchGroups()
     }
@@ -78,13 +91,33 @@ export default function OptionGroupList() {
         try {
             let groupId = editingGroup?.id
 
+            // Logic to determine backend values based on Limit Mode
+            let finalMin = 0
+            let finalMax = 1
+            let finalType = 'single'
+
+            if (limitMode === '1') {
+                finalMax = 1
+                finalType = 'single'
+                // If required, min is 1, else 0
+                finalMin = formData.is_required ? 1 : 0
+            } else if (limitMode === 'limit') {
+                finalMax = parseInt(formData.max_selection) || 2
+                finalType = 'multiple'
+                finalMin = formData.is_required ? 1 : 0
+            } else if (limitMode === 'unlimited') {
+                finalMax = 0 // 0 = unlimited
+                finalType = 'multiple'
+                finalMin = formData.is_required ? 1 : 0
+            }
+
             // 1. Upsert Group
             const payload = {
                 name: formData.name,
                 is_required: formData.is_required,
-                selection_type: formData.selection_type,
-                min_selection: parseInt(formData.min_selection),
-                max_selection: parseInt(formData.max_selection)
+                selection_type: finalType,
+                min_selection: finalMin,
+                max_selection: finalMax
             }
 
             if (editingGroup) {
@@ -96,34 +129,20 @@ export default function OptionGroupList() {
                 groupId = data.id
             }
 
-            // 2. Upsert Choices
-            // Strategy: Delete all existing choices for this group and re-insert (easiest for now)
-            // Ideally, we should diff/update, but for simplicity:
-            if (editingGroup) {
-                // Determine which IDs to keep if we want to update vs delete... 
-                // Simple approach: Delete all not in current list (if we track IDs), or just delete all.
-                // Re-inserting all is safer for order handling if we implement drag-drop later.
-                // For now, let's try to update existing ones if they have ID, insert new ones.
+            // 2. Sync Choices
+            // Get existing IDs
+            const currentChoiceIds = choices
+                .filter(c => c.id && !c.id.toString().startsWith('temp_')) // Filter out temp IDs
+                .map(c => c.id)
 
-                // Better approach for this session:
-                // Just handle 'choices' state. 
-            }
-
-            // Actually, let's just do a bulk upsert for simplicity 
-            // BUT we need to handle deletions. 
-            // Let's use a simple approach: 
-            // 1. Get existing IDs for this group
-            // 2. Identify IDs to delete (not in current choices)
-            // 3. Upsert valid choices
-
-            const currentChoiceIds = choices.filter(c => c.id).map(c => c.id)
             if (groupId) {
                 // Delete removed choices
                 await supabase.from('option_choices').delete().eq('group_id', groupId).not('id', 'in', `(${currentChoiceIds.join(',') || '00000000-0000-0000-0000-000000000000'})`)
 
                 // Upsert
                 const choicesPayload = choices.map((c, idx) => ({
-                    id: c.id?.length > 10 ? c.id : undefined, // Keep ID if valid, else undefined (insert)
+                    // Important: Send undefined for new items (temp IDs) so Supabase generates UUID
+                    id: (c.id && !c.id.toString().startsWith('temp_')) ? c.id : undefined,
                     group_id: groupId,
                     name: c.name,
                     price_modifier: parseFloat(c.price_modifier || 0),
@@ -163,8 +182,8 @@ export default function OptionGroupList() {
         <div className="text-white">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Option Groups</h2>
-                <button onClick={handleCreate} className="bg-[#DFFF00] text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-[#b0cc00]">
-                    <Plus size={18} /> New Group
+                <button onClick={handleCreate} className="bg-[#FF5A1F] text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-[#e04f1b]">
+                    <Plus size={18} /> สร้างกลุ่มตัวเลือก
                 </button>
             </div>
 
@@ -182,13 +201,13 @@ export default function OptionGroupList() {
                                 <div>
                                     <h3 className="font-bold text-lg">{group.name}</h3>
                                     <p className="text-xs text-gray-500">
-                                        {group.selection_type.toUpperCase()} • {group.min_selection}-{group.max_selection} selections • {group.is_required ? 'Required' : 'Optional'}
+                                        {group.selection_type === 'single' ? 'เลือก 1 อย่าง' : 'เลือกได้หลายอย่าง'} • {group.is_required ? 'บังคับเลือก' : 'ไม่บังคับ'}
                                     </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-400">{group.option_choices?.length} choices</span>
-                                <button onClick={(e) => { e.stopPropagation(); handleEdit(group) }} className="p-2 hover:text-[#DFFF00]"><Edit2 size={16} /></button>
+                                <span className="text-xs bg-gray-800 px-2 py-1 rounded-full text-gray-400">{group.option_choices?.length} ตัวเลือก</span>
+                                <button onClick={(e) => { e.stopPropagation(); handleEdit(group) }} className="p-2 hover:text-[#FF5A1F]"><Edit2 size={16} /></button>
                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(group.id) }} className="p-2 hover:text-red-500"><Trash2 size={16} /></button>
                             </div>
                         </div>
@@ -209,7 +228,7 @@ export default function OptionGroupList() {
                                                 <span className="text-gray-400">+{c.price_modifier}</span>
                                             </div>
                                         ))}
-                                        {group.option_choices?.length === 0 && <p className="text-gray-500 text-sm italic p-2">No choices added yet.</p>}
+                                        {group.option_choices?.length === 0 && <p className="text-gray-500 text-sm italic p-2">ยังไม่มีตัวเลือก</p>}
                                     </div>
                                 </motion.div>
                             )}
@@ -221,97 +240,150 @@ export default function OptionGroupList() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#1a1a1a] w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">{editingGroup ? 'Edit Option Group' : 'New Option Group'}</h2>
-                            <button onClick={() => setIsModalOpen(false)}><X className="text-gray-500 hover:text-white" /></button>
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-black">
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+                            <button onClick={() => setIsModalOpen(false)}><ChevronDown className="rotate-90 text-gray-400" /></button>
+                            <h2 className="text-lg font-bold flex-1 text-center">{editingGroup ? 'แก้ไขกลุ่มตัวเลือก' : 'สร้างกลุ่มตัวเลือก'}</h2>
                         </div>
 
-                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                            {/* Basic Info */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Group Name</label>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full bg-black border border-white/20 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none"
-                                        placeholder="e.g. Sweetness Level, Toppings"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Selection Type</label>
-                                    <select
-                                        value={formData.selection_type}
-                                        onChange={e => setFormData({ ...formData, selection_type: e.target.value })}
-                                        className="w-full bg-black border border-white/20 rounded-lg p-3 text-white outline-none"
-                                    >
-                                        <option value="single">Single Select (Radio)</option>
-                                        <option value="multiple">Multiple Select (Checkbox)</option>
-                                    </select>
-                                </div>
-                                <div className="flex items-center gap-3 pt-6">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.is_required}
-                                        onChange={e => setFormData({ ...formData, is_required: e.target.checked })}
-                                        className="w-5 h-5 accent-[#DFFF00]"
-                                    />
-                                    <span className="text-sm font-bold">Required?</span>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Min Selection</label>
-                                    <input type="number" value={formData.min_selection} onChange={e => setFormData({ ...formData, min_selection: e.target.value })} className="w-full bg-black border border-white/20 rounded-lg p-3 text-white outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 mb-1">Max Selection</label>
-                                    <input type="number" value={formData.max_selection} onChange={e => setFormData({ ...formData, max_selection: e.target.value })} className="w-full bg-black border border-white/20 rounded-lg p-3 text-white outline-none" />
+                        <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-gray-50/50">
+                            {/* Group Name Input */}
+                            <div>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    className="w-full bg-white border border-gray-200 rounded-xl p-4 text-base outline-none focus:border-[#FF5A1F] transition-all shadow-sm"
+                                    placeholder="ชื่อกลุ่มตัวเลือก option (เช่น ระดับความหวาน)"
+                                />
+                            </div>
+
+                            {/* Required Toggle */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-base font-medium">ลูกค้าจำเป็นต้องเลือก</span>
+                                <button
+                                    onClick={() => setFormData({ ...formData, is_required: !formData.is_required })}
+                                    className={`w-14 h-8 rounded-full p-1 transition-colors relative ${formData.is_required ? 'bg-[#FF5A1F]' : 'bg-gray-300'}`}
+                                >
+                                    <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${formData.is_required ? 'translate-x-6' : 'translate-x-0'}`} />
+                                </button>
+                            </div>
+
+                            {/* Selection Rules */}
+                            <div className="space-y-3">
+                                <label className="text-base font-bold text-black">จำนวนตัวเลือกที่เลือกได้</label>
+
+                                <div className="space-y-3">
+                                    {/* Option 1: Single */}
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${limitMode === '1' ? 'border-[#FF5A1F]' : 'border-gray-300'}`}>
+                                            {limitMode === '1' && <div className="w-2.5 h-2.5 bg-[#FF5A1F] rounded-full" />}
+                                        </div>
+                                        <input type="radio" checked={limitMode === '1'} onChange={() => setLimitMode('1')} className="hidden" />
+                                        <span className="text-gray-700">1 ตัวเลือก</span>
+                                    </label>
+
+                                    {/* Option 2: Limit Range */}
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${limitMode === 'limit' ? 'border-[#FF5A1F]' : 'border-gray-300'}`}>
+                                            {limitMode === 'limit' && <div className="w-2.5 h-2.5 bg-[#FF5A1F] rounded-full" />}
+                                        </div>
+                                        <input type="radio" checked={limitMode === 'limit'} onChange={() => setLimitMode('limit')} className="hidden" />
+                                        <span className="text-gray-700">มากกว่า 1 แต่ไม่เกิน</span>
+                                        <div className="flex items-center gap-2 bg-gray-100 rounded px-2">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.preventDefault(); setFormData(p => ({ ...p, max_selection: Math.max(2, (parseInt(p.max_selection) || 2) - 1) })) }}
+                                                className="w-6 h-8 text-gray-500 hover:text-black font-bold"
+                                                disabled={limitMode !== 'limit'}
+                                            >-</button>
+                                            <span className="w-4 text-center text-sm font-bold">{formData.max_selection || 2}</span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.preventDefault(); setFormData(p => ({ ...p, max_selection: (parseInt(p.max_selection) || 2) + 1 })) }}
+                                                className="w-6 h-8 text-gray-500 hover:text-black font-bold"
+                                                disabled={limitMode !== 'limit'}
+                                            >+</button>
+                                        </div>
+                                    </label>
+
+                                    {/* Option 3: Unlimited */}
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${limitMode === 'unlimited' ? 'border-[#FF5A1F]' : 'border-gray-300'}`}>
+                                            {limitMode === 'unlimited' && <div className="w-2.5 h-2.5 bg-[#FF5A1F] rounded-full" />}
+                                        </div>
+                                        <input type="radio" checked={limitMode === 'unlimited'} onChange={() => setLimitMode('unlimited')} className="hidden" />
+                                        <span className="text-gray-700">ไม่จำกัด</span>
+                                    </label>
                                 </div>
                             </div>
+
+                            <hr className="border-gray-100" />
 
                             {/* Choices Editor */}
                             <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="text-sm font-bold text-gray-400 uppercase">Choices</label>
-                                    <button type="button" onClick={addChoice} className="text-[#DFFF00] text-xs font-bold hover:underline">+ Add Choice</button>
+                                <div className="flex justify-between items-center mb-4">
+                                    <label className="text-base font-bold text-black">ตัวเลือก</label>
+                                    <button type="button" className="text-[#FF5A1F] text-xs font-bold flex items-center gap-1 hover:underline">
+                                        <Edit2 size={12} /> แก้ไขลำดับ
+                                    </button>
                                 </div>
-                                <div className="space-y-2">
+
+                                <div className="space-y-3">
                                     {choices.map((choice, idx) => (
-                                        <div key={choice.id || idx} className="flex gap-2 items-center">
-                                            <span className="text-gray-600 text-xs w-6 text-center">{idx + 1}</span>
-                                            <input
-                                                type="text"
-                                                value={choice.name}
-                                                onChange={e => updateChoice(idx, 'name', e.target.value)}
-                                                placeholder="Choice Name"
-                                                className="flex-1 bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-white"
-                                            />
-                                            <div className="flex items-center bg-black/50 border border-white/10 rounded px-2">
-                                                <span className="text-gray-500 text-xs">+</span>
+                                        <div key={choice.id || idx} className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                                            <div className="flex-1 space-y-1">
                                                 <input
-                                                    type="number"
-                                                    value={choice.price_modifier}
-                                                    onChange={e => updateChoice(idx, 'price_modifier', e.target.value)}
-                                                    className="w-20 bg-transparent border-none text-sm text-white text-right outline-none py-2"
-                                                    placeholder="0"
+                                                    type="text"
+                                                    value={choice.name}
+                                                    onChange={e => updateChoice(idx, 'name', e.target.value)}
+                                                    placeholder="ชื่อตัวเลือก (เช่น หวานน้อย)"
+                                                    className="w-full text-sm font-medium outline-none bg-transparent placeholder-gray-400"
                                                 />
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-gray-500">฿</span>
+                                                    <input
+                                                        type="number"
+                                                        value={choice.price_modifier}
+                                                        onChange={e => updateChoice(idx, 'price_modifier', e.target.value)}
+                                                        className="w-20 bg-transparent border-none text-xs text-gray-500 outline-none"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
                                             </div>
-                                            <button onClick={() => removeChoice(idx)} className="p-2 text-gray-500 hover:text-red-500"><X size={16} /></button>
+                                            <button onClick={() => removeChoice(idx)} className="p-2 text-gray-300 hover:text-red-500">
+                                                <X size={20} />
+                                            </button>
                                         </div>
                                     ))}
-                                    {choices.length === 0 && (
-                                        <div className="text-center py-8 border border-dashed border-white/10 rounded-xl text-gray-500 text-sm">
-                                            No choices yet. Add one to get started.
-                                        </div>
-                                    )}
                                 </div>
+
+                                <button
+                                    type="button"
+                                    onClick={addChoice}
+                                    className="w-full mt-4 bg-[#FFEFEC] text-[#FF5A1F] font-bold py-3 rounded-xl hover:bg-[#ffe5df] transition-colors flex justify-center items-center gap-2"
+                                >
+                                    <Plus size={18} /> เพิ่มตัวเลือก
+                                </button>
                             </div>
+
+                            {/* Delete Button (Only edit mode) */}
+                            {editingGroup && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDelete(editingGroup.id)}
+                                    className="w-full bg-gray-100 text-gray-500 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors flex justify-center items-center gap-2"
+                                >
+                                    <Trash2 size={18} /> ลบกลุ่มตัวเลือก
+                                </button>
+                            )}
                         </div>
 
-                        <div className="p-6 border-t border-white/10 bg-[#111]">
-                            <button onClick={handleSubmit} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:bg-[#cce600] transition-colors">
-                                Save Group
+                        {/* Footer (Save) */}
+                        <div className="p-4 bg-white border-t border-gray-100">
+                            <button onClick={handleSubmit} className="w-full bg-[#FF5A1F] text-white font-bold py-3 rounded-xl hover:bg-[#e04f1b] shadow-lg shadow-orange-200 transition-all">
+                                บันทึก
                             </button>
                         </div>
                     </div>
