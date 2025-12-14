@@ -10,6 +10,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 // --- Animation Variants ---
 import MenuCard from './components/shared/MenuCard'
 import ViewToggle from './components/shared/ViewToggle'
+import OptionSelectionModal from './components/shared/OptionSelectionModal'
 const slideVariants = {
     enter: (direction) => ({ x: direction > 0 ? 50 : -50, opacity: 0 }),
     center: { x: 0, opacity: 1 },
@@ -44,6 +45,8 @@ export default function BookingPage() {
     const [previewImage, setPreviewImage] = useState(null) // Lightbox State
     const [showLargeGroupModal, setShowLargeGroupModal] = useState(false) // New: Modal State
     const [availabilityTooltip, setAvailabilityTooltip] = useState(null) // New: Tooltip State { x, y, time }
+    const [isOptionModalOpen, setIsOptionModalOpen] = useState(false)
+    const [selectedItemForOptions, setSelectedItemForOptions] = useState(null)
 
     // Selection
     const [date, setDate] = useState('')
@@ -99,8 +102,20 @@ export default function BookingPage() {
                 }
             }
 
-            // 2. Load Menu
-            const { data: m } = await supabase.from('menu_items').select('*').eq('is_available', true).order('category')
+            // 2. Load Menu with Options
+            const { data: m } = await supabase.from('menu_items')
+                .select(`
+                    *,
+                    menu_item_options (
+                        display_order,
+                        option_groups (
+                            *,
+                            option_choices (*)
+                        )
+                    )
+                `)
+                .eq('is_available', true)
+                .order('category')
             setMenuItems(m || [])
 
             // 3. User Info
@@ -163,11 +178,31 @@ export default function BookingPage() {
 
     // Cart Logic
     const addToCart = (item) => {
+        // If item has options, open modal
+        if (item.menu_item_options && item.menu_item_options.length > 0) {
+            setSelectedItemForOptions(item)
+            setIsOptionModalOpen(true)
+            return
+        }
+
+        // Normal Add
         setCart(prev => {
-            const exist = prev.find(i => i.id === item.id)
-            if (exist) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i)
+            const exist = prev.find(i => i.id === item.id && !i.selectedOptions) // Only group items without custom options
+            if (exist) return prev.map(i => i === exist ? { ...i, qty: i.qty + 1 } : i)
             return [...prev, { ...item, qty: 1 }]
         })
+    }
+
+    // Add Item with Options
+    const confirmOptionSelection = (customItem) => {
+        setCart(prev => {
+            // Check if exact same customization exists (Rare but possible)
+            // For simplicity, we just add as new line item usually, but let's try to group if identical
+            // Actually, comparing deep objects is hard. Let's just add as new for now to be safe.
+            return [...prev, { ...customItem }] // customItem already has qty, total, etc.
+        })
+        setIsOptionModalOpen(false)
+        setSelectedItemForOptions(null)
     }
 
     const removeFromCart = (item) => {
@@ -179,7 +214,7 @@ export default function BookingPage() {
         })
     }
 
-    const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0)
+    const cartTotal = cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
     const filteredMenu = menuItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
     // Submit Logic
@@ -257,7 +292,8 @@ export default function BookingPage() {
                     booking_id: bookingData.id,
                     menu_item_id: item.id,
                     quantity: item.qty,
-                    price_at_time: item.price
+                    price_at_time: item.totalPricePerUnit || item.price,
+                    selected_options: item.selectedOptions || {} // Store usage IDs
                 }))
                 await supabase.from('order_items').insert(orderItems)
             }
@@ -771,6 +807,16 @@ export default function BookingPage() {
 
                 </AnimatePresence>
             </div>
-        </div >
+            {/* Option Selection Modal */}
+            <AnimatePresence>
+                {isOptionModalOpen && selectedItemForOptions && (
+                    <OptionSelectionModal
+                        item={selectedItemForOptions}
+                        onClose={() => setIsOptionModalOpen(false)}
+                        onConfirm={confirmOptionSelection}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
     )
 }
