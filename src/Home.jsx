@@ -28,12 +28,22 @@ export default function Home() {
 
     useEffect(() => {
         const load = async () => {
-            // ... (settings load)
-            const { data } = await supabase.from('app_settings').select('*')
-            if (data) {
-                const map = data.reduce((acc, i) => ({ ...acc, [i.key]: i.value }), {})
-                setSettings(map)
-                setStatus(checkShopStatus(map))
+            try {
+                // ... (settings load)
+                const { data, error } = await supabase.from('app_settings').select('*')
+
+                if (error) {
+                    console.error("Settings Error:", error)
+                    // Fallback defaults if DB fails
+                    setStatus({ isOpen: true, text: 'OPEN (Offline Mode)' })
+                } else if (data) {
+                    const map = data.reduce((acc, i) => ({ ...acc, [i.key]: i.value }), {})
+                    setSettings(map)
+                    setStatus(checkShopStatus(map))
+                }
+            } catch (err) {
+                console.error("Load Error:", err)
+                setStatus({ isOpen: true, text: 'OPEN' })
             }
 
             // Check User
