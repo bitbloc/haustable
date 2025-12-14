@@ -8,6 +8,7 @@ import { getThaiDate, toThaiISO } from './utils/timeUtils'
 
 import MenuCard from './components/shared/MenuCard'
 import ViewToggle from './components/shared/ViewToggle'
+import OptionSelectionModal from './components/shared/OptionSelectionModal'
 
 // --- Components ---
 
@@ -19,8 +20,11 @@ export default function PickupPage() {
     const [viewMode, setViewMode] = useState('grid')
     const [step, setStep] = useState(1)
     const [menuItems, setMenuItems] = useState([])
+    const [categories, setCategories] = useState([]) // New: Categories
     const [cart, setCart] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
+    const [activeCategory, setActiveCategory] = useState('All') // New: Active Category
+    const [selectedItem, setSelectedItem] = useState(null) // New: For Modal
 
     // Checkout Form State
     const [pickupTime, setPickupTime] = useState('')
@@ -41,8 +45,12 @@ export default function PickupPage() {
     useEffect(() => {
         const fetchMenu = async () => {
             // 1. Menu
+            // 1. Menu & Categories
             const { data: m } = await supabase.from('menu_items').select('*').eq('is_available', true).order('category')
             setMenuItems(m || [])
+
+            const { data: c } = await supabase.from('menu_categories').select('*').order('display_order')
+            setCategories(c || [])
 
             // 2. Settings (Policy & QR)
             const { data: settings } = await supabase.from('app_settings').select('*')
@@ -65,25 +73,43 @@ export default function PickupPage() {
     }, [])
 
     // --- Logic ---
-    const addToCart = (item) => {
-        setCart(prev => {
-            const exist = prev.find(i => i.id === item.id)
-            if (exist) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i)
-            return [...prev, { ...item, qty: 1 }]
-        })
+    // Replacement for direct addToCart: Open Modal
+    const handleItemClick = (item) => {
+        setSelectedItem(item)
     }
 
-    const removeFromCart = (item) => {
+    const handleConfirmAddItem = (newItem) => {
         setCart(prev => {
-            const exist = prev.find(i => i.id === item.id)
-            if (!exist) return prev
-            if (exist.qty === 1) return prev.filter(i => i.id !== item.id)
-            return prev.map(i => i.id === item.id ? { ...i, qty: i.qty - 1 } : i)
+            // Check if same item with same options exists
+            const existIndex = prev.findIndex(i =>
+                i.id === newItem.id &&
+                JSON.stringify(i.selectedOptions) === JSON.stringify(newItem.selectedOptions)
+            )
+
+            if (existIndex > -1) {
+                const newCart = [...prev]
+                newCart[existIndex].qty += newItem.qty
+                return newCart
+            }
+            return [...prev, newItem]
         })
+        setSelectedItem(null)
     }
 
-    const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0)
-    const filteredMenu = menuItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    const removeFromCart = (index) => {
+        setCart(prev => prev.filter((_, i) => i !== index))
+    }
+
+    const cartTotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0)
+
+    // Filter Logic
+    const filteredMenu = menuItems.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesCategory = activeCategory === 'All'
+            ? true
+            : (item.category === activeCategory || item.category_id === categories.find(c => c.name === activeCategory)?.id)
+        return matchesSearch && matchesCategory
+    })
 
     const handleSubmit = async () => {
         if (!contactName || !contactPhone) return alert('Please fill contact info')
@@ -144,7 +170,8 @@ export default function PickupPage() {
                     booking_id: bookingData.id,
                     menu_item_id: item.id,
                     quantity: item.qty,
-                    price_at_time: item.price
+                    price_at_time: item.totalPricePerUnit,
+                    options: item.optionsSummary // Store options summary if schema allows or use another field
                 }))
                 await supabase.from('order_items').insert(orderItems)
             }
@@ -192,11 +219,38 @@ export default function PickupPage() {
                                 <ViewToggle mode={viewMode} setMode={setViewMode} />
                             </div>
 
+                            {/* Category Tabs */}
+                            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-2">
+                                <button
+                                    onClick={() => setActiveCategory('All')}
+                                    className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === 'All' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                >
+                                    All
+                                </button>
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setActiveCategory(cat.name)}
+                                        className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat.name ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+
                             {/* Menu Grid */}
                             <div className="flex-1 overflow-y-auto pr-1 pb-20">
                                 <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                     {filteredMenu.map(item => (
-                                        <MenuCard key={item.id} item={item} mode={viewMode} onAdd={addToCart} onRemove={removeFromCart} qty={cart.find(c => c.id === item.id)?.qty || 0} t={t} />
+                                        <MenuCard
+                                            key={item.id}
+                                            item={item}
+                                            mode={viewMode}
+                                            onAdd={() => handleItemClick(item)}
+                                            onRemove={() => { }} // Remove logic not needed in card for popup flow
+                                            qty={0} // Always 0 to force 'Plus' button behavior which opens modal
+                                            t={t}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -218,6 +272,17 @@ export default function PickupPage() {
                             )}
                         </motion.div>
                     )}
+
+                    {/* Modal */}
+                    <AnimatePresence>
+                        {selectedItem && (
+                            <OptionSelectionModal
+                                item={selectedItem}
+                                onClose={() => setSelectedItem(null)}
+                                onConfirm={handleConfirmAddItem}
+                            />
+                        )}
+                    </AnimatePresence>
 
                     {/* Step 2: Checkout */}
                     {step === 2 && (
@@ -279,10 +344,16 @@ export default function PickupPage() {
                                 {/* Order Summary */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">{t('orderSummary')}</h3>
-                                    {cart.map(item => (
-                                        <div key={item.id} className="flex justify-between text-sm mb-2">
-                                            <span className="text-gray-600">{item.name} x{item.qty}</span>
-                                            <span className="font-bold font-mono">{item.price * item.qty}.-</span>
+                                    {cart.map((item, index) => (
+                                        <div key={index} className="flex justify-between text-sm mb-3 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                                            <div>
+                                                <div className="text-gray-900 font-bold">{item.name} <span className="text-gray-400 text-xs">x{item.qty}</span></div>
+                                                {item.optionsSummary?.map((opt, i) => (
+                                                    <div key={i} className="text-xs text-gray-500">+ {opt.name} ({opt.price})</div>
+                                                ))}
+                                                {item.specialRequest && <div className="text-xs text-brand">Note: {item.specialRequest}</div>}
+                                            </div>
+                                            <span className="font-bold font-mono text-gray-900">{item.totalPricePerUnit * item.qty}.-</span>
                                         </div>
                                     ))}
                                     <div className="border-t border-gray-100 mt-2 pt-2 flex justify-between font-bold text-base">
