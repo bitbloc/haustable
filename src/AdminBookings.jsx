@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock } from 'lucide-react'
+import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText } from 'lucide-react'
+import SlipModal from './components/shared/SlipModal'
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all') // all, pending, confirmed, completed, cancelled
     const [searchTerm, setSearchTerm] = useState('')
+
+    // Modal State
+    const [slipData, setSlipData] = useState(null) // { booking, type }
 
     useEffect(() => {
         fetchBookings()
@@ -15,13 +19,19 @@ export default function AdminBookings() {
     const fetchBookings = async () => {
         setLoading(true)
         try {
-            // 1. Fetch Bookings + Table Info
+            // 1. Fetch Bookings + Table Info + Order Items
             // Note: tables_layout join usually works as it is a standard public table.
             const { data: bookingsData, error: bookingsError } = await supabase
                 .from('bookings')
                 .select(`
                     *,
-                    tables_layout (table_name)
+                    tables_layout (table_name),
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        selected_options,
+                        menu_items (name, price)
+                    )
                 `)
                 .order('booking_time', { ascending: false })
 
@@ -32,9 +42,11 @@ export default function AdminBookings() {
             let profilesMap = {}
 
             if (userIds.length > 0) {
+                // Removed 'full_name' as it might not exist or cause issues. 
+                // We rely on pickup_contact_name in bookings usually.
                 const { data: profilesData, error: profilesError } = await supabase
                     .from('profiles')
-                    .select('id, full_name, email, phone_number')
+                    .select('id, email, phone_number')
                     .in('id', userIds)
 
                 if (profilesError) {
@@ -75,6 +87,11 @@ export default function AdminBookings() {
         } catch (err) {
             alert('Error updating status')
         }
+    }
+
+    // Print Handler with Modal
+    const handlePrint = (booking, type) => {
+        setSlipData({ booking, type })
     }
 
     // Filter Logic
@@ -192,6 +209,15 @@ export default function AdminBookings() {
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex justify-end gap-2">
+                                                {/* Print Buttons */}
+                                                <button onClick={() => handlePrint(booking, 'kitchen')} className="p-2 bg-gray-700/50 hover:bg-gray-600 text-gray-200 rounded-lg" title="Kitchen Slip">
+                                                    <ChefHat size={16} />
+                                                </button>
+                                                <button onClick={() => handlePrint(booking, 'customer')} className="p-2 bg-gray-700/50 hover:bg-gray-600 text-gray-200 rounded-lg" title="Customer Bill">
+                                                    <Printer size={16} />
+                                                </button>
+                                                <div className="w-px bg-white/10 mx-1"></div>
+
                                                 {booking.status === 'pending' && (
                                                     <>
                                                         <button onClick={() => updateStatus(booking.id, 'confirmed')} className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg" title="Confirm">
@@ -216,6 +242,15 @@ export default function AdminBookings() {
                     </table>
                 </div>
             </div>
+
+            {/* Slip Modal */}
+            {slipData && (
+                <SlipModal
+                    booking={slipData.booking}
+                    type={slipData.type}
+                    onClose={() => setSlipData(null)}
+                />
+            )}
         </div>
     )
 }
