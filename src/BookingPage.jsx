@@ -805,7 +805,43 @@ export default function BookingPage() {
                                         <div className="flex justify-between text-sm mb-1"><span className="text-gray-600">{t('table')}</span><span className="font-bold">{selectedTable?.table_name} ({pax} Pax)</span></div>
                                         <div className="flex justify-between text-sm mb-1"><span className="text-gray-600">{t('date')}</span><span className="font-bold">{date}</span></div>
                                         <div className="flex justify-between text-sm mb-1"><span className="text-gray-600">{t('timeSlot')}</span><span className="font-bold">{time}</span></div>
-                                        {cart.length > 0 && <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between font-bold"><span>{t('foodTotal')}</span><span>{cartTotal}.-</span></div>}
+
+                                        {/* Ordered Items List */}
+                                        {cart.length > 0 && (
+                                            <div className="mt-4 pt-4 border-t border-dashed border-gray-300 space-y-3">
+                                                <h4 className="text-xs font-bold text-gray-400 uppercase">{t('orderSummary') || 'รายการอาหาร'}</h4>
+                                                {cart.map((item, idx) => {
+                                                    // Resolve Option Names
+                                                    let optionText = ''
+                                                    if (item.selectedOptions) {
+                                                        const choiceIds = Object.values(item.selectedOptions).flat()
+                                                        // Find choices in the menu item data
+                                                        const menuItem = menuItems.find(m => m.id === item.id)
+                                                        if (menuItem && choiceIds.length > 0) {
+                                                            const allChoices = []
+                                                            menuItem.menu_item_options?.forEach(opt => {
+                                                                opt.option_groups?.option_choices?.forEach(c => {
+                                                                    if (choiceIds.includes(c.id)) allChoices.push(c.name)
+                                                                })
+                                                            })
+                                                            optionText = allChoices.join(', ')
+                                                        }
+                                                    }
+
+                                                    return (
+                                                        <div key={idx} className="flex flex-col text-sm border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                                                            <div className="flex justify-between font-bold">
+                                                                <span>{item.qty}x {item.name}</span>
+                                                                <span>{((item.totalPricePerUnit || item.price) * item.qty).toLocaleString()}</span>
+                                                            </div>
+                                                            {optionText && <div className="text-xs text-gray-500 pl-4">+ {optionText}</div>}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+
+                                        {cart.length > 0 && <div className="border-t border-gray-200 mt-4 pt-3 flex justify-between font-bold text-lg"><span>{t('foodTotal')}</span><span>{cartTotal}.-</span></div>}
 
                                         {/* Min Spend Warning */}
                                         {(minSpend > 0 && cartTotal < (minSpend * pax)) && (

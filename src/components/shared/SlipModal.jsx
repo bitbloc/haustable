@@ -1,38 +1,48 @@
-
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { X, Printer, Download, Check } from 'lucide-react'
-import html2canvas from 'html2canvas'
-import { motion, AnimatePresence } from 'framer-motion'
+import { toPng } from 'html-to-image'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
+    const [optionMap, setOptionMap] = useState({})
 
     const isKitchen = type === 'kitchen'
     const title = isKitchen ? 'KITCHEN SLIP' : 'RECEIPT'
 
-    // Save as Image
+    // Fetch Option Names for readable display
+    useEffect(() => {
+        const fetchOptions = async () => {
+            const { data } = await supabase.from('option_choices').select('id, name')
+            if (data) {
+                const map = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {})
+                setOptionMap(map)
+            }
+        }
+        fetchOptions()
+    }, [])
+
+    // Save as Image using html-to-image
     const handleSaveImage = async () => {
         if (!slipRef.current) return
         setSaving(true)
         try {
-            const canvas = await html2canvas(slipRef.current, {
-                scale: 2, // Better quality
+            // Force white bg and ensure fonts are loaded
+            const dataUrl = await toPng(slipRef.current, {
+                cacheBust: true,
                 backgroundColor: '#ffffff',
-                logging: false,
-                useCORS: true,
-                allowTaint: true
+                pixelRatio: 2 // Better quality 
             })
-            const image = canvas.toDataURL("image/png")
 
             // Trigger Download
             const link = document.createElement('a')
-            link.href = image
+            link.href = dataUrl
             link.download = `slip-${type}-${booking.id.slice(0, 8)}.png`
             link.click()
         } catch (err) {
-            console.error(err)
-            alert('Failed to generate image')
+            console.error("Generate Error:", err)
+            alert('Failed to generate image: ' + (err.message || 'Unknown Error'))
         } finally {
             setSaving(false)
         }
@@ -43,12 +53,21 @@ export default function SlipModal({ booking, type, onClose }) {
         const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
         const tableName = booking.tables_layout?.table_name || 'N/A'
 
+        // Translate Options Helper
+        const getOptionName = (id) => optionMap[id] || id
+
         // Generate Items HTML
         const itemsHtml = booking.order_items?.map(item => {
             const name = item.menu_items?.name || 'Unknown Item'
-            const opts = item.selected_options
-                ? Object.values(item.selected_options).flat().join(', ')
-                : ''
+
+            // Map IDs to Names
+            let opts = ''
+            if (item.selected_options) {
+                const ids = Object.values(item.selected_options).flat()
+                if (ids.length > 0) {
+                    opts = ids.map(id => getOptionName(id)).join(', ')
+                }
+            }
 
             const price = isKitchen ? '' : `<div style="text-align:right">${(item.price_at_time * item.quantity).toLocaleString()}.-</div>`
 
@@ -108,21 +127,15 @@ export default function SlipModal({ booking, type, onClose }) {
                 </body>
             </html>
         `)
-        // printWindow.document.close() // Close sometimes stops printing in some browsers immediately? 
-        // Better to let user close or close after print logic inside the popup script.
         printWindow.document.close()
     }
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-[#1a1a1a] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]"
-            >
+            <div className="bg-[#1a1a1a] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-4 border-b border-white/10 flex justify-between items-center text-white">
-                    <h3 className="font-bold">Priview Slip ({type})</h3>
+                    <h3 className="font-bold">Preview Slip ({type})</h3>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
                 </div>
 
@@ -148,19 +161,28 @@ export default function SlipModal({ booking, type, onClose }) {
 
                         {/* Items */}
                         <div className="space-y-3 mb-4">
-                            {booking.order_items?.map((item, idx) => (
-                                <div key={idx} className="border-b border-dashed border-gray-300 pb-2">
-                                    <div className="flex justify-between font-bold">
-                                        <span>{item.quantity}x {item.menu_items?.name}</span>
-                                        {!isKitchen && <span>{(item.price_at_time * item.quantity).toLocaleString()}</span>}
-                                    </div>
-                                    {item.selected_options && (
-                                        <div className="text-[10px] text-gray-500 ml-4 mt-0.5">
-                                            + {Object.values(item.selected_options).flat().join(', ')}
+                            {booking.order_items?.map((item, idx) => {
+                                // Map Options in Render
+                                let optionText = ''
+                                if (item.selected_options) {
+                                    const ids = Object.values(item.selected_options).flat()
+                                    optionText = ids.map(id => optionMap[id] || id).join(', ')
+                                }
+
+                                return (
+                                    <div key={idx} className="border-b border-dashed border-gray-300 pb-2">
+                                        <div className="flex justify-between font-bold">
+                                            <span>{item.quantity}x {item.menu_items?.name}</span>
+                                            {!isKitchen && <span>{(item.price_at_time * item.quantity).toLocaleString()}</span>}
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                        {optionText && (
+                                            <div className="text-[10px] text-gray-500 ml-4 mt-0.5">
+                                                + {optionText}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
                             {(!booking.order_items || booking.order_items.length === 0) && <div className="text-center text-gray-400 italic">No items</div>}
                         </div>
 
@@ -200,7 +222,12 @@ export default function SlipModal({ booking, type, onClose }) {
                         {saving ? 'Saving...' : <><Download size={18} /> Save Image</>}
                     </button>
                 </div>
-            </motion.div>
+            </div>
+
+            {/* Close Overlay (Optional, though modal backdrop handles blocking interactions, 
+             the user asked for a "Close button" which is already included in the header of the modal. 
+             If they want another one, I can add it, but the one in header is standard. 
+             I will assume header X is sufficient.) */}
         </div>
     )
 }
