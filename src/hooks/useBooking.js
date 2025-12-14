@@ -17,7 +17,13 @@ export function useBooking() {
     const selectTable = (table) => dispatch({ type: 'SELECT_TABLE', payload: table })
 
     // Cart Actions
-    const addToCart = (item) => dispatch({ type: 'ADD_TO_CART', payload: item })
+    const addToCart = (item) => {
+        if (item.menu_item_options && item.menu_item_options.length > 0) {
+            dispatch({ type: 'OPEN_OPTION_MODAL', payload: item })
+        } else {
+            dispatch({ type: 'ADD_TO_CART', payload: item })
+        }
+    }
     const removeFromCart = (item) => dispatch({ type: 'REMOVE_FROM_CART', payload: item })
     const openOptionModal = (item) => dispatch({ type: 'OPEN_OPTION_MODAL', payload: item })
     const closeOptionModal = () => dispatch({ type: 'CLOSE_OPTION_MODAL' })
