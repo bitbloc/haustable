@@ -38,6 +38,60 @@ export default function BookingCheckout() {
 
     return (
         <div className="flex-1 overflow-y-auto">
+            {/* Order Summary */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
+                <h3 className="font-bold text-sm uppercase border-b border-gray-100 pb-2">{t('bookingSummary') || 'Booking Summary'}</h3>
+
+                {/* Details */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span className="text-gray-400 text-xs block uppercase">Date</span>
+                        <span className="font-bold">{useBooking().date}</span>
+                    </div>
+                    <div>
+                        <span className="text-gray-400 text-xs block uppercase">Time</span>
+                        <span className="font-bold">{useBooking().time}</span>
+                    </div>
+                    <div>
+                        <span className="text-gray-400 text-xs block uppercase">Table</span>
+                        <span className="font-bold">{useBooking().selectedTable?.table_name}</span>
+                    </div>
+                    <div>
+                        <span className="text-gray-400 text-xs block uppercase">Guests</span>
+                        <span className="font-bold">{pax} Pax</span>
+                    </div>
+                </div>
+
+                {/* Items */}
+                {cart.length > 0 && (
+                    <div className="pt-2">
+                        <span className="text-gray-400 text-xs block uppercase mb-2">Order Items</span>
+                        <div className="space-y-2">
+                            {cart.map((item, i) => (
+                                <div key={i} className="flex justify-between text-sm">
+                                    <div className="flex-1">
+                                        <div className="font-bold text-black flex gap-2">
+                                            <span className="text-gray-500 text-xs mt-0.5">x{item.qty}</span>
+                                            {item.name}
+                                        </div>
+                                        {/* Options */}
+                                        {item.optionsSummary && item.optionsSummary.length > 0 && (
+                                            <div className="text-xs text-gray-400 pl-6">
+                                                {item.optionsSummary.map(o => o.name).join(', ')}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="font-mono text-gray-600">
+                                        {((item.totalPricePerUnit || item.price) * item.qty)}.-
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
                 <h3 className="font-bold text-sm uppercase">1. {t('contactInfo')}</h3>
                 <div className="grid gap-3">
