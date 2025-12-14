@@ -33,18 +33,10 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
         const currentSelections = selectedOptions[group.id] || []
 
         if (group.selection_type === 'single') {
-            // Check if already selected - if so, deselect it (toggle off)
-            if (currentSelections.includes(choiceId)) {
-                setSelectedOptions({
-                    ...selectedOptions,
-                    [group.id]: []
-                })
-            } else {
-                setSelectedOptions({
-                    ...selectedOptions,
-                    [group.id]: [choiceId]
-                })
-            }
+            setSelectedOptions({
+                ...selectedOptions,
+                [group.id]: [choiceId]
+            })
         } else {
             // Multiple
             if (currentSelections.includes(choiceId)) {
