@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, Star, AlertCircle, Camera } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function MenuItemList() {
     const [menuItems, setMenuItems] = useState([])
@@ -11,6 +12,7 @@ export default function MenuItemList() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [imageFile, setImageFile] = useState(null)
+    const [previewUrl, setPreviewUrl] = useState(null)
 
     const [formData, setFormData] = useState({
         name: '',
@@ -22,6 +24,7 @@ export default function MenuItemList() {
     })
 
     const [selectedOptionGroups, setSelectedOptionGroups] = useState([])
+    const [activeTab, setActiveTab] = useState('normal') // normal, custom (though we only use normal for now)
 
     useEffect(() => {
         fetchData()
@@ -30,7 +33,6 @@ export default function MenuItemList() {
     const fetchData = async () => {
         setLoading(true)
         const [menuRes, catRes, optRes] = await Promise.all([
-            // Fetch Menu Items with linked Options
             supabase.from('menu_items').select(`
                 *,
                 menu_categories (name),
@@ -39,11 +41,7 @@ export default function MenuItemList() {
                     display_order
                 )
             `).order('created_at', { ascending: false }),
-
-            // Fetch Categories
             supabase.from('menu_categories').select('*').order('display_order'),
-
-            // Fetch Option Groups
             supabase.from('option_groups').select('*').order('name')
         ])
 
@@ -65,6 +63,7 @@ export default function MenuItemList() {
         })
         setSelectedOptionGroups([])
         setImageFile(null)
+        setPreviewUrl(null)
         setIsModalOpen(true)
     }
 
@@ -78,16 +77,23 @@ export default function MenuItemList() {
             is_available: item.is_available,
             is_recommended: item.is_recommended
         })
-        // Extract linked option groups
         const linkedGroups = item.menu_item_options?.map(o => o.option_group_id) || []
         setSelectedOptionGroups(linkedGroups)
-
         setImageFile(null)
+        setPreviewUrl(item.image_url)
         setIsModalOpen(true)
     }
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setImageFile(file)
+            setPreviewUrl(URL.createObjectURL(file))
+        }
+    }
+
     const handleDelete = async (id) => {
-        if (!confirm('Delete this menu item?')) return
+        if (!confirm('ยืนยันการลบเมนูนี้? (Delete this menu item?)')) return
         await supabase.from('menu_items').delete().eq('id', id)
         fetchData()
     }
@@ -105,14 +111,13 @@ export default function MenuItemList() {
                 imageUrl = data.publicUrl
             }
 
-            // Fallback for old schema compatibility (if 'category' column still exists and is used)
             const selectedCatName = categories.find(c => c.id === formData.category_id)?.name || 'Main'
 
             const payload = {
                 name: formData.name,
                 price: parseFloat(formData.price),
                 category_id: formData.category_id || null,
-                category: selectedCatName, // Maintain backward compatibility for now
+                category: selectedCatName,
                 description: formData.description,
                 is_available: formData.is_available,
                 is_recommended: formData.is_recommended,
@@ -131,11 +136,8 @@ export default function MenuItemList() {
             }
 
             // Sync Option Groups
-            // 1. Delete existing links
             if (newItemId) {
                 await supabase.from('menu_item_options').delete().eq('menu_item_id', newItemId)
-
-                // 2. Insert new links
                 if (selectedOptionGroups.length > 0) {
                     const links = selectedOptionGroups.map((groupId, idx) => ({
                         menu_item_id: newItemId,
@@ -163,24 +165,27 @@ export default function MenuItemList() {
         }
     }
 
+    // New Component: Option Picker Modal (nested or integrated) - using integrated list for now as per image 2
+    // The image shows "Add Option Group" opening a picker, but we can list them cleaner.
+
     return (
-        <div className="text-white">
+        <div className="text-white pb-20">
+            {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-2xl font-bold">Menu Items</h2>
-                    <p className="text-gray-500 text-sm">Manage items, prices, and options</p>
+                    <p className="text-gray-500 text-sm">จัดการเมนูอาหารและเครื่องดื่ม</p>
                 </div>
                 <button onClick={handleCreate} className="bg-[#DFFF00] text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-[#b0cc00]">
-                    <Plus size={18} /> New Item
+                    <Plus size={18} /> เพิ่มเมนู
                 </button>
             </div>
 
-            {/* Group by Category */}
+            {/* List View */}
             <div className="space-y-8">
                 {categories.map(cat => {
                     const items = menuItems.filter(i => i.category_id === cat.id || (!i.category_id && i.category === cat.name))
                     if (items.length === 0) return null
-
                     return (
                         <div key={cat.id}>
                             <h3 className="text-xl font-bold text-[#DFFF00] mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
@@ -188,31 +193,26 @@ export default function MenuItemList() {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {items.map(item => (
-                                    <div key={item.id} className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all">
-                                        <div className="w-16 h-16 bg-black rounded-lg overflow-hidden shrink-0">
+                                    <div key={item.id} className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all cursor-pointer" onClick={() => handleEdit(item)}>
+                                        <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative">
                                             {item.image_url ? (
                                                 <img src={item.image_url} className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={16} /></div>
+                                                <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>
                                             )}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start">
-                                                <h4 className="font-bold truncate">{item.name}</h4>
-                                                <span className="text-[#DFFF00] font-mono">{item.price}</span>
+                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex justify-between items-start">
+                                                    <h4 className="font-bold truncate text-base">{item.name}</h4>
+                                                    <span className="text-[#DFFF00] font-mono font-bold">{item.price}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-400 line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
                                             </div>
-                                            <div className="text-xs text-gray-500 line-clamp-1">{item.description}</div>
                                             <div className="flex items-center gap-2 mt-2">
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${item.is_available ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                    {item.is_available ? 'Available' : 'Sold Out'}
-                                                </span>
-                                                {item.is_recommended && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">Rec.</span>}
-                                                {item.menu_item_options?.length > 0 && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{item.menu_item_options.length} Opts</span>}
+                                                {item.is_recommended && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded flex items-center gap-1"><Star size={8} fill="currentColor" /> แนะนำ</span>}
+                                                {!item.is_available && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">หมด</span>}
                                             </div>
-                                        </div>
-                                        <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => handleEdit(item)} className="p-1 hover:text-[#DFFF00]"><Edit2 size={16} /></button>
-                                            <button onClick={() => handleDelete(item.id)} className="p-1 hover:text-red-500"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                 ))}
@@ -222,89 +222,218 @@ export default function MenuItemList() {
                 })}
             </div>
 
-            {/* Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#1a1a1a] w-full max-w-4xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">{editingItem ? 'Edit Item' : 'New Item'}</h2>
-                            <button onClick={() => setIsModalOpen(false)}><X className="text-gray-500 hover:text-white" /></button>
-                        </div>
+            {/* Edit/Create Modal - Full Screen Mobile Style adapted to Desktop */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-0 md:p-4">
+                        <motion.div
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 50, opacity: 0 }}
+                            className="bg-[#1a1a1a] w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] md:rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+                        >
+                            {/* Header */}
+                            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#1a1a1a] z-10">
+                                <h2 className="text-xl font-bold">{editingItem ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}</h2>
+                                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full"><X className="text-white" /></button>
+                            </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Left: Basic Info */}
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-gray-400 uppercase text-xs mb-4">Basic Information</h3>
-                                <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Name</label>
-                                    <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-black border border-white/20 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none" required />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-xs text-gray-500 mb-1 block">Price</label>
-                                        <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full bg-black border border-white/20 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none" required />
+                            {/* Content */}
+                            <div className="flex-1 overflow-y-auto">
+                                {/* Image Cover */}
+                                <div className="w-full h-48 bg-[#111] relative group cursor-pointer" onClick={() => document.getElementById('menu-image-upload').click()}>
+                                    {previewUrl ? (
+                                        <img src={previewUrl} className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-600">
+                                            <ImageIcon size={48} className="mb-2" />
+                                            <span className="text-sm">เพิ่มรูปภาพเมนู</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-3 right-3 bg-white/10 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 hover:bg-white/20 transition-colors">
+                                        <Camera size={14} /> {previewUrl ? 'เปลี่ยนรูป' : 'เพิ่มรูป'}
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-gray-500 mb-1 block">Category</label>
-                                        <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className="w-full bg-black border border-white/20 rounded-lg p-3 text-white outline-none">
-                                            <option value="">Select Category</option>
+                                    <input id="menu-image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                                </div>
+
+                                <div className="p-6 space-y-6">
+                                    {/* Name Input */}
+                                    <div className="space-y-4">
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full bg-transparent border-b border-white/20 p-2 text-xl font-bold text-white placeholder-gray-600 focus:border-[#DFFF00] outline-none transition-colors"
+                                            placeholder="ชื่อเมนู (ภาษาไทย)"
+                                            required
+                                        />
+                                        <input
+                                            type="text"
+                                            className="w-full bg-transparent border-b border-white/20 p-2 text-sm text-gray-300 placeholder-gray-600 focus:border-[#DFFF00] outline-none transition-colors"
+                                            placeholder="ชื่อเมนู (ภาษาอังกฤษ - ถ้ามี)"
+                                        />
+                                    </div>
+
+                                    {/* Category Dropdown */}
+                                    <div className="relative">
+                                        <select
+                                            value={formData.category_id}
+                                            onChange={e => setFormData({ ...formData, category_id: e.target.value })}
+                                            className="w-full bg-[#222] border border-white/10 rounded-xl p-4 text-white appearance-none outline-none focus:border-[#DFFF00]"
+                                        >
+                                            <option value="">เลือกหมวดหมู่</option>
                                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">▼</div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Description</label>
-                                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-black border border-white/20 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none resize-none" rows={3}></textarea>
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500 mb-1 block">Image</label>
-                                    <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} className="w-full bg-black border border-white/20 rounded-lg p-2 text-sm text-gray-400" />
-                                </div>
-                                <div className="flex gap-4 pt-2">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-4 h-4 accent-[#DFFF00]" />
-                                        <span className="text-sm">Available</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-4 h-4 accent-[#DFFF00]" />
-                                        <span className="text-sm">Recommended</span>
-                                    </label>
-                                </div>
-                            </div>
 
-                            {/* Right: Option Groups */}
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-gray-400 uppercase text-xs mb-4">Option Groups (Add-ons)</h3>
-                                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                                    {optionGroups.map(group => {
-                                        const isSelected = selectedOptionGroups.includes(group.id)
-                                        return (
-                                            <div
-                                                key={group.id}
-                                                onClick={() => toggleOptionGroup(group.id)}
-                                                className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${isSelected ? 'bg-[#DFFF00]/10 border-[#DFFF00]' : 'bg-black border-white/10 hover:border-white/30'}`}
+                                    {/* Price Section */}
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 mb-2 block uppercase">ราคาขาย</label>
+                                        <div className="flex gap-2 mb-4 bg-[#222] p-1 rounded-xl">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTab('normal')}
+                                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'normal' ? 'bg-[#DFFF00] text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
                                             >
-                                                <div>
-                                                    <div className={`font-bold text-sm ${isSelected ? 'text-[#DFFF00]' : 'text-white'}`}>{group.name}</div>
-                                                    <div className="text-xs text-gray-500">{group.is_required ? 'Required' : 'Optional'} • {group.selection_type}</div>
-                                                </div>
-                                                {isSelected && <Check size={16} className="text-[#DFFF00]" />}
+                                                ราคาปกติ
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTab('custom')}
+                                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'custom' ? 'bg-[#DFFF00] text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                                            >
+                                                ราคากำหนดเอง
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-4 bg-[#222] rounded-xl p-4 border border-white/5">
+                                            <span className="font-bold">ราคา</span>
+                                            <input
+                                                type="number"
+                                                value={formData.price}
+                                                onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                                className="flex-1 bg-transparent text-right font-mono text-xl font-bold outline-none placeholder-gray-600"
+                                                placeholder="0.00"
+                                            />
+                                            <span className="text-gray-500">฿</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Option Groups */}
+                                    <div className="bg-[#222] rounded-xl p-4 border border-white/5">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="font-bold text-base">กลุ่มตัวเลือก (Options)</h3>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    // This usually opens a picker modal, but for simplicity/speed let's just toggle visibility of all options below or a separate small modal?
+                                                    // Let's verify how to best UX this. A small inline picker is good.
+                                                    const picker = document.getElementById('option-picker')
+                                                    if (picker) picker.classList.toggle('hidden')
+                                                }}
+                                                className="text-[#DFFF00] text-xs font-bold flex items-center gap-1"
+                                            >
+                                                <Plus size={14} /> เพิ่มกลุ่มตัวเลือก
+                                            </button>
+                                        </div>
+
+                                        {/* Selected Options List */}
+                                        <div className="space-y-2 mb-4">
+                                            {selectedOptionGroups.map(gid => {
+                                                const group = optionGroups.find(g => g.id === gid)
+                                                if (!group) return null
+                                                return (
+                                                    <div key={gid} className="bg-[#333] p-3 rounded-lg flex justify-between items-center">
+                                                        <div>
+                                                            <div className="font-bold text-sm">{group.name}</div>
+                                                            <div className="text-xs text-gray-400">
+                                                                {group.selection_type === 'single' ? 'เลือก 1' : 'หลายข้อ'} • {group.is_required ? 'บังคับ' : 'ไม่บังคับ'}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {group.is_required && <span className="bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">ต้องเลือก</span>}
+                                                            <button onClick={() => toggleOptionGroup(gid)}><X size={16} className="text-gray-400 hover:text-red-500" /></button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                            {selectedOptionGroups.length === 0 && <p className="text-center text-gray-500 text-sm py-4">ยังไม่ได้เลือก Option เสริม</p>}
+                                        </div>
+
+                                        {/* Inline Picker (Hidden by default) */}
+                                        <div id="option-picker" className="hidden border-t border-white/10 pt-4 mt-4">
+                                            <div className="text-xs text-gray-400 mb-2 font-bold">เลือกกลุ่มตัวเลือกที่ต้องการเพิ่ม:</div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {optionGroups.filter(g => !selectedOptionGroups.includes(g.id)).map(g => (
+                                                    <button
+                                                        key={g.id}
+                                                        onClick={() => toggleOptionGroup(g.id)}
+                                                        className="text-left text-xs p-2 bg-black border border-white/10 rounded hover:border-[#DFFF00] hover:text-[#DFFF00]"
+                                                    >
+                                                        {g.name}
+                                                    </button>
+                                                ))}
+                                                {optionGroups.filter(g => !selectedOptionGroups.includes(g.id)).length === 0 && (
+                                                    <span className="text-gray-500 text-xs col-span-2">เลือกครบแล้ว หรือยังไม่ได้สร้างกลุ่มตัวเลือก</span>
+                                                )}
                                             </div>
-                                        )
-                                    })}
-                                    {optionGroups.length === 0 && <p className="text-gray-500 text-sm">No option groups created yet.</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Toggles */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between p-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-full ${formData.is_recommended ? 'bg-[#DFFF00]/20 text-[#DFFF00]' : 'bg-gray-800 text-gray-500'}`}><Star size={20} /></div>
+                                                <div>
+                                                    <div className="font-bold text-sm">เมนูแนะนำ</div>
+                                                    <div className="text-xs text-gray-500">แสดงดาวแนะนำบนเมนูนี้</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" />
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-500/20 text-green-500' : 'bg-gray-800 text-gray-500'}`}><Check size={20} /></div>
+                                                <div>
+                                                    <div className="font-bold text-sm">เปิดขายเมนูนี้</div>
+                                                    <div className="text-xs text-gray-500">เมื่อปิด ลูกค้าจะสั่งไม่ได้</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" />
+                                        </div>
+                                    </div>
+
+                                    {/* Description */}
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-400 mb-2 block uppercase">คำอธิบายเมนู</label>
+                                        <textarea
+                                            value={formData.description}
+                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                            className="w-full bg-[#222] border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-[#DFFF00] outline-none resize-none h-32"
+                                            placeholder="ใส่รายละเอียดเมนู เช่น ส่วนประกอบ รสชาติ..."
+                                        ></textarea>
+                                    </div>
+
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-6 border-t border-white/10">
-                            <button onClick={handleSubmit} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:bg-[#cce600]">
-                                Save Menu Item
-                            </button>
-                        </div>
+                            {/* Footer */}
+                            <div className="p-4 border-t border-white/10 bg-[#111] z-10">
+                                <button onClick={handleSubmit} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:bg-[#cce600] shadow-lg shadow-[#DFFF00]/20">
+                                    บันทึกเมนู
+                                </button>
+                                {editingItem && (
+                                    <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:underline">
+                                        ลบเมนูนี้
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
         </div>
     )
 }
