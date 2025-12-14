@@ -1,6 +1,6 @@
 
 import { motion } from 'framer-motion'
-import { Plus, Star } from 'lucide-react'
+import { Plus, Star, Minus } from 'lucide-react'
 
 // Using Lucide 'Plus' instead of custom SVG for better consistency if possible, 
 // but sticking to the custom one to preserve exact look if preferred. 

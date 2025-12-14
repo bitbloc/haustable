@@ -34,6 +34,8 @@ export default function PickupPage() {
     // Settings State
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
     const [policyNote, setPolicyNote] = useState('')
+    const [minAdvanceHours, setMinAdvanceHours] = useState(1) // Default 1 hr
+    const [pickupDate, setPickupDate] = useState('today') // 'today' | 'tomorrow'
 
     // Load Menu & Settings
     useEffect(() => {
@@ -48,6 +50,7 @@ export default function PickupPage() {
                 const map = settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
                 if (map.payment_qr_url) setQrCodeUrl(`${map.payment_qr_url}?t=${Date.now()}`)
                 if (map.policy_pickup) setPolicyNote(map.policy_pickup)
+                if (map.pickup_min_advance_hours) setMinAdvanceHours(Number(map.pickup_min_advance_hours))
             }
 
             // 3. User
@@ -93,8 +96,24 @@ export default function PickupPage() {
             const { data: { user } } = await supabase.auth.getUser()
 
             // Construct Booking Time (Today + Time)
-            const today = getThaiDate() // YYYY-MM-DD in Thai time
-            const bookingDateTime = toThaiISO(today, pickupTime) // +07:00
+            // Construct Booking Time
+            const now = new Date()
+            const dateBasis = new Date()
+            if (pickupDate === 'tomorrow') {
+                dateBasis.setDate(dateBasis.getDate() + 1)
+            }
+            const dateStr = dateBasis.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) // YYYY-MM-DD
+            const bookingDateTime = toThaiISO(dateStr, pickupTime) // +07:00
+
+            // Validation: Advance Notice
+            const pickupDateTime = new Date(bookingDateTime)
+            const minTime = new Date(now.getTime() + minAdvanceHours * 60 * 60 * 1000)
+
+            if (pickupDateTime < minTime) {
+                alert(`Please order at least ${minAdvanceHours} hour(s) in advance.`)
+                setSubmitting(false)
+                return
+            }
 
             // Upload Slip
             const fileExt = slipFile.name.split('.').pop()
@@ -230,7 +249,31 @@ export default function PickupPage() {
                                 {/* Pickup Time */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <label className="text-xs font-bold text-gray-400 uppercase block mb-3">{t('pickupTime')}</label>
-                                    <input type="time" value={pickupTime} onChange={e => setPickupTime(e.target.value)} className="w-full text-lg font-bold bg-transparent outline-none" />
+
+                                    {/* Date Selection */}
+                                    <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
+                                        <button
+                                            onClick={() => setPickupDate('today')}
+                                            className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'today' ? 'bg-white shadow text-black' : 'text-gray-400'}`}
+                                        >
+                                            Today
+                                        </button>
+                                        <button
+                                            onClick={() => setPickupDate('tomorrow')}
+                                            className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'tomorrow' ? 'bg-white shadow text-black' : 'text-gray-400'}`}
+                                        >
+                                            Tomorrow
+                                        </button>
+                                    </div>
+
+                                    <input
+                                        type="time"
+                                        value={pickupTime}
+                                        onChange={e => setPickupTime(e.target.value)}
+                                        className="w-full text-lg font-bold bg-transparent outline-none"
+                                        placeholder="ระบุเวลาที่มารับ (Time to pick up)"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-2">*Please order at least {minAdvanceHours} hour(s) in advance.</p>
                                 </div>
 
                                 {/* Order Summary */}

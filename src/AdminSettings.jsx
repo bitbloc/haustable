@@ -135,6 +135,7 @@ export default function AdminSettings() {
                                 await handleSave('booking_min_spend', settings.booking_min_spend)
                                 await handleSave('booking_min_advance_hours', settings.booking_min_advance_hours)
                                 await handleSave('booking_min_advance_hours', settings.booking_min_advance_hours)
+                                await handleSave('pickup_min_advance_hours', settings.pickup_min_advance_hours)
                                 await handleSave('booking_time_slots', settings.booking_time_slots)
                                 await handleSave('policy_dine_in', settings.policy_dine_in)
                                 await handleSave('policy_pickup', settings.policy_pickup)
@@ -186,6 +187,17 @@ export default function AdminSettings() {
                                 value={settings.booking_min_advance_hours || ''}
                                 onChange={(e) => setSettings(prev => ({ ...prev, booking_min_advance_hours: e.target.value }))}
                                 placeholder="e.g. 2"
+                                className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs text-[#DFFF00] font-bold mb-1">Min Advance Pickup (Hours)</label>
+                            <input
+                                type="number"
+                                value={settings.pickup_min_advance_hours || ''}
+                                onChange={(e) => setSettings(prev => ({ ...prev, pickup_min_advance_hours: e.target.value }))}
+                                placeholder="e.g. 1"
                                 className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
                             />
                         </div>
