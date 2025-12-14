@@ -115,15 +115,6 @@ export default function BookingPage() {
         load()
     }, [])
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-[#F8F8F8] p-6 flex flex-col items-center justify-center space-y-4">
-                <div className="w-16 h-16 bg-gray-200 rounded-full animate-pulse"></div>
-                <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
-                <div className="w-48 h-3 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-        )
-    }
     // Reset Time when Date changes (Enforce Sequential Flow)
     useEffect(() => {
         setTime(null)
@@ -159,6 +150,16 @@ export default function BookingPage() {
             fetchAvailability()
         }
     }, [step, date, time])
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-[#F8F8F8] p-6 flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-48 h-3 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+        )
+    }
 
     // Cart Logic
     const addToCart = (item) => {
