@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
-import SlipModal from '../shared/SlipModal'
+import ImageModal from '../shared/ImageModal'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -138,7 +138,7 @@ export default function BookingCheckout() {
             </button>
 
             {/* QR Modal */}
-            <SlipModal
+            <ImageModal
                 isOpen={isSlipModalOpen}
                 onClose={() => setIsSlipModalOpen(false)}
                 imageUrl={settings.qrCodeUrl}
