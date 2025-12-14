@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, LayoutGrid, List as ListIcon, Search, Maximize, Minimize, X, ZoomIn, ZoomOut, RotateCw, Image } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, LayoutGrid, List as ListIcon, Search, Maximize, Minimize, X, ZoomIn, ZoomOut, RotateCw, Image, Calendar } from 'lucide-react'
 import { useLanguage } from './context/LanguageContext'
 import { toThaiISO } from './utils/timeUtils'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
@@ -465,9 +465,9 @@ export default function BookingPage() {
                                             onChange={e => setDate(e.target.value)}
                                             className={`w-full text-lg font-bold border-b border-gray-200 py-2 outline-none focus:border-black bg-transparent placeholder-gray-300 ${!isDateFocused && date ? 'font-mono tracking-wider' : ''}`}
                                         />
-                                        {!date && <span className="absolute right-0 top-2 pointer-events-none text-gray-400"><ListIcon size={16} /></span>}
+                                        {!date && <span className="absolute right-0 top-2 pointer-events-none text-gray-400"><Calendar size={20} /></span>}
                                         {/* Show Calendar Icon if date is selected and not focused (for aesthetic matching design) */}
-                                        {date && !isDateFocused && <span className="absolute right-0 top-2 pointer-events-none text-black"><ListIcon size={20} /></span>}
+                                        {date && !isDateFocused && <span className="absolute right-0 top-2 pointer-events-none text-black"><Calendar size={20} /></span>}
                                     </div>
                                 </div>
 
