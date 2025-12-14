@@ -455,19 +455,22 @@ export default function BookingPage() {
                                 {/* Date */}
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">{t('date')}</label>
-                                    <div className="relative">
+                                    <div className="relative border-b border-gray-200 hover:border-black transition-colors">
+                                        {/* INVISIBLE NATIVE INPUT (Triggers Picker) */}
                                         <input
-                                            type={isDateFocused ? 'date' : 'text'}
-                                            placeholder="กรุณาเลือกวันจอง"
-                                            value={isDateFocused ? date : formatDateDisplay(date)}
-                                            onFocus={() => setIsDateFocused(true)}
-                                            onBlur={() => setIsDateFocused(false)}
+                                            type="date"
+                                            value={date}
                                             onChange={e => setDate(e.target.value)}
-                                            className={`w-full text-lg font-bold border-b border-gray-200 py-2 outline-none focus:border-black bg-transparent placeholder-gray-300 ${!isDateFocused && date ? 'font-mono tracking-wider' : ''}`}
+                                            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                                         />
-                                        {!date && <span className="absolute right-0 top-2 pointer-events-none text-gray-400"><Calendar size={20} /></span>}
-                                        {/* Show Calendar Icon if date is selected and not focused (for aesthetic matching design) */}
-                                        {date && !isDateFocused && <span className="absolute right-0 top-2 pointer-events-none text-black"><Calendar size={20} /></span>}
+
+                                        {/* VISUAL LAYER (Placeholder / Formatted Value) */}
+                                        <div className="py-2 w-full flex items-center justify-between">
+                                            <span className={`text-lg font-bold ${date ? 'text-black' : 'text-gray-300'}`}>
+                                                {date ? formatDateDisplay(date) : "กรุณาเลือกวันจอง"}
+                                            </span>
+                                            <Calendar size={20} className="text-gray-400" />
+                                        </div>
                                     </div>
                                 </div>
 

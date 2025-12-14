@@ -12,7 +12,8 @@ export default function Home() {
     const [status, setStatus] = useState({ isOpen: false, text: 'LOADING' })
     const [settings, setSettings] = useState(null)
     const [user, setUser] = useState(null)
-    const [showAuthModal, setShowAuthModal] = useState(false) // New State
+    const [userRole, setUserRole] = useState(null) // NEW: Dedicated state for role
+    const [showAuthModal, setShowAuthModal] = useState(false)
 
     // Check Status Logic
     const checkShopStatus = (s) => {
@@ -40,9 +41,10 @@ export default function Home() {
             if (session?.user) {
                 setUser(session.user)
                 const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-                if (profile) setSettings(prev => ({ ...prev, role: profile.role }))
+                if (profile) setUserRole(profile.role)
             } else {
                 setUser(null)
+                setUserRole(null)
             }
         }
         load()
@@ -54,7 +56,9 @@ export default function Home() {
             if (session?.user) {
                 // Manually fetch role to update UI immediately
                 const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-                if (profile) setSettings(prev => ({ ...prev, role: profile.role }))
+                if (profile) setUserRole(profile.role)
+            } else {
+                setUserRole(null)
             }
         })
 
@@ -69,6 +73,7 @@ export default function Home() {
     const handleLogout = async () => {
         await supabase.auth.signOut()
         setUser(null)
+        setUserRole(null)
     }
 
     return (
@@ -79,7 +84,7 @@ export default function Home() {
                 {user ? (
                     <div className="flex items-center gap-3 bg-white pl-4 pr-2 py-2 rounded-full shadow-sm border border-gray-200">
                         <span className="text-xs font-bold truncate max-w-[100px] text-black">{user.user_metadata.full_name || 'User'}</span>
-                        {settings?.role === 'admin' ? (
+                        {userRole === 'admin' ? (
                             <Link to="/admin" className="bg-black text-white px-3 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform shadow-lg">
                                 Admin
                             </Link>
