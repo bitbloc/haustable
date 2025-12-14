@@ -8,6 +8,8 @@ import { toThaiISO } from './utils/timeUtils'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 
 // --- Animation Variants ---
+import MenuCard from './components/shared/MenuCard'
+import ViewToggle from './components/shared/ViewToggle'
 const slideVariants = {
     enter: (direction) => ({ x: direction > 0 ? 50 : -50, opacity: 0 }),
     center: { x: 0, opacity: 1 },
@@ -22,81 +24,7 @@ const Header = ({ title, subtitle }) => (
     </div>
 )
 
-const ViewToggle = ({ mode, setMode }) => (
-    <div className="flex bg-gray-200 rounded-lg p-1 gap-1">
-        <button onClick={() => setMode('grid')} className={`p-2 rounded-md transition-all ${mode === 'grid' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}>
-            <LayoutGrid size={18} />
-        </button>
-        <button onClick={() => setMode('list')} className={`p-2 rounded-md transition-all ${mode === 'list' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}>
-            <ListIcon size={18} />
-        </button>
-    </div>
-)
 
-const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`group bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-black/20 transition-all ${mode === 'list' ? 'flex flex-row items-center p-3 gap-4 h-24' : 'flex flex-col h-full'}`}
-        >
-            <div className={`bg-gray-100 overflow-hidden relative ${mode === 'list' ? 'w-20 h-full rounded-lg shrink-0' : 'w-full aspect-square'}`}>
-                {item.image_url ? (
-                    <img src={item.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={item.name} />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">No Image</div>
-                )}
-                {/* Qty Badge (Grid only - optional, since we have controls now, but keep for clarity if needed. Removing to clean up UI as controls show qty) */}
-            </div>
-
-            <div className={`flex flex-col justify-between ${mode === 'list' ? 'flex-1 py-1' : 'p-4 flex-1'}`}>
-                <div>
-                    <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{item.name}</h3>
-                        {mode === 'list' && <span className="font-mono text-sm font-bold ml-2">{item.price}.-</span>}
-                    </div>
-                    {mode === 'grid' && <p className="text-gray-400 text-xs mt-1 uppercase tracking-wider">{item.category}</p>}
-                </div>
-
-                <div className={`flex items-end justify-between ${mode === 'grid' ? 'mt-3' : 'mt-0'}`}>
-                    {mode === 'grid' && <span className="font-mono text-sm font-bold">{item.price}.-</span>}
-
-                    {/* Quantity Control */}
-                    {qty > 0 ? (
-                        <div className={`flex items-center bg-black text-white rounded-full shadow-lg overflow-hidden ${mode === 'list' ? 'h-8' : 'h-8'}`}>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onRemove(item); }}
-                                className="w-8 h-full flex items-center justify-center hover:bg-gray-800 active:scale-95 transition-all text-lg font-bold pb-1"
-                            >
-                                -
-                            </button>
-                            <span className="font-bold text-sm min-w-[20px] text-center">{qty}</span>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onAdd(item); }}
-                                className="w-8 h-full flex items-center justify-center hover:bg-gray-800 active:scale-95 transition-all text-lg font-bold pb-1"
-                            >
-                                +
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => onAdd(item)}
-                            className={`active:scale-95 transition-transform flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-black group-hover:bg-[#DFFF00] group-hover:text-black ${mode === 'list' ? 'px-4 py-1.5 rounded-full text-xs font-bold' : 'w-8 h-8 rounded-full'}`}
-                        >
-                            {mode === 'list' ? t('addToCart') : <PlusIcon size={16} />}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </motion.div>
-    )
-}
-
-// Icon Helper since I used PlusIcon
-const PlusIcon = ({ size }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-)
 
 export default function BookingPage() {
     const { t } = useLanguage()
@@ -140,6 +68,8 @@ export default function BookingPage() {
     const [submitting, setSubmitting] = useState(false)
     const [isDateFocused, setIsDateFocused] = useState(false) // New: Control Date Input Display
 
+    const [isLoading, setIsLoading] = useState(true)
+
     // Helper: Format YYYY-MM-DD to DD/MM/YYYY
     const formatDateDisplay = (isoDate) => {
         if (!isoDate) return ''
@@ -180,9 +110,20 @@ export default function BookingPage() {
                 const { data: profile } = await supabase.from('profiles').select('phone_number').eq('id', user.id).single()
                 if (profile?.phone_number) setContactPhone(profile.phone_number)
             }
+            setIsLoading(false)
         }
         load()
     }, [])
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-[#F8F8F8] p-6 flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="w-48 h-3 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+        )
+    }
     // Reset Time when Date changes (Enforce Sequential Flow)
     useEffect(() => {
         setTime(null)
@@ -496,7 +437,7 @@ export default function BookingPage() {
                                                     key={tm}
                                                     onClick={() => !isDisabled && setTime(tm)}
                                                     disabled={isDisabled}
-                                                    className={`py-2 rounded-lg text-sm font-bold transition-all ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')} `}
+                                                    className={`py-2 rounded-lg text-sm font-bold transition-all active:scale-95 ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')} `}
                                                 >
                                                     {tm}
                                                 </button>
@@ -509,7 +450,7 @@ export default function BookingPage() {
                                 <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity duration-300 ${!time ? 'opacity-50 pointer-events-none' : ''}`}>
                                     <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('guests')}</label>
                                     <div className="flex items-center gap-4">
-                                        <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200">-</button>
+                                        <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 active:scale-90 transition-transform">-</button>
                                         <span className="text-2xl font-bold w-10 text-center">{pax}</span>
                                         <button
                                             onClick={() => {
@@ -519,7 +460,7 @@ export default function BookingPage() {
                                                     setPax(pax + 1)
                                                 }
                                             }}
-                                            className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold hover:bg-gray-800"
+                                            className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold hover:bg-gray-800 active:scale-90 transition-transform"
                                         >
                                             +
                                         </button>
@@ -561,7 +502,7 @@ export default function BookingPage() {
                                 )}
                             </AnimatePresence>
 
-                            <button onClick={nextStep} disabled={!date || !time} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-8 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2">
+                            <button onClick={nextStep} disabled={!date || !time} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-8 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2 active:scale-95">
                                 {t('selectTable')} <ArrowRight size={18} />
                             </button>
                         </motion.div>
@@ -627,9 +568,9 @@ export default function BookingPage() {
                                     {({ zoomIn, zoomOut, resetTransform }) => (
                                         <>
                                             <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
-                                                <button onClick={() => zoomIn()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><ZoomIn size={20} /></button>
-                                                <button onClick={() => zoomOut()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><ZoomOut size={20} /></button>
-                                                <button onClick={() => resetTransform()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50"><RotateCw size={20} /></button>
+                                                <button onClick={() => zoomIn()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50 active:scale-90 transition-transform"><ZoomIn size={20} /></button>
+                                                <button onClick={() => zoomOut()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50 active:scale-90 transition-transform"><ZoomOut size={20} /></button>
+                                                <button onClick={() => resetTransform()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50 active:scale-90 transition-transform"><RotateCw size={20} /></button>
                                             </div>
                                             <TransformComponent
                                                 wrapperClass="w-full h-full flex items-center justify-center bg-[#f0f0f0]"
@@ -819,7 +760,7 @@ export default function BookingPage() {
                                         </div>
                                     </div>
 
-                                    <button onClick={handleSubmit} disabled={submitting || !isAgreed || !slipFile} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-6 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2">
+                                    <button onClick={handleSubmit} disabled={submitting || !isAgreed || !slipFile} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-6 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2 active:scale-95">
                                         {submitting ? t('processing') : t('confirmBooking')}
                                     </button>
                                 </div>

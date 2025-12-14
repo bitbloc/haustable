@@ -265,6 +265,79 @@ export default function AdminSettings() {
                 </div>
 
             </div>
+
+            {/* Data Maintenance Section */}
+            <div className="mt-8 bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <span className="text-red-500">⚠</span> Data Maintenance
+                </h2>
+                <div className="flex items-center justify-between p-4 border border-white/10 rounded-2xl bg-black/20">
+                    <div>
+                        <h3 className="font-bold text-white">Clean Old Slips (&gt;30 Days)</h3>
+                        <p className="text-xs text-gray-400 mt-1">
+                            ลบรูปสลิปที่เก่ากว่า 30 วันออกจาก Storage เพื่อประหยัดพื้นที่ (ข้อมูลการจองยังอยู่)
+                        </p>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            if (!window.confirm('Are you sure you want to delete slip images older than 30 days?')) return
+
+                            try {
+                                setLoading(true)
+                                // 1. Calculate Date 30 Days Ago
+                                const d = new Date()
+                                d.setDate(d.getDate() - 30)
+                                const cutoffDate = d.toISOString()
+
+                                // 2. Find old bookings with slips
+                                const { data: oldBookings, error: fetchError } = await supabase
+                                    .from('bookings')
+                                    .select('id, payment_slip_url')
+                                    .lt('booking_time', cutoffDate)
+                                    .not('payment_slip_url', 'is', null)
+
+                                if (fetchError) throw fetchError
+                                if (!oldBookings || oldBookings.length === 0) {
+                                    alert('No old slips found to clean.')
+                                    return
+                                }
+
+                                // 3. Delete from Storage
+                                const filesToRemove = oldBookings.map(b => b.payment_slip_url)
+                                // Only delete if valid filenames (no http links if any)
+                                // Assuming simple filenames. 
+                                const { error: storageError } = await supabase.storage
+                                    .from('slips')
+                                    .remove(filesToRemove)
+
+                                if (storageError) throw storageError
+
+                                // 4. Update Database (Set payment_slip_url to null)
+                                const idsToUpdate = oldBookings.map(b => b.id)
+                                const { error: updateError } = await supabase
+                                    .from('bookings')
+                                    .update({ payment_slip_url: null })
+                                    .in('id', idsToUpdate)
+
+                                if (updateError) throw updateError
+
+                                alert(`Cleaned up ${filesToRemove.length} old slips successfully!`)
+
+                            } catch (e) {
+                                console.error(e)
+                                alert('Error cleaning slips: ' + e.message)
+                            } finally {
+                                setLoading(false)
+                            }
+                        }}
+                        disabled={loading}
+                        className="px-6 py-3 bg-red-900/30 text-red-500 border border-red-500/50 rounded-xl font-bold hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                    >
+                        {loading ? 'Cleaning...' : 'Clean Now'}
+                    </button>
+                </div>
+            </div>
+
         </div>
     )
 }

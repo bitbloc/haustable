@@ -4,12 +4,13 @@ import { supabase } from './lib/supabaseClient'
 import { Check, X, Image, Settings, Move, RotateCcw } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { Link } from 'react-router-dom'
-import { formatThaiTime, formatThaiTimeOnly, formatThaiDateOnly } from './utils/timeUtils'
+import { formatThaiTime, formatThaiTimeOnly, formatThaiDateOnly, getThaiDate } from './utils/timeUtils'
 
 export default function AdminDashboard() {
     const [bookings, setBookings] = useState([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('dine_in') // 'dine_in' หรือ 'pickup'
+    const [filterMode, setFilterMode] = useState('today') // 'today', 'all'
 
     useEffect(() => {
         fetchBookings()
@@ -22,12 +23,12 @@ export default function AdminDashboard() {
         return () => {
             supabase.removeChannel(subscription)
         }
-    }, [])
+    }, [filterMode])
 
     const fetchBookings = async () => {
         setLoading(true)
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('bookings')
                 .select(`
                     *,
@@ -39,7 +40,19 @@ export default function AdminDashboard() {
                     profiles ( display_name, phone_number ),
                     tables_layout ( table_name )
                 `)
-                .order('created_at', { ascending: false })
+
+            if (filterMode === 'today') {
+                const today = getThaiDate() // YYYY-MM-DD
+                query = query.gte('booking_time', `${today}T00:00:00+07:00`)
+                    .lte('booking_time', `${today}T23:59:59+07:00`)
+                // If today, order by booking time asc (Schedule view)
+                query = query.order('booking_time', { ascending: true })
+            } else {
+                // If all history, order by created_at desc (Latest first)
+                query = query.order('created_at', { ascending: false })
+            }
+
+            const { data, error } = await query
 
             if (error) throw error
             setBookings(data || [])
@@ -79,6 +92,21 @@ export default function AdminDashboard() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h1 className="text-2xl font-bold text-primary">จัดการออเดอร์ (Staff Dashboard)</h1>
                     <div className="flex gap-2">
+                        {/* Filter Toggle */}
+                        <div className="bg-gray-800 p-1 rounded-xl flex">
+                            <button
+                                onClick={() => setFilterMode('today')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterMode === 'today' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                วันนี้
+                            </button>
+                            <button
+                                onClick={() => setFilterMode('all')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterMode === 'all' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                ทั้งหมด
+                            </button>
+                        </div>
                         <button onClick={fetchBookings} className="px-4 py-2 bg-primary text-bgDark font-bold rounded-xl shadow-sm hover:bg-primary/80 transition-colors flex items-center gap-2">
                             <RotateCcw className="w-4 h-4" /> Refresh
                         </button>
@@ -149,22 +177,20 @@ export default function AdminDashboard() {
                             <div className="flex justify-between items-center pt-2 border-t border-gray-800 mt-1">
                                 <div className="font-mono font-bold text-xl text-primary">{booking.total_amount.toLocaleString()}.-</div>
                                 <div className="flex gap-2">
-                                    {/* Slip Link */}
                                     {booking.payment_slip_url && (
-                                        <a href={`https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="bg-gray-700 p-2 rounded-lg text-white">
-                                            <Image size={16} />
+                                        <a href={booking.payment_slip_url} target="_blank" rel="noreferrer" className="p-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600">
+                                            <Image size={18} />
                                         </a>
                                     )}
-
-                                    {/* Actions */}
                                     {booking.status === 'pending' && (
                                         <>
-                                            <button onClick={() => updateStatus(booking.id, 'confirmed')} className="bg-green-600 text-white p-2 rounded-lg"><Check size={16} /></button>
-                                            <button onClick={() => updateStatus(booking.id, 'cancelled')} className="bg-red-600 text-white p-2 rounded-lg"><X size={16} /></button>
+                                            <button onClick={() => updateStatus(booking.id, 'confirmed')} className="p-2 bg-green-500/20 text-green-400 rounded-lg border border-green-500/50 hover:bg-green-500/30">
+                                                <Check size={18} />
+                                            </button>
+                                            <button onClick={() => updateStatus(booking.id, 'cancelled')} className="p-2 bg-red-500/20 text-red-400 rounded-lg border border-red-500/50 hover:bg-red-500/30">
+                                                <X size={18} />
+                                            </button>
                                         </>
-                                    )}
-                                    {booking.status === 'confirmed' && (
-                                        <button onClick={() => updateStatus(booking.id, 'completed')} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Finish</button>
                                     )}
                                 </div>
                             </div>
@@ -173,94 +199,93 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 2. Desktop Table View (>= md) */}
-                <div className="hidden md:block bg-cardDark rounded-3xl shadow overflow-hidden border border-gray-800">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-bgDark/50 text-secondaryText uppercase text-xs">
-                                <tr>
-                                    <th className="p-4">เวลา</th>
-                                    <th className="p-4">{activeTab === 'dine_in' ? 'โต๊ะ' : 'ผู้รับ'}</th>
-                                    <th className="p-4">ลูกค้า</th>
-                                    <th className="p-4">รายการอาหาร</th>
-                                    <th className="p-4">ยอดรวม</th>
-                                    <th className="p-4">สลิป</th>
-                                    <th className="p-4">สถานะ</th>
-                                    <th className="p-4">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-800">
-                                {loading ? (
-                                    <tr><td colSpan="8" className="p-4 text-center text-secondaryText">Loading...</td></tr>
-                                ) : filteredBookings.length === 0 ? (
-                                    <tr><td colSpan="8" className="p-10 text-center text-secondaryText">ไม่มีรายการในหมวดหมู่นี้</td></tr>
-                                ) : filteredBookings.map((booking) => (
-                                    <tr key={booking.id} className="hover:bg-bgDark/50 transition-colors">
-                                        <td className="p-4 text-white">
-                                            {booking.booking_type === 'pickup'
-                                                ? formatThaiTimeOnly(booking.booking_time)
-                                                : formatThaiTime(booking.booking_time)
-                                            }
-                                        </td>
-                                        <td className="p-4 text-white">
-                                            {booking.booking_type === 'dine_in'
-                                                ? (booking.tables_layout?.table_name || '-')
-                                                : (<div>
-                                                    <div className="font-bold">{booking.pickup_contact_name}</div>
-                                                    <div className="text-xs text-secondaryText">{booking.pickup_contact_phone}</div>
-                                                </div>)
-                                            }
-                                        </td>
-                                        <td className="p-4 text-white">
-                                            <div className="flex flex-col">
-                                                <span>{booking.profiles?.display_name || 'Guest'}</span>
-                                                <span className="text-xs text-secondaryText">{booking.profiles?.phone_number}</span>
-                                                {booking.customer_note && <div className="mt-1 text-xs text-[#DFFF00] bg-white/5 p-1 rounded border border-white/10 whitespace-pre-wrap">{booking.customer_note}</div>}
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <ul className="list-disc list-inside text-sm text-secondaryText">
-                                                {booking.order_items.map((item, i) => (
-                                                    <li key={i}>
-                                                        {item.menu_items?.name} x{item.quantity}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </td>
-                                        <td className="p-4 font-mono text-primary font-bold">
-                                            {booking.total_amount.toLocaleString()}.-
-                                        </td>
-                                        <td className="p-4">
-                                            {booking.payment_slip_url ? (
-                                                <a href={`https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                                                    <Image size={16} /> ดูสลิป
-                                                </a>
-                                            ) : '-'}
-                                        </td>
-                                        <td className="p-4">
-                                            {getStatusBadge(booking.status)}
-                                        </td>
-                                        <td className="p-4">
-                                            {booking.status === 'pending' && (
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => updateStatus(booking.id, 'confirmed')} className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-lg transition-colors" title="Confirm">
-                                                        <Check size={16} />
-                                                    </button>
-                                                    <button onClick={() => updateStatus(booking.id, 'cancelled')} className="bg-red-600 hover:bg-red-500 text-white p-2 rounded-lg transition-colors" title="Cancel">
-                                                        <X size={16} />
-                                                    </button>
+                <div className="hidden md:block overflow-x-auto rounded-3xl border border-gray-800 shadow-xl">
+                    <table className="w-full bg-cardDark text-left border-collapse">
+                        <thead className="bg-[#1A1A1A] text-secondaryText uppercase text-xs tracking-wider">
+                            <tr>
+                                <th className="p-4 border-b border-gray-800">Time</th>
+                                <th className="p-4 border-b border-gray-800">Date</th>
+                                <th className="p-4 border-b border-gray-800">Table</th>
+                                <th className="p-4 border-b border-gray-800">Customer</th>
+                                <th className="p-4 border-b border-gray-800">Details</th>
+                                <th className="p-4 border-b border-gray-800 text-right">Total</th>
+                                <th className="p-4 border-b border-gray-800">Slip</th>
+                                <th className="p-4 border-b border-gray-800">Status</th>
+                                <th className="p-4 border-b border-gray-800">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-800">
+                            {loading ? (
+                                <tr><td colSpan="9" className="p-8 text-center text-gray-500">Loading bookings...</td></tr>
+                            ) : filteredBookings.length === 0 ? (
+                                <tr><td colSpan="9" className="p-8 text-center text-gray-500">No bookings found in this category.</td></tr>
+                            ) : filteredBookings.map((booking) => (
+                                <tr key={booking.id} className="hover:bg-white/5 transition-colors group">
+                                    <td className="p-4 font-bold text-white border-r border-gray-800/50">
+                                        {formatThaiTimeOnly(booking.booking_time)}
+                                    </td>
+                                    <td className="p-4 text-sm text-secondaryText">
+                                        {formatThaiDateOnly(booking.booking_time)}
+                                    </td>
+                                    <td className="p-4">
+                                        {booking.booking_type === 'dine_in' ? (
+                                            <span className="bg-gray-800 text-white px-2 py-1 rounded text-xs font-bold">
+                                                {booking.tables_layout?.table_name}
+                                            </span>
+                                        ) : (
+                                            <span className="text-secondaryText text-xs">Pickup</span>
+                                        )}
+                                    </td>
+                                    <td className="p-4">
+                                        <div className="font-bold text-white text-sm">
+                                            {booking.booking_type === 'pickup' ? booking.pickup_contact_name : (booking.profiles?.display_name || 'Guest')}
+                                        </div>
+                                        <div className="text-xs text-secondaryText">
+                                            {booking.booking_type === 'pickup' ? booking.pickup_contact_phone : booking.profiles?.phone_number}
+                                        </div>
+                                        {booking.customer_note && <div className="text-xs text-[#DFFF00] mt-1">{booking.customer_note}</div>}
+                                    </td>
+                                    <td className="p-4 max-w-xs">
+                                        <div className="flex flex-col gap-1">
+                                            {booking.order_items.map((item, i) => (
+                                                <div key={i} className="flex justify-between text-xs text-gray-400">
+                                                    <span>{item.menu_items?.name}</span>
+                                                    <span className="text-gray-500">x{item.quantity}</span>
                                                 </div>
-                                            )}
-                                            {booking.status === 'confirmed' && (
-                                                <button onClick={() => updateStatus(booking.id, 'completed')} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg transition-colors flex items-center gap-2 text-xs" title="Clear Table / Complete">
-                                                    <Check size={14} /> Clear / Finish
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-right font-mono font-bold text-primary">
+                                        {booking.total_amount.toLocaleString()}
+                                    </td>
+                                    <td className="p-4">
+                                        {booking.payment_slip_url ? (
+                                            <a href={booking.payment_slip_url} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-xs">
+                                                <Image size={14} /> View
+                                            </a>
+                                        ) : (
+                                            <span className="text-gray-600 text-xs">-</span>
+                                        )}
+                                    </td>
+                                    <td className="p-4">
+                                        {getStatusBadge(booking.status)}
+                                    </td>
+                                    <td className="p-4">
+                                        {booking.status === 'pending' && (
+                                            <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => updateStatus(booking.id, 'confirmed')} className="p-1.5 bg-green-500 rounded text-black hover:bg-green-400 shadow-lg hover:scale-105 transition-transform" title="Approve">
+                                                    <Check size={16} />
                                                 </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                <button onClick={() => updateStatus(booking.id, 'cancelled')} className="p-1.5 bg-red-500 rounded text-white hover:bg-red-400 shadow-lg hover:scale-105 transition-transform" title="Reject">
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </PageTransition>
