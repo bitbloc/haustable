@@ -116,48 +116,23 @@ const KineticText = ({
     const smoothMouseY = useSpring(mouseY, { damping: 20, stiffness: 150 });
 
     useEffect(() => {
-        let animationFrame;
-        let lastInteraction = 0;
-
-        // Idle Animation Loop
-        const animateIdle = () => {
-            const now = Date.now();
-            // If no interaction for 2 seconds, assume idle
-            if (now - lastInteraction > 2000) {
-                // Idle Mode: Gentle "Breathing" / Figure-8 pattern
-                // We use a slow timer
-                const time = now / 3000;
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-
-                // Radius
-                const rx = Math.min(window.innerWidth * 0.2, 200);
-                const ry = Math.min(window.innerHeight * 0.1, 100);
-
-                // Figure-8: x = sin(t), y = sin(2t)
-                const targetX = centerX + Math.sin(time) * rx;
-                const targetY = centerY + Math.sin(time * 2) * ry;
-
-                mouseX.set(targetX);
-                mouseY.set(targetY);
-            }
-            animationFrame = requestAnimationFrame(animateIdle);
-        };
-        animationFrame = requestAnimationFrame(animateIdle);
-
-
-
         const handleMouseMove = (e) => {
-            lastInteraction = Date.now();
             mouseX.set(e.clientX);
             mouseY.set(e.clientY);
         };
 
         window.addEventListener('mousemove', handleMouseMove);
 
+        // Reset to center on mouse leave
+        const handleMouseLeave = () => {
+            mouseX.set(0);
+            mouseY.set(0);
+        }
+        window.addEventListener('mouseleave', handleMouseLeave);
+
         return () => {
-            cancelAnimationFrame(animationFrame);
             window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseleave', handleMouseLeave);
         };
     }, [mouseX, mouseY]);
 
