@@ -27,44 +27,57 @@ export default function Home() {
     }
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                // ... (settings load)
-                const { data, error } = await supabase.from('app_settings').select('*')
+        // 1. Safety Timeout (Ensures "LOADING" never stays forever)
+        const safetyTimer = setTimeout(() => {
+            setStatus(prev => prev.text === 'LOADING' ? { isOpen: true, text: 'OPEN' } : prev)
+        }, 3000)
 
+        // 2. Fetch Settings (Independent)
+        const fetchSettings = async () => {
+            try {
+                const { data, error } = await supabase.from('app_settings').select('*')
                 if (error) {
+                    // Silently fail or log, will fallback to safety timer or defaults
                     console.error("Settings Error:", error)
-                    // Fallback defaults if DB fails
-                    setStatus({ isOpen: true, text: 'OPEN (Offline Mode)' })
-                } else if (data) {
+                    return
+                }
+                if (data) {
                     const map = data.reduce((acc, i) => ({ ...acc, [i.key]: i.value }), {})
                     setSettings(map)
                     setStatus(checkShopStatus(map))
                 }
             } catch (err) {
-                console.error("Load Error:", err)
-                setStatus({ isOpen: true, text: 'OPEN' })
-            }
-
-            // Check User
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session?.user) {
-                setUser(session.user)
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-                if (profile) setUserRole(profile.role)
-            } else {
-                setUser(null)
-                setUserRole(null)
+                console.error("Settings Load Exception:", err)
             }
         }
-        load()
+
+        // 3. Fetch User & Role (Independent)
+        const fetchUser = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+                if (session?.user) {
+                    setUser(session.user)
+                    // Fetch Role
+                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+                    if (profile) setUserRole(profile.role)
+                } else {
+                    setUser(null)
+                    setUserRole(null)
+                }
+            } catch (err) {
+                console.error("User Load Exception:", err)
+            }
+        }
+
+        fetchSettings()
+        fetchUser()
+
         const interval = setInterval(() => { if (settings) setStatus(checkShopStatus(settings)) }, 60000)
 
         // Auth Listener
         const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setUser(session?.user || null)
             if (session?.user) {
-                // Manually fetch role to update UI immediately
                 const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
                 if (profile) setUserRole(profile.role)
             } else {
@@ -73,6 +86,7 @@ export default function Home() {
         })
 
         return () => {
+            clearTimeout(safetyTimer)
             clearInterval(interval)
             authListener.subscription.unsubscribe()
         }
