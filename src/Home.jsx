@@ -7,12 +7,11 @@ import { useLanguage } from './context/LanguageContext'
 import KineticText from './components/KineticText'
 import AuthModal from './components/AuthModal' // Added Import
 
-export default function Home() {
+export default function Home({ session }) {
     const { t } = useLanguage()
     const [status, setStatus] = useState({ isOpen: false, text: 'LOADING' })
     const [settings, setSettings] = useState(null)
-    const [user, setUser] = useState(null)
-    const [userRole, setUserRole] = useState(null) // NEW: Dedicated state for role
+    const [userRole, setUserRole] = useState(null) // Dedicated state for role
     const [showAuthModal, setShowAuthModal] = useState(false)
 
     // Check Status Logic
@@ -37,7 +36,6 @@ export default function Home() {
             try {
                 const { data, error } = await supabase.from('app_settings').select('*')
                 if (error) {
-                    // Silently fail or log, will fallback to safety timer or defaults
                     console.error("Settings Error:", error)
                     return
                 }
@@ -51,63 +49,46 @@ export default function Home() {
             }
         }
 
-        // 3. Fetch User & Role (Independent)
-        const fetchUser = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession()
-                if (session?.user) {
-                    setUser(session.user)
-                    // Fetch Role
-                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-                    if (profile) setUserRole(profile.role)
-                } else {
-                    setUser(null)
-                    setUserRole(null)
-                }
-            } catch (err) {
-                console.error("User Load Exception:", err)
-            }
-        }
-
         fetchSettings()
-        fetchUser()
 
         const interval = setInterval(() => { if (settings) setStatus(checkShopStatus(settings)) }, 60000)
 
-        // Auth Listener
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setUser(session?.user || null)
+        return () => {
+            clearTimeout(safetyTimer)
+            clearInterval(interval)
+        }
+    }, [])
+
+    useEffect(() => { if (settings) setStatus(checkShopStatus(settings)) }, [settings])
+
+    // Fetch Role when session changes
+    useEffect(() => {
+        const fetchRole = async () => {
             if (session?.user) {
                 const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
                 if (profile) setUserRole(profile.role)
             } else {
                 setUserRole(null)
             }
-        })
-
-        return () => {
-            clearTimeout(safetyTimer)
-            clearInterval(interval)
-            authListener.subscription.unsubscribe()
         }
-    }, [])
-
-    useEffect(() => { if (settings) setStatus(checkShopStatus(settings)) }, [settings])
+        fetchRole()
+    }, [session])
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
-        setUser(null)
         setUserRole(null)
+        // Session update will be handled by App.jsx listener
     }
+
 
     return (
         <div className="min-h-[90vh] flex flex-col items-center justify-center p-6 text-center bg-[#F4F4F4] text-[#111] relative">
 
             {/* Top Right Login / Profile */}
             <div className="absolute top-4 right-4 z-50">
-                {user ? (
+                {session?.user ? (
                     <div className="flex items-center gap-3 bg-white pl-4 pr-2 py-2 rounded-full shadow-sm border border-gray-200">
-                        <span className="text-xs font-bold truncate max-w-[100px] text-black">{user.user_metadata.full_name || 'User'}</span>
+                        <span className="text-xs font-bold truncate max-w-[100px] text-black">{session.user.user_metadata.full_name || 'User'}</span>
                         {userRole === 'admin' ? (
                             <Link to="/admin" className="bg-black text-white px-3 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform shadow-lg">
                                 Admin
@@ -226,7 +207,7 @@ export default function Home() {
             >
                 {status.isOpen ? (
                     <>
-                        {!user ? (
+                        {!session?.user ? (
                             <div className="flex flex-col gap-4 animate-fade-in">
                                 <div className="text-red-500 font-bold bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-red-200 text-sm shadow-lg">
                                     ⚠️ กรุณา Log-in ก่อนสั่งอาหารหรือจองโต๊ะ

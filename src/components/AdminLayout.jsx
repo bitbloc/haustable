@@ -10,20 +10,32 @@ export default function AdminLayout() {
 
     useEffect(() => {
         const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (error || !user) {
+                    console.error("Admin Auth Error:", error);
+                    setIsAdmin(false);
+                    return;
+                }
+
+                // Security Check
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError) {
+                    console.error("Profile Fetch Error:", profileError);
+                    setIsAdmin(false);
+                    return;
+                }
+
+                setIsAdmin(profile?.role === 'admin');
+            } catch (err) {
+                console.error("Unexpected Admin Auth Error:", err);
                 setIsAdmin(false);
-                return;
             }
-
-            // เช็คว่าเป็น Admin จริงไหม (Security Check)
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', user.id)
-                .single();
-
-            setIsAdmin(profile?.role === 'admin');
         };
         checkUser();
     }, []);

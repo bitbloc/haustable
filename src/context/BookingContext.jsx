@@ -12,22 +12,18 @@ export function BookingProvider({ children }) {
     useEffect(() => {
         const loadData = async () => {
             try {
-                // 1. Parallel Fetch
+                // 1. FAST LOAD (Critical for UI)
                 const [
                     { data: tables },
                     { data: settingsData },
-                    { data: menuRaw },
-                    { data: categories },
                     { data: { user } }
                 ] = await Promise.all([
                     supabase.from('tables_layout').select('*'),
                     supabase.from('app_settings').select('*'),
-                    supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('category'),
-                    supabase.from('menu_categories').select('*').order('display_order'),
                     supabase.auth.getUser()
                 ])
 
-                // 2. Parse Settings
+                // Parse Settings
                 const settings = initialState.settings
                 if (settingsData) {
                     const map = settingsData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
@@ -39,7 +35,7 @@ export function BookingProvider({ children }) {
                     if (map.booking_time_slots) settings.bookingTimeSlots = map.booking_time_slots.split(',').map(s => s.trim())
                 }
 
-                // 3. User Profile
+                // User Profile
                 let userProfile = null
                 if (user) {
                     const { data: profile } = await supabase.from('profiles').select('phone_number').eq('id', user.id).single()
@@ -49,14 +45,31 @@ export function BookingProvider({ children }) {
                     }
                 }
 
+                // UNBLOCK UI NOW
                 dispatch({
-                    type: 'LOAD_DATA_SUCCESS',
+                    type: 'LOAD_INITIAL_SUCCESS',
                     payload: {
                         tables: tables || [],
-                        menuItems: menuRaw || [],
-                        categories: categories || [],
                         settings,
                         user: userProfile
+                    }
+                })
+
+                // 2. BACKGROUND LOAD (Heavy Menu Data)
+                // Fetch menu items and categories asynchronously
+                const [
+                    { data: menuRaw },
+                    { data: categories }
+                ] = await Promise.all([
+                    supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('category'),
+                    supabase.from('menu_categories').select('*').order('display_order')
+                ])
+
+                dispatch({
+                    type: 'LOAD_MENU_SUCCESS',
+                    payload: {
+                        menuItems: menuRaw || [],
+                        categories: categories || []
                     }
                 })
 

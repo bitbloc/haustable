@@ -39,16 +39,22 @@ export const initialState = {
 export function bookingReducer(state, action) {
     switch (action.type) {
         // --- Data Loading ---
-        case 'LOAD_DATA_SUCCESS':
+        // --- Data Loading ---
+        case 'LOAD_INITIAL_SUCCESS':
             return {
                 ...state,
                 tables: action.payload.tables || [],
-                menuItems: action.payload.menuItems || [],
-                categories: action.payload.categories || [],
                 settings: { ...state.settings, ...action.payload.settings },
                 contactName: action.payload.user?.name || state.contactName,
                 contactPhone: action.payload.user?.phone || state.contactPhone,
-                isLoading: false
+                isLoading: false // FAST LOAD DONE
+            }
+
+        case 'LOAD_MENU_SUCCESS':
+            return {
+                ...state,
+                menuItems: action.payload.menuItems || [],
+                categories: action.payload.categories || []
             }
 
         case 'SET_BOOKED_TABLES':
