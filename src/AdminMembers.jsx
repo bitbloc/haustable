@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Shield, User, Phone, Edit2, X, Clock } from 'lucide-react'
+import { Search, Shield, User, Phone, Edit2, X, Clock, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 
@@ -83,6 +83,22 @@ export default function AdminMembers() {
             alert("Could not load history")
         } finally {
             setHistoryLoading(false)
+        }
+    }
+
+    // Delete User
+    const handleDeleteUser = async (member) => {
+        if (!confirm(`Are you sure you want to DELETE user "${member.display_name}"?\nThis action cannot be undone.`)) return
+
+        try {
+            const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: member.id })
+            if (error) throw error
+
+            // Update UI
+            setMembers(prev => prev.filter(m => m.id !== member.id))
+        } catch (err) {
+            console.error(err)
+            alert('Failed to delete user: ' + err.message)
         }
     }
 
@@ -212,16 +228,24 @@ export default function AdminMembers() {
                                 </div>
                             </div>
 
-                            {/* Toggle Switch */}
-                            <div className="flex items-center gap-3 w-full md:w-auto justify-center pt-4 md:pt-0 border-t md:border-t-0 border-white/10">
-                                <span className={`text-xs font-bold uppercase ${member.role === 'admin' ? 'text-[#DFFF00]' : 'text-gray-500'}`}>
-                                    {member.role}
-                                </span>
+                            {/* Toggle Switch & Delete */}
+                            <div className="flex flex-col items-end gap-2 w-full md:w-auto justify-center pt-4 md:pt-0 border-t md:border-t-0 border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <span className={`text-xs font-bold uppercase ${member.role === 'admin' ? 'text-[#DFFF00]' : 'text-gray-500'}`}>
+                                        {member.role}
+                                    </span>
+                                    <button
+                                        onClick={() => handleToggleRole(member)}
+                                        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${member.role === 'admin' ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${member.role === 'admin' ? 'translate-x-6' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
                                 <button
-                                    onClick={() => handleToggleRole(member)}
-                                    className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${member.role === 'admin' ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                                    onClick={() => handleDeleteUser(member)}
+                                    className="flex items-center gap-1 text-red-500 hover:text-red-400 text-xs font-bold px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
                                 >
-                                    <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${member.role === 'admin' ? 'translate-x-6' : 'translate-x-0'}`} />
+                                    <Trash2 size={12} /> Delete User
                                 </button>
                             </div>
 
