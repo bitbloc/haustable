@@ -46,11 +46,32 @@ export default function PickupPage() {
         const fetchMenu = async () => {
             // 1. Menu
             // 1. Menu & Categories
-            const { data: m } = await supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('category')
-            setMenuItems(m || [])
+            // 1. Menu & Categories
+            const { data: menuRaw } = await supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').order('category')
 
             const { data: c } = await supabase.from('menu_categories').select('*').order('display_order')
             setCategories(c || [])
+
+            // SMART SORT logic
+            const categoryOrder = (c || []).reduce((acc, cat, idx) => {
+                acc[cat.name] = cat.display_order ?? idx
+                return acc
+            }, {})
+
+            const sortedMenu = (menuRaw || [])
+                .filter(item => item.is_pickup_available !== false) // Filter out items not for pickup
+                .sort((a, b) => {
+                    // 1. Availability (available first using is_available)
+                    if (a.is_available !== b.is_available) return b.is_available - a.is_available
+                    // 2. Category Order
+                    const orderA = categoryOrder[a.category] ?? 999
+                    const orderB = categoryOrder[b.category] ?? 999
+                    if (orderA !== orderB) return orderA - orderB
+                    // 3. Name
+                    return a.name.localeCompare(b.name)
+                })
+
+            setMenuItems(sortedMenu)
 
             // 2. Settings (Policy & QR)
             const { data: settings } = await supabase.from('app_settings').select('*')

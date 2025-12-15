@@ -61,14 +61,33 @@ export function BookingProvider({ children }) {
                     { data: menuRaw },
                     { data: categories }
                 ] = await Promise.all([
-                    supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('category'),
+                    supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').order('category'),
                     supabase.from('menu_categories').select('*').order('display_order')
                 ])
+
+                // SMART SORT: 1. Category Order, 2. Available First, 3. Name
+                const categoryOrder = (categories || []).reduce((acc, cat, idx) => {
+                    acc[cat.name] = cat.display_order ?? idx
+                    return acc
+                }, {})
+
+                const sortedMenu = (menuRaw || []).sort((a, b) => {
+                    // 1. Availability (True first)
+                    if (a.is_available !== b.is_available) return b.is_available - a.is_available
+
+                    // 2. Category Order
+                    const orderA = categoryOrder[a.category] ?? 999
+                    const orderB = categoryOrder[b.category] ?? 999
+                    if (orderA !== orderB) return orderA - orderB
+
+                    // 3. Name
+                    return a.name.localeCompare(b.name)
+                })
 
                 dispatch({
                     type: 'LOAD_MENU_SUCCESS',
                     payload: {
-                        menuItems: menuRaw || [],
+                        menuItems: sortedMenu,
                         categories: categories || []
                     }
                 })

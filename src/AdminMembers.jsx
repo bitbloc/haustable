@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Shield, ShieldOff, User, Phone, Calendar } from 'lucide-react'
+import { Search, Shield, ShieldOff, User, Phone, Calendar, Edit2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function AdminMembers() {
@@ -81,6 +81,17 @@ export default function AdminMembers() {
         }
     }
 
+    // Update Note
+    const handleUpdateNote = async (userId, note) => {
+        try {
+            const { error } = await supabase.from('profiles').update({ admin_notes: note }).eq('id', userId)
+            if (error) throw error
+            setMembers(prev => prev.map(m => m.id === userId ? { ...m, admin_notes: note } : m))
+        } catch (err) {
+            alert('Failed to update note')
+        }
+    }
+
     const filteredMembers = members.filter(m =>
         (m.display_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (m.phone_number || '').includes(searchTerm)
@@ -135,6 +146,17 @@ export default function AdminMembers() {
                                         <span className="flex items-center gap-1 justify-center md:justify-start"><Phone size={12} /> {member.phone_number}</span>
                                     )}
                                     <span className="flex items-center gap-1 justify-center md:justify-start font-mono text-gray-500">ID: {member.id.substring(0, 8)}...</span>
+                                </div>
+                                <div className="mt-3">
+                                    <button
+                                        onClick={() => {
+                                            const note = prompt("Edit Customer Note:", member.admin_notes || '')
+                                            if (note !== null) handleUpdateNote(member.id, note)
+                                        }}
+                                        className="text-xs flex items-center gap-1 text-gray-500 hover:text-[#DFFF00] transition-colors"
+                                    >
+                                        <Edit2 size={12} /> {member.admin_notes ? <span className="text-white">{member.admin_notes}</span> : "Add Note"}
+                                    </button>
                                 </div>
                             </div>
 
