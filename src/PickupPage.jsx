@@ -61,13 +61,15 @@ export default function PickupPage() {
             const sortedMenu = (menuRaw || [])
                 .filter(item => item.is_pickup_available !== false) // Filter out items not for pickup
                 .sort((a, b) => {
-                    // 1. Availability (available first using is_available)
-                    if (a.is_available !== b.is_available) return b.is_available - a.is_available
-                    // 2. Category Order
+                    // 1. Recommended (Top Priority)
+                    if (a.is_recommended !== b.is_recommended) return (b.is_recommended ? 1 : 0) - (a.is_recommended ? 1 : 0)
+                    // 2. Availability (available first using is_available)
+                    if (a.is_available !== b.is_available) return (b.is_available ? 1 : 0) - (a.is_available ? 1 : 0)
+                    // 3. Category Order
                     const orderA = categoryOrder[a.category] ?? 999
                     const orderB = categoryOrder[b.category] ?? 999
                     if (orderA !== orderB) return orderA - orderB
-                    // 3. Name
+                    // 4. Name
                     return a.name.localeCompare(b.name)
                 })
 
