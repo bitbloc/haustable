@@ -31,17 +31,16 @@ export default function AuthModal({ isOpen, onClose }) {
     const [pdpaConsent, setPdpaConsent] = useState(false) // New
 
     // Bot Protection
-    const [mathChallenge, setMathChallenge] = useState({ a: 0, b: 0, ans: 0 })
-    const [mathInput, setMathInput] = useState('')
+    const [botChallenge, setBotChallenge] = useState({ word: '' })
+    const [botInput, setBotInput] = useState('')
+
+    const challengeWords = ['HAUS', 'TABLE', 'MENU', 'CHEF', 'FRESH', 'FOOD', 'YUMMY']
 
     useEffect(() => {
         if (isOpen) {
             // Reset state or initialize
-            setMathChallenge({
-                a: Math.floor(Math.random() * 5) + 1,
-                b: Math.floor(Math.random() * 5) + 1,
-                ans: Math.floor(Math.random() * 5) + 1 + Math.floor(Math.random() * 5) + 1
-            })
+            const randomWord = challengeWords[Math.floor(Math.random() * challengeWords.length)]
+            setBotChallenge({ word: randomWord })
             checkLineSync()
         }
     }, [isOpen])
@@ -107,7 +106,7 @@ export default function AuthModal({ isOpen, onClose }) {
         if (step === 1) {
             if (!email || !password || !confirmPassword) return setError("Please fill all fields")
             if (password !== confirmPassword) return setError("Passwords do not match")
-            if (parseInt(mathInput) !== mathChallenge.ans) return setError("Math Incorrect")
+            if (botInput.toUpperCase() !== botChallenge.word) return setError("Bot Check Failed: Incorrect Word")
         }
         if (step === 2) {
             if (!name) return setError("Name is required")
@@ -206,7 +205,19 @@ export default function AuthModal({ isOpen, onClose }) {
 
                         <form onSubmit={handleEmailLogin} className="space-y-4">
                             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" required />
-                            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" required />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none"
+                                    required
+                                />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                             <button disabled={loading} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:opacity-90">{loading ? '...' : 'Login'}</button>
                         </form>
 
@@ -249,15 +260,30 @@ export default function AuthModal({ isOpen, onClose }) {
                                         </div>
                                         <div className="relative">
                                             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" />
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                placeholder="Password"
+                                                value={password}
+                                                onChange={e => setPassword(e.target.value)}
+                                                className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 pr-10 text-white focus:border-[#DFFF00] outline-none"
+                                            />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
                                         </div>
                                         <div className="relative">
                                             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" />
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                placeholder="Confirm Password"
+                                                value={confirmPassword}
+                                                onChange={e => setConfirmPassword(e.target.value)}
+                                                className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 pr-10 text-white focus:border-[#DFFF00] outline-none"
+                                            />
                                         </div>
-                                        <div className="bg-[#222] p-3 rounded-xl border border-white/5 flex items-center gap-3">
-                                            <span className="text-xs text-gray-400">Human Check: {mathChallenge.a} + {mathChallenge.b} = </span>
-                                            <input type="number" value={mathInput} onChange={e => setMathInput(e.target.value)} className="w-16 bg-[#111] border border-white/10 rounded p-1 text-center text-white" />
+                                        <div className="bg-[#222] p-3 rounded-xl border border-white/5 flex items-center justify-between gap-3">
+                                            <span className="text-xs text-gray-400">Type the word: <span className="text-[#DFFF00] font-bold text-sm tracking-wider">{botChallenge.word}</span></span>
+                                            <input type="text" value={botInput} onChange={e => setBotInput(e.target.value)} placeholder={botChallenge.word} className="w-24 bg-[#111] border border-white/10 rounded p-1 text-center text-white uppercase" />
                                         </div>
                                     </motion.div>
                                 )}
