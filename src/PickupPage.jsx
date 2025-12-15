@@ -262,7 +262,7 @@ export default function PickupPage() {
                             </div>
 
                             {/* Menu Grid */}
-                            <div className="flex-1 overflow-y-auto pr-1 pb-20">
+                            <div className="flex-1 overflow-y-auto pr-1 pb-32">
                                 <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                     {filteredMenu.map(item => (
                                         <MenuCard
@@ -278,21 +278,44 @@ export default function PickupPage() {
                                 </div>
                             </div>
 
-                            {/* Footer Cart Bar */}
-                            {cart.length > 0 && (
-                                <div className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto">
-                                    <div onClick={() => setStep(2)} className="bg-black text-white p-4 rounded-xl flex justify-between items-center cursor-pointer hover:bg-gray-800 transition-colors shadow-2xl">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-white text-black w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">{cart.reduce((a, b) => a + b.qty, 0)}</div>
+                            {/* Footer Cart Bar - Full Width Floating */}
+                            <AnimatePresence>
+                                {cart.length > 0 && (
+                                    <motion.div
+                                        initial={{ y: 100, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        exit={{ y: 100, opacity: 0 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 p-4 pb-8 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.1)]"
+                                    >
+                                        <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
+                                            {/* Left: Info */}
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">{t('cartTotal')}</span>
-                                                <span className="font-mono font-bold text-lg leading-none">{cartTotal}.-</span>
+                                                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
+                                                <div className="flex items-end gap-2">
+                                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} Items</span>
+                                                    <motion.span
+                                                        key={cartTotal}
+                                                        initial={{ scale: 1.2, color: '#DFFF00' }}
+                                                        animate={{ scale: 1, color: '#000000' }}
+                                                        className="font-mono font-bold text-2xl leading-none"
+                                                    >
+                                                        ฿{cartTotal}
+                                                    </motion.span>
+                                                </div>
                                             </div>
+
+                                            {/* Right: Action */}
+                                            <button
+                                                onClick={() => setStep(2)}
+                                                className="bg-black text-[#DFFF00] px-8 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-gray-900 transition-transform active:scale-95 shadow-lg"
+                                            >
+                                                {t('next')} <ArrowRight size={18} />
+                                            </button>
                                         </div>
-                                        <div className="flex items-center gap-2 font-bold text-sm">{t('next')} <ArrowRight size={16} /></div>
-                                    </div>
-                                </div>
-                            )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </motion.div>
                     )}
 
