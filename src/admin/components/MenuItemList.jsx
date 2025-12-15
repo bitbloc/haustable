@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, Star, AlertCircle, Camera } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, Star, AlertCircle, Camera, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function MenuItemList() {
@@ -21,11 +21,12 @@ export default function MenuItemList() {
         category_id: '',
         description: '',
         is_available: true,
-        is_recommended: false
+        is_recommended: false,
+        is_pickup_available: true // New
     })
 
     const [selectedOptionGroups, setSelectedOptionGroups] = useState([])
-    const [activeTab, setActiveTab] = useState('normal') // normal, custom (though we only use normal for now)
+    const [activeTab, setActiveTab] = useState('normal') // normal, custom
 
     useEffect(() => {
         fetchData()
@@ -54,6 +55,15 @@ export default function MenuItemList() {
         setImageFile(null)
         setPreviewUrl(null)
         setImageRemoved(false)
+        setFormData({
+            name: '',
+            price: '',
+            category_id: '',
+            description: '',
+            is_available: true,
+            is_recommended: false,
+            is_pickup_available: true
+        })
         setIsModalOpen(true)
     }
 
@@ -65,7 +75,8 @@ export default function MenuItemList() {
             category_id: item.category_id || categories.find(c => c.name === item.category)?.id || '',
             description: item.description || '',
             is_available: item.is_available,
-            is_recommended: item.is_recommended
+            is_recommended: item.is_recommended,
+            is_pickup_available: item.is_pickup_available !== false // Default true
         })
 
         // Lazy Load Options
@@ -81,6 +92,24 @@ export default function MenuItemList() {
         setPreviewUrl(item.image_url)
         setImageRemoved(false)
         setIsModalOpen(true)
+    }
+
+    const handleTogglePickup = async (e, item) => {
+        e.stopPropagation() // Prevent opening edit modal
+        const newValue = item.is_pickup_available === false ? true : false
+
+        // Optimistic Update
+        setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: newValue } : i))
+
+        try {
+            const { error } = await supabase.from('menu_items').update({ is_pickup_available: newValue }).eq('id', item.id)
+            if (error) throw error
+        } catch (err) {
+            console.error("Toggle Error", err)
+            // Revert on error
+            setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: !newValue } : i))
+            alert("Failed to update status")
+        }
     }
 
     // Resize Utility
@@ -184,6 +213,7 @@ export default function MenuItemList() {
                 description: formData.description,
                 is_available: formData.is_available,
                 is_recommended: formData.is_recommended,
+                is_pickup_available: formData.is_pickup_available, // New
                 image_url: imageUrl
             }
 
@@ -243,9 +273,6 @@ export default function MenuItemList() {
         }
     }
 
-    // New Component: Option Picker Modal (nested or integrated) - using integrated list for now as per image 2
-    // The image shows "Add Option Group" opening a picker, but we can list them cleaner.
-
     return (
         <div className="text-white pb-20">
             {/* Header */}
@@ -271,7 +298,7 @@ export default function MenuItemList() {
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {items.map(item => (
-                                    <div key={item.id} className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all cursor-pointer" onClick={() => handleEdit(item)}>
+                                    <div key={item.id} className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all cursor-pointer relative" onClick={() => handleEdit(item)}>
                                         <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative">
                                             {item.image_url ? (
                                                 <img src={item.image_url} className="w-full h-full object-cover" />
@@ -291,6 +318,17 @@ export default function MenuItemList() {
                                                 {item.is_recommended && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded flex items-center gap-1"><Star size={8} fill="currentColor" /> แนะนำ</span>}
                                                 {!item.is_available && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">หมด</span>}
                                             </div>
+                                        </div>
+
+                                        {/* Inline Pickup Toggle (Bottom Right) */}
+                                        <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10" onClick={(e) => e.stopPropagation()}>
+                                            <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-gray-400' : 'text-gray-600'}`}>Pick-up</span>
+                                            <button
+                                                onClick={(e) => handleTogglePickup(e, item)}
+                                                className={`w-8 h-4 rounded-full p-0.5 transition-colors ${item.is_pickup_available !== false ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                                            >
+                                                <div className={`w-3 h-3 bg-black rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -420,8 +458,6 @@ export default function MenuItemList() {
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    // This usually opens a picker modal, but for simplicity/speed let's just toggle visibility of all options below or a separate small modal?
-                                                    // Let's verify how to best UX this. A small inline picker is good.
                                                     const picker = document.getElementById('option-picker')
                                                     if (picker) picker.classList.toggle('hidden')
                                                 }}
@@ -497,6 +533,19 @@ export default function MenuItemList() {
                                             </div>
                                             <input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" />
                                         </div>
+
+                                        {/* Modal Pickup Toggle */}
+                                        <div className="flex items-center justify-between p-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-500/20 text-blue-500' : 'bg-gray-800 text-gray-500'}`}><ShoppingBag size={20} /></div>
+                                                <div>
+                                                    <div className="font-bold text-sm">เปิดให้สั่ง Pick-up</div>
+                                                    <div className="text-xs text-gray-500">ถ้าปิด จะไม่แสดงในหน้า Pick-up</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" />
+                                        </div>
+
                                     </div>
 
                                     {/* Description */}

@@ -147,7 +147,10 @@ export default function AuthModal({ isOpen, onClose }) {
                     line_uid: lineUid,
                     role: 'customer'
                 })
-                if (profileError) console.error("Profile Error:", profileError)
+                if (profileError) {
+                    console.error("Profile Error:", profileError)
+                    throw new Error("Failed to create profile: " + profileError.message)
+                }
             }
 
             setView('success')
