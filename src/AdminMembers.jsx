@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Shield, ShieldOff, User, Phone, Calendar, Edit2 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Search, Shield, User, Phone, Edit2, X, Clock } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { format } from 'date-fns'
 
 export default function AdminMembers() {
     const [members, setMembers] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+
+    // History Modal State
+    const [selectedMember, setSelectedMember] = useState(null)
+    const [memberHistory, setMemberHistory] = useState([])
+    const [historyLoading, setHistoryLoading] = useState(false)
 
     // Fetch Data
     const fetchMembers = async () => {
@@ -21,8 +27,6 @@ export default function AdminMembers() {
             if (profileError) throw profileError
 
             // 2. Get Booking Counts (Aggregation)
-            // Note: asking for all bookings might be heavy later, but fine for now. 
-            // Better approach: .rpc() if complex, but client-side count is ok for < 1000 users.
             const { data: bookings, error: bookingError } = await supabase
                 .from('bookings')
                 .select('user_id, status')
@@ -37,7 +41,7 @@ export default function AdminMembers() {
                     ...p,
                     total_bookings: userBookings.length,
                     completed_bookings: completed,
-                    last_active: 'N/A' // strict auth logs not available to client easily, can add updated_at later
+                    last_active: 'N/A'
                 }
             })
 
@@ -54,6 +58,33 @@ export default function AdminMembers() {
     useEffect(() => {
         fetchMembers()
     }, [])
+
+    const handleViewHistory = async (member) => {
+        setSelectedMember(member)
+        setHistoryLoading(true)
+        setMemberHistory([])
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        menu_items (name)
+                    )
+                `)
+                .eq('user_id', member.id)
+                .order('created_at', { ascending: false })
+
+            if (error) throw error
+            setMemberHistory(data || [])
+        } catch (err) {
+            console.error(err)
+            alert("Could not load history")
+        } finally {
+            setHistoryLoading(false)
+        }
+    }
 
     // Toggle Role
     const handleToggleRole = async (member) => {
@@ -140,14 +171,17 @@ export default function AdminMembers() {
 
                             {/* Info */}
                             <div className="flex-1 text-center md:text-left min-w-0 w-full">
-                                <h3 className="font-bold text-lg text-white truncate">{member.display_name || 'Unknown User'}</h3>
+                                <div className="flex items-center justify-center md:justify-start gap-2">
+                                    <h3 className="font-bold text-lg text-white truncate">{member.display_name || 'Unknown User'}</h3>
+                                    {member.nickname && <span className="bg-gray-800 text-gray-300 text-[10px] px-2 py-0.5 rounded-full">({member.nickname})</span>}
+                                </div>
                                 <div className="flex flex-col md:flex-row gap-2 md:gap-4 text-xs text-gray-400 mt-1 justify-center md:justify-start">
                                     {member.phone_number && (
                                         <span className="flex items-center gap-1 justify-center md:justify-start"><Phone size={12} /> {member.phone_number}</span>
                                     )}
                                     <span className="flex items-center gap-1 justify-center md:justify-start font-mono text-gray-500">ID: {member.id.substring(0, 8)}...</span>
                                 </div>
-                                <div className="mt-3">
+                                <div className="mt-3 flex gap-3 justify-center md:justify-start">
                                     <button
                                         onClick={() => {
                                             const note = prompt("Edit Customer Note:", member.admin_notes || '')
@@ -156,6 +190,12 @@ export default function AdminMembers() {
                                         className="text-xs flex items-center gap-1 text-gray-500 hover:text-[#DFFF00] transition-colors"
                                     >
                                         <Edit2 size={12} /> {member.admin_notes ? <span className="text-white">{member.admin_notes}</span> : "Add Note"}
+                                    </button>
+                                    <button
+                                        onClick={() => handleViewHistory(member)}
+                                        className="text-xs flex items-center gap-1 text-[#DFFF00] hover:underline"
+                                    >
+                                        <Clock size={12} /> View History
                                     </button>
                                 </div>
                             </div>
@@ -189,6 +229,73 @@ export default function AdminMembers() {
                     ))
                 )}
             </div>
+
+            {/* History Modal */}
+            <AnimatePresence>
+                {selectedMember && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-[#1A1A1A] w-full max-w-2xl max-h-[85vh] rounded-3xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-white/10 flex justify-between items-start bg-[#222]">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white">{selectedMember.display_name}</h2>
+                                    <div className="flex flex-wrap gap-4 text-sm text-gray-400 mt-2">
+                                        {selectedMember.nickname && <span>Nickname: <span className="text-white">{selectedMember.nickname}</span></span>}
+                                        <span>Phone: <span className="text-white">{selectedMember.phone_number || '-'}</span></span>
+                                        <span>Gender: <span className="text-white">{selectedMember.gender || '-'}</span></span>
+                                        <span>Birthday: <span className="text-white">{selectedMember.birth_day ? `${selectedMember.birth_day}/${selectedMember.birth_month}` : '-'}</span></span>
+                                        <span>Line ID: <span className="text-white">{selectedMember.line_uid || '-'}</span></span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedMember(null)} className="p-2 hover:bg-white/10 rounded-full"><X className="text-gray-400 hover:text-white" /></button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6">
+                                <h3 className="font-bold text-[#DFFF00] mb-4 flex items-center gap-2">
+                                    <Clock size={18} /> Booking History
+                                </h3>
+
+                                {historyLoading ? (
+                                    <div className="text-center py-10 text-gray-500">Loading history...</div>
+                                ) : memberHistory.length === 0 ? (
+                                    <div className="text-center py-10 text-gray-600">No booking history found.</div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {memberHistory.map(booking => (
+                                            <div key={booking.id} className="bg-[#111] border border-white/5 rounded-xl p-4 flex justify-between items-center hover:border-white/10 transition-colors">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${booking.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                                                            booking.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                                'bg-gray-700 text-gray-400'
+                                                            }`}>
+                                                            {booking.status}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">{format(new Date(booking.created_at), 'dd MMM yyyy, HH:mm')}</span>
+                                                    </div>
+                                                    <div className="text-sm font-bold text-white mb-1">
+                                                        {booking.order_items?.map(i => `${i.menu_items?.name} (x${i.quantity})`).join(', ') || 'No Items'}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Type: <span className="capitalize">{booking.booking_type}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-[#DFFF00] font-mono font-bold">{booking.total_amount}.-</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

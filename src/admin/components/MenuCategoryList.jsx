@@ -77,9 +77,9 @@ export default function MenuCategoryList() {
                             </div>
                             <span className="font-bold text-lg">{cat.name}</span>
                         </div>
-                        <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEdit(cat)} className="p-2 hover:text-[#DFFF00]"><Edit2 size={16} /></button>
-                            <button onClick={() => handleDelete(cat.id)} className="p-2 hover:text-red-500"><Trash2 size={16} /></button>
+                        <div className="flex gap-2">
+                            <button onClick={() => handleEdit(cat)} className="p-2 text-gray-400 hover:text-[#DFFF00]"><Edit2 size={16} /></button>
+                            <button onClick={() => handleDelete(cat.id)} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                         </div>
                     </div>
                 ))}
