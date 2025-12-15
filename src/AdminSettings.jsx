@@ -107,90 +107,101 @@ export default function AdminSettings() {
         <div className="max-w-4xl mx-auto pb-20 animate-fade-in">
             <h1 className="text-3xl font-bold text-white mb-8">System Settings</h1>
 
-            <div className="grid md:grid-cols-2 gap-8">
-
-                {/* Shop Status Control */}
-                <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Power size={20} className={settings.shop_mode === 'manual_close' ? 'text-red-500' : 'text-brand'} />
-                        Shop Status
-                    </h2>
-
-                    <div className="space-y-3">
-                        {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                            <label key={mode} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${settings.shop_mode === mode ? 'bg-white/10 border-brand' : 'border-white/10 hover:bg-white/5'}`}>
-                                <input
-                                    type="radio"
-                                    name="shop_mode"
-                                    checked={settings.shop_mode === mode}
-                                    onChange={() => handleSave('shop_mode', mode)}
-                                    className="accent-brand w-5 h-5"
-                                />
-                                <div>
-                                    <span className="block text-white font-bold capitalize">{mode.replace('_', ' ')}</span>
-                                    <span className="text-xs text-gray-500">
-                                        {mode === 'auto' ? 'Based on schedule' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
-                                    </span>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="space-y-6">
+                    {/* Enable Booking System - Redesigned as a Card */}
+                    <label className={`block bg-[#111] p-6 rounded-3xl border transition-all cursor-pointer ${settings.is_menu_system_enabled === 'true' ? 'border-[#DFFF00]/50 shadow-[0_0_20px_rgba(223,255,0,0.1)]' : 'border-white/5 hover:bg-white/5'}`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}>
+                                    <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-6' : 'translate-x-0'}`} />
                                 </div>
-                            </label>
-                        ))}
-                    </div>
-
-                    {/* Time Settings */}
-                    <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300 ${settings.shop_mode !== 'auto' ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                        <div>
-                            <label className="block text-xs text-gray-500 mb-1">Opens at</label>
-                            <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand" />
-                        </div>
-                        <div>
-                            <label className="block text-xs text-gray-500 mb-1">Closes at</label>
-                            <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="pt-4 border-t border-white/10">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}>
-                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-6' : 'translate-x-0'}`} />
-                        </div>
-                        <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={settings.is_menu_system_enabled === 'true'}
-                            onChange={(e) => handleSave('is_menu_system_enabled', e.target.checked ? 'true' : 'false')}
-                        />
-                        <div>
-                            <span className="block text-white font-bold text-sm">Enable Booking & Pickup System</span>
-                            <span className="text-[10px] text-gray-500">Global switch to turn on/off the entire ordering system.</span>
+                                <div>
+                                    <span className={`block font-bold text-lg ${settings.is_menu_system_enabled === 'true' ? 'text-[#DFFF00]' : 'text-white'}`}>
+                                        Booking System {settings.is_menu_system_enabled === 'true' ? 'Active' : 'Disabled'}
+                                    </span>
+                                    <span className="text-xs text-gray-400">Master switch for all customer ordering</span>
+                                </div>
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={settings.is_menu_system_enabled === 'true'}
+                                onChange={(e) => handleSave('is_menu_system_enabled', e.target.checked ? 'true' : 'false')}
+                            />
                         </div>
                     </label>
-                </div>
-            </div>
 
-            {/* Date Overrides / Exceptions */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Calendar size={20} className="text-orange-500" /> Date Overrides
-                </h2>
-                <p className="text-xs text-gray-500">Set special holidays or closures here.</p>
+                    {/* Shop Status Control */}
+                    <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-6">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Power size={20} className={settings.shop_mode === 'manual_close' ? 'text-red-500' : 'text-[#DFFF00]'} />
+                            Shop Status
+                        </h2>
 
-                <form onSubmit={handleAddException} className="flex gap-2">
-                    <input type="date" value={newException.date} onChange={e => setNewException({ ...newException, date: e.target.value })} className="bg-black border border-white/10 rounded-lg px-3 text-white text-sm" required />
-                    <input type="text" placeholder="Reason (e.g. Holiday)" value={newException.reason} onChange={e => setNewException({ ...newException, reason: e.target.value })} className="flex-1 bg-black border border-white/10 rounded-lg px-3 text-white text-sm" required />
-                    <button className="bg-white text-black font-bold px-3 rounded-lg text-sm">+</button>
-                </form>
-
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {exceptions.map(ex => (
-                        <div key={ex.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                            <div>
-                                <div className="text-white text-sm font-bold">{new Date(ex.date).toLocaleDateString()}</div>
-                                <div className="text-xs text-gray-400">{ex.reason} ({ex.is_closed ? 'Closed' : 'Open'})</div>
-                            </div>
-                            <button onClick={() => handleDeleteException(ex.id)} className="text-red-500 hover:text-white"><Trash2 size={14} /></button>
+                        <div className="space-y-3">
+                            {['auto', 'manual_open', 'manual_close'].map((mode) => (
+                                <label key={mode} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${settings.shop_mode === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                    <input
+                                        type="radio"
+                                        name="shop_mode"
+                                        checked={settings.shop_mode === mode}
+                                        onChange={() => handleSave('shop_mode', mode)}
+                                        className="accent-[#DFFF00] w-5 h-5"
+                                    />
+                                    <div>
+                                        <span className="block text-white font-bold capitalize">{mode.replace('_', ' ')}</span>
+                                        <span className="text-xs text-gray-500">
+                                            {mode === 'auto' ? 'Based on schedule' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                        </span>
+                                    </div>
+                                </label>
+                            ))}
                         </div>
-                    ))}
+
+                        {/* Time Settings */}
+                        <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300 ${settings.shop_mode !== 'auto' ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Opens at</label>
+                                <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Closes at</label>
+                                <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Date Overrides / Exceptions */}
+                <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-6 flex flex-col">
+                    <div className="flex-1">
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
+                            <Calendar size={20} className="text-orange-500" /> Date Overrides
+                        </h2>
+                        <p className="text-xs text-gray-500 mb-6">Set special holidays or closures here.</p>
+
+                        <form onSubmit={handleAddException} className="flex gap-2 mb-4">
+                            <input type="date" value={newException.date} onChange={e => setNewException({ ...newException, date: e.target.value })} className="bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" required />
+                            <input type="text" placeholder="Reason (e.g. Holiday)" value={newException.reason} onChange={e => setNewException({ ...newException, reason: e.target.value })} className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" required />
+                            <button className="bg-white hover:bg-[#DFFF00] text-black font-bold px-4 rounded-lg text-sm transition-colors">+</button>
+                        </form>
+
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                            {exceptions.map(ex => (
+                                <div key={ex.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                                    <div>
+                                        <div className="text-white text-sm font-bold">{new Date(ex.date).toLocaleDateString()}</div>
+                                        <div className="text-xs text-gray-400">{ex.reason} ({ex.is_closed ? 'Closed' : 'Open'})</div>
+                                    </div>
+                                    <button onClick={() => handleDeleteException(ex.id)} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16} /></button>
+                                </div>
+                            ))}
+                            {exceptions.length === 0 && (
+                                <div className="text-center text-gray-600 text-xs py-10">No exceptions added</div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
