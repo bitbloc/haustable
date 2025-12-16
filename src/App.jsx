@@ -75,29 +75,31 @@ function App() {
   }, [])
 
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route element={<PublicLayout session={session} />}>
-          <Route path="/" element={<Home session={session} />} />
-          <Route path="/booking" element={<BookingPage />} />
-          <Route path="/pickup" element={<PickupPage />} />
-        </Route>
+    <ToastProvider>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route element={<PublicLayout session={session} />}>
+              <Route path="/" element={<Home session={session} />} />
+              <Route path="/booking" element={<BookingPage />} />
+              <Route path="/pickup" element={<PickupPage />} />
+            </Route>
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="bookings" element={<AdminBookings />} />
-          <Route path="members" element={<AdminMembers />} />
-          <Route path="menu" element={<AdminMenu />} />
-          <Route path="editor" element={<AdminTableEditor />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="members" element={<AdminMembers />} />
+              <Route path="menu" element={<AdminMenu />} />
+              <Route path="editor" element={<AdminTableEditor />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
 
-        {/* Staff/Kitchen Route (Standalone) */}
-        <Route path="/staff" element={<StaffOrderPage />} />
-      </Routes>
-    </Router>
+            {/* Staff/Kitchen Route (Standalone) */}
+            <Route path="/staff" element={<StaffOrderPage />} />
+          </Routes>
+        </Router>
+    </ToastProvider>
   )
 }
 
