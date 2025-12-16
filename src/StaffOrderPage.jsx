@@ -16,6 +16,15 @@ export default function StaffOrderPage() {
     const { toast } = useToast()
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null, isDangerous: false })
 
+    // Auth State
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [pinInput, setPinInput] = useState('')
+    const [errorMsg, setErrorMsg] = useState('')
+
+    const [orders, setOrders] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [isConnected, setIsConnected] = useState(true)
+
     const { isSupported, isLocked, request, release } = useWakeLock({
         onRequest: () => console.log('Screen locked!'),
         onRelease: () => console.log('Screen unlocked!'),
@@ -31,15 +40,6 @@ export default function StaffOrderPage() {
              if (isLocked) release()
         }
     }, [isAuthenticated, isSupported])
-
-    const [orders, setOrders] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [isConnected, setIsConnected] = useState(true)
-    
-    // Auth State
-    const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [pinInput, setPinInput] = useState('')
-    const [errorMsg, setErrorMsg] = useState('')
 
     useEffect(() => {
         // Check local storage for persistent login
