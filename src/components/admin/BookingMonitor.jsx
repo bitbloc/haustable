@@ -150,8 +150,11 @@ export default function BookingMonitor() {
         window.addEventListener('online', handleOnline)
         window.addEventListener('offline', handleOffline)
 
-        return () => {
-            supabase.removeChannel(channel)
+        return async () => {
+            // Using unsubscribe() is standard for RealtimeSubscription
+            // Note: removeChannel is the high level Supabase Client method, which handles internal map.
+            // We use removeChannel to be safe.
+            await supabase.removeChannel(channel)
             window.removeEventListener('online', handleOnline)
             window.removeEventListener('offline', handleOffline)
             stopAlarm()
