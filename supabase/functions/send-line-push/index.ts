@@ -40,10 +40,16 @@ Deno.serve(async (req) => {
       .eq('id', userId)
       .single()
       
-    const targetLineId = profile?.line_user_id || userId 
+    // STRICT CHECK: Only use if it looks like a LINE ID (starts with 'U')
+    let targetLineId = profile?.line_user_id 
+
+    // If no profile found (or no line_id), check if the passed 'userId' itself IS a LINE ID (e.g. legacy/testing)
+    if (!targetLineId && typeof userId === 'string' && userId.startsWith('U') && userId.length === 33) {
+        targetLineId = userId
+    }
     
     if (!targetLineId) {
-        throw new Error('No target LINE user ID found')
+        throw new Error(`User does not have a valid LINE ID linked. (Profile found: ${!!profile})`)
     }
 
     // Send to LINE
