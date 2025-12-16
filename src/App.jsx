@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
+import { ToastProvider } from './context/ToastContext'
 
 // Pages
 import Home from './Home'
