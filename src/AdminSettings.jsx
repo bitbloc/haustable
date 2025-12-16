@@ -204,7 +204,7 @@ export default function AdminSettings() {
                         <QrCode className="text-blue-400" /> Staff Mobile Access
                     </h2>
                     <p className="text-gray-400 text-sm mt-1 mb-4">
-                        Scan to open Kitchen View on mobile.
+                        Scan to open Staff View on mobile.
                         <br/>
                         <span className="text-xs opacity-50">
                             Current Mode: {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'Local Dev (LAN)' : 'Production (Cloud)'}
@@ -315,7 +315,7 @@ export default function AdminSettings() {
                             👨‍🍳 Staff Access
                     </h2>
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">Kitchen PIN Code</label>
+                        <label className="block text-xs text-gray-500 mb-1">Staff PIN Code</label>
                         <input 
                             type="text" 
                             value={settings.staff_pin_code || ''} 
@@ -323,8 +323,8 @@ export default function AdminSettings() {
                             placeholder="e.g. 1234"
                             className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00] font-mono tracking-widest text-center text-lg" 
                         />
-                        <p className="text-[10px] text-gray-600 mt-2">Simple code for staff to access Kitchen View without email login.</p>
-                    </div>
+                        <p className="text-[10px] text-gray-600 mt-2">Simple code for staff to access Staff View without email login.</p>
+                    </div> w
                 </div>
             </div>
 

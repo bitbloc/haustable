@@ -204,7 +204,7 @@ export default function StaffOrderPage() {
                     <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
                          <ChefHat className="w-8 h-8 text-orange-500" />
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Kitchen Access</h1>
+                    <h1 className="text-2xl font-bold text-white mb-2">Staff Access</h1>
                     <p className="text-zinc-500 mb-8 text-sm">Enter PIN code to continue</p>
                     
                     <form onSubmit={handleLogin} className="space-y-4">
@@ -221,7 +221,7 @@ export default function StaffOrderPage() {
                             type="submit"
                             className="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl hover:bg-orange-500 active:scale-95 transition-all"
                         >
-                            {loading ? 'Checking...' : 'Enter Kitchen'}
+                            {loading ? 'Checking...' : 'Enter Staff View'}
                         </button>
                     </form>
                 </div>
@@ -248,7 +248,7 @@ export default function StaffOrderPage() {
                         <ChefHat className="w-6 h-6 text-orange-500" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-bold">Kitchen View</h1>
+                        <h1 className="text-xl font-bold">Staff View</h1>
                         <div className="flex items-center gap-2 text-xs text-zinc-400">
                             <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
                             {isConnected ? 'Live' : 'Offline'}
