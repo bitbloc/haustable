@@ -16,11 +16,13 @@ export function BookingProvider({ children }) {
                 const [
                     { data: tables },
                     { data: settingsData },
-                    { data: { user } }
+                    { data: { user } },
+                    { data: blockedDates } // New
                 ] = await Promise.all([
                     supabase.from('tables_layout').select('*'),
                     supabase.from('app_settings').select('*'),
-                    supabase.auth.getUser()
+                    supabase.auth.getUser(),
+                    supabase.from('blocked_dates').select('blocked_date, reason') // New
                 ])
 
                 // Parse Settings
@@ -50,6 +52,7 @@ export function BookingProvider({ children }) {
                     type: 'LOAD_INITIAL_SUCCESS',
                     payload: {
                         tables: tables || [],
+                        blockedDates: blockedDates || [],
                         settings,
                         user: userProfile
                     }

@@ -12,7 +12,8 @@ export default function StepDateSelection() {
         time, setTime,
         pax, setPax,
         settings,
-        nextStep
+        nextStep,
+        blockedDates // New
     } = useBooking()
 
     const [showLargeGroupModal, setShowLargeGroupModal] = useState(false)
@@ -22,6 +23,23 @@ export default function StepDateSelection() {
         if (!isoDate) return ''
         const [y, m, d] = isoDate.split('-')
         return `${d}/${m}/${y}`
+    }
+
+    const handleDateChange = (e) => {
+        const val = e.target.value
+        if (!val) {
+            setDate('')
+            return
+        }
+
+        // Check blocked
+        const isBlocked = (blockedDates || []).some(b => b.blocked_date === val)
+        if (isBlocked) {
+            alert('วันดังกล่าวปิดให้บริการ (The selected date is unavailable)')
+            setDate('') // Auto Clear
+            return
+        }
+        setDate(val)
     }
 
     return (
@@ -36,7 +54,7 @@ export default function StepDateSelection() {
                         <input
                             type="date"
                             value={date}
-                            onChange={e => setDate(e.target.value)}
+                            onChange={handleDateChange} // Updated
                             className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
                         />
                         <div className="py-2 w-full flex items-center justify-between">

@@ -23,6 +23,7 @@ export const initialState = {
     // Data (Loaded via API)
     tables: [],
     bookedTableIds: [], // New
+    blockedDates: [], // New - For store closure
     menuItems: [],
     categories: [],
     settings: {
@@ -44,6 +45,7 @@ export function bookingReducer(state, action) {
             return {
                 ...state,
                 tables: action.payload.tables || [],
+                blockedDates: action.payload.blockedDates || [],
                 settings: { ...state.settings, ...action.payload.settings },
                 contactName: action.payload.user?.name || state.contactName,
                 contactPhone: action.payload.user?.phone || state.contactPhone,

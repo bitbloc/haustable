@@ -17,9 +17,9 @@ export default function AdminSettings() {
     const [uploadingQr, setUploadingQr] = useState(false)
     const [uploadingFloor, setUploadingFloor] = useState(false)
 
-    // Exceptions
-    const [exceptions, setExceptions] = useState([])
-    const [newException, setNewException] = useState({ date: '', reason: '', is_closed: true })
+    // Blocked Dates
+    const [blockedList, setBlockedList] = useState([])
+    const [blockForm, setBlockForm] = useState({ startDate: '', endDate: '', reason: '' })
 
     // Load Settings
     useEffect(() => { fetchSettings() }, [])
@@ -32,9 +32,9 @@ export default function AdminSettings() {
             setSettings(prev => ({ ...prev, ...map }))
         }
 
-        // Fetch Exceptions
-        const { data: ex } = await supabase.from('store_exceptions').select('*').order('date', { ascending: true })
-        setExceptions(ex || [])
+        // Fetch Blocked Dates
+        const { data: bd } = await supabase.from('blocked_dates').select('*').order('blocked_date', { ascending: true })
+        setBlockedList(bd || [])
     }
 
     // Save Function (แก้ใหม่ให้ลื่นขึ้น)
@@ -85,21 +85,52 @@ export default function AdminSettings() {
         }
     }
 
-    const handleAddException = async (e) => {
+    // Helper: Create range array
+    const getDatesInRange = (startDate, endDate) => {
+        const dates = []
+        let currentDate = new Date(startDate)
+        const stopDate = new Date(endDate)
+        while (currentDate <= stopDate) {
+            dates.push(currentDate.toISOString().split('T')[0])
+            currentDate.setDate(currentDate.getDate() + 1)
+        }
+        return dates
+    }
+
+    const handleBlockDates = async (e) => {
         e.preventDefault()
-        if (!newException.date) return alert('Select a date')
+        if (!blockForm.startDate) return alert('Select start date')
+
+        // Use startDate as endDate if endDate is empty (Single day block)
+        const finalEndDate = blockForm.endDate || blockForm.startDate
+
+        if (new Date(blockForm.startDate) > new Date(finalEndDate)) {
+            return alert('Start date must be before end date')
+        }
 
         try {
-            const { error } = await supabase.from('store_exceptions').insert(newException)
+            const datesToBlock = getDatesInRange(blockForm.startDate, finalEndDate)
+            const payload = datesToBlock.map(dateStr => ({
+                blocked_date: dateStr,
+                reason: blockForm.reason || 'Closed'
+            }))
+
+            // UPSERT with ignoreDuplicates
+            const { error } = await supabase
+                .from('blocked_dates')
+                .upsert(payload, { onConflict: 'blocked_date', ignoreDuplicates: true })
+
             if (error) throw error
-            setNewException({ date: '', reason: '', is_closed: true })
-            fetchSettings() // Reload
+
+            setBlockForm({ startDate: '', endDate: '', reason: '' })
+            fetchSettings()
+            alert(`Blocked ${datesToBlock.length} dates successfully!`)
         } catch (err) { alert(err.message) }
     }
 
-    const handleDeleteException = async (id) => {
-        if (!confirm('Delete this exception?')) return
-        const { error } = await supabase.from('store_exceptions').delete().eq('id', id)
+    const handleDeleteBlockedDate = async (id) => {
+        if (!confirm('Unblock this date?')) return
+        const { error } = await supabase.from('blocked_dates').delete().eq('id', id)
         if (!error) fetchSettings()
     }
 
@@ -173,32 +204,41 @@ export default function AdminSettings() {
                     </div>
                 </div>
 
-                {/* Date Overrides / Exceptions */}
+                {/* Blocked Dates Management */}
                 <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-6 flex flex-col">
                     <div className="flex-1">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
-                            <Calendar size={20} className="text-orange-500" /> Date Overrides
+                            <Calendar size={20} className="text-red-500" /> Blocked Dates
                         </h2>
-                        <p className="text-xs text-gray-500 mb-6">Set special holidays or closures here.</p>
+                        <p className="text-xs text-gray-500 mb-6">Close bookings for specific days or ranges.</p>
 
-                        <form onSubmit={handleAddException} className="flex gap-2 mb-4">
-                            <input type="date" value={newException.date} onChange={e => setNewException({ ...newException, date: e.target.value })} className="bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" required />
-                            <input type="text" placeholder="Reason (e.g. Holiday)" value={newException.reason} onChange={e => setNewException({ ...newException, reason: e.target.value })} className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" required />
-                            <button className="bg-white hover:bg-[#DFFF00] text-black font-bold px-4 rounded-lg text-sm transition-colors">+</button>
+                        <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-6 bg-white/5 p-4 rounded-xl border border-white/5">
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-[10px] text-gray-400 uppercase font-bold">Start</label>
+                                    <input type="date" value={blockForm.startDate} onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" required />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-gray-400 uppercase font-bold">End (Optional)</label>
+                                    <input type="date" value={blockForm.endDate} min={blockForm.startDate} onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" />
+                                </div>
+                            </div>
+                            <input type="text" placeholder="Reason (e.g. Holiday)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" />
+                            <button className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg text-sm transition-colors mt-1">Block Dates</button>
                         </form>
 
-                        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-                            {exceptions.map(ex => (
-                                <div key={ex.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                            {blockedList.map(item => (
+                                <div key={item.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
                                     <div>
-                                        <div className="text-white text-sm font-bold">{new Date(ex.date).toLocaleDateString()}</div>
-                                        <div className="text-xs text-gray-400">{ex.reason} ({ex.is_closed ? 'Closed' : 'Open'})</div>
+                                        <div className="text-white text-sm font-bold">{new Date(item.blocked_date).toLocaleDateString()}</div>
+                                        <div className="text-xs text-gray-400">{item.reason}</div>
                                     </div>
-                                    <button onClick={() => handleDeleteException(ex.id)} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16} /></button>
+                                    <button onClick={() => handleDeleteBlockedDate(item.id)} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16} /></button>
                                 </div>
                             ))}
-                            {exceptions.length === 0 && (
-                                <div className="text-center text-gray-600 text-xs py-10">No exceptions added</div>
+                            {blockedList.length === 0 && (
+                                <div className="text-center text-gray-600 text-xs py-10">No blocked dates</div>
                             )}
                         </div>
                     </div>

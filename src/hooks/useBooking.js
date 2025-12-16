@@ -78,6 +78,16 @@ export function useBooking() {
             if (!state.isAgreed) throw new Error('Please agree to terms')
             if (!state.slipFile) throw new Error('Please upload payment slip')
 
+            // Security Check: Blocked Date
+            const { count: blockedCount } = await supabase
+                .from('blocked_dates')
+                .select('id', { count: 'exact', head: true })
+                .eq('blocked_date', state.date)
+
+            if (blockedCount > 0) {
+                throw new Error('ขออภัย วันดังกล่าวเพิ่งถูกปิดรับจอง (This date is now closed)')
+            }
+
             // Min Spend Check
             const cartTotal = state.cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
             if (state.settings.minSpend > 0) {
