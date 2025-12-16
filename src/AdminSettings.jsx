@@ -215,12 +215,26 @@ export default function AdminSettings() {
                         <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-6 bg-white/5 p-4 rounded-xl border border-white/5">
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-gray-400 uppercase font-bold">Start</label>
-                                    <input type="date" value={blockForm.startDate} onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" required />
+                                    <label className="text-[10px] text-gray-400 uppercase font-bold">วันที่เริ่มหยุด (Start)</label>
+                                    <input
+                                        type="date"
+                                        value={blockForm.startDate}
+                                        onClick={(e) => e.target.showPicker?.()}
+                                        onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })}
+                                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none cursor-pointer"
+                                        required
+                                    />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-gray-400 uppercase font-bold">End (Optional)</label>
-                                    <input type="date" value={blockForm.endDate} min={blockForm.startDate} onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" />
+                                    <label className="text-[10px] text-gray-400 uppercase font-bold">ถึงวันที่ (End)</label>
+                                    <input
+                                        type="date"
+                                        value={blockForm.endDate}
+                                        min={blockForm.startDate}
+                                        onClick={(e) => e.target.showPicker?.()}
+                                        onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })}
+                                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none cursor-pointer"
+                                    />
                                 </div>
                             </div>
                             <input type="text" placeholder="Reason (e.g. Holiday)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" />
