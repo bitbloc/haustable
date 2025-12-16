@@ -128,8 +128,52 @@ export default function AdminMembers() {
         }
     }
 
-    // Update Note
+    // Note: handleUpdateNote is now part of the general Edit flow, specifically kept for backward compat or quick note edit if needed, 
+    // but we will implement a full Edit Modal.
+    
+    // Edit Member State
+    const [editingMember, setEditingMember] = useState(null)
+    const [editForm, setEditForm] = useState({ display_name: '', phone_number: '', line_user_id: '', admin_notes: '' })
+
+    const openEditModal = (member) => {
+        setEditingMember(member)
+        setEditForm({
+            display_name: member.display_name || '',
+            phone_number: member.phone_number || '',
+            line_user_id: member.line_user_id || member.line_uid || '', // Support both if legacy exists
+            admin_notes: member.admin_notes || '' 
+        })
+    }
+
+    const handleSaveMember = async (e) => {
+        e.preventDefault()
+        if (!editingMember) return
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    display_name: editForm.display_name,
+                    phone_number: editForm.phone_number,
+                    line_user_id: editForm.line_user_id,
+                    admin_notes: editForm.admin_notes
+                })
+                .eq('id', editingMember.id)
+
+            if (error) throw error
+
+            // Update UI
+            setMembers(prev => prev.map(m => m.id === editingMember.id ? { ...m, ...editForm } : m))
+            setEditingMember(null)
+            alert('Member updated successfully!')
+        } catch (err) {
+            console.error(err)
+            alert('Failed to update member: ' + err.message)
+        }
+    }
+
     const handleUpdateNote = async (userId, note) => {
+        // ... kept for existing simple note edit if needed
         try {
             const { error } = await supabase.from('profiles').update({ admin_notes: note }).eq('id', userId)
             if (error) throw error
@@ -195,17 +239,14 @@ export default function AdminMembers() {
                                     {member.phone_number && (
                                         <span className="flex items-center gap-1 justify-center md:justify-start"><Phone size={12} /> {member.phone_number}</span>
                                     )}
-                                    <span className="flex items-center gap-1 justify-center md:justify-start font-mono text-gray-500">ID: {member.id.substring(0, 8)}...</span>
+                                    <span className="flex items-center gap-1 justify-center md:justify-start font-mono text-gray-500">LINE: {member.line_user_id || '-'}</span>
                                 </div>
                                 <div className="mt-3 flex gap-3 justify-center md:justify-start">
                                     <button
-                                        onClick={() => {
-                                            const note = prompt("Edit Customer Note:", member.admin_notes || '')
-                                            if (note !== null) handleUpdateNote(member.id, note)
-                                        }}
+                                        onClick={() => openEditModal(member)}
                                         className="text-xs flex items-center gap-1 text-gray-500 hover:text-[#DFFF00] transition-colors"
                                     >
-                                        <Edit2 size={12} /> {member.admin_notes ? <span className="text-white">{member.admin_notes}</span> : "Add Note"}
+                                        <Edit2 size={12} /> Edit Info
                                     </button>
                                     <button
                                         onClick={() => handleViewHistory(member)}
@@ -253,6 +294,71 @@ export default function AdminMembers() {
                     ))
                 )}
             </div>
+
+            {/* Edit Member Modal */}
+            <AnimatePresence>
+                {editingMember && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-[#1A1A1A] w-full max-w-md rounded-3xl border border-white/10 shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#222]">
+                                <h2 className="text-xl font-bold text-white">Edit Member</h2>
+                                <button onClick={() => setEditingMember(null)} className="p-2 hover:bg-white/10 rounded-full"><X className="text-gray-400 hover:text-white" size={20} /></button>
+                            </div>
+                            
+                            <form onSubmit={handleSaveMember} className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Display Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={editForm.display_name} 
+                                        onChange={e => setEditForm({...editForm, display_name: e.target.value})}
+                                        className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Phone Number</label>
+                                    <input 
+                                        type="text" 
+                                        value={editForm.phone_number} 
+                                        onChange={e => setEditForm({...editForm, phone_number: e.target.value})}
+                                        className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-[#06c755] uppercase mb-1">LINE User ID (For Notifications)</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Uxxxxxxxxxxxxxxxx..."
+                                        value={editForm.line_user_id} 
+                                        onChange={e => setEditForm({...editForm, line_user_id: e.target.value})}
+                                        className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-[#06c755] outline-none font-mono text-sm"
+                                    />
+                                    <p className="text-[10px] text-gray-500 mt-1">Found in LINE Developers console or via webhook.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Admin Notes</label>
+                                    <textarea 
+                                        rows={3}
+                                        value={editForm.admin_notes} 
+                                        onChange={e => setEditForm({...editForm, admin_notes: e.target.value})}
+                                        className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none"
+                                    />
+                                </div>
+
+                                <div className="pt-4 flex justify-end gap-3">
+                                    <button type="button" onClick={() => setEditingMember(null)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
+                                    <button type="submit" className="px-6 py-2 bg-[#DFFF00] text-black font-bold rounded-lg hover:bg-[#cbe600]">Save Changes</button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* History Modal */}
             <AnimatePresence>

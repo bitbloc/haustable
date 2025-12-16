@@ -46,7 +46,7 @@ export default function AdminBookings() {
                 // We rely on pickup_contact_name in bookings usually.
                 const { data: profilesData, error: profilesError } = await supabase
                     .from('profiles')
-                    .select('id, email, phone_number')
+                    .select('id, phone_number')
                     .in('id', userIds)
 
                 if (profilesError) {
