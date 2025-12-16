@@ -72,42 +72,36 @@ export default function AdminBookings() {
         }
     }
 
-    const sendLineNotification = async (bookingId, userId, type, status) => {
-        // Fetch Admin Contact for Cancel
+    const sendSmsNotification = async (bookingId, phone, type) => {
         let msg = ''
+        const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit'})
+        
         if (type === 'confirmed') {
-            msg = '🎉 การจองของคุณได้รับการยืนยันแล้ว! (Booking Confirmed) \nขอบคุณที่ใช้บริการร้าน IN THE HAUS ครับ'
+            msg = `Booking Confirmed: Your table is ready! See you soon. - IN THE HAUS`
         } else if (type === 'cancelled') {
-            // Fetch Admin Phone setting
+             // Fetch Admin Phone
             const { data } = await supabase.from('app_settings').select('value').eq('key', 'admin_phone_contact').single()
-            const phone = data?.value || '-'
-            msg = `❌ ขออภัย การจองของคุณถูกยกเลิก (Booking Cancelled) \nเนื่องจากโต๊ะเต็มหรือเหตุสุดวิสัย \n\nติดต่อสอบถาม (Contact): ${phone}`
+            const adminPhone = data?.value || '-'
+            msg = `Booking Canceled: Sorry, we cannot accommodate you. Contact: ${adminPhone} - IN THE HAUS`
         }
 
-        if (!msg) return
+        if (!msg || !phone) return
 
         try {
-            // Call Edge Function
-            // Note: Use 'bookings.user_id' as the target.
-            const { data, error } = await supabase.functions.invoke('send-line-push', {
-                body: { userId, message: msg, type }
+            const { data, error } = await supabase.functions.invoke('send-sms', {
+                body: { phone, message: msg }
             })
+            
             if (error) {
-                // Try to parse if it's a JSON string in error.message (Supabase Client sometimes wraps it)
-                // But usually 'error' is an object.
-                // If it's a 400/500 from the function, Supabase might return it as `error`.
-                console.warn('LINE Notification Failed:', error)
-                
-                // Alert for easier debugging
-                // Accessing context or message property if available
-                const detail =  (error && error.context && await error.context.text()) || error.message || JSON.stringify(error)
-                 alert(`LINE Send Failed: ${detail}`)
+                 const detail = (error && error.context && await error.context.text()) || error.message || JSON.stringify(error)
+                 alert(`SMS Failed: ${detail}`)
             } else {
-                 console.log('LINE Sent Successfully:', data)
+                 console.log('SMS Sent:', data)
+                 alert('SMS Sent Successfully!')
             }
         } catch (e) {
-            console.error('LINE invoke exception:', e)
-            alert('LINE invoke exception: ' + e.message)
+            console.error('SMS exception:', e)
+            alert('SMS Exception: ' + e.message)
         }
     }
 
@@ -124,9 +118,14 @@ export default function AdminBookings() {
             // Optimistic Update
             setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b))
 
-            // Trigger LINE Notification (Async - don't block UI)
+            // Trigger SMS Notification
             if (newStatus === 'confirmed' || newStatus === 'cancelled') {
-                sendLineNotification(booking.id, booking.user_id, newStatus, newStatus)
+                const targetPhone = booking.pickup_contact_phone || booking.profiles?.phone_number
+                if (targetPhone) {
+                     sendSmsNotification(booking.id, targetPhone, newStatus)
+                } else {
+                    alert('Cannot send SMS: No phone number found for this booking.')
+                }
             }
 
         } catch (err) {

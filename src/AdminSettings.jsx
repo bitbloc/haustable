@@ -12,7 +12,8 @@ export default function AdminSettings() {
         booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00',
         is_menu_system_enabled: 'true',
         soundAlertUrl: null,
-        lineAccessToken: '',
+        smsApiKey: '',
+        smsApiSecret: '',
         adminPhone: ''
     })
     const [loading, setLoading] = useState(false)
@@ -34,7 +35,8 @@ export default function AdminSettings() {
             const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
             // Remap keys to match state
             if (map.alert_sound_url) map.soundAlertUrl = map.alert_sound_url
-            if (map.line_channel_access_token) map.lineAccessToken = map.line_channel_access_token
+            if (map.sms_api_key) map.smsApiKey = map.sms_api_key
+            if (map.sms_api_secret) map.smsApiSecret = map.sms_api_secret
             if (map.admin_phone_contact) map.adminPhone = map.admin_phone_contact
 
             // Merge กับค่า default เพื่อป้องกัน undefined
@@ -435,28 +437,41 @@ export default function AdminSettings() {
                 </div>
             </div>
 
-            {/* --- LINE OA Settings --- */}
+            {/* --- SMS Notification Settings (ThaiBulkSMS) --- */}
             <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <MessageSquare className="text-[#06c755]" /> LINE OA Configuration
+                    <MessageSquare className="text-[#06c755]" /> SMS Configuration (ThaiBulkSMS)
                 </h2>
 
                 <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                        Channel Access Token (Long-lived)
+                        API Key
                     </label>
                     <input
                         type="password"
-                        placeholder="Put your LINE Channel Access Token here..."
-                        value={settings.lineAccessToken || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, lineAccessToken: e.target.value }))}
+                        placeholder="Your ThaiBulkSMS API Key"
+                        value={settings.smsApiKey || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, smsApiKey: e.target.value }))}
                         className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
                     />
                 </div>
 
                 <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                        Admin Contact Number (For Cancellation Message)
+                        API Secret
+                    </label>
+                    <input
+                        type="password"
+                        placeholder="Your ThaiBulkSMS API Secret"
+                        value={settings.smsApiSecret || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, smsApiSecret: e.target.value }))}
+                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                        Admin Contact Number (Shown in Cancel SMS)
                     </label>
                     <input
                         type="text"
@@ -471,9 +486,10 @@ export default function AdminSettings() {
                     onClick={async () => {
                         try {
                             setLoading(true)
-                            await handleSave('line_channel_access_token', settings.lineAccessToken)
+                            await handleSave('sms_api_key', settings.smsApiKey)
+                            await handleSave('sms_api_secret', settings.smsApiSecret)
                             await handleSave('admin_phone_contact', settings.adminPhone)
-                            alert('LINE Configuration Saved!')
+                            alert('SMS Configuration Saved!')
                         } catch (err) {
                             console.error(err)
                             alert('Failed to save')
@@ -484,7 +500,7 @@ export default function AdminSettings() {
                     disabled={loading}
                     className="bg-[#06c755] hover:bg-[#05b64d] text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg"
                 >
-                    {loading ? 'Saving...' : 'Save LINE Configuration'}
+                    {loading ? 'Saving...' : 'Save SMS Configuration'}
                 </button>
             </div>
 
