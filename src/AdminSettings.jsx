@@ -183,7 +183,18 @@ export default function AdminSettings() {
             <div className="bg-gradient-to-r from-blue-900/40 to-black p-6 rounded-3xl border border-blue-500/30 mb-8 flex flex-col md:flex-row items-center gap-6">
                 <div className="bg-white p-2 rounded-xl">
                     <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`http://${settings.manualIp || process.env.HOST_IP || 'localhost'}:5173/staff`)}`} 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                            // Smart URL Generation:
+                            // 1. If Manual IP is set, trust it (Local Dev overriding) -> http://IP:5173/staff
+                            // 2. If on Localhost/127.0.0.1 (and no manual IP), try detected IP -> http://IP:5173/staff
+                            // 3. If on Production (Vercel/Domain), use the current origin -> https://domain.com/staff
+                            
+                            settings.manual_ip 
+                                ? `http://${settings.manual_ip}:5173/staff`
+                                : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                                    ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
+                                    : `${window.location.origin}/staff`
+                        )}`} 
                         alt="Staff Access QR" 
                         className="w-32 h-32"
                     />
@@ -193,28 +204,38 @@ export default function AdminSettings() {
                         <QrCode className="text-blue-400" /> Staff Mobile Access
                     </h2>
                     <p className="text-gray-400 text-sm mt-1 mb-4">
-                        Scan with mobile to access Kitchen View.
+                        Scan to open Kitchen View on mobile.
                         <br/>
-                        <span className="text-xs opacity-50">LAN IP: {process.env.HOST_IP || 'Unknown'}</span>
+                        <span className="text-xs opacity-50">
+                            Current Mode: {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'Local Dev (LAN)' : 'Production (Cloud)'}
+                        </span>
                     </p>
                     
-                    {/* IP Override Section */}
+                    {/* IP Override Section (Only show if likely needed) */}
                     <div className="flex flex-col gap-2 mb-4">
                         <div className="flex items-center gap-2">
                              <input 
                                 type="text" 
-                                placeholder={process.env.HOST_IP || "Enter Server IP"} 
-                                value={settings.manualIp || ''}
-                                onChange={(e) => setSettings(prev => ({...prev, manualIp: e.target.value}))}
+                                placeholder="Override IP (Optional)" 
+                                value={settings.manual_ip || ''}
+                                onChange={(e) => setSettings(prev => ({...prev, manual_ip: e.target.value}))}
                                 className="bg-black/50 border border-white/10 rounded-lg px-3 py-1 text-sm text-[#DFFF00] font-mono w-full md:w-48 outline-none focus:border-blue-500"
                             />
-                            <button onClick={() => window.location.reload()} className="p-2 bg-white/10 rounded-lg hover:bg-white/20" title="Reload Page">
-                                <RefreshCw size={16} className="text-blue-400" />
-                            </button>
+                            {settings.manual_ip && (
+                                <button onClick={() => setSettings(prev => ({ ...prev, manual_ip: '' }))} className="text-xs text-red-500 hover:text-red-400">
+                                    Clear
+                                </button>
+                            )}
                         </div>
-                        <code className="bg-black/50 px-4 py-2 rounded-lg text-[#DFFF00] font-mono text-sm border border-white/10 select-all block w-fit">
-                            http://{settings.manualIp || process.env.HOST_IP || 'localhost'}:5173/staff
-                        </code>
+                        <div className="bg-black/50 px-4 py-2 rounded-lg text-[#DFFF00] font-mono text-xs border border-white/10 select-all block w-fit max-w-full overflow-x-auto whitespace-nowrap">
+                             {
+                                settings.manual_ip 
+                                ? `http://${settings.manual_ip}:5173/staff`
+                                : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                                    ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
+                                    : `${window.location.origin}/staff`
+                             }
+                        </div>
                     </div>
 
                     {/* Install PWA Button */}
