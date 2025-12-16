@@ -1,29 +1,161 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Clock, Check, X, Bell, RefreshCw, ChefHat, User } from 'lucide-react'
+import { useWakeLock } from './hooks/useWakeLock'
+import { useToast } from './context/ToastContext'
+import ConfirmationModal from './components/ConfirmationModal'
 
 // Helper for formatting time
 const formatTime = (dateString, timeString) => {
     if (!dateString) return ''
-    // Combine if necessary or just use time string if reliable
-    // For now, let's trust booking_time for sorting
     const d = new Date(dateString)
     return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 }
-
-import { useToast } from './context/ToastContext'
-import ConfirmationModal from './components/ConfirmationModal'
-
-// ... existing imports ...
 
 export default function StaffOrderPage() {
     const { toast } = useToast()
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null, isDangerous: false })
 
-    // ... useWakeLock ...
+    const { isSupported, isLocked, request, release } = useWakeLock({
+        onRequest: () => console.log('Screen locked!'),
+        onRelease: () => console.log('Screen unlocked!'),
+        onError: () => console.error('Wake Lock error')
+    })
     
-    // ... handleLogin ...
-             // inside handleLogin error
+    // Auto-request lock when authenticated
+    useEffect(() => {
+        if (isAuthenticated && isSupported) {
+            request()
+        }
+        return () => {
+             if (isLocked) release()
+        }
+    }, [isAuthenticated, isSupported])
+
+    const [orders, setOrders] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [isConnected, setIsConnected] = useState(true)
+    
+    // Auth State
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+    const [pinInput, setPinInput] = useState('')
+    const [errorMsg, setErrorMsg] = useState('')
+
+    useEffect(() => {
+        // Check local storage for persistent login
+        const savedAuth = localStorage.getItem('staff_auth')
+        if (savedAuth === 'true') {
+            setIsAuthenticated(true)
+            fetchOrders()
+            subscribeRealtime()
+        }
+    }, [])
+    
+    // Separate subscription to call only when authenticated
+    const subscribeRealtime = () => {
+         const channel = supabase
+            .channel('staff-orders')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'bookings' },
+                () => {
+                    // Refresh orders on any change
+                    fetchOrders()
+                }
+            )
+            .subscribe((status) => {
+                setIsConnected(status === 'SUBSCRIBED')
+            })
+         return channel
+    }
+
+    // Effect for subscription cleanup
+    useEffect(() => {
+        let channel = null;
+        if (isAuthenticated) {
+            channel = subscribeRealtime()
+        }
+        return () => {
+            if (channel) supabase.removeChannel(channel)
+        }
+    }, [isAuthenticated])
+
+
+    // Sound Logic
+    const [soundUrl, setSoundUrl] = useState(null)
+    const [audio] = useState(new Audio())
+
+    useEffect(() => {
+        // Fetch Sound Settings
+        const fetchSound = async () => {
+            const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
+            if (data?.value) setSoundUrl(data.value)
+        }
+        fetchSound()
+        
+        // Setup Audio Loop
+        audio.loop = true
+    }, [])
+
+    useEffect(() => {
+        // Play when pending orders exist & authenticated
+        // Only if soundUrl is loaded
+        if (isAuthenticated && soundUrl && orders.length > 0) {
+            audio.src = soundUrl
+            // User interaction (login) has happened, so play should work
+            audio.play().catch(e => console.log("Audio play blocked", e))
+        } else {
+            audio.pause()
+            audio.currentTime = 0
+        }
+        
+        return () => audio.pause()
+    }, [isAuthenticated, soundUrl, orders.length])
+
+    const fetchOrders = async () => {
+        setLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    tables_layout (table_name),
+                    order_items (
+                        quantity,
+                        selected_options,
+                        menu_items (name)
+                    )
+                `)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: true })
+            
+            if (error) throw error
+            setOrders(data || [])
+            
+        } catch (err) {
+            console.error('Error fetching orders:', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleLogin = async (e) => {
+        e.preventDefault()
+        setLoading(true)
+        try {
+            // Fetch PIN from generic setting
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'staff_pin_code')
+                .single()
+            
+            const correctPin = data?.value || '0000' // Default fallback
+
+            if (pinInput === correctPin) {
+                setIsAuthenticated(true)
+                localStorage.setItem('staff_auth', 'true')
+                fetchOrders()
             } else {
                 toast.error('Incorrect PIN')
                 setPinInput('')
@@ -35,7 +167,11 @@ export default function StaffOrderPage() {
         }
     }
 
-    // ... handleLogout ...
+    const handleLogout = () => {
+        setIsAuthenticated(false)
+        localStorage.removeItem('staff_auth')
+        setPinInput('')
+    }
 
     const updateStatus = async (id, newStatus) => {
         setConfirmModal({
@@ -62,7 +198,35 @@ export default function StaffOrderPage() {
     }
 
     if (!isAuthenticated) {
-        // ... login form ...
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+                <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl">
+                    <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                         <ChefHat className="w-8 h-8 text-orange-500" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-white mb-2">Kitchen Access</h1>
+                    <p className="text-zinc-500 mb-8 text-sm">Enter PIN code to continue</p>
+                    
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <input 
+                            type="number" 
+                            className="w-full bg-black border border-zinc-700 rounded-2xl p-4 text-center text-2xl text-white tracking-[1em] outline-none focus:border-orange-500 transition-colors appearance-none"
+                            value={pinInput}
+                            onChange={(e) => setPinInput(e.target.value)}
+                            maxLength={6}
+                            placeholder="••••"
+                        />
+                        {errorMsg && <p className="text-red-500 text-sm">{errorMsg}</p>}
+                        <button 
+                            type="submit"
+                            className="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl hover:bg-orange-500 active:scale-95 transition-all"
+                        >
+                            {loading ? 'Checking...' : 'Enter Kitchen'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        )
     }
 
     return (

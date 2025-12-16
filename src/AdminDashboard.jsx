@@ -4,22 +4,98 @@ import { supabase } from './lib/supabaseClient'
 import { RotateCcw } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
+import { useToast } from './context/ToastContext'
+import ConfirmationModal from './components/ConfirmationModal'
 
 // Components
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 
-import { useToast } from './context/ToastContext'
-import ConfirmationModal from './components/ConfirmationModal'
-
 export default function AdminDashboard() {
     const { toast } = useToast()
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
-    
-    // ... fetchData ...
+
+    const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings
+    const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup
+
+    useEffect(() => {
+        fetchData()
+
+        // Real-time: Refresh on any booking change
+        const subscription = supabase
+            .channel('public:bookings')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(subscription)
+        }
+    }, [])
+
+    const fetchData = async () => {
+        setLoading(true)
+        try {
+            const today = getThaiDate() // YYYY-MM-DD
+
+            // 1. Fetch ALL Pending (Inbox)
+            const pendingReq = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        menu_items ( name, price )
+                    ),
+                    profiles ( display_name, phone_number ),
+                    tables_layout ( table_name )
+                `)
+                .eq('status', 'pending')
+                .order('booking_time', { ascending: true })
+
+            // 2. Fetch ALL Today's bookings (Schedule / Logs)
+            const todayReq = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        menu_items ( name, price )
+                    ),
+                    profiles ( display_name, phone_number ),
+                    tables_layout ( table_name )
+                `)
+                .gte('booking_time', `${today}T00:00:00+07:00`)
+                .lte('booking_time', `${today}T23:59:59+07:00`)
+                .order('booking_time', { ascending: true })
+
+            const [pendingRes, todayRes] = await Promise.all([pendingReq, todayReq])
+
+            if (pendingRes.error) throw pendingRes.error
+            if (todayRes.error) throw todayRes.error
+
+            // Merge and Deduplicate (in case a pending booking is also today)
+            const map = new Map()
+            pendingRes.data.forEach(b => map.set(b.id, b))
+            todayRes.data.forEach(b => map.set(b.id, b))
+
+            // Convert to Array
+            const merged = Array.from(map.values())
+
+            // Sort: Pending first? No, UI handles separation.
+            // Just keep them in state.
+            setBookings(merged)
+
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error.message)
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const updateStatus = async (id, status) => {
-        // We will use the modal for this action
         setConfirmModal({
             isOpen: true,
             title: status === 'confirmed' ? 'Confirm Order' : (status === 'cancelled' ? 'Reject Order' : 'Update Status'),
@@ -47,7 +123,72 @@ export default function AdminDashboard() {
         })
     }
 
-    // ... derived state ...
+    // --- DERIVED STATE ---
+
+    // 1. Inbox: Pending (ALL dates)
+    const pendingBookings = useMemo(() =>
+        bookings.filter(b => b.status === 'pending').sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
+        , [bookings])
+
+    // --- Sound Logic ---
+    const [soundUrl, setSoundUrl] = useState(null)
+    const [audio] = useState(new Audio())
+
+    useEffect(() => {
+        const fetchSound = async () => {
+            const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
+            if (data?.value) setSoundUrl(data.value)
+        }
+        fetchSound()
+        audio.loop = true
+    }, [])
+
+    useEffect(() => {
+        // Play if there are pending bookings
+        if (soundUrl && pendingBookings.length > 0) {
+            audio.src = soundUrl
+            audio.play().catch(e => console.log('Autoplay blocked:', e)) // Normal for first load without interaction
+        } else {
+            audio.pause()
+            audio.currentTime = 0
+        }
+        return () => audio.pause()
+    }, [pendingBookings.length, soundUrl])
+    // -------------------
+
+    // 2. Schedule: Confirmed (Today Only)
+    // We filter from 'bookings'. Note that 'bookings' contains 'Today' (all statuses) + 'Pending' (future).
+    // So for Schedule, we want Status=Confirmed AND Date=Today.
+    const scheduleBookings = useMemo(() => {
+        const todayStr = getThaiDate()
+        return bookings.filter(b => {
+            // Date Check
+            const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isToday = bDate === todayStr
+            const isConfirmed = b.status === 'confirmed'
+            return isToday && isConfirmed
+        }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
+    }, [bookings])
+
+    // 4. Filter for Tabs (Dine-in / Pickup) - View ONLY Today's Confirmed/Pending?
+    // Let's make tabs act as filters on the "Today" list mostly.
+    const getTabContent = () => {
+        if (activeTab === 'overview') {
+            return (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                    {/* ZERO INBOX */}
+                    <InboxSection bookings={pendingBookings} onUpdateStatus={updateStatus} />
+
+                    {/* TODAY'S SCHEDULE */}
+                    <ScheduleSection bookings={scheduleBookings} loading={loading} />
+                </div>
+            )
+        }
+
+        // Fallback for old tabs (Dine In / Pickup) - Just show a simple list of TODAY's relevant items
+        const filtered = bookings.filter(b => b.booking_type === activeTab && (b.status === 'confirmed' || b.status === 'pending'))
+        return <ScheduleSection bookings={filtered} loading={loading} />
+    }
 
     return (
         <PageTransition>
