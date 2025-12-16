@@ -34,33 +34,35 @@ Deno.serve(async (req) => {
     }
 
     const credentials = settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
-    const API_KEY = credentials.sms_api_key
-    const API_SECRET = credentials.sms_api_secret
+    const API_KEY = (credentials.sms_api_key || '').trim()
+    const API_SECRET = (credentials.sms_api_secret || '').trim()
+
+    console.log(`Sending SMS to ${phone} using Key: ${API_KEY.substring(0,4)}...`)
 
     // ThaiBulkSMS API Implementation
     // Endpoint: https://api-v2.thaibulksms.com/sms
     
-    // Format Phone Number (ensure 66 prefix if needed, or 08x)
-    // ThaiBulkSMS usually accepts '08xxxxxxxx' or '668xxxxxxxx'
-    
-    const body = new URLSearchParams()
-    body.append('key', API_KEY)
-    body.append('secret', API_SECRET)
-    body.append('msisdn', phone)
-    body.append('message', message)
-    body.append('sender', 'IN THE HAUS') // Or leave blank for default
+    const payload = new URLSearchParams()
+    payload.append('apiKey', API_KEY)
+    payload.append('apiSecret', API_SECRET)
+    payload.append('msisdn', phone)
+    payload.append('message', message)
+    payload.append('sender', 'IN THE HAUS')
 
     const resp = await fetch('https://api-v2.thaibulksms.com/sms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body
+        headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        },
+        body: payload
     })
 
     const result = await resp.json()
 
     if (!resp.ok) {
         // ThaiBulkSMS Error Handling
-        throw new Error(`SMS Provider Error: ${JSON.stringify(result)}`)
+        throw new Error(`SMS Provider Error: ${JSON.stringify(result)} (Used Key: ${API_KEY.substring(0,4)}...${API_KEY.slice(-3)})`)
     }
 
     return new Response(JSON.stringify({ success: true, provider_result: result }), { 
