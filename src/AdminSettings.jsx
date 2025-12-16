@@ -45,11 +45,11 @@ export default function AdminSettings() {
         payment_qr_url: '',
         booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00',
         is_menu_system_enabled: 'true',
-        soundAlertUrl: null,
-        smsApiKey: '',
-        smsApiSecret: '',
-        adminPhone: '',
-        staffPinCode: ''
+        alert_sound_url: null,
+        sms_api_key: '',
+        sms_api_secret: '',
+        admin_phone_contact: '',
+        staff_pin_code: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -68,13 +68,6 @@ export default function AdminSettings() {
         const { data } = await supabase.from('app_settings').select('*')
         if (data) {
             const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
-            // Remap keys to match state
-            if (map.alert_sound_url) map.soundAlertUrl = map.alert_sound_url
-            if (map.sms_api_key) map.smsApiKey = map.sms_api_key
-            if (map.sms_api_secret) map.smsApiSecret = map.sms_api_secret
-            if (map.admin_phone_contact) map.adminPhone = map.admin_phone_contact
-            if (map.staff_pin_code) map.staffPinCode = map.staff_pin_code
-
             // Merge กับค่า default เพื่อป้องกัน undefined
             setSettings(prev => ({ ...prev, ...map }))
         }
@@ -304,7 +297,7 @@ export default function AdminSettings() {
                         <label className="block text-xs text-gray-500 mb-1">Kitchen PIN Code</label>
                         <input 
                             type="text" 
-                            value={settings.staffPinCode || ''} 
+                            value={settings.staff_pin_code || ''} 
                             onChange={(e) => handleSave('staff_pin_code', e.target.value)} 
                             placeholder="e.g. 1234"
                             className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00] font-mono tracking-widest text-center text-lg" 
@@ -499,12 +492,12 @@ export default function AdminSettings() {
                             <div>
                                 <p className="text-sm font-bold text-white">Current Alert Sound</p>
                                 <p className="text-xs text-gray-400">
-                                    {settings.soundAlertUrl ? 'Custom File Uploaded' : 'System Default (Beep)'}
+                                    {settings.alert_sound_url ? 'Custom File Uploaded' : 'System Default (Beep)'}
                                 </p>
                             </div>
                         </div>
-                        {settings.soundAlertUrl && (
-                            <audio controls src={settings.soundAlertUrl} className="h-8 w-32" />
+                        {settings.alert_sound_url && (
+                            <audio controls src={settings.alert_sound_url} className="h-8 w-32" />
                         )}
                     </div>
                 </div>
@@ -549,8 +542,8 @@ export default function AdminSettings() {
                     <input
                         type="password"
                         placeholder="Your ThaiBulkSMS API Key"
-                        value={settings.smsApiKey || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, smsApiKey: e.target.value }))}
+                        value={settings.sms_api_key || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, sms_api_key: e.target.value }))}
                         className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
                     />
                 </div>
@@ -562,8 +555,8 @@ export default function AdminSettings() {
                     <input
                         type="password"
                         placeholder="Your ThaiBulkSMS API Secret"
-                        value={settings.smsApiSecret || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, smsApiSecret: e.target.value }))}
+                        value={settings.sms_api_secret || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, sms_api_secret: e.target.value }))}
                         className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
                     />
                 </div>
@@ -575,8 +568,8 @@ export default function AdminSettings() {
                     <input
                         type="text"
                         placeholder="08x-xxx-xxxx"
-                        value={settings.adminPhone || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, adminPhone: e.target.value }))}
+                        value={settings.admin_phone_contact || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, admin_phone_contact: e.target.value }))}
                         className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
                     />
                 </div>
@@ -585,9 +578,9 @@ export default function AdminSettings() {
                     onClick={async () => {
                         try {
                             setLoading(true)
-                            await handleSave('sms_api_key', settings.smsApiKey)
-                            await handleSave('sms_api_secret', settings.smsApiSecret)
-                            await handleSave('admin_phone_contact', settings.adminPhone)
+                            await handleSave('sms_api_key', settings.sms_api_key)
+                            await handleSave('sms_api_secret', settings.sms_api_secret)
+                            await handleSave('admin_phone_contact', settings.admin_phone_contact)
                             alert('SMS Configuration Saved!')
                         } catch (err) {
                             console.error(err)
