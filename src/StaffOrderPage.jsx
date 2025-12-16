@@ -77,7 +77,7 @@ export default function StaffOrderPage() {
         if (Notification.permission === 'granted') {
             new Notification(title, {
                 body: body,
-                icon: '/icons/icon-192x192.png', // Assuming PWA icon exists
+                icon: '/icons/icon-192x192.png',
                 vibrate: [200, 100, 200]
             })
         }
@@ -85,15 +85,22 @@ export default function StaffOrderPage() {
 
     // Authenticated & Sound Verified Setup
     useEffect(() => {
+        let pollInterval
         if (isAuthenticated && isSoundChecked) {
             fetchOrders()
             const channel = subscribeRealtime()
             if (isSupported) request()
 
+            // Safety Polling (Every 10s) to guarantee no missed orders
+            pollInterval = setInterval(() => {
+                fetchOrders(true) // silent refresh
+            }, 10000)
+
             return () => {
                 supabase.removeChannel(channel)
                 if (isLocked) release()
                 stopAlarm()
+                clearInterval(pollInterval)
             }
         }
     }, [isAuthenticated, isSoundChecked])
@@ -137,38 +144,52 @@ export default function StaffOrderPage() {
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'bookings' },
                 async (payload) => {
-                    // IMMEDIATE ALERT on Insert
                     const newOrder = payload.new
                     if (newOrder.status === 'pending') {
-                        playAlarm() // Force play immediately
-                        showSystemNotification('New Order Incoming!', `Table: ${newOrder.table_id || 'N/A'} - Total: ${newOrder.total_amount}`)
-                        
-                        // Optimistic Update (wait for full fetch for relations, but alert first)
+                        // 1. Play Sound & Notify IMMEDIATELY
+                        playAlarm()
+                        showSystemNotification('New Order Incoming!', `Table: ${newOrder.table_id || 'Checking...'} - ${newOrder.total_amount}.-`)
                         toast.success('New Order Received!')
-                        fetchOrders() // Fetch full data to get table names/items
+
+                        // 2. Optimistic UI Update (Show card INSTANTLY)
+                        // We construct a temporary object. Relations (table name, items) will be missing initially.
+                        setOrders(prev => {
+                            // Avoid duplicate
+                            if (prev.find(o => o.id === newOrder.id)) return prev
+                            return [...prev, { ...newOrder, isOptimistic: true }]
+                        })
+
+                        // 3. Fetch Full Data (Background)
+                        fetchOrders()
                     }
                 }
             )
             .on(
                 'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'order_items' },
+                () => {
+                    // When items are added to the booking, refresh to show them
+                    console.log('Items inserted, refreshing...')
+                    fetchOrders(true)
+                }
+            )
+            .on(
+                'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'bookings' },
-                () => fetchOrders() // Refresh on updates too
+                () => fetchOrders(true)
             )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') setIsConnected(true)
                 if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
                     console.error("Realtime disconnected:", status)
-                    // Auto-reconnect logic could go here, but Supabase client handles it mostly.
-                    // We keep 'isConnected' true to avoid false alarms unless critical.
-                    // If it's a hard error, maybe flicker.
                      if (status === 'CHANNEL_ERROR') setIsConnected(false)
                 }
             })
          return channel
     }
 
-    const fetchOrders = async () => {
-        setLoading(true)
+    const fetchOrders = async (silent = false) => {
+        if (!silent) setLoading(true)
         try {
             const { data, error } = await supabase
                 .from('bookings')
@@ -190,9 +211,9 @@ export default function StaffOrderPage() {
             
         } catch (err) {
             console.error('Error fetching orders:', err)
-            toast.error('Connection weak. Retrying...')
+            if (!silent) toast.error('Connection weak. Retrying...')
         } finally {
-            setLoading(false)
+            if (!silent) setLoading(false)
         }
     }
 
@@ -383,7 +404,7 @@ export default function StaffOrderPage() {
             ) : (
                 <div className="space-y-4">
                     {orders.map(order => (
-                        <div key={order.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden">
+                        <div key={order.id} className={`bg-zinc-900 border ${order.isOptimistic ? 'border-orange-500/50' : 'border-zinc-800'} rounded-2xl p-5 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden transition-all`}>
                              {/* Flashing Border for new orders */}
                              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50 animate-pulse" />
                              
@@ -391,7 +412,9 @@ export default function StaffOrderPage() {
                             <div className="flex justify-between items-start mb-4 pb-4 border-b border-white/5">
                                 <div>
                                     <div className="text-3xl font-bold text-white mb-1 flex items-center gap-2">
-                                        {order.tables_layout?.table_name || 'Pickup'}
+                                        {/* OPTIMISTIC TABLE NAME LOGIC */}
+                                        {order.tables_layout?.table_name || `Table ${order.table_id || '?'}`}
+                                        
                                         {order.status === 'pending' && <span className="flex h-3 w-3 relative">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
@@ -400,13 +423,15 @@ export default function StaffOrderPage() {
                                     <div className="flex items-center gap-2 text-orange-400 text-sm font-medium">
                                         <Clock className="w-4 h-4" />
                                         {formatTime(order.booking_date, order.booking_time)}
+                                        {order.isOptimistic && <span className="text-[10px] text-zinc-500 animate-pulse ml-2">(Syncing...)</span>}
                                     </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
                                     <div className="text-xs text-zinc-500 mb-1">#{order.id.slice(0, 4)}</div>
                                     <button 
                                         onClick={() => setPrintModal({ isOpen: true, booking: order })}
-                                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors flex items-center gap-1 text-xs mb-1"
+                                        disabled={order.isOptimistic}
+                                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors flex items-center gap-1 text-xs mb-1 disabled:opacity-50"
                                     >
                                         <Printer size={14} /> Print Kitchen
                                     </button>
@@ -432,6 +457,11 @@ export default function StaffOrderPage() {
                                         </div>
                                     </div>
                                 ))}
+                                {(!order.order_items || order.order_items.length === 0) && (
+                                    <div className="text-zinc-500 text-sm italic py-2">
+                                        {order.isOptimistic ? 'Loading items...' : 'No items'}
+                                    </div>
+                                )}
                                 {order.customer_note && (
                                     <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-red-200 text-xs mt-3 flex gap-2">
                                         <span className="font-bold">Note:</span> {order.customer_note}
