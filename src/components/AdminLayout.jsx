@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
+import BookingMonitor from './admin/BookingMonitor';
 
-export default function AdminLayout() {
+export default function AdminLayout({ children }) {
     const [isAdmin, setIsAdmin] = useState(null);
     const location = useLocation();
+    const navigate = useNavigate();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         const checkUser = async () => {

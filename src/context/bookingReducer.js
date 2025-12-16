@@ -32,7 +32,8 @@ export const initialState = {
         bookingTimeSlots: ['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'],
         floorplanUrl: null,
         qrCodeUrl: null,
-        policyNote: ''
+        policyNote: '',
+        soundAlertUrl: null
     },
     isLoading: true
 }
