@@ -14,6 +14,7 @@ import AdminTableEditor from './AdminTableEditor'
 import AdminMenu from './admin/AdminMenuPage'
 import AdminBookings from './AdminBookings'
 import AdminMembers from './AdminMembers'
+import StaffOrderPage from './StaffOrderPage'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -92,6 +93,9 @@ function App() {
           <Route path="editor" element={<AdminTableEditor />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
+
+        {/* Staff/Kitchen Route (Standalone) */}
+        <Route path="/staff" element={<StaffOrderPage />} />
       </Routes>
     </Router>
   )

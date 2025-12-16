@@ -14,7 +14,8 @@ export default function AdminSettings() {
         soundAlertUrl: null,
         smsApiKey: '',
         smsApiSecret: '',
-        adminPhone: ''
+        adminPhone: '',
+        staffPinCode: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -38,6 +39,7 @@ export default function AdminSettings() {
             if (map.sms_api_key) map.smsApiKey = map.sms_api_key
             if (map.sms_api_secret) map.smsApiSecret = map.sms_api_secret
             if (map.admin_phone_contact) map.adminPhone = map.admin_phone_contact
+            if (map.staff_pin_code) map.staffPinCode = map.staff_pin_code
 
             // Merge กับค่า default เพื่อป้องกัน undefined
             setSettings(prev => ({ ...prev, ...map }))
@@ -149,6 +151,37 @@ export default function AdminSettings() {
         <div className="max-w-4xl mx-auto pb-20 animate-fade-in">
             <h1 className="text-3xl font-bold text-white mb-8">System Settings</h1>
 
+            {/* Network Connection Helper */}
+            <div className="bg-gradient-to-r from-blue-900/40 to-black p-6 rounded-3xl border border-blue-500/30 mb-8 flex flex-col md:flex-row items-center gap-6">
+                <div className="bg-white p-2 rounded-xl">
+                    {/* Simple QR Code Generation using API to avoid adding hefty deps if not needed, or just display text first */}
+                    {/* Using a reliable QR API for now since we don't have a library installed and don't want to break build */}
+                    <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`http://${process.env.HOST_IP || 'localhost'}:5173/staff`)}`} 
+                        alt="Staff Access QR" 
+                        className="w-32 h-32"
+                    />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                    <h2 className="text-xl font-bold text-white flex items-center justify-center md:justify-start gap-2">
+                        <QrCode className="text-blue-400" /> Staff Mobile Access
+                    </h2>
+                    <p className="text-gray-400 text-sm mt-1 mb-4">
+                        Scan this QR code with your mobile device to access the Staff Kitchen View.
+                        <br/>
+                        <span className="text-xs opacity-50">(Must be on the same Wi-Fi network: {process.env.HOST_IP || 'Unknown'})</span>
+                    </p>
+                    <div className="flex flex-col gap-2">
+                        <code className="bg-black/50 px-4 py-2 rounded-lg text-[#DFFF00] font-mono text-sm border border-white/10 select-all">
+                            http://{process.env.HOST_IP || 'localhost'}:5173/staff
+                        </code>
+                        <code className="bg-black/50 px-4 py-2 rounded-lg text-blue-300 font-mono text-xs border border-white/10 select-all">
+                            http://{process.env.HOST_IP || 'localhost'}:5173/admin
+                        </code>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-6 mb-8">
                 <div className="space-y-6">
                     {/* Enable Booking System - Redesigned as a Card */}
@@ -213,7 +246,26 @@ export default function AdminSettings() {
                             </div>
                         </div>
                     </div>
+
+
+                {/* Staff Access Settings */}
+                <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-4">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            👨‍🍳 Staff Access
+                    </h2>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Kitchen PIN Code</label>
+                        <input 
+                            type="text" 
+                            value={settings.staffPinCode || ''} 
+                            onChange={(e) => handleSave('staff_pin_code', e.target.value)} 
+                            placeholder="e.g. 1234"
+                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00] font-mono tracking-widest text-center text-lg" 
+                        />
+                        <p className="text-[10px] text-gray-600 mt-2">Simple code for staff to access Kitchen View without email login.</p>
+                    </div>
                 </div>
+            </div>
 
                 {/* Blocked Dates Management */}
                 <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-6 flex flex-col">
