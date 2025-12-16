@@ -4,6 +4,7 @@ import { ArrowRight, Calendar } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import BookingHeader from './BookingHeader'
+import CustomCalendar from './CustomCalendar'
 
 export default function StepDateSelection() {
     const { t } = useLanguage()
@@ -46,24 +47,18 @@ export default function StepDateSelection() {
         <div className="h-full flex flex-col">
             <BookingHeader title={t('reservation')} subtitle={t('stepDate')} />
 
-            <div className="space-y-6 flex-1">
-                {/* Date */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">{t('date')}</label>
-                    <div className="relative border-b border-gray-200 hover:border-black transition-colors">
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={handleDateChange} // Updated
-                            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
-                        />
-                        <div className="py-2 w-full flex items-center justify-between">
-                            <span className={`text-lg font-bold ${date ? 'text-black' : 'text-gray-300'}`}>
-                                {date ? formatDateDisplay(date) : "กรุณาเลือกวันจอง"}
-                            </span>
-                            <Calendar size={20} className="text-gray-400" />
-                        </div>
-                    </div>
+            <div className="space-y-6 flex-1 overflow-y-auto px-1 py-1">
+                {/* Custom Calendar */}
+                <div className="animate-fade-in-up">
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-4 px-2">{t('date')}</label>
+                    <CustomCalendar
+                        value={date}
+                        onChange={(newDate) => {
+                            setDate(newDate)
+                            // Auto scroll to time if needed, or visual cue
+                        }}
+                        blockedDates={blockedDates}
+                    />
                 </div>
 
                 {/* Time */}
