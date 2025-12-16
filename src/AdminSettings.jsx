@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2 } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode } from 'lucide-react'
 
 export default function AdminSettings() {
     const [settings, setSettings] = useState({
@@ -10,12 +10,16 @@ export default function AdminSettings() {
         floorplan_url: '',
         payment_qr_url: '',
         booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00',
-        is_menu_system_enabled: 'true'
+        is_menu_system_enabled: 'true',
+        soundAlertUrl: null,
+        lineAccessToken: '',
+        adminPhone: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
     const [uploadingQr, setUploadingQr] = useState(false)
     const [uploadingFloor, setUploadingFloor] = useState(false)
+    const [uploadingSound, setUploadingSound] = useState(false)
 
     // Blocked Dates
     const [blockedList, setBlockedList] = useState([])
@@ -28,6 +32,11 @@ export default function AdminSettings() {
         const { data } = await supabase.from('app_settings').select('*')
         if (data) {
             const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
+            // Remap keys to match state
+            if (map.alert_sound_url) map.soundAlertUrl = map.alert_sound_url
+            if (map.line_channel_access_token) map.lineAccessToken = map.line_channel_access_token
+            if (map.admin_phone_contact) map.adminPhone = map.admin_phone_contact
+
             // Merge กับค่า default เพื่อป้องกัน undefined
             setSettings(prev => ({ ...prev, ...map }))
         }
@@ -373,6 +382,110 @@ export default function AdminSettings() {
                         />
                     </div>
                 </div>
+            </div>
+
+            {/* --- Sound Alert Settings --- */}
+            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Volume2 className="text-[#DFFF00]" /> Sound Alert (Loop)
+                </h2>
+                <div className="flex items-center gap-4">
+                    <div className="flex-1 bg-black rounded-xl p-4 flex items-center justify-between border border-white/10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-[#DFFF00]/10 flex items-center justify-center text-[#DFFF00]">
+                                <Bell size={20} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-white">Current Alert Sound</p>
+                                <p className="text-xs text-gray-400">
+                                    {settings.soundAlertUrl ? 'Custom File Uploaded' : 'System Default (Beep)'}
+                                </p>
+                            </div>
+                        </div>
+                        {settings.soundAlertUrl && (
+                            <audio controls src={settings.soundAlertUrl} className="h-8 w-32" />
+                        )}
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                        Upload New Sound (Max 1MB, .mp3/.wav)
+                    </label>
+                    <input
+                        type="file"
+                        accept=".mp3,audio/mpeg,audio/wav"
+                        onChange={(e) => {
+                            const file = e.target.files[0]
+                            if (file) {
+                                if (file.size > 1024 * 1024) return alert("File size exceeds 1MB")
+                                handleUpload(file, 'alert_sound_url', setUploadingSound)
+                            }
+                        }}
+                        disabled={uploadingSound}
+                        className="block w-full text-sm text-gray-400
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-xs file:font-semibold
+                        file:bg-[#DFFF00] file:text-black
+                        hover:file:bg-[#eaff66]
+                        cursor-pointer"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">{uploadingSound ? 'Uploading...' : 'Recommended: Short loopable sound'}</p>
+                </div>
+            </div>
+
+            {/* --- LINE OA Settings --- */}
+            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <MessageSquare className="text-[#06c755]" /> LINE OA Configuration
+                </h2>
+
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                        Channel Access Token (Long-lived)
+                    </label>
+                    <input
+                        type="password"
+                        placeholder="Put your LINE Channel Access Token here..."
+                        value={settings.lineAccessToken || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, lineAccessToken: e.target.value }))}
+                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                        Admin Contact Number (For Cancellation Message)
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="08x-xxx-xxxx"
+                        value={settings.adminPhone || ''}
+                        onChange={e => setSettings(prev => ({ ...prev, adminPhone: e.target.value }))}
+                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
+                    />
+                </div>
+
+                <button
+                    onClick={async () => {
+                        try {
+                            setLoading(true)
+                            await handleSave('line_channel_access_token', settings.lineAccessToken)
+                            await handleSave('admin_phone_contact', settings.adminPhone)
+                            alert('LINE Configuration Saved!')
+                        } catch (err) {
+                            console.error(err)
+                            alert('Failed to save')
+                        } finally {
+                            setLoading(false)
+                        }
+                    }}
+                    disabled={loading}
+                    className="bg-[#06c755] hover:bg-[#05b64d] text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg"
+                >
+                    {loading ? 'Saving...' : 'Save LINE Configuration'}
+                </button>
             </div>
 
             {/* Floor Plan & QR */}
