@@ -33,6 +33,7 @@ export default function BookingMonitor() {
                 customAudioRef.current.loop = true
             }
         }
+        // Also subscribe to settings changes if needed, but for now simple fetch is enough
         fetchSettings()
     }, [])
 
@@ -59,6 +60,8 @@ export default function BookingMonitor() {
     const startAlarm = () => {
         if (customSoundUrl) {
             // Play Custom File
+            // Check if audio context is running to allow play? HTML5 Audio is separate but often needs user gesture too.
+            // However "Open System" button handles the gesture context.
             customAudioRef.current.play().catch(e => console.error("Play failed", e))
         } else {
             // Play Beep Fallback

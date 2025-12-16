@@ -72,20 +72,53 @@ export default function AdminBookings() {
         }
     }
 
-    const updateStatus = async (id, newStatus) => {
+    const sendLineNotification = async (bookingId, userId, type, status) => {
+        // Fetch Admin Contact for Cancel
+        let msg = ''
+        if (type === 'confirmed') {
+            msg = '🎉 การจองของคุณได้รับการยืนยันแล้ว! (Booking Confirmed) \nขอบคุณที่ใช้บริการร้าน IN THE HAUS ครับ'
+        } else if (type === 'cancelled') {
+            // Fetch Admin Phone setting
+            const { data } = await supabase.from('app_settings').select('value').eq('key', 'admin_phone_contact').single()
+            const phone = data?.value || '-'
+            msg = `❌ ขออภัย การจองของคุณถูกยกเลิก (Booking Cancelled) \nเนื่องจากโต๊ะเต็มหรือเหตุสุดวิสัย \n\nติดต่อสอบถาม (Contact): ${phone}`
+        }
+
+        if (!msg) return
+
+        try {
+            // Call Edge Function
+            // Note: Use 'bookings.user_id' as the target.
+            const { data, error } = await supabase.functions.invoke('send-line-push', {
+                body: { userId, message: msg, type }
+            })
+            if (error) console.warn('LINE Notification Failed:', error)
+            // else console.log('LINE Sent:', data)
+        } catch (e) {
+            console.error('LINE invoke error:', e)
+        }
+    }
+
+    const updateStatus = async (booking, newStatus) => {
         if (!confirm(`Change status to ${newStatus}?`)) return
         try {
             const { error } = await supabase
                 .from('bookings')
                 .update({ status: newStatus })
-                .eq('id', id)
+                .eq('id', booking.id)
 
             if (error) throw error
 
             // Optimistic Update
-            setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b))
+            setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b))
+
+            // Trigger LINE Notification (Async - don't block UI)
+            if (newStatus === 'confirmed' || newStatus === 'cancelled') {
+                sendLineNotification(booking.id, booking.user_id, newStatus, newStatus)
+            }
+
         } catch (err) {
-            alert('Error updating status')
+            alert('Error updating status: ' + err.message)
         }
     }
 
@@ -220,16 +253,16 @@ export default function AdminBookings() {
 
                                                 {booking.status === 'pending' && (
                                                     <>
-                                                        <button onClick={() => updateStatus(booking.id, 'confirmed')} className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg" title="Confirm">
+                                                        <button onClick={() => updateStatus(booking, 'confirmed')} className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg" title="Confirm">
                                                             <Check size={16} />
                                                         </button>
-                                                        <button onClick={() => updateStatus(booking.id, 'cancelled')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg" title="Cancel">
+                                                        <button onClick={() => updateStatus(booking, 'cancelled')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg" title="Cancel">
                                                             <X size={16} />
                                                         </button>
                                                     </>
                                                 )}
                                                 {booking.status === 'confirmed' && (
-                                                    <button onClick={() => updateStatus(booking.id, 'completed')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg" title="Complete (Check Bill)">
+                                                    <button onClick={() => updateStatus(booking, 'completed')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg" title="Complete (Check Bill)">
                                                         <Check size={16} />
                                                     </button>
                                                 )}
