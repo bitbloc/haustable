@@ -1,6 +1,40 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download } from 'lucide-react'
+
+// PWA Install Button Component
+const InstallPWA = () => {
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null)
+    }
+  }
+
+  if (!deferredPrompt) return null
+
+  return (
+    <button 
+        onClick={handleInstall}
+        className="flex items-center gap-2 bg-zinc-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-zinc-700 transition-colors border border-zinc-700"
+    >
+        <Download size={16} /> Install App
+    </button>
+  )
+}
 
 export default function AdminSettings() {
     const [settings, setSettings] = useState({
@@ -152,12 +186,11 @@ export default function AdminSettings() {
             <h1 className="text-3xl font-bold text-white mb-8">System Settings</h1>
 
             {/* Network Connection Helper */}
+            {/* Network Connection Helper */}
             <div className="bg-gradient-to-r from-blue-900/40 to-black p-6 rounded-3xl border border-blue-500/30 mb-8 flex flex-col md:flex-row items-center gap-6">
                 <div className="bg-white p-2 rounded-xl">
-                    {/* Simple QR Code Generation using API to avoid adding hefty deps if not needed, or just display text first */}
-                    {/* Using a reliable QR API for now since we don't have a library installed and don't want to break build */}
                     <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`http://${process.env.HOST_IP || 'localhost'}:5173/staff`)}`} 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`http://${settings.manualIp || process.env.HOST_IP || 'localhost'}:5173/staff`)}`} 
                         alt="Staff Access QR" 
                         className="w-32 h-32"
                     />
@@ -167,18 +200,32 @@ export default function AdminSettings() {
                         <QrCode className="text-blue-400" /> Staff Mobile Access
                     </h2>
                     <p className="text-gray-400 text-sm mt-1 mb-4">
-                        Scan this QR code with your mobile device to access the Staff Kitchen View.
+                        Scan with mobile to access Kitchen View.
                         <br/>
-                        <span className="text-xs opacity-50">(Must be on the same Wi-Fi network: {process.env.HOST_IP || 'Unknown'})</span>
+                        <span className="text-xs opacity-50">LAN IP: {process.env.HOST_IP || 'Unknown'}</span>
                     </p>
-                    <div className="flex flex-col gap-2">
-                        <code className="bg-black/50 px-4 py-2 rounded-lg text-[#DFFF00] font-mono text-sm border border-white/10 select-all">
-                            http://{process.env.HOST_IP || 'localhost'}:5173/staff
-                        </code>
-                        <code className="bg-black/50 px-4 py-2 rounded-lg text-blue-300 font-mono text-xs border border-white/10 select-all">
-                            http://{process.env.HOST_IP || 'localhost'}:5173/admin
+                    
+                    {/* IP Override Section */}
+                    <div className="flex flex-col gap-2 mb-4">
+                        <div className="flex items-center gap-2">
+                             <input 
+                                type="text" 
+                                placeholder={process.env.HOST_IP || "Enter Server IP"} 
+                                value={settings.manualIp || ''}
+                                onChange={(e) => setSettings(prev => ({...prev, manualIp: e.target.value}))}
+                                className="bg-black/50 border border-white/10 rounded-lg px-3 py-1 text-sm text-[#DFFF00] font-mono w-full md:w-48 outline-none focus:border-blue-500"
+                            />
+                            <button onClick={() => window.location.reload()} className="p-2 bg-white/10 rounded-lg hover:bg-white/20" title="Reload Page">
+                                <RefreshCw size={16} className="text-blue-400" />
+                            </button>
+                        </div>
+                        <code className="bg-black/50 px-4 py-2 rounded-lg text-[#DFFF00] font-mono text-sm border border-white/10 select-all block w-fit">
+                            http://{settings.manualIp || process.env.HOST_IP || 'localhost'}:5173/staff
                         </code>
                     </div>
+
+                    {/* Install PWA Button */}
+                    <InstallPWA />
                 </div>
             </div>
 
