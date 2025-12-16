@@ -194,7 +194,7 @@ export default function PickupPage() {
                     menu_item_id: item.id,
                     quantity: item.qty,
                     price_at_time: item.totalPricePerUnit,
-                    options: item.optionsSummary // Store options summary if schema allows or use another field
+                    selected_options: item.optionsSummary // Store options summary in correct column 'selected_options'
                 }))
                 await supabase.from('order_items').insert(orderItems)
             }

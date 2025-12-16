@@ -92,10 +92,22 @@ export default function AdminBookings() {
             const { data, error } = await supabase.functions.invoke('send-line-push', {
                 body: { userId, message: msg, type }
             })
-            if (error) console.warn('LINE Notification Failed:', error)
-            // else console.log('LINE Sent:', data)
+            if (error) {
+                // Try to parse if it's a JSON string in error.message (Supabase Client sometimes wraps it)
+                // But usually 'error' is an object.
+                // If it's a 400/500 from the function, Supabase might return it as `error`.
+                console.warn('LINE Notification Failed:', error)
+                
+                // Alert for easier debugging
+                // Accessing context or message property if available
+                const detail =  (error && error.context && await error.context.text()) || error.message || JSON.stringify(error)
+                 alert(`LINE Send Failed: ${detail}`)
+            } else {
+                 console.log('LINE Sent Successfully:', data)
+            }
         } catch (e) {
-            console.error('LINE invoke error:', e)
+            console.error('LINE invoke exception:', e)
+            alert('LINE invoke exception: ' + e.message)
         }
     }
 

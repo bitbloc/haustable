@@ -113,7 +113,8 @@ export default function AuthModal({ isOpen, onClose }) {
             // Nickname, Birthday, Gender optional but recommended
         }
         if (step === 3) {
-            if (!phone) return setError("Phone is required")
+            if (!phone) return setError("Phone Number is required")
+            if (!lineUid) return setError("LINE User ID is required")
         }
         return true
     }
@@ -144,7 +145,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     birth_day: birthDay ? parseInt(birthDay) : null,
                     birth_month: birthMonth ? parseInt(birthMonth) : null,
                     gender: gender,
-                    line_uid: lineUid,
+                    line_user_id: lineUid, // Use correct column name
                     role: 'customer'
                 })
                 if (profileError) {
@@ -334,12 +335,12 @@ export default function AuthModal({ isOpen, onClose }) {
                                     <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                                         <div className="relative">
                                             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="tel" placeholder="Mobile Number" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" />
+                                            <input type="tel" placeholder="Mobile Number (Required)" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" required />
                                         </div>
                                         <div className="relative">
                                             <Smartphone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#06C755]" />
-                                            <input type="text" placeholder="LINE User ID (Optional)" value={lineUid} onChange={e => setLineUid(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#06C755] outline-none" />
-                                            <p className="text-[10px] text-gray-500 mt-1 ml-1">Connect for points & notifications.</p>
+                                            <input type="text" placeholder="LINE ID (Required)" value={lineUid} onChange={e => setLineUid(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#06C755] outline-none" required />
+                                            <p className="text-[10px] text-gray-500 mt-1 ml-1">For receiving booking notifications.</p>
                                         </div>
                                     </motion.div>
                                 )}
