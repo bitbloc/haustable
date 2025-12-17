@@ -550,72 +550,7 @@ export default function AdminSettings() {
                 </div>
             </div>
 
-            {/* --- SMS Notification Settings (ThaiBulkSMS) --- */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <MessageSquare className="text-[#06c755]" /> SMS Configuration (ThaiBulkSMS)
-                </h2>
 
-                <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                        API Key
-                    </label>
-                    <input
-                        type="password"
-                        placeholder="Your ThaiBulkSMS API Key"
-                        value={settings.sms_api_key || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, sms_api_key: e.target.value }))}
-                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                        API Secret
-                    </label>
-                    <input
-                        type="password"
-                        placeholder="Your ThaiBulkSMS API Secret"
-                        value={settings.sms_api_secret || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, sms_api_secret: e.target.value }))}
-                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                        Admin Contact Number (Shown in Cancel SMS)
-                    </label>
-                    <input
-                        type="text"
-                        placeholder="08x-xxx-xxxx"
-                        value={settings.admin_phone_contact || ''}
-                        onChange={e => setSettings(prev => ({ ...prev, admin_phone_contact: e.target.value }))}
-                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#06c755] outline-none"
-                    />
-                </div>
-
-                <button
-                    onClick={async () => {
-                        try {
-                            setLoading(true)
-                            await handleSave('sms_api_key', settings.sms_api_key)
-                            await handleSave('sms_api_secret', settings.sms_api_secret)
-                            await handleSave('admin_phone_contact', settings.admin_phone_contact)
-                            alert('SMS Configuration Saved!')
-                        } catch (err) {
-                            console.error(err)
-                            alert('Failed to save')
-                        } finally {
-                            setLoading(false)
-                        }
-                    }}
-                    disabled={loading}
-                    className="bg-[#06c755] hover:bg-[#05b64d] text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg"
-                >
-                    {loading ? 'Saving...' : 'Save SMS Configuration'}
-                </button>
-            </div>
 
             {/* Floor Plan & QR */}
             {/* QR Code Section */}

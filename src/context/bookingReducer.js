@@ -20,6 +20,10 @@ export const initialState = {
     isAgreed: false,
     slipFile: null,
 
+    // Auth (Hybrid)
+    lineProfile: null, // { userId, displayName, pictureUrl }
+    lineIdToken: null,
+
     // Data (Loaded via API)
     tables: [],
     bookedTableIds: [], // New
@@ -27,6 +31,9 @@ export const initialState = {
     menuItems: [],
     categories: [],
     settings: {
+        shopMode: 'auto',
+        openingTime: '10:00',
+        closingTime: '20:00',
         minSpend: 0,
         minAdvanceHours: 2,
         bookingTimeSlots: ['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'],
@@ -40,7 +47,6 @@ export const initialState = {
 
 export function bookingReducer(state, action) {
     switch (action.type) {
-        // --- Data Loading ---
         // --- Data Loading ---
         case 'LOAD_INITIAL_SUCCESS':
             return {
@@ -62,6 +68,24 @@ export function bookingReducer(state, action) {
 
         case 'SET_BOOKED_TABLES':
             return { ...state, bookedTableIds: action.payload }
+
+        // --- Auth (Hybrid) ---
+        case 'SET_LINE_PROFILE':
+            return {
+                ...state,
+                lineProfile: action.payload.profile,
+                lineIdToken: action.payload.idToken,
+                // Auto-fill form data if available
+                contactName: action.payload.profile?.displayName || state.contactName
+            }
+        case 'LOGOUT_LINE':
+            return {
+                ...state,
+                lineProfile: null,
+                lineIdToken: null,
+                contactName: '',
+                contactPhone: ''
+            }
 
         // --- Step Navigation ---
         case 'NEXT_STEP':

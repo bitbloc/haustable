@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { X, Mail, Lock, User, Phone, Check, Eye, EyeOff, Calendar, Smartphone, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
+import { useBookingContext } from '../context/BookingContext'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function AuthModal({ isOpen, onClose }) {
@@ -24,6 +25,9 @@ export default function AuthModal({ isOpen, onClose }) {
     const [birthDay, setBirthDay] = useState('') // New
     const [birthMonth, setBirthMonth] = useState('') // New
     const [gender, setGender] = useState('') // 'Male', 'Female', 'Not Specified'
+    
+    // LINE Specific
+    const { loginWithLine, state: bookingState } = useBookingContext()
 
     // Contact Data
     const [phone, setPhone] = useState('')
@@ -75,15 +79,66 @@ export default function AuthModal({ isOpen, onClose }) {
     }
 
     const handleLineLogin = async () => {
-        // LINE Login implementation if provider is enabled
-        // Ensuring "Line Sync" works by using the provider
         try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'line',
-                options: { redirectTo: window.location.origin }
+            setLoading(true)
+            const result = await loginWithLine()
+            
+            if (result?.idToken) {
+                // Check if user exists via Edge Function
+                const { data, error } = await supabase.functions.invoke('manage-booking', {
+                    body: { action: 'check_user', idToken: result.idToken }
+                })
+
+                if (error) throw error
+
+                if (data?.status === 'new_user') {
+                    // Pre-fill data
+                    setName(result.profile?.displayName || '')
+                    setLineUid(result.profile?.userId) // Keep for reference, though backed uses token
+                    setView('register-line-completion')
+                } else {
+                    // Existing user -> Done
+                    onClose()
+                    window.location.reload() // Reload to refresh state/UI
+                }
+            }
+        } catch (err) { 
+            console.error(err)
+            setError(err.message || 'LINE Login Failed') 
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleLineProfileCompletion = async () => {
+        if (!pdpaConsent) return setError("Please accept the Terms & Privacy Policy")
+        if (!phone) return setError("Phone Number is required")
+        
+        setLoading(true)
+        try {
+            const { error } = await supabase.functions.invoke('manage-booking', {
+                body: { 
+                    action: 'register_profile', 
+                    idToken: bookingState.lineIdToken, // Use token from context
+                    profileData: {
+                        display_name: name,
+                        phone_number: phone,
+                        birth_day: birthDay ? parseInt(birthDay) : null,
+                        birth_month: birthMonth ? parseInt(birthMonth) : null,
+                        gender,
+                        nickname
+                    }
+                }
             })
+
             if (error) throw error
-        } catch (err) { setError(err.message) }
+
+            setView('success')
+        } catch (e) {
+            setError(e.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const handleEmailLogin = async (e) => {
@@ -377,6 +432,57 @@ export default function AuthModal({ isOpen, onClose }) {
                     </div>
                 )}
 
+            {/* View: LINE Profile Completion */}
+                {view === 'register-line-completion' && (
+                    <div className="animate-fade-in-up flex flex-col h-full">
+                        <div className="text-center mb-6">
+                            <div className="w-20 h-20 mx-auto bg-[#06C755] rounded-full flex items-center justify-center mb-4 text-white">
+                                <Smartphone size={40} />
+                            </div>
+                            <h2 className="text-xl font-bold text-white">Almost Done!</h2>
+                            <p className="text-sm text-gray-400">Please provide your contact info to complete registration.</p>
+                        </div>
+
+                        {error && <div className="bg-red-500/10 text-red-500 p-2 rounded-lg text-xs mb-4 text-center">{error}</div>}
+
+                        <div className="space-y-4 flex-1 overflow-y-auto">
+                             <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Full Name</label>
+                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" />
+                            </div>
+                            
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Mobile Number (Required)</label>
+                                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" placeholder="0xx-xxx-xxxx" required />
+                            </div>
+
+                             <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Birthday (Get Birthday Gift!)</label>
+                                <div className="flex gap-2">
+                                    <select value={birthDay} onChange={e => setBirthDay(e.target.value)} className="w-24 bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
+                                        <option value="">Day</option>
+                                        {[...Array(31)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+                                    </select>
+                                    <select value={birthMonth} onChange={e => setBirthMonth(e.target.value)} className="flex-1 bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
+                                        <option value="">Month</option>
+                                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-[#222] p-4 rounded-xl border border-white/5">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" checked={pdpaConsent} onChange={e => setPdpaConsent(e.target.checked)} className="mt-1 accent-[#DFFF00] w-4 h-4" />
+                                    <span className="text-xs text-white">I agree to the PDPA (Privacy Policy).</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button onClick={handleLineProfileCompletion} disabled={loading} className="w-full mt-6 bg-[#DFFF00] text-black font-bold py-3 rounded-xl shadow-lg hover:brightness-110 disabled:opacity-50">
+                            {loading ? 'Saving...' : 'Complete Registration'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )

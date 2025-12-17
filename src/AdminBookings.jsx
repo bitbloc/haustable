@@ -72,36 +72,39 @@ export default function AdminBookings() {
         }
     }
 
-    const sendSmsNotification = async (bookingId, phone, type) => {
-        let msg = ''
-        const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit'})
-        
-        if (type === 'confirmed') {
-            msg = `Booking Confirmed: Your table is ready! See you soon. - IN THE HAUS`
-        } else if (type === 'cancelled') {
-             // Fetch Admin Phone
-            const { data } = await supabase.from('app_settings').select('value').eq('key', 'admin_phone_contact').single()
-            const adminPhone = data?.value || '-'
-            msg = `Booking Canceled: Sorry, we cannot accommodate you. Contact: ${adminPhone} - IN THE HAUS`
-        }
-
-        if (!msg || !phone) return
-
+    // Unified Notification Logic (Email / LINE Push)
+    const sendNotification = async (booking, type) => {
         try {
-            const { data, error } = await supabase.functions.invoke('send-sms', {
-                body: { phone, message: msg }
-            })
+            console.log(`[Notification] Processing ${type} for booking ${booking.id}`)
             
-            if (error) {
-                 const detail = (error && error.context && await error.context.text()) || error.message || JSON.stringify(error)
-                 alert(`SMS Failed: ${detail}`)
+            // 1. LINE User Check (Hybrid: Check profiles table manually linked via FK or trusted logic)
+            // Note: The 'bookings' query in fetchBookings already joins 'profiles'.
+            // So we can check booking.profiles.line_user_id
+            
+            if (booking.profiles?.line_user_id) {
+                // Send payload for Flex Message construction
+                await supabase.functions.invoke('send-line-push', {
+                    body: { 
+                        userId: booking.user_id, // Identifies target
+                        targetLineId: booking.profiles.line_user_id, // Optimization to skip manual DB lookup in edge function if we already have it
+                        type, // 'confirmed' or 'cancelled'
+                        bookingDetails: {
+                            id: booking.id,
+                            date: new Date(booking.booking_time).toLocaleDateString('th-TH'),
+                            time: new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                            tableName: booking.tables_layout?.table_name || 'N/A',
+                            pax: booking.pax,
+                            total: booking.total_amount,
+                            customerName: booking.profiles.display_name || booking.pickup_contact_name // Fallback
+                        }
+                    }
+                })
             } else {
-                 console.log('SMS Sent:', data)
-                 alert('SMS Sent Successfully!')
+                 console.log("Not a LINE user (or no line_user_id linked), skipping LINE Push.")
             }
-        } catch (e) {
-            console.error('SMS exception:', e)
-            alert('SMS Exception: ' + e.message)
+
+        } catch (error) {
+            console.error('Notification Error:', error)
         }
     }
 
@@ -118,14 +121,9 @@ export default function AdminBookings() {
             // Optimistic Update
             setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b))
 
-            // Trigger SMS Notification
+            // Trigger Notification
             if (newStatus === 'confirmed' || newStatus === 'cancelled') {
-                const targetPhone = booking.pickup_contact_phone || booking.profiles?.phone_number
-                if (targetPhone) {
-                     sendSmsNotification(booking.id, targetPhone, newStatus)
-                } else {
-                    alert('Cannot send SMS: No phone number found for this booking.')
-                }
+                await sendNotification(booking, newStatus)
             }
 
         } catch (err) {

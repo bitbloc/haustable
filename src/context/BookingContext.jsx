@@ -108,8 +108,37 @@ export function BookingProvider({ children }) {
         loadData()
     }, [])
 
-    // Performance Optimization: Memoize Context Value
-    const contextValue = useMemo(() => ({ state, dispatch }), [state])
+
+
+    const loginWithLine = async () => {
+        if (!window.liff) return
+        try {
+             if (!window.liff.isLoggedIn()) {
+                window.liff.login() 
+            } else {
+                const profile = await window.liff.getProfile()
+                const idToken = window.liff.getIDToken()
+                dispatch({ type: 'SET_LINE_PROFILE', payload: { profile, idToken } })
+                return { profile, idToken }
+            }
+        } catch (e) {
+            console.error("LIFF Login Error", e)
+        }
+    }
+
+    const logoutLine = () => {
+        if (window.liff && window.liff.isLoggedIn()) {
+            window.liff.logout()
+        }
+        dispatch({ type: 'LOGOUT_LINE' })
+    }
+
+    const contextValue = useMemo(() => ({ 
+        state, 
+        dispatch,
+        loginWithLine,
+        logoutLine
+    }), [state])
 
     return (
         <BookingContext.Provider value={contextValue}>

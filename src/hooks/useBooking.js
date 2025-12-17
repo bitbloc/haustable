@@ -89,6 +89,7 @@ export function useBooking() {
             }
 
             // Min Spend Check
+            // Min Spend Check
             const cartTotal = state.cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
             if (state.settings.minSpend > 0) {
                 const requiredSpend = state.settings.minSpend * state.pax
@@ -97,33 +98,18 @@ export function useBooking() {
                 }
             }
 
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) throw new Error('Please Login')
-
             const bookingDateTime = toThaiISO(state.date, state.time)
-
-            // Double Check
-            const { count, error: checkError } = await supabase
-                .from('bookings')
-                .select('id', { count: 'exact', head: true })
-                .eq('booking_time', bookingDateTime)
-                .eq('table_id', state.selectedTable.id)
-                .in('status', ['pending', 'confirmed'])
-
-            if (checkError) throw checkError
-            if (count > 0) throw new Error('This table was just taken! Please select another.')
-
+            
             // Upload Slip
             const fileExt = state.slipFile.name.split('.').pop()
             const fileName = `booking_${Math.random()}.${fileExt}`
             const { error: uploadError } = await supabase.storage.from('slips').upload(fileName, state.slipFile)
             if (uploadError) throw uploadError
 
-            // Insert Booking
             const customerNoteContent = `Booking ${state.selectedTable.table_name} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '')
 
-            const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
-                user_id: user.id,
+            // Prepare Booking Payload
+            const bookingPayload = {
                 booking_type: 'dine_in',
                 status: 'pending',
                 booking_time: bookingDateTime,
@@ -134,20 +120,60 @@ export function useBooking() {
                 pickup_contact_phone: state.contactPhone,
                 customer_note: customerNoteContent,
                 pax: state.pax
-            }).select().single()
+            }
 
-            if (bookingError) throw bookingError
+            const orderItemsPayload = state.cart.map(item => ({
+                menu_item_id: item.id,
+                quantity: item.qty,
+                price_at_time: item.totalPricePerUnit || item.price,
+                selected_options: item.selectedOptions || {}
+            }))
 
-            // Order Items
-            if (state.cart.length > 0) {
-                const orderItems = state.cart.map(item => ({
-                    booking_id: bookingData.id,
-                    menu_item_id: item.id,
-                    quantity: item.qty,
-                    price_at_time: item.totalPricePerUnit || item.price,
-                    selected_options: item.selectedOptions || {}
-                }))
-                await supabase.from('order_items').insert(orderItems)
+            // HYBRID LOGIC: Check LINE vs Standard
+            const lineIdToken = state.lineIdToken || (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
+            const { data: { user } } = await supabase.auth.getUser()
+
+            if (lineIdToken) {
+                // --- LINE USER FLOW (Edge Function) ---
+                const { data, error } = await supabase.functions.invoke('manage-booking', {
+                    body: { 
+                        action: 'create_booking', 
+                        idToken: lineIdToken,
+                        bookingData: { ...bookingPayload, orderItems: orderItemsPayload }
+                    }
+                })
+
+                if (error) throw error
+                if (!data.success) throw new Error(data.error || 'Booking Failed')
+
+            } else if (user) {
+                // --- STANDALONE USER FLOW (Direct Insert) ---
+                
+                // Double Check Availability (Concurrency)
+                const { count, error: checkError } = await supabase
+                .from('bookings')
+                .select('id', { count: 'exact', head: true })
+                .eq('booking_time', bookingDateTime)
+                .eq('table_id', state.selectedTable.id)
+                .in('status', ['pending', 'confirmed'])
+
+                if (checkError) throw checkError
+                if (count > 0) throw new Error('This table was just taken! Please select another.')
+
+                const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
+                    ...bookingPayload,
+                    user_id: user.id
+                }).select().single()
+
+                if (bookingError) throw bookingError
+
+                if (orderItemsPayload.length > 0) {
+                    const items = orderItemsPayload.map(item => ({ booking_id: bookingData.id, ...item }))
+                    await supabase.from('order_items').insert(items)
+                }
+
+            } else {
+                throw new Error('Please Login (Login with LINE or Email)')
             }
 
             return { success: true }
@@ -167,7 +193,7 @@ export function useBooking() {
         setDate, setTime, setPax,
         selectTable,
         addToCart, removeFromCart, openOptionModal, closeOptionModal, confirmOptionSelection,
-        setCheckoutMode, updateForm,
+        setCheckoutMode, updateForm, // Added updateForm to return
 
         // Async
         refreshAvailability,
