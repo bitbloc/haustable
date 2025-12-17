@@ -75,29 +75,77 @@ export default function Home({ session }) {
         fetchRole()
     }, [session])
 
-    // Auto-Resume Line Login
-    const { isLiffReady } = useBookingContext()
-    
+    // --- LINE AUTH GUARD ---
+    // Instead of auto-opening a modal, we block the UI if Line is logged in but Supabase isn't.
+    const { isLiffReady, state: bookingState } = useBookingContext()
+    const [isVerifyingLine, setIsVerifyingLine] = useState(false)
+    const [lineVerifyError, setLineVerifyError] = useState(null)
+    const hasVerified = useRef(false) // Prevent double-check
+
     useEffect(() => {
-        // Prevent opening if we are processing a redirect (Magic Link / OAuth)
+        // 1. Ignore if already processing a Redirect (Hash present)
         if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
             return
         }
 
-        // Check session storage to see if we already tried to auto-open this session
-        const hasAutoOpened = sessionStorage.getItem('haus_auth_auto_opened')
-
-        if (isLiffReady && window.liff?.isLoggedIn() && !session && !hasAutoOpened) {
-            console.log("LIFF Logged In, checking Supabase Session...")
-            setShowAuthModal(true)
-            sessionStorage.setItem('haus_auth_auto_opened', 'true')
+        // 2. If LIFF is ready, Logged In, but NO Supabase Session -> We must verify
+        // Only run once.
+        if (isLiffReady && window.liff?.isLoggedIn() && !session && !isVerifyingLine && !hasVerified.current) {
+            hasVerified.current = true
+            verifyLineUser()
         }
     }, [isLiffReady, session])
 
+    const verifyLineUser = async () => {
+        console.log("Blocking UI: Verifying Line User...")
+        setIsVerifyingLine(true)
+        try {
+            const idToken = window.liff.getIDToken()
+            if (!idToken) throw new Error("No ID Token")
+
+            const { data, error } = await supabase.functions.invoke('manage-booking', {
+                body: { action: 'check_user', idToken }
+            })
+
+            if (error) throw error
+
+            if (data?.sessionLink) {
+                console.log("User verified! Redirecting to session...")
+                window.location.href = data.sessionLink
+            } else {
+                // Profile might exist but no Link (Legacy), or New User
+                console.warn("User needs registration/update.")
+                // Allow UI to render but Open Modal
+                setIsVerifyingLine(false)
+                setShowAuthModal(true) 
+                // We could pass a prop to AuthModal to start at 'register-profile' but 
+                // existing logic inside AuthModal will handle 'check_user' again. 
+                // Optimization: Pass data to modal? For now, let it re-check to be safe/simple.
+            }
+        } catch (err) {
+            console.error("Line Verification Failed:", err)
+            setLineVerifyError(err.message)
+            setIsVerifyingLine(false)
+            // If failed, we stop blocking. User is just 'not logged in'.
+        }
+    }
+
+    if (isVerifyingLine) {
+        return (
+             <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F4F4] text-[#111]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#DFFF00]"></div>
+                <h2 className="mt-4 text-xl font-bold">Verifying Line Account...</h2>
+                <p className="text-gray-500 text-sm">Please wait a moment</p>
+             </div>
+        )
+    }
+
     const handleLogout = async () => {
         await supabase.auth.signOut()
-        setUserRole(null)
-        // Session update will be handled by App.jsx listener
+        if (window.liff?.isLoggedIn()) {
+            window.liff.logout()
+        }
+        window.location.reload()
     }
 
 
