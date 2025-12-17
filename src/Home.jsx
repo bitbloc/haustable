@@ -99,6 +99,14 @@ export default function Home({ session }) {
     const verifyLineUser = async () => {
         console.log("Blocking UI: Verifying Line User...")
         setIsVerifyingLine(true)
+        
+        // Safety Timeout
+        const timer = setTimeout(() => {
+            console.warn("Verification Timed Out")
+            setLineVerifyError("Verification timed out. Please try again.")
+            setIsVerifyingLine(false)
+        }, 15000) // 15s
+
         try {
             const idToken = window.liff.getIDToken()
             if (!idToken) throw new Error("No ID Token")
@@ -106,6 +114,8 @@ export default function Home({ session }) {
             const { data, error } = await supabase.functions.invoke('manage-booking', {
                 body: { action: 'check_user', idToken }
             })
+
+            clearTimeout(timer)
 
             if (error) throw error
 
@@ -115,27 +125,29 @@ export default function Home({ session }) {
             } else {
                 // Profile might exist but no Link (Legacy), or New User
                 console.warn("User needs registration/update.")
-                // Allow UI to render but Open Modal
                 setIsVerifyingLine(false)
                 setShowAuthModal(true) 
-                // We could pass a prop to AuthModal to start at 'register-profile' but 
-                // existing logic inside AuthModal will handle 'check_user' again. 
-                // Optimization: Pass data to modal? For now, let it re-check to be safe/simple.
             }
         } catch (err) {
+            clearTimeout(timer)
             console.error("Line Verification Failed:", err)
             setLineVerifyError(err.message)
             setIsVerifyingLine(false)
-            // If failed, we stop blocking. User is just 'not logged in'.
         }
     }
 
     if (isVerifyingLine) {
         return (
-             <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F4F4] text-[#111]">
+             <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F4F4] text-[#111] p-6 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#DFFF00]"></div>
                 <h2 className="mt-4 text-xl font-bold">Verifying Line Account...</h2>
-                <p className="text-gray-500 text-sm">Please wait a moment</p>
+                <p className="text-gray-500 text-sm mb-6">Please wait a moment</p>
+                <button 
+                    onClick={() => { setIsVerifyingLine(false); window.location.reload(); }}
+                    className="text-gray-400 hover:text-black text-xs underline"
+                >
+                    Stuck? Click here to reload
+                </button>
              </div>
         )
     }
