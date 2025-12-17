@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
 
         result = { 
             status: data ? 'existing_user' : 'new_user', 
-            profile: { userId: lineUserId, displayName: lineDisplayName, pictureUrl: linePicture },
+            profile: data ? { ...data, userId: lineUserId, pictureUrl: linePicture } : { userId: lineUserId, displayName: lineDisplayName, pictureUrl: linePicture },
             sessionLink // Might still be null if repair failed
         }
     }
