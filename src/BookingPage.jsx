@@ -7,8 +7,6 @@ import { motion } from 'framer-motion'
 
 export default function BookingPage() {
     return (
-        <BookingProvider>
-            <BookingSteps />
-        </BookingProvider>
+        <BookingSteps />
     )
 }

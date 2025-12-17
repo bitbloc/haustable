@@ -4,6 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
 import { ToastProvider } from './context/ToastContext'
+import { BookingProvider } from './context/BookingContext'
 
 // Pages
 import Home from './Home'
@@ -89,6 +90,7 @@ function App() {
 
   return (
     <ToastProvider>
+      <BookingProvider>
         <Router>
           <Routes>
             {/* Public Routes */}
@@ -112,6 +114,7 @@ function App() {
             <Route path="/staff" element={<StaffOrderPage />} />
           </Routes>
         </Router>
+      </BookingProvider>
     </ToastProvider>
   )
 }
