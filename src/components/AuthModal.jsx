@@ -91,17 +91,24 @@ export default function AuthModal({ isOpen, onClose }) {
                         return
                     }
 
-                    // Fallback: If existing user but no link (e.g. legacy user without auth account), 
-                    // we should probably allow them to "Register" or show specific error.
-                    // DO NOT RELOAD to avoid loops.
+                    // Fallback: If existing user but no link
                     console.warn("Existing user found but no session link returned.")
-                    // Force them to 'register-line-completion' to potentially fix/update their profile? 
-                    // Or just show error?
-                    // Let's try sending them to registration to "fix" their account (upsert will handle it)
-                    setName(result.profile?.displayName || '')
+                    
+                    // Pre-fill profile data if available
+                    if (data?.profile) {
+                        setName(data.profile.display_name || result.profile?.displayName || '')
+                        setPhone(data.profile.phone_number || '')
+                        setNickname(data.profile.nickname || '')
+                        setGender(data.profile.gender || '')
+                        setBirthDay(data.profile.birth_day || '')
+                        setBirthMonth(data.profile.birth_month || '')
+                        setPdpaConsent(true) // They likely agreed before
+                    } else {
+                        setName(result.profile?.displayName || '')
+                    }
+
                     setLineUid(result.profile?.userId)
                     setView('register-line-completion')
-                    // Optional: setError("Account requires update. Please confirm details.")
             }
         } catch (err) { 
             console.error(err)

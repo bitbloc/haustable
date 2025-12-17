@@ -77,7 +77,6 @@ export default function Home({ session }) {
 
     // Auto-Resume Line Login
     const { isLiffReady } = useBookingContext()
-    const hasAutoOpened = useRef(false)
     
     useEffect(() => {
         // Prevent opening if we are processing a redirect (Magic Link / OAuth)
@@ -85,10 +84,13 @@ export default function Home({ session }) {
             return
         }
 
-        if (isLiffReady && window.liff?.isLoggedIn() && !session && !hasAutoOpened.current) {
+        // Check session storage to see if we already tried to auto-open this session
+        const hasAutoOpened = sessionStorage.getItem('haus_auth_auto_opened')
+
+        if (isLiffReady && window.liff?.isLoggedIn() && !session && !hasAutoOpened) {
             console.log("LIFF Logged In, checking Supabase Session...")
             setShowAuthModal(true)
-            hasAutoOpened.current = true
+            sessionStorage.setItem('haus_auth_auto_opened', 'true')
         }
     }, [isLiffReady, session])
 
