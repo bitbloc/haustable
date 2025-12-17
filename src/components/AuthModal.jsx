@@ -27,7 +27,11 @@ export default function AuthModal({ isOpen, onClose }) {
     const [gender, setGender] = useState('') // 'Male', 'Female', 'Not Specified'
     
     // LINE Specific
-    const { loginWithLine, state: bookingState, isLiffReady } = useBookingContext()
+    const { loginWithLine, logoutLine, state: bookingState, isLiffReady } = useBookingContext()
+
+
+
+
 
     // Contact Data
     const [phone, setPhone] = useState('')
@@ -487,8 +491,6 @@ export default function AuthModal({ isOpen, onClose }) {
 
                         <button 
                             onClick={() => {
-                                const { logoutLine } = useBookingContext() // Access context dynamically/closure or via props if needed, but here we can use handleLogout equivalent
-                                // Actually we have 'logoutLine' from the hook at top level
                                 logoutLine()
                                 setView('login')
                                 setStep(1)
