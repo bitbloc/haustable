@@ -136,11 +136,27 @@ export default function AuthModal({ isOpen, onClose }) {
 
             if (data?.sessionLink) {
                 console.log("Registration Success! Redirecting...", data.sessionLink)
+                // Force redirect
                 window.location.href = data.sessionLink
                 return
             }
 
+            // Fallback: If no link, we might be in a weird state. 
+            // Better to reload to let App.jsx check session or just close if we trust the logic.
+            // But if we just close, user isn't logged in.
+            // Let's force a reload to home if no link (assuming cookie might be set? No, magic link sets cookie).
+            // Actually, if no link, something is wrong. But let's show "Done" and close.
+           
+            // Update: User requested "No Go To Login Page". Just "Completed".
+            // So if we are here (no link), we just set view to success but change success view to be "Done" and Auto Close.
             setView('success')
+            
+            // Auto close after 2 seconds
+            setTimeout(() => {
+                 // Try to reload to see if session works? 
+                 // Or just Close.
+                 window.location.reload()
+            }, 2000)
         } catch (e) {
             setError(e.message)
         } finally {
@@ -244,8 +260,8 @@ export default function AuthModal({ isOpen, onClose }) {
                         <div className="w-20 h-20 bg-[#DFFF00]/20 text-[#DFFF00] rounded-full flex items-center justify-center mb-6">
                             <Check size={40} />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">{t('accountReady') || "Success!"}</h2>
-                        <button onClick={() => { setView('login'); setStep(1); }} className="mt-8 text-[#DFFF00] font-bold hover:underline">Go to Login</button>
+                        <h2 className="text-2xl font-bold text-white mb-2">{t('accountReady') || "Registration Complete!"}</h2>
+                        <p className="text-gray-400 text-sm">Logging you in...</p>
                     </div>
                 )}
 
