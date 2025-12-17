@@ -210,24 +210,15 @@ export default function PickupPage() {
 
 
             // Check Auth (Standard vs LINE)
-            // User is already fetched above at line 176
-            const lineIdToken = window.liff?.isLoggedIn() ? window.liff.getIDToken() : null
+            // FIX: Prioritize Supabase Session (User) if available.
+            // (User fetched above at line 176)
+            
+            // Only use Line Token if NO Supabase User.
+            const lineIdToken = !user && (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
 
-            if (lineIdToken) {
-                 // --- LINE USER FLOW ---
-                 const { data, error } = await supabase.functions.invoke('manage-booking', {
-                    body: { 
-                        action: 'create_booking', 
-                        idToken: lineIdToken,
-                        bookingData: { ...bookingPayload, orderItems: orderItemsPayload }
-                    }
-                })
-
-                if (error) throw error
-                if (!data.success) throw new Error(data.error || 'Booking Failed')
-
-            } else if (user) {
-                // --- STANDARD USER FLOW ---
+            if (user) {
+                // --- STANDARD USER FLOW (Direct Insert) ---
+                console.log("Submitting Pickup as Authenticated User:", user.id)
                 const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
                     ...bookingPayload,
                     user_id: user.id
@@ -242,6 +233,21 @@ export default function PickupPage() {
                     }))
                     await supabase.from('order_items').insert(items)
                 }
+
+            } else if (lineIdToken) {
+                 // --- LINE USER FLOW (Edge Function) - FALLBACK ---
+                 console.warn("Submitting Pickup via Edge Function (No Supabase Session)...")
+                 const { data, error } = await supabase.functions.invoke('manage-booking', {
+                    body: { 
+                        action: 'create_booking', 
+                        idToken: lineIdToken,
+                        bookingData: { ...bookingPayload, orderItems: orderItemsPayload }
+                    }
+                })
+
+                if (error) throw error
+                if (!data.success) throw new Error(data.error || 'Booking Failed')
+
             } else {
                 throw new Error("Please Login before ordering.")
             }
