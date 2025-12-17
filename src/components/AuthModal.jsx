@@ -120,7 +120,10 @@ export default function AuthModal({ isOpen, onClose }) {
 
     const handleLineProfileCompletion = async () => {
         if (!pdpaConsent) return setError("Please accept the Terms & Privacy Policy")
-        if (!phone) return setError("Phone Number is required")
+        if (!phone) {
+             setError("Phone Number is required")
+             return
+        }
         
         setLoading(true)
         try {
@@ -146,6 +149,8 @@ export default function AuthModal({ isOpen, onClose }) {
                 // Force redirect
                 window.location.href = data.sessionLink
                 return
+            } else {
+                throw new Error("Login failed (No Link). Please try again.")
             }
 
             // Fallback: If no link, we might be in a weird state. 

@@ -157,6 +157,10 @@ Deno.serve(async (req) => {
         if (!sessionLink) {
              sessionLink = await generateSessionLink(lineUserId)
         }
+        
+        if (!sessionLink) {
+            throw new Error("Unable to allow login (Rate Limit?). Please try again in a few minutes.")
+        }
 
         result = { success: true, userId: targetUuid, sessionLink }
     }
