@@ -83,14 +83,23 @@ export default function Home({ session }) {
     const hasVerified = useRef(false) // Prevent double-check
 
     useEffect(() => {
+        // 0. Clear verification flag if session is found
+        if (session) {
+            sessionStorage.removeItem('haus_verifying_ts')
+        }
+
         // 1. Ignore if already processing a Redirect (Hash present)
         if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
             return
         }
 
-        // 2. If LIFF is ready, Logged In, but NO Supabase Session -> We must verify
-        // Only run once.
-        if (isLiffReady && window.liff?.isLoggedIn() && !session && !isVerifyingLine && !hasVerified.current) {
+        // 2. Loop Protection: Check if we just tried verifying recently (15s)
+        const lastVerify = sessionStorage.getItem('haus_verifying_ts')
+        const isRecent = lastVerify && (Date.now() - parseInt(lastVerify) < 15000)
+
+        // 3. If LIFF is ready, Logged In, but NO Supabase Session -> We must verify
+        // Only run once per load, and NOT if we just tried.
+        if (isLiffReady && window.liff?.isLoggedIn() && !session && !isVerifyingLine && !hasVerified.current && !isRecent) {
             hasVerified.current = true
             verifyLineUser()
         }
@@ -121,6 +130,8 @@ export default function Home({ session }) {
 
             if (data?.sessionLink) {
                 console.log("User verified! Redirecting to session...")
+                // Set flag to prevent loop
+                sessionStorage.setItem('haus_verifying_ts', Date.now().toString())
                 window.location.href = data.sessionLink
             } else {
                 // Profile might exist but no Link (Legacy), or New User
