@@ -73,18 +73,6 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(handleAuthChange)
 
-    // Global LIFF Init
-    const initLiff = async () => {
-        try {
-            if (window.liff) {
-                await window.liff.init({ liffId: "2008674756-hTEWodVj" })
-            }
-        } catch (e) {
-            console.error("LIFF Init Error:", e)
-        }
-    }
-    initLiff()
-
     return () => subscription.unsubscribe()
   }, [])
 

@@ -4,6 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { supabase } from './lib/supabaseClient'
 import { ArrowRight, Clock, User } from 'lucide-react' // Added User
 import { useLanguage } from './context/LanguageContext'
+import { useBookingContext } from './context/BookingContext'
 import KineticText from './components/KineticText'
 import AuthModal from './components/AuthModal' // Added Import
 
@@ -73,6 +74,16 @@ export default function Home({ session }) {
         }
         fetchRole()
     }, [session])
+
+    // Auto-Resume Line Login
+    const { isLiffReady } = useBookingContext()
+    
+    useEffect(() => {
+        if (isLiffReady && window.liff?.isLoggedIn() && !session) {
+            console.log("LIFF Logged In, checking Supabase Session...")
+            setShowAuthModal(true)
+        }
+    }, [isLiffReady, session])
 
     const handleLogout = async () => {
         await supabase.auth.signOut()

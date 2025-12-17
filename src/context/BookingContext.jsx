@@ -8,8 +8,23 @@ const BookingContext = createContext()
 export function BookingProvider({ children }) {
     const [state, dispatch] = useReducer(bookingReducer, initialState)
 
+    const [isLiffReady, setIsLiffReady] = useState(false)
+
     // Initial Data Load
     useEffect(() => {
+        // LIFF Init
+        const initLiff = async () => {
+            try {
+                if (window.liff) {
+                    await window.liff.init({ liffId: "2008674756-hTEWodVj" })
+                    setIsLiffReady(true)
+                }
+            } catch (e) {
+                console.error("LIFF Init Error:", e)
+            }
+        }
+        initLiff()
+
         const loadData = async () => {
             try {
                 // 1. FAST LOAD (Critical for UI)
@@ -137,8 +152,9 @@ export function BookingProvider({ children }) {
         state, 
         dispatch,
         loginWithLine,
-        logoutLine
-    }), [state])
+        logoutLine,
+        isLiffReady
+    }), [state, isLiffReady])
 
     return (
         <BookingContext.Provider value={contextValue}>

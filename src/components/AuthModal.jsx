@@ -27,7 +27,7 @@ export default function AuthModal({ isOpen, onClose }) {
     const [gender, setGender] = useState('') // 'Male', 'Female', 'Not Specified'
     
     // LINE Specific
-    const { loginWithLine, state: bookingState } = useBookingContext()
+    const { loginWithLine, state: bookingState, isLiffReady } = useBookingContext()
 
     // Contact Data
     const [phone, setPhone] = useState('')
@@ -46,23 +46,21 @@ export default function AuthModal({ isOpen, onClose }) {
             const randomWord = challengeWords[Math.floor(Math.random() * challengeWords.length)]
             setBotChallenge({ word: randomWord })
             checkLineSync()
+
+            // Auto-trigger Line Login if LIFF is ready and logged in (and we aren't already processing)
+            if (isLiffReady && window.liff?.isLoggedIn() && !loading) {
+                console.log("Auto-executing Line Login in Modal...")
+                handleLineLogin()
+            }
         }
-    }, [isOpen])
+    }, [isOpen, isLiffReady]) // Added isLiffReady dependency
 
     // "Line Sync" / Social Pre-fill
-    // Check if user is logged in but might be in extraction flow (rare in this modal context, but good for "Complete Profile")
-    // Or just check if we have metadata from a previous attempt? 
-    // For now, let's assume if they registered via Social, Supabase handles it. 
-    // If we want to pre-fill from Google/Line metadata after they click "Register" (if we supported hybrid), we'd need that data.
-    // Here we'll implement logic: If user is logged in via OAuth (e.g. just redirected back), we might want to auto-open this modal?
-    // That needs to be in App.jsx. 
-    // INSIDE Modal: We'll mainly focus on the "Progressive Reveal" UI.
     const checkLineSync = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (user && view.startsWith('register')) {
             if (user.user_metadata?.full_name) setName(user.user_metadata.full_name)
             if (user.user_metadata?.picture) { /* could show avatar */ }
-            // Line UID might be in user.identities
         }
     }
 
@@ -97,9 +95,16 @@ export default function AuthModal({ isOpen, onClose }) {
                     setLineUid(result.profile?.userId) // Keep for reference, though backed uses token
                     setView('register-line-completion')
                 } else {
-                    // Existing user -> Done
+                    // Existing user -> Check for Session Link (Magic Link)
+                    if (data?.sessionLink) {
+                        console.log("Redirecting to Session...", data.sessionLink)
+                        window.location.href = data.sessionLink
+                        return
+                    }
+
+                    // Fallback (Should not happen if backend works)
                     onClose()
-                    window.location.reload() // Reload to refresh state/UI
+                    window.location.reload() 
                 }
             }
         } catch (err) { 
@@ -116,7 +121,7 @@ export default function AuthModal({ isOpen, onClose }) {
         
         setLoading(true)
         try {
-            const { error } = await supabase.functions.invoke('manage-booking', {
+            const { data, error } = await supabase.functions.invoke('manage-booking', {
                 body: { 
                     action: 'register_profile', 
                     idToken: bookingState.lineIdToken, // Use token from context
@@ -132,6 +137,12 @@ export default function AuthModal({ isOpen, onClose }) {
             })
 
             if (error) throw error
+
+            if (data?.sessionLink) {
+                console.log("Registration Success! Redirecting...", data.sessionLink)
+                window.location.href = data.sessionLink
+                return
+            }
 
             setView('success')
         } catch (e) {
