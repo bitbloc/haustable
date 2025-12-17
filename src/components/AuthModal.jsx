@@ -45,7 +45,7 @@ export default function AuthModal({ isOpen, onClose }) {
             // Reset state or initialize
             const randomWord = challengeWords[Math.floor(Math.random() * challengeWords.length)]
             setBotChallenge({ word: randomWord })
-            checkLineSync()
+            // checkLineSync removed - redundant
 
             // Auto-trigger Line Login if LIFF is ready and logged in (and we aren't already processing)
             if (isLiffReady && window.liff?.isLoggedIn() && !loading) {
@@ -54,15 +54,6 @@ export default function AuthModal({ isOpen, onClose }) {
             }
         }
     }, [isOpen, isLiffReady]) // Added isLiffReady dependency
-
-    // "Line Sync" / Social Pre-fill
-    const checkLineSync = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && view.startsWith('register')) {
-            if (user.user_metadata?.full_name) setName(user.user_metadata.full_name)
-            if (user.user_metadata?.picture) { /* could show avatar */ }
-        }
-    }
 
     if (!isOpen) return null
 
@@ -492,6 +483,19 @@ export default function AuthModal({ isOpen, onClose }) {
 
                         <button onClick={handleLineProfileCompletion} disabled={loading} className="w-full mt-6 bg-[#DFFF00] text-black font-bold py-3 rounded-xl shadow-lg hover:brightness-110 disabled:opacity-50">
                             {loading ? 'Saving...' : 'Complete Registration'}
+                        </button>
+
+                        <button 
+                            onClick={() => {
+                                const { logoutLine } = useBookingContext() // Access context dynamically/closure or via props if needed, but here we can use handleLogout equivalent
+                                // Actually we have 'logoutLine' from the hook at top level
+                                logoutLine()
+                                setView('login')
+                                setStep(1)
+                            }}
+                            className="w-full mt-3 text-gray-500 text-xs hover:text-white underline"
+                        >
+                            Cancel / Login with other account
                         </button>
                     </div>
                 )}
