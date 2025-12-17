@@ -136,21 +136,15 @@ export default function Home({ session }) {
         }
     }
 
+    // Blocking UI Removed as per user request to "Enter immediately".
+    // The verification runs in background. 
+    // If successful, it will redirect (reload).
+    // If not, user can interact manually.
+    /* 
     if (isVerifyingLine) {
-        return (
-             <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4F4F4] text-[#111] p-6 text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#DFFF00]"></div>
-                <h2 className="mt-4 text-xl font-bold">Verifying Line Account...</h2>
-                <p className="text-gray-500 text-sm mb-6">Please wait a moment</p>
-                <button 
-                    onClick={() => { setIsVerifyingLine(false); window.location.reload(); }}
-                    className="text-gray-400 hover:text-black text-xs underline"
-                >
-                    Stuck? Click here to reload
-                </button>
-             </div>
-        )
-    }
+        return ( ... ) 
+    } 
+    */
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
