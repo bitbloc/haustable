@@ -66,19 +66,37 @@ Deno.serve(async (req) => {
     if (action === 'check_user') {
         const { data } = await supabaseAdmin
             .from('profiles')
-            .select('id')
+            .select('*') // Select all to get name for repair if needed
             .eq('line_user_id', lineUserId)
             .single()
         
         let sessionLink = null
         if (data) {
              sessionLink = await generateSessionLink(lineUserId)
+             
+             // Repair: If profile exists but no link (likely no Auth User), create Auth User
+             if (!sessionLink) {
+                 console.log("Profile exists but no Auth User. repairing...")
+                 const email = `line_${lineUserId}@haus.local`
+                 const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                    email: email,
+                    email_confirm: true,
+                    user_metadata: { full_name: data.display_name || lineDisplayName, line_user_id: lineUserId }
+                })
+                
+                if (!createError && newUser) {
+                    // Try generate link again
+                    sessionLink = await generateSessionLink(lineUserId)
+                } else {
+                    console.error("Failed to repair user:", createError)
+                }
+             }
         }
 
         result = { 
             status: data ? 'existing_user' : 'new_user', 
             profile: { userId: lineUserId, displayName: lineDisplayName, pictureUrl: linePicture },
-            sessionLink
+            sessionLink // Might still be null if repair failed
         }
     }
 

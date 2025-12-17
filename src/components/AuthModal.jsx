@@ -89,12 +89,6 @@ export default function AuthModal({ isOpen, onClose }) {
 
                 if (error) throw error
 
-                if (data?.status === 'new_user') {
-                    // Pre-fill data
-                    setName(result.profile?.displayName || '')
-                    setLineUid(result.profile?.userId) // Keep for reference, though backed uses token
-                    setView('register-line-completion')
-                } else {
                     // Existing user -> Check for Session Link (Magic Link)
                     if (data?.sessionLink) {
                         console.log("Redirecting to Session...", data.sessionLink)
@@ -102,10 +96,17 @@ export default function AuthModal({ isOpen, onClose }) {
                         return
                     }
 
-                    // Fallback (Should not happen if backend works)
-                    onClose()
-                    window.location.reload() 
-                }
+                    // Fallback: If existing user but no link (e.g. legacy user without auth account), 
+                    // we should probably allow them to "Register" or show specific error.
+                    // DO NOT RELOAD to avoid loops.
+                    console.warn("Existing user found but no session link returned.")
+                    // Force them to 'register-line-completion' to potentially fix/update their profile? 
+                    // Or just show error?
+                    // Let's try sending them to registration to "fix" their account (upsert will handle it)
+                    setName(result.profile?.displayName || '')
+                    setLineUid(result.profile?.userId)
+                    setView('register-line-completion')
+                    // Optional: setError("Account requires update. Please confirm details.")
             }
         } catch (err) { 
             console.error(err)
