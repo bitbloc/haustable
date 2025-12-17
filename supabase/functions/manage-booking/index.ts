@@ -107,9 +107,10 @@ Deno.serve(async (req) => {
         // Let's try to find existing user first, if not create one.
         let { data: existingUser } = await supabaseAdmin.from('profiles').select('id').eq('line_user_id', lineUserId).single()
         let targetUuid = existingUser?.id
+        let sessionLink = null
 
         if (!targetUuid) {
-            // Create a "Dummy" Auth User for this LINE user
+            // 1. Try Create
             const email = `line_${lineUserId}@haus.local`
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: email,
@@ -117,24 +118,26 @@ Deno.serve(async (req) => {
                 user_metadata: { full_name: profileData.display_name, line_user_id: lineUserId }
             })
             
-            if (createError) {
-                 console.log("Create user error (might exist):", createError)
-                 // Try to fetch 'auth.users' by email? Admin API can.
-                 // But for now let's hope it works or exists.
+            if (newUser?.user) {
+                targetUuid = newUser.user.id
+            } else {
+                 console.log("Create user failed (likely exists). Trying to recover via Link Generation...", createError)
+                 // 2. Fallback: Generate Link to get User ID
+                 const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+                    type: 'magiclink',
+                    email: email
+                })
+                
+                if (linkData?.user) {
+                    targetUuid = linkData.user.id
+                    sessionLink = linkData.properties.action_link
+                } else {
+                    console.error("Link Gen failed:", linkError)
+                }
             }
-            targetUuid = newUser?.user?.id
         }
         
-        // If we still don't have UUID (e.g. create failed because exists), we need to find it by email or rely on upsert failure?
-        // Let's assume critical path works.
-
-        if (!targetUuid) {
-             // Fallback: Try to get user by email to get ID
-             const email = `line_${lineUserId}@haus.local`
-             // Not easily exposed in supabase-js admin without listUsers.
-             // Assume failure.
-             throw new Error("Could not resolve User User ID")
-        }
+        if (!targetUuid) throw new Error("Could not resolve User User ID (System Error)")
 
         // Now upsert profile
         const { error: upsertError } = await supabaseAdmin.from('profiles').upsert({
@@ -150,8 +153,10 @@ Deno.serve(async (req) => {
         })
         if (upsertError) throw upsertError
 
-        // New: Generate Link
-        const sessionLink = await generateSessionLink(lineUserId)
+        // Ensure we have a link
+        if (!sessionLink) {
+             sessionLink = await generateSessionLink(lineUserId)
+        }
 
         result = { success: true, userId: targetUuid, sessionLink }
     }

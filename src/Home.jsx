@@ -79,6 +79,11 @@ export default function Home({ session }) {
     const { isLiffReady } = useBookingContext()
     
     useEffect(() => {
+        // Prevent opening if we are processing a redirect (Magic Link / OAuth)
+        if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
+            return
+        }
+
         if (isLiffReady && window.liff?.isLoggedIn() && !session) {
             console.log("LIFF Logged In, checking Supabase Session...")
             setShowAuthModal(true)
