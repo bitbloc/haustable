@@ -89,7 +89,6 @@ export function useBooking() {
             }
 
             // Min Spend Check
-            // Min Spend Check
             const cartTotal = state.cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
             if (state.settings.minSpend > 0) {
                 const requiredSpend = state.settings.minSpend * state.pax
@@ -129,28 +128,18 @@ export function useBooking() {
                 selected_options: item.selectedOptions || {}
             }))
 
-            // HYBRID LOGIC: Check LINE vs Standard
-            const lineIdToken = state.lineIdToken || (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
+            // FIX: Prioritize Supabase Session (User) if available. 
             const { data: { user } } = await supabase.auth.getUser()
+            
+            // Only use Line Token if NO Supabase User (e.g. Guest Mode?) 
+            const lineIdToken = !user && (state.lineIdToken || (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null))
 
-            if (lineIdToken) {
-                // --- LINE USER FLOW (Edge Function) ---
-                const { data, error } = await supabase.functions.invoke('manage-booking', {
-                    body: { 
-                        action: 'create_booking', 
-                        idToken: lineIdToken,
-                        bookingData: { ...bookingPayload, orderItems: orderItemsPayload }
-                    }
-                })
-
-                if (error) throw error
-                if (!data.success) throw new Error(data.error || 'Booking Failed')
-
-            } else if (user) {
-                // --- STANDALONE USER FLOW (Direct Insert) ---
+            if (user) {
+                 // --- STANDALONE USER FLOW (Direct Insert) ---
+                 console.log("Submitting as Authenticated User:", user.id)
                 
-                // Double Check Availability (Concurrency)
-                const { count, error: checkError } = await supabase
+                 // Double Check Availability (Concurrency)
+                 const { count, error: checkError } = await supabase
                 .from('bookings')
                 .select('id', { count: 'exact', head: true })
                 .eq('booking_time', bookingDateTime)
@@ -172,8 +161,22 @@ export function useBooking() {
                     await supabase.from('order_items').insert(items)
                 }
 
+            } else if (lineIdToken) {
+                // --- LINE USER FLOW (Edge Function) - FALLBACK ONLY ---
+                console.warn("Submitting via Edge Function (No Supabase Session)...")
+                const { data, error } = await supabase.functions.invoke('manage-booking', {
+                    body: { 
+                        action: 'create_booking', 
+                        idToken: lineIdToken,
+                        bookingData: { ...bookingPayload, orderItems: orderItemsPayload }
+                    }
+                })
+
+                if (error) throw error
+                if (!data.success) throw new Error(data.error || 'Booking Failed')
+
             } else {
-                throw new Error('Please Login (Login with LINE or Email)')
+                 throw new Error('Please Login (Login with LINE or Email)')
             }
 
             return { success: true }
