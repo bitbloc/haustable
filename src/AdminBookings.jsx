@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText } from 'lucide-react'
+import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2 } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 
 export default function AdminBookings() {
@@ -128,6 +128,63 @@ export default function AdminBookings() {
 
         } catch (err) {
             alert('Error updating status: ' + err.message)
+        }
+    }
+
+    // Secure Delete Handler
+    const handleDelete = async (booking) => {
+        const inputPin = prompt("Please enter Staff PIN to confirm deletion:")
+        if (!inputPin) return
+
+        try {
+             // 1. Verify PIN
+            const { data: setting } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'staff_pin_code')
+                .single()
+            
+            const correctPin = setting?.value
+
+            if (inputPin !== correctPin) {
+                alert("Incorrect PIN!")
+                return
+            }
+
+            if (!confirm(`⚠ WARNING: This will permanently delete booking #${booking.id} and its slip image.\nAre you sure?`)) return
+
+            setLoading(true)
+
+            // 2. Delete Slip Image (if exists)
+            if (booking.payment_slip_url) {
+                // Extract path from URL or just use the filename if standard bucket structure
+                // Usually we store full path or just filename? Let's assume standard behavior matches AdminSettings cleanup.
+                // AdminSettings uses: storage.from('slips').remove([url]) - wait, remove takes paths/names, not full URLs typically unless stored that way.
+                // Let's try to pass the value stored in DB exactly.
+                const { error: storageError } = await supabase.storage
+                    .from('slips')
+                    .remove([booking.payment_slip_url])
+                
+                if (storageError) console.warn("Slip deletion warning:", storageError)
+            }
+
+            // 3. Delete Booking Record
+            const { error: dbError } = await supabase
+                .from('bookings')
+                .delete()
+                .eq('id', booking.id)
+
+            if (dbError) throw dbError
+
+            // 4. Update UI
+            setBookings(prev => prev.filter(b => b.id !== booking.id))
+            alert("Booking deleted successfully.")
+
+        } catch (err) {
+            console.error(err)
+            alert('Delete failed: ' + err.message)
+        } finally {
+            setLoading(false)
         }
     }
 
