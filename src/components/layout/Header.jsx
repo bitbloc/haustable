@@ -12,9 +12,11 @@ export default function Header({ session }) {
         <nav className="bg-white/80 backdrop-blur-md px-6 py-4 border-b border-gray-100 sticky top-0 z-40 flex justify-between items-center transition-all bg-[#FFFFFFCC]">
             <div>
                 <Link to="/" className="flex items-center gap-2 group">
-                    <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-xl font-serif text-2xl font-bold shadow-sm transition-transform group-hover:scale-105">
-                        H
-                    </div>
+                    <img 
+                        src="/logo.png" 
+                        alt="Haus Table" 
+                        className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
+                    />
                 </Link>
             </div>
 

@@ -239,10 +239,7 @@ export default function Home({ session }) {
                 <div className="bg-white/90 backdrop-blur-xl rounded-full pl-5 pr-5 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 text-left flex items-center gap-4 hover:scale-[1.02] transition-transform duration-300">
                     {/* Flat Line Icon (Haus/Home) */}
                     <div className="shrink-0 text-[#1A1A1A]">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                            <polyline points="9 22 9 12 15 12 15 22" />
-                        </svg>
+                        <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
                     </div>
 
                     {/* Content: HDL | Marquee */}
