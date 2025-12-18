@@ -1,5 +1,6 @@
 
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Star, Minus } from 'lucide-react'
 
 // Using Lucide 'Plus' instead of custom SVG for better consistency if possible, 
@@ -12,7 +13,38 @@ const PlusIcon = ({ size }) => (
 // The custom PlusIcon component is no longer needed as Lucide's Plus and Minus are used directly.
 
 const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
-    const hasOptions = item.menu_item_options && item.menu_item_options.length > 0
+    const [ripples, setRipples] = useState([])
+
+    const createRipple = (e) => {
+        const button = e.currentTarget.getBoundingClientRect()
+        // Improve ripple positioning to be centered or click-relative? 
+        // User asked for "spread out", centered on button/click is standard.
+        // Let's make it emanate from the center of the button for a "scent" effect.
+        const size = Math.max(button.width, button.height)
+        const x = e.clientX - button.left - size / 2
+        const y = e.clientY - button.top - size / 2
+        
+        // Actually, for "scent spreading out", maybe center of the button is best?
+        // Let's stick to click position for interactivity, or center for "aura".
+        // "Ripple effect" usually implies click feedback.
+        
+        const newRipple = {
+            x,
+            y,
+            size,
+            id: Date.now()
+        }
+        
+        setRipples((prev) => [...prev, newRipple])
+        
+        // Clean up ripple after animation
+        setTimeout(() => {
+            setRipples((prev) => prev.filter((r) => r.id !== newRipple.id))
+        }, 1000)
+
+        // Trigger the actual action
+        onAdd(item)
+    }
 
     return (
         <div className={`group bg-white rounded-2xl p-3 border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden ${mode === 'list' ? 'flex gap-4' : ''}`}>
@@ -33,7 +65,12 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
                     </div>
                 )}
                 {/* Clickable Overlay */}
-                <div className="absolute inset-0 cursor-pointer" onClick={() => onAdd(item)}></div>
+                <div className="absolute inset-0 cursor-pointer" onClick={(e) => {
+                    // Start ripple if clicking image too?
+                    // User said: Mouse over (image and button) > Click > Ripple.
+                    // The button has its own click handler. This is for adding via image.
+                    onAdd(item)
+                }}></div>
 
                 {item.is_recommended && (
                     <div className="absolute top-2 left-2 bg-[#DFFF00] text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm z-10">
@@ -55,12 +92,39 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
                     <span className="font-mono font-bold text-lg text-black">{item.price}.-</span>
 
                     {hasOptions ? (
-                        <button
-                            onClick={() => onAdd(item)}
-                            className="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-90 transition-transform flex items-center gap-1 shadow-lg hover:bg-gray-800"
-                        >
-                            <Plus size={14} /> Customize
-                        </button>
+                        <div className="relative overflow-visible"> 
+                           {/* Ripples Container (Absolute to button/container) */}
+                           {ripples.map((ripple) => (
+                                <motion.span
+                                    key={ripple.id}
+                                    initial={{ transform: "scale(0)", opacity: 0.5 }}
+                                    animate={{ transform: "scale(4)", opacity: 0 }}
+                                    transition={{ duration: 0.8, ease: "easeOut" }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0, 
+                                        left: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        borderRadius: '9999px',
+                                        backgroundColor: 'rgba(0,0,0, 0.1)', // Light spreading color
+                                        pointerEvents: 'none',
+                                        zIndex: 0
+                                    }}
+                                />
+                            ))}
+
+                            <button
+                                onClick={createRipple}
+                                className="relative overflow-hidden bg-black text-white h-8 pl-3 pr-3 rounded-full text-xs font-bold active:scale-95 transition-all duration-300 flex items-center gap-0 group-hover:pr-4 shadow-lg hover:bg-gray-800 z-10"
+                                style={{ maxWidth: '100%' }}
+                            >
+                                <Plus size={16} className="shrink-0" />
+                                <span className="max-w-0 opacity-0 group-hover:max-w-[100px] group-hover:opacity-100 group-hover:ml-1 transition-all duration-300 whitespace-nowrap overflow-hidden">
+                                    เลือกอร่อย
+                                </span>
+                            </button>
+                        </div>
                     ) : (
                         qty === 0 ? (
                             <button onClick={() => onAdd(item)} className="bg-gray-100 text-black w-8 h-8 rounded-full flex items-center justify-center hover:bg-black hover:text-white transition-colors active:scale-90">
