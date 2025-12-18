@@ -331,7 +331,7 @@ export default function AdminBookings() {
                                                     <button onClick={() => updateStatus(booking, 'completed')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg" title="Complete (Check Bill)">
                                                         <Check size={16} />
                                                     </button>
-                                                    </button>
+
                                                 )}
                                                 
                                                 <div className="w-px bg-white/10 mx-1"></div>
