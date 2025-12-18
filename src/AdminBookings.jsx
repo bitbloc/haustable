@@ -101,6 +101,7 @@ export default function AdminBookings() {
                 })
             } else {
                  console.log("Not a LINE user (or no line_user_id linked), skipping LINE Push.")
+                 alert("Debug: Push skipped because 'line_user_id' is missing for this user.")
             }
 
         } catch (error) {
