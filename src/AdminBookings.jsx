@@ -331,7 +331,13 @@ export default function AdminBookings() {
                                                     <button onClick={() => updateStatus(booking, 'completed')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg" title="Complete (Check Bill)">
                                                         <Check size={16} />
                                                     </button>
+                                                    </button>
                                                 )}
+                                                
+                                                <div className="w-px bg-white/10 mx-1"></div>
+                                                <button onClick={() => handleDelete(booking)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors" title="Delete Booking (PIN Required)">
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
