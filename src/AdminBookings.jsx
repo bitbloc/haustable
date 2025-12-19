@@ -140,8 +140,8 @@ export default function AdminBookings() {
 
     // Secure Delete Handler (Single)
     const handleDelete = async (booking) => {
-        if (booking.status !== 'completed') {
-            alert("Protected: Only 'Completed' orders can be deleted.")
+        if (booking.status !== 'completed' && booking.status !== 'cancelled') {
+            alert("Protected: Only 'Completed' or 'Cancelled' orders can be deleted.")
             return
         }
         
@@ -152,12 +152,12 @@ export default function AdminBookings() {
     const handleBatchDelete = async () => {
         if (selectedIds.length === 0) return
 
-        // 1. Filter for valid bookings (must be 'completed')
-        const validBookings = bookings.filter(b => selectedIds.includes(b.id) && b.status === 'completed')
+        // 1. Filter for valid bookings (must be 'completed' or 'cancelled')
+        const validBookings = bookings.filter(b => selectedIds.includes(b.id) && (b.status === 'completed' || b.status === 'cancelled'))
         const invalidCount = selectedIds.length - validBookings.length
 
         if (validBookings.length === 0) {
-            alert("None of the selected orders can be deleted. Only 'Completed' orders are deletable.")
+            alert("None of the selected orders can be deleted. Only 'Completed' or 'Cancelled' orders are deletable.")
             return
         }
 
@@ -476,8 +476,8 @@ export default function AdminBookings() {
                                                 <div className="w-px bg-white/10 mx-1"></div>
                                                 <button 
                                                     onClick={() => handleDelete(booking)} 
-                                                    className={`p-2 rounded-lg transition-colors ${booking.status === 'completed' ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
-                                                    title={booking.status === 'completed' ? "Delete Booking (PIN Required)" : "Only Completed orders can be deleted"}
+                                                    className={`p-2 rounded-lg transition-colors ${(booking.status === 'completed' || booking.status === 'cancelled') ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
+                                                    title={(booking.status === 'completed' || booking.status === 'cancelled') ? "Delete Booking (PIN Required)" : "Only Completed or Cancelled orders can be deleted"}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
