@@ -125,8 +125,9 @@ export default function StaffOrderPage() {
     const [pinInput, setPinInput] = useState('')
     
     // Data State
-    const [activeTab, setActiveTab] = useState('live') // 'live' | 'history'
+    const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'schedule'
     const [orders, setOrders] = useState([]) // Live pending orders
+    const [scheduleOrders, setScheduleOrders] = useState([]) // Upcoming confirmed orders
     const [historyOrders, setHistoryOrders] = useState([]) // History orders
     const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0]) // YYYY-MM-DD
     const [loading, setLoading] = useState(true)
@@ -200,10 +201,11 @@ export default function StaffOrderPage() {
         }
     }, [isAuthenticated, isSoundChecked]) // Removed request/release/isSupported dependencies to prevent loops if they are stable
 
-    // Load History when tab/date changes
+    // Load History or Schedule when tab changes
     useEffect(() => {
-        if (isAuthenticated && activeTab === 'history') {
-            fetchHistoryOrders()
+        if (isAuthenticated) {
+            if (activeTab === 'history') fetchHistoryOrders()
+            if (activeTab === 'schedule') fetchScheduleOrders()
         }
     }, [isAuthenticated, activeTab, historyDate])
 
@@ -344,20 +346,12 @@ export default function StaffOrderPage() {
     const fetchLiveOrders = async (silent = false) => {
         if (!silent) setLoading(true)
         try {
-            // Calculate start and end of today in local time (assuming server expects ISO or similar, 
-            // but standard practice for 'today' query is range on timestamp)
-            const now = new Date()
-            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString()
-            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString()
-            
-            console.log("Fetching orders for range:", startOfDay, "to", endOfDay)
+            console.log("Fetching ALL live orders (pending/confirmed)...")
 
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .in('status', ['pending', 'confirmed'])
-                .gte('booking_time', startOfDay) // Use range instead of .eq('booking_date')
-                .lte('booking_time', endOfDay)
                 .order('booking_time', { ascending: true })
             
             if (error) {
@@ -396,6 +390,26 @@ export default function StaffOrderPage() {
             toast.error('โหลดประวัติไม่สำเร็จ')
         } finally {
             setHistoryLoading(false)
+        }
+    }
+
+    const fetchScheduleOrders = async () => {
+        setLoading(true)
+        try {
+            const now = new Date().toISOString()
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .eq('status', 'confirmed')
+                .gte('booking_time', now)
+                .order('booking_time', { ascending: true })
+            
+            if (error) throw error
+            setScheduleOrders(data || [])
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -663,6 +677,13 @@ export default function StaffOrderPage() {
                         {orders.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{orders.length}</span>}
                     </button>
                     <button 
+                        onClick={() => setActiveTab('schedule')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'schedule' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                    >
+                        <Calendar className="w-4 h-4" />
+                        Schedule
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('history')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'history' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
@@ -703,15 +724,29 @@ export default function StaffOrderPage() {
                                      {order.status === 'pending' && <div className="absolute inset-x-0 top-0 h-1.5 bg-[#DFFF00] animate-pulse" />}
                                      
                                     {/* Card Header */}
+                                    {/* Card Header Configured as requested: Short ID : Type */}
                                     <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-100">
                                         <div>
-                                            <div className="text-3xl font-black text-[#1A1A1A] mb-2 flex items-center gap-3">
-                                                {order.tables_layout?.table_name || `โต๊ะ ${order.table_id || '?'}`}
-                                                {order.status === 'pending' && <span className="flex h-3 w-3 relative">
+                                            <div className="text-3xl font-black text-[#1A1A1A] mb-2 flex flex-wrap items-center gap-3">
+                                                <span className="font-mono">
+                                                    #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
+                                                </span>
+                                                <span className="text-gray-300">|</span>
+                                                {order.booking_type === 'pickup' ? (
+                                                     <span className="text-blue-600 flex items-center gap-2">
+                                                        Pickup ({order.customer_name})
+                                                     </span>
+                                                ) : (
+                                                    <span className="text-[#1A1A1A]">
+                                                        Table {order.tables_layout?.table_name || order.table_id || '?'}
+                                                    </span>
+                                                )}
+                                                
+                                                {order.status === 'pending' && <span className="flex h-3 w-3 relative ml-2">
                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                                 </span>}
-                                                {order.status === 'confirmed' && <span className="bg-black text-white text-xs px-2 py-1 rounded-full font-bold">Eating</span>}
+                                                {order.status === 'confirmed' && <span className="bg-black text-white text-xs px-2 py-1 rounded-full font-bold ml-2">Active</span>}
                                             </div>
                                             <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
                                                 <Clock className="w-4 h-4" />
@@ -720,9 +755,7 @@ export default function StaffOrderPage() {
                                             </div>
                                         </div>
                                         <div className="text-right flex flex-col items-end">
-                                            <div className="text-xs font-mono text-gray-400 mb-3 bg-gray-50 px-2 py-1 rounded">
-                                                #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
-                                            </div>
+                                            {/* Removed old Short ID location */}
                                             <div className="flex gap-2">
                                                 {order.payment_slip_url && (
                                                     <button 
@@ -821,7 +854,100 @@ export default function StaffOrderPage() {
                 </>
             )}
 
-            {/* HISTORY VIEW */}
+            {/* SCHEDULE VIEW */}
+            {activeTab === 'schedule' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 pb-20">
+                     <div className="flex justify-between items-center mb-4 px-2">
+                        <h2 className="font-bold text-lg">Upcoming Bookings</h2>
+                        <button onClick={() => fetchScheduleOrders()} className="p-2 bg-white rounded-full border border-gray-200">
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+
+                    {loading ? (
+                        <div className="text-center py-20 opacity-50"><RefreshCw className="animate-spin w-8 h-8 mx-auto" /></div>
+                    ) : scheduleOrders.length === 0 ? (
+                        <div className="text-center py-20 text-gray-400">No upcoming bookings</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {scheduleOrders.map((order, index) => {
+                                const prevDate = index > 0 ? new Date(scheduleOrders[index-1].booking_time).toDateString() : null
+                                const currDateObj = new Date(order.booking_time)
+                                const currDate = currDateObj.toDateString()
+                                const showHeader = prevDate !== currDate
+
+                                return (
+                                    <div key={order.id}>
+                                        {showHeader && (
+                                            <div className="sticky top-[140px] z-10 bg-[#E5E5E5]/95 backdrop-blur px-4 py-2 rounded-lg font-bold text-[#1A1A1A] text-sm mb-3 shadow-sm mx-4 border border-white/20">
+                                                <Calendar className="inline-block w-4 h-4 mr-2 mb-0.5" />
+                                                {formatDateThai(currDateObj)}
+                                            </div>
+                                        )}
+                                        
+                                        <div className="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:border-[#1A1A1A] transition-all duration-300">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                     <div className="text-2xl font-black text-[#1A1A1A] flex items-center gap-2 mb-1">
+                                                        {formatTime(order.booking_date, order.booking_time)}
+                                                        <span className="text-base font-medium text-gray-400">
+                                                             • {order.booking_type === 'pickup' ? 'Pickup' : `Table ${order.tables_layout?.table_name || '?'}`}
+                                                        </span>
+                                                     </div>
+                                                     <div className="text-sm text-gray-600 font-bold mb-3">{order.customer_name}</div>
+                                                     
+                                                     <div className="flex flex-wrap gap-2">
+                                                         {order.booking_type === 'pickup' ? (
+                                                             <span className="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded-md border border-blue-100">
+                                                                 Pickup
+                                                             </span>
+                                                         ) : (
+                                                             <span className="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded-md border border-gray-200">
+                                                                 Dine-in
+                                                             </span>
+                                                         )}
+                                                         <span className="bg-gray-50 text-gray-500 text-xs font-mono px-2 py-1 rounded-md border border-gray-200">
+                                                             #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
+                                                         </span>
+                                                         {order.pax && (
+                                                             <span className="bg-orange-50 text-orange-700 text-xs font-bold px-2 py-1 rounded-md border border-orange-100">
+                                                                 {order.pax} Guests
+                                                             </span>
+                                                         )}
+                                                     </div>
+                                                </div>
+                                                
+                                                <div className="flex flex-col gap-2">
+                                                    <button 
+                                                        onClick={() => setPrintModal({ isOpen: true, booking: order })}
+                                                        className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600 shadow-sm"
+                                                    >
+                                                        <Printer size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Pre-order items summary if needed */}
+                                            {order.order_items?.length > 0 && (
+                                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                                    <div className="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">Pre-order Items</div>
+                                                    <div className="space-y-1">
+                                                        {order.order_items.map((item, i) => (
+                                                            <div key={i} className="flex justify-between text-sm text-gray-600">
+                                                                <span>{item.quantity}x {item.menu_items?.name}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
             {activeTab === 'history' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2">
                     {/* Date Picker */}
