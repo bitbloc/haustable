@@ -36,6 +36,9 @@ serve(async (req) => {
       .from("bookings")
       .select(`
         *,
+        tables_layout (
+          table_name
+        ),
         order_items (
           quantity,
           price_at_time,
@@ -120,6 +123,7 @@ serve(async (req) => {
       pax: booking.pax,
       items: items,
       table_id: booking.table_id,
+      table_name: booking.tables_layout?.table_name, // Add table name
       customer_note: booking.customer_note,
       total_amount: booking.total_amount,
       token_expires_at: booking.token_expires_at

@@ -266,6 +266,80 @@ export default function TrackingPage() {
           </div>
       </div>
 
+       {/* 2.5 Order Summary & Table */}
+       {!isCancelled && (
+        <div className="px-6 mb-8">
+            <h3 className="font-bold text-gray-900 mb-4">ข้อมูลการจอง</h3>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                {/* Table Name */}
+                <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
+                    <span className="text-sm font-medium text-gray-500">หมายเลขโต๊ะ (Table)</span>
+                    <span className="text-2xl font-bold bg-black text-white px-4 py-2 rounded-xl">
+                        {data.table_name || 'TBA'}
+                    </span>
+                </div>
+
+                {/* Date & Time */}
+                <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-100">
+                    <div>
+                        <span className="block text-xs text-gray-400 mb-1">วันที่ (Date)</span>
+                        <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
+                    </div>
+                    <div className="text-right">
+                         <span className="block text-xs text-gray-400 mb-1">เวลา (Time)</span>
+                         <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                </div>
+
+                {/*  Order Accordion */}
+                <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <button 
+                        onClick={() => setIsAccordionOpen(!isAccordionOpen)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-100 transition-colors"
+                    >
+                         <span className="font-bold text-sm text-gray-700">รายการอาหาร ({data.items?.length || 0})</span>
+                         <ArrowRight size={16} className={`text-gray-400 transition-transform ${isAccordionOpen ? 'rotate-90' : ''}`}/>
+                    </button>
+                    <AnimatePresence>
+                        {isAccordionOpen && (
+                            <motion.div
+                                initial={{ height: 0 }}
+                                animate={{ height: 'auto' }}
+                                exit={{ height: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="p-4 pt-0 border-t border-gray-100">
+                                    <div className="space-y-3 mt-3">
+                                        {data.items?.map((item, i) => (
+                                            <div key={i} className="flex justify-between items-start text-sm">
+                                                <div className="flex gap-3">
+                                                    <div className="font-bold text-gray-400 w-4">{item.quantity}x</div>
+                                                    <div>
+                                                        <div className="text-gray-900 font-medium">{item.name}</div>
+                                                        {item.options && (
+                                                            <div className="text-[10px] text-gray-500 mt-0.5">
+                                                                {Object.values(item.options).join(', ')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="text-gray-500 font-mono">{item.price * item.quantity}.-</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="border-t border-dashed border-gray-300 mt-4 pt-4 flex justify-between items-center bg-white p-3 rounded-lg">
+                                         <span className="text-sm font-bold text-gray-900">Total</span>
+                                         <span className="text-lg font-bold text-green-600">{data.total_amount.toLocaleString()}.-</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        </div>
+       )}
+
       {/* 3. Action Buttons */}
       <div className="px-6 mb-10 space-y-3">
           {/* Contact Actions for Cancelled - Prominent */}
@@ -426,10 +500,10 @@ export default function TrackingPage() {
                        <span className="font-bold">{new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                    </div>
                    {/* Table or Pickup Info */}
-                   {data.tables_layout && (
+                   {(data.table_name || data.tables_layout?.table_name) && (
                          <div className="flex justify-between">
                              <span className="text-gray-500">Table</span>
-                             <span className="font-bold">{data.tables_layout.table_name}</span>
+                             <span className="font-bold">{data.table_name || data.tables_layout?.table_name}</span>
                          </div>
                    )}
                    {isPickup && (
