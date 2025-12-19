@@ -36,7 +36,7 @@ export default function StepDateSelection() {
         // Check blocked
         const isBlocked = (blockedDates || []).some(b => b.blocked_date === val)
         if (isBlocked) {
-            alert('วันดังกล่าวปิดให้บริการ (The selected date is unavailable)')
+            alert(t('dateUnavailable'))
             setDate('') // Auto Clear
             return
         }
@@ -65,7 +65,7 @@ export default function StepDateSelection() {
                 <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity duration-300 ${!date ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex justify-between items-center mb-4">
                         <label className="text-xs font-bold text-gray-400 uppercase">{t('timeSlot')}</label>
-                        {!date && <span className="text-xs text-red-400 font-bold">(กรุณาเลือกวันที่ก่อน)</span>}
+                        {!date && <span className="text-xs text-red-400 font-bold">{t('selectDateFirst')}</span>}
                     </div>
 
                     <div className="grid grid-cols-4 gap-3">
@@ -129,19 +129,19 @@ export default function StepDateSelection() {
                             <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-2">
                                 <span className="text-2xl">👨‍👩‍👧‍👦</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900">Bookings Over 10 People</h3>
+                            <h3 className="text-xl font-bold text-gray-900">{t('largeGroupTitle')}</h3>
                             <p className="text-gray-500 text-sm">
-                                สำหรับหมู่คณะมากกว่า 10 ท่าน กรุณาติดต่อทางร้านโดยตรงเพื่อจัดเตรียมที่นั่งพิเศษ
+                                {t('largeGroupDesc')}
                             </p>
                             <div className="flex flex-col gap-2 pt-2">
                                 <a href="tel:0961424663" className="bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
-                                    📞 โทร 096-142-4663
+                                    📞 {t('call')} 096-142-4663
                                 </a>
                                 <a href="https://facebook.com" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors">
                                     FB: ร้านในบ้าน นตรพนม
                                 </a>
                             </div>
-                            <button onClick={() => setShowLargeGroupModal(false)} className="text-gray-400 text-xs hover:text-black mt-2">Close</button>
+                            <button onClick={() => setShowLargeGroupModal(false)} className="text-gray-400 text-xs hover:text-black mt-2">{t('close')}</button>
                         </motion.div>
                     </motion.div>
                 )}

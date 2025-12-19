@@ -40,7 +40,7 @@ export default function BookingMenu() {
     const handleNext = () => {
         // Pre-check Min Spend
         if (settings.minSpend > 0 && cartTotal < (settings.minSpend * pax)) {
-            alert(`ยอดขั้นต่ำต่อท่านคือ ${settings.minSpend}.- (รวม ${settings.minSpend * pax}.-) \nกรุณาสั่งอาหารเพิ่มอีก ${(settings.minSpend * pax) - cartTotal}.-`)
+            alert(`${t('minSpendError')} ${settings.minSpend}.- (${t('totalPrice')} ${settings.minSpend * pax}.-) \n${t('pleaseOrderMore')} ${(settings.minSpend * pax) - cartTotal}.-`)
             return
         }
         setCheckoutMode(true)
@@ -55,7 +55,7 @@ export default function BookingMenu() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
                             type="text"
-                            placeholder={t('searchMenu') || "Search menu..."}
+                            placeholder={t('searchMenu')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-white pl-9 pr-4 py-2.5 rounded-xl border border-gray-100 shadow-sm focus:ring-1 focus:ring-black outline-none text-sm"
@@ -93,7 +93,7 @@ export default function BookingMenu() {
                     {filteredMenu.length === 0 && (
                         <div className="col-span-full py-12 text-center text-gray-400 text-sm flex flex-col items-center">
                             <span className="bg-gray-200 p-3 rounded-full mb-2"><Search size={20} /></span>
-                            No menu items found
+                            {t('noMenuItems')}
                         </div>
                     )}
                 </div>
@@ -114,7 +114,7 @@ export default function BookingMenu() {
                             <div className="flex flex-col">
                                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
                                 <div className="flex items-end gap-2">
-                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} Items</span>
+                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
                                     <motion.span
                                         key={cartTotal}
                                         initial={{ scale: 1.2, color: '#DFFF00' }}
@@ -145,7 +145,7 @@ export default function BookingMenu() {
                         onClick={handleNext}
                         className="text-xs text-gray-400 hover:text-black"
                     >
-                        {t('skipFood')} (Pay Only)
+                        {t('payOnly')}
                     </button>
                 </div>
             )}

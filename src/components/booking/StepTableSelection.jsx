@@ -55,7 +55,7 @@ export default function StepTableSelection() {
                     e.stopPropagation()
                     if (isBooked) {
                         // Show tooltip
-                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: "ไม่ว่าง (Booked)", loading: false })
+                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `${t('bookedTooltip')} (Booked)`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
                     } else {
                         selectTable(table)
@@ -72,7 +72,7 @@ export default function StepTableSelection() {
                 <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${-rotation}deg)` }}>
                     {isBooked ? (
                         <>
-                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>Full</span>
+                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>{t('full')}</span>
                             <span className="text-[8px] opacity-75" style={{ color: textColor }}>{table.table_name}</span>
                         </>
                     ) : (
@@ -95,7 +95,7 @@ export default function StepTableSelection() {
                     <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">
                         <span className="bg-gray-100 px-2 py-1 rounded-md">{date}</span>
                         <span className="bg-gray-100 px-2 py-1 rounded-md">{time}</span>
-                        <span className="bg-black text-white px-2 py-1 rounded-md">{pax} Pax</span>
+                        <span className="bg-black text-white px-2 py-1 rounded-md">{pax} {t('guests')}</span>
                     </div>
                 </div>
                 <button onClick={toggleExpanded} className="bg-white p-3 rounded-full shadow-lg text-black pointer-events-auto hover:bg-gray-50 transition-colors">
@@ -194,9 +194,9 @@ export default function StepTableSelection() {
                                         <h3 className="font-bold text-lg truncate pr-2">{selectedTable.table_name}</h3>
                                         <button onClick={() => selectTable(null)} className="text-gray-400 hover:text-black"><X size={18} /></button>
                                     </div>
-                                    <p className="text-gray-500 text-xs mb-3">{selectedTable.capacity} Seats</p>
+                                    <p className="text-gray-500 text-xs mb-3">{selectedTable.capacity} {t('seats')}</p>
                                     <button onClick={nextStep} className="w-full bg-black text-white py-2 rounded-lg font-bold text-xs shadow-md">
-                                        Select
+                                        {t('select')}
                                     </button>
                                 </div>
                             </div>

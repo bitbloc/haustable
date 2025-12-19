@@ -166,10 +166,10 @@ export default function PickupPage() {
     })
 
     const handleSubmit = async () => {
-        if (!contactName || !contactPhone) return alert('Please fill contact info')
+        if (!contactName || !contactPhone) return alert(t('fillContact'))
         if (!isAgreed) return alert(t('agreeTerms'))
         if (!slipFile) return alert(t('uploadSlipDesc'))
-        if (!pickupTime) return alert('Select pickup time')
+        if (!pickupTime) return alert(t('selectPickupTime'))
 
         setSubmitting(true)
         try {
@@ -325,7 +325,7 @@ export default function PickupPage() {
                                             <div className="flex flex-col">
                                                 <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
                                                 <div className="flex items-end gap-2">
-                                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} Items</span>
+                                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
                                                     <span className="font-mono font-bold text-2xl leading-none">฿{cartTotal}</span>
                                                 </div>
                                             </div>
@@ -361,8 +361,8 @@ export default function PickupPage() {
                                 </div>
 
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-3">Special Request (Note)</label>
-                                    <textarea value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} placeholder="แพ้อาหาร, เพิ่มเติม..." className="w-full bg-transparent border-b border-gray-200 py-2 focus:border-black outline-none resize-none text-sm" rows={2} />
+                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-3">{t('specialRequest')}</label>
+                                    <textarea value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} placeholder={t('specialRequestPlaceholder')} className="w-full bg-transparent border-b border-gray-200 py-2 focus:border-black outline-none resize-none text-sm" rows={2} />
                                 </div>
 
                                 {/* Pickup Time Dropdown */}
@@ -370,8 +370,8 @@ export default function PickupPage() {
                                     <label className="text-xs font-bold text-gray-400 uppercase block mb-3">{t('pickupTime')}</label>
                                     
                                     <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
-                                        <button onClick={() => { setPickupDate('today'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'today' ? 'bg-white shadow text-black' : 'text-gray-400'}`}>Today</button>
-                                        <button onClick={() => { setPickupDate('tomorrow'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'tomorrow' ? 'bg-white shadow text-black' : 'text-gray-400'}`}>Tomorrow</button>
+                                        <button onClick={() => { setPickupDate('today'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'today' ? 'bg-white shadow text-black' : 'text-gray-400'}`}>{t('today')}</button>
+                                        <button onClick={() => { setPickupDate('tomorrow'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'tomorrow' ? 'bg-white shadow text-black' : 'text-gray-400'}`}>{t('tomorrow')}</button>
                                     </div>
 
                                     <div className="relative">
@@ -381,9 +381,9 @@ export default function PickupPage() {
                                             onChange={(e) => setPickupTime(e.target.value)} 
                                             className="w-full bg-gray-50 border border-gray-200 text-black font-bold p-3 pl-10 rounded-xl outline-none focus:border-black appearance-none"
                                         >
-                                            <option value="" disabled selected>เวลาที่เข้ามารับ</option>
+                                            <option value="" disabled selected>{t('selectPickupTime')}</option>
                                             {availableTimeSlots().length === 0 ? (
-                                                <option disabled>No valid times available</option>
+                                                <option disabled>{t('noValidTimes')}</option>
                                             ) : (
                                                 availableTimeSlots().map(slot => (
                                                     <option key={slot} value={slot}>{slot}</option>
@@ -393,7 +393,7 @@ export default function PickupPage() {
                                         {/* Custom chevron */}
                                         <div className="absolute right-4 top-4 w-2 h-2 border-r-2 border-b-2 border-gray-400 rotate-45 pointer-events-none"></div>
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-2">*Advance booking: {minAdvanceHours} hour(s) minimum.</p>
+                                    <p className="text-xs text-gray-400 mt-2">*{t('advanceBooking')}: {minAdvanceHours} {t('hours')}.</p>
                                 </div>
 
                                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
@@ -403,7 +403,7 @@ export default function PickupPage() {
                                             <div>
                                                 <div className="text-gray-900 font-bold">{item.name} <span className="text-gray-400 text-xs">x{item.qty}</span></div>
                                                 {item.optionsSummary?.map((opt, i) => <div key={i} className="text-xs text-gray-500">+ {opt.name} ({opt.price})</div>)}
-                                                {item.specialRequest && <div className="text-xs text-brand">Note: {item.specialRequest}</div>}
+                                                {item.specialRequest && <div className="text-xs text-brand">{t('note')}: {item.specialRequest}</div>}
                                             </div>
                                             <span className="font-bold font-mono text-gray-900">{item.totalPricePerUnit * item.qty}.-</span>
                                         </div>

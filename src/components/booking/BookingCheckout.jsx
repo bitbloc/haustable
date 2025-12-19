@@ -51,32 +51,32 @@ export default function BookingCheckout() {
         <div className="flex-1 overflow-y-auto">
             {/* Order Summary */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
-                <h3 className="font-bold text-sm uppercase border-b border-gray-100 pb-2">{t('bookingSummary') || 'Booking Summary'}</h3>
+                <h3 className="font-bold text-sm uppercase border-b border-gray-100 pb-2">{t('bookingSummary')}</h3>
 
                 {/* Details */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span className="text-gray-400 text-xs block uppercase">Date</span>
+                        <span className="text-gray-400 text-xs block uppercase">{t('dateDate')}</span>
                         <span className="font-bold">{useBooking().date}</span>
                     </div>
                     <div>
-                        <span className="text-gray-400 text-xs block uppercase">Time</span>
+                        <span className="text-gray-400 text-xs block uppercase">{t('dateTime')}</span>
                         <span className="font-bold">{useBooking().time}</span>
                     </div>
                     <div>
-                        <span className="text-gray-400 text-xs block uppercase">Table</span>
+                        <span className="text-gray-400 text-xs block uppercase">{t('tableNumber')}</span>
                         <span className="font-bold">{useBooking().selectedTable?.table_name}</span>
                     </div>
                     <div>
-                        <span className="text-gray-400 text-xs block uppercase">Guests</span>
-                        <span className="font-bold">{pax} Pax</span>
+                        <span className="text-gray-400 text-xs block uppercase">{t('guests')}</span>
+                        <span className="font-bold">{pax} {t('guests')}</span>
                     </div>
                 </div>
 
                 {/* Items */}
                 {cart.length > 0 && (
                     <div className="pt-2">
-                        <span className="text-gray-400 text-xs block uppercase mb-2">Order Items</span>
+                        <span className="text-gray-400 text-xs block uppercase mb-2">{t('orderItems')}</span>
                         <div className="space-y-2">
                             {cart.map((item, i) => (
                                 <div key={i} className="flex justify-between text-sm">
@@ -104,24 +104,24 @@ export default function BookingCheckout() {
 
 
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
-                <h3 className="font-bold text-sm uppercase">1. {t('contactInfo')}</h3>
+                <h3 className="font-bold text-sm uppercase">1. {t('yourName')}</h3>
                 <div className="grid gap-3">
                     <input
                         type="text"
-                        placeholder="ชื่อผู้จอง (Name)"
+                        placeholder={t('yourName')}
                         value={contactName}
                         onChange={e => updateForm('contactName', e.target.value)}
                         className="w-full bg-gray-50 p-3 rounded-lg text-sm outline-none border border-transparent focus:bg-white focus:border-black transition-colors"
                     />
                     <input
                         type="tel"
-                        placeholder="เบอร์โทรศัพท์ (Phone)"
+                        placeholder={t('phoneNumber')}
                         value={contactPhone}
                         onChange={e => updateForm('contactPhone', e.target.value)}
                         className="w-full bg-gray-50 p-3 rounded-lg text-sm outline-none border border-transparent focus:bg-white focus:border-black transition-colors"
                     />
                     <textarea
-                        placeholder="คำขอพิเศษ (แพ้อาหาร, วันเกิด, etc.)"
+                        placeholder="Special Requests (Allergy, Birthday, etc.)"
                         value={specialRequest}
                         onChange={e => updateForm('specialRequest', e.target.value)}
                         className="w-full bg-gray-50 p-3 rounded-lg text-sm outline-none border border-transparent focus:bg-white focus:border-black transition-colors resize-none h-20"
@@ -130,9 +130,9 @@ export default function BookingCheckout() {
             </div>
 
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
-                <h3 className="font-bold text-sm uppercase">2. {t('payment')}</h3>
+                <h3 className="font-bold text-sm uppercase">2. {t('paymentTitle')}</h3>
                 <div className="bg-gray-50 p-4 rounded-xl text-center space-y-2">
-                    <p className="text-gray-500 text-xs">ยอดรวมที่ต้องชำระ (Total)</p>
+                    <p className="text-gray-500 text-xs">{t('totalPrice')}</p>
                     <p className="text-3xl font-bold font-mono tracking-tight">{cartTotal}.-</p>
                     {settings.minSpend > 0 && (
                         <p className="text-[10px] text-gray-400">Min Spend: {settings.minSpend * pax}.-</p>
@@ -147,10 +147,10 @@ export default function BookingCheckout() {
                             alt="QR Code"
                             onClick={() => setIsSlipModalOpen(true)}
                         />
-                        <p className="text-[10px] text-gray-400">Click QR to Enlarge</p>
+                        <p className="text-[10px] text-gray-400">{t('clickToEnlarge')}</p>
                     </div>
                 ) : (
-                    <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg">No QR Code</div>
+                    <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 rounded-lg">{t('noQrCode')}</div>
                 )}
 
                 {/* Note: In StepFood view toggle logic, we handle "Skip Food" which might mean 0 cart but still pay? 
@@ -158,19 +158,19 @@ export default function BookingCheckout() {
                 */}
 
                 <div className="border-t border-gray-100 pt-4">
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Upload Slip</label>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">{t('uploadSlip')}</label>
                     <div className="relative">
                         <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" id="slip-upload" />
                         <label htmlFor="slip-upload" className={`w-full py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors ${slipFile ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-black text-gray-500 hover:text-black'}`}>
                             {slipFile ? (
                                 <>
                                     <span className="font-bold text-sm truncate max-w-[200px]">{slipFile.name}</span>
-                                    <span className="bg-green-200 px-2 py-0.5 rounded text-[10px]">Change</span>
+                                    <span className="bg-green-200 px-2 py-0.5 rounded text-[10px]">{t('changeFile')}</span>
                                 </>
                             ) : (
                                 <>
                                     <Upload size={18} />
-                                    <span className="font-bold text-sm">Tap to Upload</span>
+                                    <span className="font-bold text-sm">{t('tapToUpload')}</span>
                                 </>
                             )}
                         </label>
@@ -181,7 +181,7 @@ export default function BookingCheckout() {
             {/* Policy */}
             {settings.policyNote && (
                 <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-4">
-                    <h4 className="text-orange-800 font-bold text-xs uppercase mb-1">Condition / เงื่อนไข</h4>
+                    <h4 className="text-orange-800 font-bold text-xs uppercase mb-1">{t('condition')}</h4>
                     <p className="text-orange-700 text-xs whitespace-pre-line">{settings.policyNote}</p>
                 </div>
             )}

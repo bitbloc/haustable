@@ -3,6 +3,9 @@ import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon } from 'lucide-react'
+import { useWakeLock } from './hooks/useWakeLock'
+import { toast } from 'sonner'
+import ConfirmationModal from './components/ConfirmationModal'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
