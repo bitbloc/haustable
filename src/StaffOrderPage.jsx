@@ -1,10 +1,91 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useToast } from './context/ToastContext'
 import ConfirmationModal from './components/ConfirmationModal'
 import SlipModal from './components/shared/SlipModal'
+
+// --- PWA Components ---
+const IOSInstallModal = ({ onClose }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
+        <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-[#1A1A1A] text-center space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto">
+                <Share className="w-6 h-6 text-blue-500" />
+            </div>
+            <div>
+                <h3 className="font-bold text-lg">Install on iOS</h3>
+                <p className="text-gray-500 text-sm mt-2">
+                    Tap the <span className="font-bold">Share</span> button and select <span className="font-bold">"Add to Home Screen"</span>
+                </p>
+                <p className="text-gray-500 text-sm mt-1">
+                    (กดปุ่มแชร์ แล้วเลือก "เพิ่มไปยังหน้าจอโฮม")
+                </p>
+            </div>
+            <div className="pt-2">
+                 <button onClick={onClose} className="w-full py-3 bg-[#1A1A1A] text-white font-bold rounded-xl text-sm">
+                     Understood
+                 </button>
+            </div>
+        </div>
+    </div>
+)
+
+const InstallPrompt = () => {
+    const [deferredPrompt, setDeferredPrompt] = useState(null)
+    const [isIOS, setIsIOS] = useState(false)
+    const [showIOSModal, setShowIOSModal] = useState(false)
+    const [isInstalled, setIsInstalled] = useState(false)
+
+    useEffect(() => {
+        // iOS Check
+        const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+        setIsIOS(isIosDevice)
+
+        // Standalone Check
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            setIsInstalled(true)
+        }
+
+        // Android Prompt
+        const handler = (e) => {
+            e.preventDefault()
+            setDeferredPrompt(e)
+        }
+        window.addEventListener('beforeinstallprompt', handler)
+        return () => window.removeEventListener('beforeinstallprompt', handler)
+    }, [])
+
+    if (isInstalled) return null
+    if (!isIOS && !deferredPrompt) return null
+
+    const handleInstall = () => {
+        if (isIOS) {
+            setShowIOSModal(true)
+        } else if (deferredPrompt) {
+            deferredPrompt.prompt()
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    setDeferredPrompt(null)
+                }
+            })
+        }
+    }
+
+    return (
+        <>
+            <button 
+                onClick={handleInstall}
+                className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-white/40 border border-white/40 rounded-2xl text-xs font-bold text-[#1A1A1A] hover:bg-white/60 transition-colors"
+                type="button"
+            >
+                <Download size={14} />
+                Install App for easier access
+            </button>
+            {showIOSModal && <IOSInstallModal onClose={() => setShowIOSModal(false)} />}
+        </>
+    )
+}
 
 // Helper for formatting time
 const formatTime = (dateString, timeString) => {
@@ -272,7 +353,7 @@ export default function StaffOrderPage() {
     // 1. Sound Check (Sage Theme)
     if (isAuthenticated && !isSoundChecked) {
         return (
-            <div className="min-h-screen bg-[#BFCBC2] flex flex-col items-center justify-center p-4 font-sans text-[#1A1A1A]">
+            <div className="min-h-screen bg-[#BFCBC2] flex flex-col items-center justify-center p-4 font-sans text-[#1A1A1A] safe-area-inset-bottom">
                 <div className="bg-white/60 backdrop-blur-xl border border-white/50 p-8 rounded-3xl w-full max-w-sm text-center shadow-xl relative overflow-hidden">
                     <Volume2 className="w-16 h-16 text-[#DFFF00] drop-shadow-sm mx-auto mb-6" fill="#1A1A1A" />
                     <h1 className="text-2xl font-bold mb-2">ตรวจสอบเสียงแจ้งเตือน</h1>
@@ -295,6 +376,8 @@ export default function StaffOrderPage() {
                             ได้ยินชัดเจน - เริ่มงาน
                         </button>
                     </div>
+                    
+                    <InstallPrompt />
                 </div>
             </div>
         )
@@ -303,7 +386,7 @@ export default function StaffOrderPage() {
     // 2. Login (Sage Theme)
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen bg-[#BFCBC2] flex flex-col items-center justify-center p-4 font-sans text-[#1A1A1A]">
+            <div className="min-h-screen bg-[#BFCBC2] flex flex-col items-center justify-center p-4 font-sans text-[#1A1A1A] safe-area-inset-bottom">
                 <div className="bg-white/60 backdrop-blur-xl border border-white/50 p-8 rounded-3xl w-full max-w-sm text-center shadow-xl">
                     <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mx-auto mb-6">
                          <ChefHat className="w-8 h-8 text-[#DFFF00]" />
@@ -327,6 +410,8 @@ export default function StaffOrderPage() {
                             {loading ? 'กำลังตรวจสอบ...' : 'เข้าใช้งาน'}
                         </button>
                     </form>
+
+                    <InstallPrompt />
                 </div>
             </div>
         )

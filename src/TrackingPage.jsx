@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
-import { MapPin, Phone, Copy, Share2, Clock, CheckCircle, ChefHat, Utensils, XCircle, AlertCircle, ArrowRight, Download, Calendar as CalendarIcon } from 'lucide-react'
+import { MapPin, Phone, Copy, Share2, Clock, CheckCircle, ChefHat, Utensils, XCircle, AlertCircle, ArrowRight, Download, Calendar as CalendarIcon, Lock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from './context/LanguageContext'
 import html2canvas from 'html2canvas'
+import QRCode from 'qrcode'
 
 // --- CONSTANTS ---
 const BOOKING_STEPS = [
@@ -33,6 +34,7 @@ export default function TrackingPage() {
   const [isAccordionOpen, setIsAccordionOpen] = useState(true) // Open by default
   const [timeLeft, setTimeLeft] = useState('')
   const [downloadingSlip, setDownloadingSlip] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState('')
   
   const slipRef = useRef(null)
 
@@ -69,6 +71,16 @@ export default function TrackingPage() {
       setLoading(false)
     }
   }
+
+  // Generate QR
+  useEffect(() => {
+      if (token) {
+          const url = `${window.location.origin}/t/${token}` // Use token or short_id URL
+          QRCode.toDataURL(url, { width: 200, margin: 2 }, (err, url) => {
+              if (!err) setQrDataUrl(url)
+          })
+      }
+  }, [token])
 
   // Adaptive Polling
   useEffect(() => {
@@ -130,14 +142,18 @@ export default function TrackingPage() {
 
   const handleDownloadSlip = async () => {
       if (!slipRef.current) return
+      if (!qrDataUrl) return alert("QR Code ยังไม่พร้อม")
+
       setDownloadingSlip(true)
       try {
-          // Use html2canvas to capture the hidden slip
+          // Force render sync?
+          await new Promise(r => setTimeout(r, 100))
+
           const canvas = await html2canvas(slipRef.current, {
               scale: 2,
               backgroundColor: '#ffffff',
               logging: false,
-              useCORS: true // Important for images
+              useCORS: true // Safe now with dataUrl
           })
           
           const image = canvas.toDataURL("image/png")
@@ -148,7 +164,7 @@ export default function TrackingPage() {
           
       } catch (err) {
           console.error("Slip Error:", err)
-          alert("ไม่สามารถบันทึกรูปได้")
+          alert("ไม่สามารถบันทึกรูปได้: " + err.message)
       } finally {
           setDownloadingSlip(false)
       }
@@ -183,7 +199,13 @@ export default function TrackingPage() {
   const steps = isPickup ? PICKUP_STEPS : BOOKING_STEPS
   let currentStatus = data.status?.toLowerCase() || 'pending'
   const currentStepIndex = steps.findIndex(s => s.key === currentStatus)
-  const isCancelled = currentStatus === 'cancelled'
+  
+  // Logic to Enable Slip Download
+  // Booking: Confirmed or later
+  // Pickup: Ready or later
+  const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'completed'].includes(currentStatus)
+  const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
+  const canSaveSlip = isBookingConfirmed || isPickupReady
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32 font-inter text-gray-900 selection:bg-black selection:text-white">
@@ -254,13 +276,22 @@ export default function TrackingPage() {
               </button>
               <button 
                 onClick={handleDownloadSlip}
-                disabled={downloadingSlip}
-                className="w-full bg-white border border-gray-200 text-gray-900 py-3 rounded-xl font-bold hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm"
+                disabled={!canSaveSlip || downloadingSlip}
+                className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
+                    ${canSaveSlip 
+                        ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900 active:scale-[0.98]' 
+                        : 'bg-gray-100 border-transparent text-gray-400 cursor-not-allowed'}
+                `}
               >
-                  <Download size={18} />
+                  {canSaveSlip ? <Download size={18} /> : <Lock size={18} />}
                   {downloadingSlip ? 'Saving...' : 'Save Slip'}
               </button>
           </div>
+            {!canSaveSlip && (
+                <p className="text-center text-xs text-red-400 mt-2">
+                    {isPickup ? '*บันทึกได้เมื่ออาหารเสร็จแล้ว' : '*บันทึกได้เมื่อยืนยันโต๊ะแล้ว'}
+                </p>
+            )}
       </div>
 
       {/* 4. Status Tracker */}
@@ -344,6 +375,20 @@ export default function TrackingPage() {
                        <span className="text-gray-500">Time</span>
                        <span className="font-bold">{new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                    </div>
+                   {/* Table or Pickup Info */}
+                   {data.tables_layout && (
+                         <div className="flex justify-between">
+                             <span className="text-gray-500">Table</span>
+                             <span className="font-bold">{data.tables_layout.table_name}</span>
+                         </div>
+                   )}
+                   {isPickup && (
+                         <div className="flex justify-between">
+                             <span className="text-gray-500">Type</span>
+                             <span className="font-bold">Take Away</span>
+                         </div>
+                   )}
+
                     {data.items?.length > 0 && (
                         <div className="flex justify-between">
                             <span className="text-gray-500">Items</span>
@@ -358,11 +403,13 @@ export default function TrackingPage() {
                
                <div className="bg-gray-100 p-4 rounded-xl">
                    <p className="text-xs text-gray-500 mb-2">Scan to Track</p>
-                   <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${window.location.href}`} 
-                      className="w-24 h-24 mx-auto mix-blend-multiply"
-                      alt="QR"
-                   />
+                   {qrDataUrl && (
+                        <img 
+                            src={qrDataUrl} 
+                            className="w-24 h-24 mx-auto mix-blend-multiply"
+                            alt="QR"
+                        />
+                   )}
                </div>
           </div>
       </div>
