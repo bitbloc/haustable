@@ -344,18 +344,24 @@ export default function StaffOrderPage() {
     const fetchLiveOrders = async (silent = false) => {
         if (!silent) setLoading(true)
         try {
-            const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+            // Calculate start and end of today in local time (assuming server expects ISO or similar, 
+            // but standard practice for 'today' query is range on timestamp)
+            const now = new Date()
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString()
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString()
             
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .in('status', ['pending', 'confirmed'])
-                .eq('booking_date', today)
+                .gte('booking_time', startOfDay) // Use range instead of .eq('booking_date')
+                .lte('booking_time', endOfDay)
                 .order('booking_time', { ascending: true })
             if (error) throw error
             setOrders(data || [])
         } catch (err) {
             console.error(err)
+            // Optional: toast.error("Unable to sync orders")
         } finally {
             if (!silent) setLoading(false)
         }
