@@ -328,7 +328,7 @@ export default function StaffOrderPage() {
         try {
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: true })
             if (error) throw error
@@ -350,7 +350,7 @@ export default function StaffOrderPage() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .neq('status', 'pending')
                 .gte('created_at', start.toISOString())
                 .lte('created_at', end.toISOString())
@@ -672,7 +672,9 @@ export default function StaffOrderPage() {
                                             </div>
                                         </div>
                                         <div className="text-right flex flex-col items-end">
-                                            <div className="text-xs font-mono text-gray-400 mb-3 bg-gray-50 px-2 py-1 rounded">ID: {order.id.slice(0, 4)}</div>
+                                            <div className="text-xs font-mono text-gray-400 mb-3 bg-gray-50 px-2 py-1 rounded">
+                                                #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
+                                            </div>
                                             <button 
                                                 onClick={() => setPrintModal({ isOpen: true, booking: order })}
                                                 disabled={order.isOptimistic}
@@ -777,6 +779,9 @@ export default function StaffOrderPage() {
                                     <div>
                                         <div className="font-bold text-lg mb-0.5 flex items-center gap-2">
                                             {order.tables_layout?.table_name || 'Pickup'}
+                                            <span className="text-xs font-mono text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
+                                                 #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
+                                            </span>
                                             <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wide ${order.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {order.status === 'confirmed' ? 'Done' : 'Void'}
                                             </span>
