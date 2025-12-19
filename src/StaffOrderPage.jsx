@@ -328,11 +328,14 @@ export default function StaffOrderPage() {
     const fetchLiveOrders = async (silent = false) => {
         if (!silent) setLoading(true)
         try {
+            const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+            
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
-                .eq('status', 'pending')
-                .order('created_at', { ascending: true })
+                .in('status', ['pending', 'confirmed'])
+                .eq('booking_date', today)
+                .order('booking_time', { ascending: true })
             if (error) throw error
             setOrders(data || [])
         } catch (err) {
@@ -581,7 +584,7 @@ export default function StaffOrderPage() {
 
             {viewSlipUrl && (
                 <ViewSlipModal 
-                    url={viewSlipUrl} 
+                    url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
                     onClose={() => setViewSlipUrl(null)} 
                 />
             )}
@@ -654,13 +657,13 @@ export default function StaffOrderPage() {
                             <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
                                 <Bell className="w-10 h-10 opacity-40" />
                             </div>
-                            <p className="text-lg font-medium text-gray-500">No Pending Orders</p>
-                            <p className="text-xs">Waiting for new bookings...</p>
+                            <p className="text-lg font-medium text-gray-500">No Active Orders</p>
+                            <p className="text-xs">Waiting for today's bookings...</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
                             {orders.map(order => (
-                                <div key={order.id} className={`bg-white border ${order.isOptimistic ? 'border-orange-200' : 'border-gray-200'} rounded-2xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300 relative overflow-hidden group`}>
+                                <div key={order.id} className={`bg-white border-2 ${order.status === 'confirmed' ? 'border-[#1A1A1A]' : 'border-gray-200'} rounded-2xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300 relative overflow-hidden group`}>
                                      {/* Flashing Border for new orders */}
                                      {order.status === 'pending' && <div className="absolute inset-x-0 top-0 h-1.5 bg-[#DFFF00] animate-pulse" />}
                                      
@@ -673,6 +676,7 @@ export default function StaffOrderPage() {
                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                                 </span>}
+                                                {order.status === 'confirmed' && <span className="bg-black text-white text-xs px-2 py-1 rounded-full font-bold">Eating</span>}
                                             </div>
                                             <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
                                                 <Clock className="w-4 h-4" />
@@ -747,22 +751,34 @@ export default function StaffOrderPage() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button 
-                                            onClick={() => updateStatus(order.id, 'cancelled')}
-                                            className="py-4 rounded-xl bg-gray-100 text-gray-500 font-bold flex items-center justify-center gap-2 hover:bg-gray-200 hover:text-gray-700 active:scale-95 transition-all text-sm"
-                                        >
-                                            <X className="w-5 h-5" />
-                                            Reject
-                                        </button>
-                                        <button 
-                                            onClick={() => updateStatus(order.id, 'confirmed')}
-                                            className="py-4 rounded-xl bg-[#1A1A1A] text-white font-bold flex items-center justify-center gap-2 hover:bg-black active:scale-95 transition-all shadow-lg shadow-black/20 animate-pulse-slow text-sm"
-                                        >
-                                            <Check className="w-5 h-5" />
-                                            Accept Order
-                                        </button>
-                                    </div>
+                                    {order.status === 'pending' ? (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <button 
+                                                onClick={() => updateStatus(order.id, 'cancelled')}
+                                                className="py-4 rounded-xl bg-gray-100 text-gray-500 font-bold flex items-center justify-center gap-2 hover:bg-gray-200 hover:text-gray-700 active:scale-95 transition-all text-sm"
+                                            >
+                                                <X className="w-5 h-5" />
+                                                Reject
+                                            </button>
+                                            <button 
+                                                onClick={() => updateStatus(order.id, 'confirmed')}
+                                                className="py-4 rounded-xl bg-[#1A1A1A] text-white font-bold flex items-center justify-center gap-2 hover:bg-black active:scale-95 transition-all shadow-lg shadow-black/20 animate-pulse-slow text-sm"
+                                            >
+                                                <Check className="w-5 h-5" />
+                                                Accept Order
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1">
+                                            <button 
+                                                onClick={() => updateStatus(order.id, 'completed')}
+                                                className="py-4 rounded-xl bg-[#DFFF00] text-[#1A1A1A] font-bold flex items-center justify-center gap-2 hover:bg-[#ccff00] active:scale-95 transition-all shadow-md text-sm border-2 border-black/5"
+                                            >
+                                                <Check className="w-5 h-5" />
+                                                Order Completed (Check Bill)
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

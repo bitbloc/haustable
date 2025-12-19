@@ -378,7 +378,7 @@ export default function AdminBookings() {
 
             {viewSlipUrl && (
                 <ViewSlipModal 
-                    url={viewSlipUrl} 
+                    url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
                     onClose={() => setViewSlipUrl(null)} 
                 />
             )}
