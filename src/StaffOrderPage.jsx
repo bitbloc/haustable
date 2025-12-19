@@ -31,8 +31,18 @@ const IOSInstallModal = ({ onClose }) => (
     </div>
 )
 
+// Global capture of install prompt
+let globalDeferredPrompt = null
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault()
+        globalDeferredPrompt = e
+    })
+}
+
 const InstallPrompt = () => {
-    const [deferredPrompt, setDeferredPrompt] = useState(null)
+    const [deferredPrompt, setDeferredPrompt] = useState(globalDeferredPrompt)
     const [isIOS, setIsIOS] = useState(false)
     const [showIOSModal, setShowIOSModal] = useState(false)
     const [isInstalled, setIsInstalled] = useState(false)
@@ -47,10 +57,11 @@ const InstallPrompt = () => {
             setIsInstalled(true)
         }
 
-        // Android Prompt
+        // Android Prompt (Runtime Update)
         const handler = (e) => {
             e.preventDefault()
             setDeferredPrompt(e)
+            globalDeferredPrompt = e
         }
         window.addEventListener('beforeinstallprompt', handler)
         return () => window.removeEventListener('beforeinstallprompt', handler)
