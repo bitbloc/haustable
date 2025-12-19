@@ -174,12 +174,13 @@ export function useBooking() {
 
                 if (error) throw error
                 if (!data.success) throw new Error(data.error || 'Booking Failed')
+                return { success: true, data: data.data }
 
             } else {
                  throw new Error('Please Login (Login with LINE or Email)')
             }
 
-            return { success: true }
+            return { success: true, data: bookingData }
 
         } catch (error) {
             return { success: false, error: error.message }

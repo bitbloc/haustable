@@ -17,6 +17,7 @@ import AdminMenu from './admin/AdminMenuPage'
 import AdminBookings from './AdminBookings'
 import AdminMembers from './AdminMembers'
 import StaffOrderPage from './StaffOrderPage'
+import TrackingPage from './TrackingPage'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -86,6 +87,7 @@ function App() {
               <Route path="/" element={<Home session={session} />} />
               <Route path="/booking" element={<BookingPage />} />
               <Route path="/pickup" element={<PickupPage />} />
+              <Route path="/tracking/:token" element={<TrackingPage />} />
             </Route>
 
             {/* Admin Routes */}

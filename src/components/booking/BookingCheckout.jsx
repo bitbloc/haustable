@@ -29,8 +29,19 @@ export default function BookingCheckout() {
         setSubmitting(false)
 
         if (result.success) {
+            // Check if we have tracking token in the response
+            // result.data should be the array or object returned from Supabase
+            // Depending on useBooking implementation, it might be result.data[0]
+            const bookingData = Array.isArray(result.data) ? result.data[0] : result.data
+            const token = bookingData?.tracking_token
+
             alert(t('confirmBooking') + ' Success!')
-            window.location.href = '/' // Simple redirect or use router
+            
+            if (token) {
+                window.location.href = `/tracking/${token}`
+            } else {
+                window.location.href = '/'
+            }
         } else {
             alert('Error: ' + result.error)
         }

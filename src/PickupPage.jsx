@@ -216,6 +216,8 @@ export default function PickupPage() {
             // Only use Line Token if NO Supabase User.
             const lineIdToken = !user && (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
 
+            let trackingToken = null
+
             if (user) {
                 // --- STANDARD USER FLOW (Direct Insert) ---
                 console.log("Submitting Pickup as Authenticated User:", user.id)
@@ -225,6 +227,7 @@ export default function PickupPage() {
                 }).select().single()
 
                 if (bookingError) throw bookingError
+                trackingToken = bookingData?.tracking_token
 
                 if (orderItemsPayload.length > 0) {
                      const items = orderItemsPayload.map(item => ({
@@ -247,13 +250,19 @@ export default function PickupPage() {
 
                 if (error) throw error
                 if (!data.success) throw new Error(data.error || 'Booking Failed')
+                trackingToken = data.data?.tracking_token
 
             } else {
                 throw new Error("Please Login before ordering.")
             }
 
             alert(t('confirmOrder') + ' Success!')
-            navigate('/')
+            
+            if (trackingToken) {
+                window.location.href = `/tracking/${trackingToken}`
+            } else {
+                navigate('/')
+            }
 
         } catch (error) {
             alert('Error: ' + error.message)
