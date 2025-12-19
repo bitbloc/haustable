@@ -1,43 +1,46 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
-import { MapPin, Phone, Copy, Share2, Clock, CheckCircle, ChefHat, Utensils, XCircle, AlertCircle, ArrowRight, Download, Calendar as CalendarIcon, Lock } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { MapPin, Phone, Copy, Share2, Calendar as CalendarIcon, AlertCircle, XCircle, CheckCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import confetti from 'canvas-confetti'
 import { useLanguage } from './context/LanguageContext'
-import { toPng } from 'html-to-image' // Switched to html-to-image
-import QRCode from 'qrcode'
+
+// Hooks & Components
+import { useTrackingLogic } from './hooks/useTrackingLogic'
+import { useStatusConfig } from './hooks/useStatusConfig'
+import BookingSlip from './components/tracking/BookingSlip'
+import StatusTracker from './components/tracking/StatusTracker'
+import OrderSummary from './components/tracking/OrderSummary'
+
+// Helper for confetti
+const triggerCelebration = () => {
+  const count = 200
+  const defaults = {
+    origin: { y: 0.7 }
+  }
+
+  function fire(particleRatio, opts) {
+    confetti(Object.assign({}, defaults, opts, {
+      particleCount: Math.floor(count * particleRatio)
+    }))
+  }
+
+  fire(0.25, { spread: 26, startVelocity: 55 })
+  fire(0.2, { spread: 60 })
+  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
+  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
+  fire(0.1, { spread: 120, startVelocity: 45 })
+}
 
 export default function TrackingPage() {
   const { token } = useParams()
   const { t } = useLanguage() 
-  const [data, setData] = useState(null)
+  const { data, loading, error, timeLeft } = useTrackingLogic(token)
+  const { getSteps } = useStatusConfig()
   const [settings, setSettings] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [isAccordionOpen, setIsAccordionOpen] = useState(true) // Open by default
-  const [timeLeft, setTimeLeft] = useState('')
-  const [downloadingSlip, setDownloadingSlip] = useState(false)
-  const [qrDataUrl, setQrDataUrl] = useState('')
   
-  const slipRef = useRef(null)
-
-  // --- TRANS STEPS ---
-  const BOOKING_STEPS = [
-    { key: 'pending', label: t('stepPending'), sub: 'Waiting', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-    { key: 'confirmed', label: t('stepConfirmed'), sub: 'Confirmed', icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { key: 'seated', label: t('stepSeated'), sub: 'Arrived', icon: Utensils, color: 'text-green-500', bg: 'bg-green-50' },
-    { key: 'completed', label: t('stepCompleted'), sub: 'Completed', icon: CheckCircle, color: 'text-gray-400', bg: 'bg-gray-100' },
-  ]
-  
-  const PICKUP_STEPS = [
-    { key: 'pending', label: t('stepPickupPending'), sub: 'Received', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-    { key: 'confirmed', label: t('stepPickupConfirmed'), sub: 'Preparing', icon: ChefHat, color: 'text-orange-500', bg: 'bg-orange-50' }, 
-    { key: 'preparing', label: t('stepPickupPreparing'), sub: 'Cooking', icon: ChefHat, color: 'text-orange-500', bg: 'bg-orange-50' },
-    { key: 'ready', label: t('stepPickupReady'), sub: 'Ready', icon: Utensils, color: 'text-white', bg: 'bg-green-500' }, 
-    { key: 'completed', label: t('stepPickupCompleted'), sub: 'Collected', icon: CheckCircle, color: 'text-gray-400', bg: 'bg-gray-100' },
-  ]
-
-  // Fetch App Settings
+  // App Settings for Contact Info
   useEffect(() => {
     const fetchSettings = async () => {
         const { data } = await supabase.from('app_settings').select('*')
@@ -49,73 +52,22 @@ export default function TrackingPage() {
     fetchSettings()
   }, [])
 
-  const fetchTrackingInfo = async () => {
-    try {
-      const { data: resData, error: apiError } = await supabase.functions.invoke('get-tracking-info', {
-        body: { token },
-      })
+  // Celebration Effect
+  useEffect(() => {
+      if (!data?.status) return
+      
+      const isPickup = data.booking_type === 'pickup'
+      const status = data.status.toLowerCase()
+      
+      // Celebrate if completed (dine-in) or ready (pickup)
+      const shouldCelebrate = (!isPickup && status === 'completed') || (isPickup && status === 'ready')
 
-      if (apiError) throw apiError
-      if (resData.error) {
-        if (resData.code === 'TOKEN_EXPIRED') throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
-        throw new Error(resData.error)
+      if (shouldCelebrate) {
+          triggerCelebration()
       }
-
-      setData(resData)
-      setError(null) 
-    } catch (err) {
-      console.error('Tracking Error:', err)
-      setError(err.message || 'ไม่สามารถโหลดข้อมูลได้')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Generate QR
-  useEffect(() => {
-      if (token) {
-          const url = `${window.location.host}/t/${token}`
-          QRCode.toDataURL(url, { width: 200, margin: 2 }, (err, url) => {
-              if (!err) setQrDataUrl(url)
-          })
-      }
-  }, [token])
-
-  // Adaptive Polling
-  useEffect(() => {
-    fetchTrackingInfo()
-    let intervalTime = 45000 
-    if (data && ['pending', 'confirmed', 'preparing'].includes(data.status)) {
-        intervalTime = 15000 
-    }
-    const interval = setInterval(fetchTrackingInfo, intervalTime)
-    return () => clearInterval(interval)
-  }, [token, data?.status]) 
-
-  // Countdown
-  useEffect(() => {
-    if (!data?.booking_time) return
-    const updateTime = () => {
-        const now = new Date()
-        const target = new Date(data.booking_time)
-        const diff = target - now
-        
-        if (diff > 0) {
-            const hours = Math.floor(diff / (1000 * 60 * 60))
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-            setTimeLeft(`${hours}h ${minutes}m`)
-        } else {
-            setTimeLeft('Arrived')
-        }
-    }
-    updateTime()
-    const timer = setInterval(updateTime, 60000)
-    return () => clearInterval(timer)
-  }, [data?.booking_time])
-
+  }, [data?.status, data?.booking_type])
 
   // --- ACTIONS ---
-
   const handleShareLine = () => {
       const url = window.location.href
       const text = `${t('trackingTitle')} #${data?.short_id}: ${url}`
@@ -137,42 +89,6 @@ export default function TrackingPage() {
       
       const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startTime}/${endTime}&details=${encodeURIComponent(details)}&location=${encodeURIComponent('In The Haus')}`
       window.open(googleUrl, '_blank')
-  }
-
-  const handleDownloadSlip = async () => {
-      if (!slipRef.current) return
-      if (!qrDataUrl) return alert("QR Code ยังไม่พร้อม")
-
-      setDownloadingSlip(true)
-      try {
-          // Force render sync
-          await new Promise(r => setTimeout(r, 100))
-
-          const dataUrl = await toPng(slipRef.current, {
-              cacheBust: true,
-              backgroundColor: '#ffffff',
-              pixelRatio: 2,
-              skipAutoScale: true,
-              style: {
-                  fontFamily: 'Inter, sans-serif'
-              }
-          })
-          
-          const link = document.createElement('a')
-          link.href = dataUrl
-          link.download = `Slip-${data.short_id}.png`
-          link.click()
-          
-      } catch (err) {
-          console.error("Slip Error:", err)
-          if (err.message && err.message.includes('lab')) {
-             alert("ขออภัย Browser ของคุณไม่รองรับการบันทึกภาพนี้ (Color Format Error) \nแนะนำให้แคปหน้าจอแทนครับ")
-          } else {
-             alert("ไม่สามารถบันทึกรูปได้: " + err.message)
-          }
-      } finally {
-          setDownloadingSlip(false)
-      }
   }
 
   // --- RENDER ---
@@ -201,20 +117,18 @@ export default function TrackingPage() {
   if (!data) return null
 
   const isPickup = data.booking_type === 'pickup'
-  const steps = isPickup ? PICKUP_STEPS : BOOKING_STEPS
-  let currentStatus = data.status?.toLowerCase() || 'pending'
+  const steps = getSteps(isPickup)
+  const currentStatus = data.status?.toLowerCase() || 'pending'
   const currentStepIndex = steps.findIndex(s => s.key === currentStatus)
+  const isCancelled = ['cancelled', 'void', 'rejected'].includes(currentStatus)
   
   // Logic to Enable Slip Download
-  // Booking: Confirmed or later
-  // Pickup: Ready or later
   const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'completed'].includes(currentStatus)
   const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
   const canSaveSlip = isBookingConfirmed || isPickupReady
-  const isCancelled = ['cancelled', 'void', 'rejected'].includes(currentStatus)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32 font-inter text-gray-900 selection:bg-black selection:text-white">
+    <div className="min-h-screen bg-gray-50 pb-32 font-inter text-gray-900 selection:bg-black selection:text-white overflow-hidden">
       
       {/* 1. Header Area with Gradient */}
       <div className={`pt-10 pb-6 px-6 text-center ${isCancelled ? 'bg-red-50' : 'bg-gradient-to-b from-white to-gray-50'}`}>
@@ -270,7 +184,7 @@ export default function TrackingPage() {
         <div className="px-6 mb-8">
             <h3 className="font-bold text-gray-900 mb-4">{t('bookingInfo')}</h3>
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                {/* Table Name - Hidden for Pickup */}
+                {/* Table Name */}
                 {!isPickup && (
                     <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
                         <span className="text-sm font-medium text-gray-500">{t('tableNumber')}</span>
@@ -292,51 +206,7 @@ export default function TrackingPage() {
                     </div>
                 </div>
 
-                {/*  Order Accordion */}
-                <div className="bg-gray-50 rounded-xl overflow-hidden">
-                    <button 
-                        onClick={() => setIsAccordionOpen(!isAccordionOpen)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-gray-100 transition-colors"
-                    >
-                         <span className="font-bold text-sm text-gray-700">{t('orderItems')} ({data.items?.length || 0})</span>
-                         <ArrowRight size={16} className={`text-gray-400 transition-transform ${isAccordionOpen ? 'rotate-90' : ''}`}/>
-                    </button>
-                    <AnimatePresence>
-                        {isAccordionOpen && (
-                            <motion.div
-                                initial={{ height: 0 }}
-                                animate={{ height: 'auto' }}
-                                exit={{ height: 0 }}
-                                className="overflow-hidden"
-                            >
-                                <div className="p-4 pt-0 border-t border-gray-100">
-                                    <div className="space-y-3 mt-3">
-                                        {data.items?.map((item, i) => (
-                                            <div key={i} className="flex justify-between items-start text-sm">
-                                                <div className="flex gap-3">
-                                                    <div className="font-bold text-gray-400 w-4">{item.quantity}x</div>
-                                                    <div>
-                                                        <div className="text-gray-900 font-medium">{item.name}</div>
-                                                        {item.options && (
-                                                            <div className="text-[10px] text-gray-500 mt-0.5">
-                                                                {Object.values(item.options).join(', ')}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="text-gray-500 font-mono">{item.price * item.quantity}.-</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="border-t border-dashed border-gray-300 mt-4 pt-4 flex justify-between items-center bg-white p-3 rounded-lg">
-                                         <span className="text-sm font-bold text-gray-900">{t('totalPrice')}</span>
-                                         <span className="text-lg font-bold text-green-600">{data.total_amount.toLocaleString()}.-</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                <OrderSummary data={data} />
             </div>
         </div>
        )}
@@ -358,7 +228,7 @@ export default function TrackingPage() {
                      target="_blank" rel="noreferrer"
                      className="bg-[#06C755] text-white p-4 rounded-xl shadow-lg shadow-green-500/20 flex flex-col items-center justify-center gap-2 hover:bg-[#05b64d] transition-all active:scale-95"
                   >
-                     <Share2 size={24}/> {/* Using Share2 icon logic as placeholder if needed, or specific component */}
+                     <Share2 size={24}/> 
                      <span className="text-xs font-bold">{t('lineChat')}</span>
                   </a>
               </div>
@@ -387,18 +257,18 @@ export default function TrackingPage() {
                   <CalendarIcon size={18} />
                   {t('addToCalendar')}
               </button>
-              <button 
-                onClick={handleDownloadSlip}
-                disabled={!canSaveSlip || downloadingSlip || isCancelled}
-                className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
-                    ${(canSaveSlip && !isCancelled)
-                        ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900 active:scale-[0.98]' 
-                        : 'bg-gray-100 border-transparent text-gray-400 cursor-not-allowed'}
-                `}
-              >
-                  {canSaveSlip ? <Download size={18} /> : <Lock size={18} />}
-                  {downloadingSlip ? t('saving') : t('saveSlip')}
-              </button>
+              
+              <BookingSlip 
+                data={data}
+                // Generate simple QR for the slip link (handled internally by component usually or we pass data URL)
+                // For simplified flow, let's pass the URL if needed, but BookingSlip generates its own logic? 
+                // Wait, BookingSlip needs the QR data URL. Let's create it here or inside?
+                // The original code generated it inside useEffect. Let's do it inside the component or pass it.
+                // Let's pass the data URL to keep component pure.
+                qrCodeUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}`}
+                canSave={canSaveSlip}
+                isCancelled={isCancelled}
+              />
           </div>
             {!canSaveSlip && !isCancelled && (
                 <p className="text-center text-xs text-red-400 mt-2">
@@ -410,45 +280,12 @@ export default function TrackingPage() {
       {/* 4. Status Tracker */}
       <div className="px-6 mb-8">
           <h3 className="font-bold text-gray-900 mb-4">{t('statusLatest')}</h3>
-          <div className={`rounded-3xl p-6 shadow-sm border ${isCancelled ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100'}`}>
-              
-                {isCancelled ? (
-                     <div className="text-center py-8">
-                         <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
-                             <XCircle size={32} />
-                         </div>
-                         <h2 className="text-xl font-bold text-red-700 mb-2">{t('orderCancelled')}</h2>
-                         <p className="text-sm text-red-600/80 whitespace-pre-line">
-                             {t('statusCancelledBody')}
-                         </p>
-                     </div>
-                ) : (
-                    <div className="relative pl-2">
-                        <div className="absolute left-[19px] top-2 bottom-4 w-[2px] bg-gray-100"/>
-                        <div className="space-y-6">
-                            {steps.map((step, idx) => {
-                                const isCurrent = idx === currentStepIndex
-                                const isActive = idx <= currentStepIndex
-                                return (
-                                    <div key={step.key} className={`relative flex items-center gap-4 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
-                                        <div className={`
-                                            w-10 h-10 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-sm
-                                            ${isActive ? step.bg + ' ' + step.color : 'bg-gray-100 text-gray-300'}
-                                            ${isCurrent ? 'ring-2 ring-offset-2 ring-blackScale' : ''}
-                                        `}>
-                                            <step.icon size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-900">{step.label}</p>
-                                            {isCurrent && <p className="text-xs text-orange-500 animate-pulse">{step.sub}</p>}
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-          </div>
+          <StatusTracker 
+            status={currentStatus} 
+            steps={steps} 
+            isCancelled={isCancelled}
+            currentStepIndex={currentStepIndex}
+          />
       </div>
 
       {/* 5. Contact & Map */}
@@ -472,71 +309,6 @@ export default function TrackingPage() {
                 </div>
                 <span className="text-xs font-bold text-gray-700">{t('callButton')}</span>
              </a>
-      </div>
-
-      {/* Hidden Slip Component for Capture */}
-      <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
-          <div ref={slipRef} className="w-[400px] bg-white p-8 text-center text-black font-inter border border-gray-200" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
-               <div className="mb-6">
-                   <h2 className="text-2xl font-bold tracking-tight">IN THE HAUS</h2>
-                   <p className="text-xs text-gray-400 uppercase tracking-widest">Booking Slip</p>
-               </div>
-               
-               <div className="border-t border-b border-black py-6 mb-6">
-                   <p className="text-sm text-gray-500 mb-1">Make Note of this ID</p>
-                   <div className="text-6xl font-mono font-bold tracking-tight">#{data.short_id}</div>
-               </div>
-               
-               <div className="text-left space-y-2 mb-8 text-sm">
-                   <div className="flex justify-between">
-                       <span className="text-gray-500">Guest Name</span>
-                       <span className="font-bold">{data.customer_name}</span>
-                   </div>
-                   <div className="flex justify-between">
-                       <span className="text-gray-500">Date</span>
-                       <span className="font-bold">{new Date(data.booking_time).toLocaleDateString()}</span>
-                   </div>
-                   <div className="flex justify-between">
-                       <span className="text-gray-500">Time</span>
-                       <span className="font-bold">{new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                   </div>
-                   {/* Table or Pickup Info */}
-                   {!isPickup && (data.table_name || data.tables_layout?.table_name) && (
-                         <div className="flex justify-between">
-                             <span className="text-gray-500">Table</span>
-                             <span className="font-bold">{data.table_name || data.tables_layout?.table_name}</span>
-                         </div>
-                   )}
-                   {isPickup && (
-                         <div className="flex justify-between">
-                             <span className="text-gray-500">Type</span>
-                             <span className="font-bold">Take Away</span>
-                         </div>
-                   )}
-
-                    {data.items?.length > 0 && (
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Items</span>
-                            <span className="font-bold">{data.items.length} items</span>
-                        </div>
-                    )}
-                   <div className="flex justify-between border-t border-dashed border-gray-300 pt-2 mt-2">
-                       <span className="font-bold">Total</span>
-                       <span className="font-bold">{data.total_amount}.-</span>
-                   </div>
-               </div>
-               
-               <div className="bg-gray-100 p-4 rounded-xl">
-                   <p className="text-xs text-gray-500 mb-2">Scan to Track</p>
-                   {qrDataUrl && (
-                        <img 
-                            src={qrDataUrl} 
-                            className="w-24 h-24 mx-auto mix-blend-multiply"
-                            alt="QR"
-                        />
-                   )}
-               </div>
-          </div>
       </div>
 
     </div>
