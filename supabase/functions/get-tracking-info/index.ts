@@ -30,44 +30,60 @@ serve(async (req) => {
       throw new Error("Token is required");
     }
 
-    // Query Booking by tracking_token
+    // 1. Query Booking with Items and Menu Details
+    // We select order_items and nested menu_items to get names
     const { data: booking, error: dbError } = await supabase
       .from("bookings")
-      .select("*")
+      .select(`
+        *,
+        order_items (
+          quantity,
+          price_at_time,
+          selected_options,
+          menu_items (
+            name,
+            image_url
+          )
+        )
+      `)
       .eq("tracking_token", token)
       .single();
 
     if (dbError || !booking) {
       if (dbError) console.error("Database Error:", dbError);
-      return new Response(JSON.stringify({ error: "Booking not found or invalid token" }), {
+      return new Response(JSON.stringify({ error: "Booking not found", code: "NOT_FOUND" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Validate Expiry
+    // 2. Validate Expiry
+    // Rules:
+    // - Token allows access from creation time.
+    // - Expires STRICTLY after token_expires_at (usually booking_time + 24h).
     const now = new Date();
     const expiresAt = new Date(booking.token_expires_at);
 
     if (now > expiresAt) {
-      return new Response(JSON.stringify({ error: "Link has expired" }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: "Link has expired", code: "TOKEN_EXPIRED" }), {
+        status: 400, // Or 410 Gone
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Data Masking logic
-    // 1. Name: First word only
+    // 3. Data Masking & Transformation
+    
+    // Name: First word only
     const fullName = booking.customer_name || "Customer";
-    const displayName = fullName.split(" ")[0];
+    const displayName = booking.user_id ? fullName : fullName.split(" ")[0]; // If registered user (maybe), show full? No, keep safe.
+    // User requested "Customer changed to System Name". If we have user_id, maybe we can fetch profile, but booking.customer_name should be the name formatted at booking time.
+    // Let's stick to the requested "System Name" or safe first name.
+    const safeName = fullName.split(" ")[0]; 
 
-    // 2. Phone: 08X-XXX-1234
+    // Phone: 08X-XXX-1234
     let maskedPhone = "";
     if (booking.phone) {
-      // Simple regex to keep last 4 digits and first 2-3, mask the middle
-      // Or strictly follow 08X-XXX-1234 style if standard thai number
-      // User request: 081-xxx-1234
-      const p = booking.phone.replace(/[^0-9]/g, ""); // clean non-digits
+      const p = booking.phone.replace(/[^0-9]/g, ""); 
       if (p.length >= 10) {
         maskedPhone = `${p.substring(0, 3)}-xxx-${p.substring(p.length - 4)}`;
       } else {
@@ -75,16 +91,38 @@ serve(async (req) => {
       }
     }
 
+    // Short ID (for humans)
+    // If no specific short_id column, we use the last 4 chars of the UUID or ID.
+    // Assuming 'id' is integer, we can use that if it's safe? or just hash.
+    // Booking ID is usually safe to show partial.
+    // Let's use the last 4 of tracking_token (it's random UUID) usually HEX.
+    // Better: Generate a simple Hash or use ID if non-sequential. 
+    // Let's use last 4 chars of Token upper-cased for now as "Order Code".
+    const shortId = token.slice(-4).toUpperCase();
+
+    // Map Items to simpler structure
+    const items = booking.order_items?.map((item: any) => ({
+      name: item.menu_items?.name || "Unknown Item",
+      quantity: item.quantity,
+      price: item.price_at_time,
+      options: item.selected_options
+    })) || [];
+
     // Construct Safe Response
     const safeData = {
+      booking_id: booking.id, // Internal ID (maybe useful)
+      short_id: shortId,
       status: booking.status,
-      customer_name: displayName,
+      booking_type: booking.booking_type || 'dine_in', // default to dine_in
+      customer_name: safeName,
       phone: maskedPhone,
       booking_time: booking.booking_time,
       pax: booking.pax,
-      items: booking.items, // Assuming items is JSONB or similar
-      table_id: booking.table_id, // Maybe safe to show?
-      customer_note: booking.customer_note, // Be careful, but usually okay
+      items: items,
+      table_id: booking.table_id,
+      customer_note: booking.customer_note,
+      total_amount: booking.total_amount,
+      token_expires_at: booking.token_expires_at
     };
 
     return new Response(JSON.stringify(safeData), {
@@ -94,7 +132,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error("Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message, code: "INTERNAL_ERROR" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
