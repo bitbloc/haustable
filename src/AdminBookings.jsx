@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2 } from 'lucide-react'
+import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2, ArrowUpDown, History } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 
@@ -13,6 +13,10 @@ export default function AdminBookings() {
     // Modal State
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
+
+    // New State for Batch/Sort
+    const [selectedIds, setSelectedIds] = useState([])
+    const [sortConfig, setSortConfig] = useState({ key: 'booking_time', direction: 'desc' })
 
     useEffect(() => {
         fetchBookings()
@@ -134,12 +138,47 @@ export default function AdminBookings() {
         }
     }
 
-    // Secure Delete Handler
+    // Secure Delete Handler (Single)
     const handleDelete = async (booking) => {
+        if (booking.status !== 'completed') {
+            alert("Protected: Only 'Completed' orders can be deleted.")
+            return
+        }
+        
+        await executeDelete([booking])
+    }
+
+    // Batch Delete Handler
+    const handleBatchDelete = async () => {
+        if (selectedIds.length === 0) return
+
+        // 1. Filter for valid bookings (must be 'completed')
+        const validBookings = bookings.filter(b => selectedIds.includes(b.id) && b.status === 'completed')
+        const invalidCount = selectedIds.length - validBookings.length
+
+        if (validBookings.length === 0) {
+            alert("None of the selected orders can be deleted. Only 'Completed' orders are deletable.")
+            return
+        }
+
+        let confirmMsg = `Are you sure you want to delete ${validBookings.length} completed orders?`
+        if (invalidCount > 0) {
+            confirmMsg += `\n(${invalidCount} non-completed orders will be skipped)`
+        }
+
+        if (!confirm(confirmMsg)) return
+
+        await executeDelete(validBookings)
+        setSelectedIds([]) // Clear selection
+    }
+
+    // Core Delete Logic (Shared)
+    const executeDelete = async (targets) => {
         const inputPin = prompt("Please enter Staff PIN to confirm deletion:")
         if (!inputPin) return
 
         try {
+            setLoading(true)
              // 1. Verify PIN
             const { data: setting } = await supabase
                 .from('app_settings')
@@ -154,34 +193,27 @@ export default function AdminBookings() {
                 return
             }
 
-            if (!confirm(`⚠ WARNING: This will permanently delete booking #${booking.id} and its slip image.\nAre you sure?`)) return
-
-            setLoading(true)
-
-            // 2. Delete Slip Image (if exists)
-            if (booking.payment_slip_url) {
-                // Extract path from URL or just use the filename if standard bucket structure
-                // Usually we store full path or just filename? Let's assume standard behavior matches AdminSettings cleanup.
-                // AdminSettings uses: storage.from('slips').remove([url]) - wait, remove takes paths/names, not full URLs typically unless stored that way.
-                // Let's try to pass the value stored in DB exactly.
+            // 2. Delete Slip Images
+            const slipsToDelete = targets.map(b => b.payment_slip_url).filter(Boolean)
+            if (slipsToDelete.length > 0) {
                 const { error: storageError } = await supabase.storage
                     .from('slips')
-                    .remove([booking.payment_slip_url])
-                
+                    .remove(slipsToDelete)
                 if (storageError) console.warn("Slip deletion warning:", storageError)
             }
 
-            // 3. Delete Booking Record
+            // 3. Delete Booking Records
+            const targetIds = targets.map(b => b.id)
             const { error: dbError } = await supabase
                 .from('bookings')
                 .delete()
-                .eq('id', booking.id)
+                .in('id', targetIds)
 
             if (dbError) throw dbError
 
             // 4. Update UI
-            setBookings(prev => prev.filter(b => b.id !== booking.id))
-            alert("Booking deleted successfully.")
+            setBookings(prev => prev.filter(b => !targetIds.includes(b.id)))
+            alert(`Successfully deleted ${targets.length} bookings.`)
 
         } catch (err) {
             console.error(err)
@@ -196,19 +228,55 @@ export default function AdminBookings() {
         setSlipData({ booking, type })
     }
 
+    // Sorting Helper
+    const handleSort = (key) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }))
+    }
+
+    // Selection Helper
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        )
+    }
+
+    const toggleSelectAll = (displayedBookings) => {
+        if (selectedIds.length === displayedBookings.length) {
+            setSelectedIds([])
+        } else {
+            setSelectedIds(displayedBookings.map(b => b.id))
+        }
+    }
+
     // Helper
     const getShortId = (token) => token ? token.slice(-4).toUpperCase() : '----'
 
-    // Filter Logic
+    // Filter & Sort Logic
     const filteredBookings = bookings.filter(b => {
         const matchesStatus = filter === 'all' || b.status === filter
         const shortId = getShortId(b.tracking_token)
+        const nameToSearch = b.pickup_contact_name || b.profiles?.display_name || ''
+        
         const matchesSearch =
-            (b.pickup_contact_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            nameToSearch.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (b.pickup_contact_phone || '').includes(searchTerm) ||
             (b.id || '').includes(searchTerm) ||
             shortId.includes(searchTerm.toUpperCase())
         return matchesStatus && matchesSearch
+    }).sort((a, b) => {
+        const aValue = sortConfig.key === 'customer' 
+            ? (a.pickup_contact_name || a.profiles?.display_name || '') 
+            : a[sortConfig.key]
+        const bValue = sortConfig.key === 'customer'
+            ? (b.pickup_contact_name || b.profiles?.display_name || '')
+            : b[sortConfig.key]
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+        return 0
     })
 
     const statusColors = {
@@ -262,14 +330,48 @@ export default function AdminBookings() {
                 </div>
             </div>
 
+            {/* Batch Action Bar */}
+            {selectedIds.length > 0 && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between animate-fade-in">
+                    <span className="text-red-400 text-sm font-medium pl-2">
+                        {selectedIds.length} orders selected
+                    </span>
+                    <button 
+                        onClick={handleBatchDelete}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition-colors"
+                    >
+                        <Trash2 size={16} />
+                        Delete Selected
+                    </button>
+                </div>
+            )}
+
             {/* Table */}
             <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-white/5 text-gray-500 text-xs uppercase tracking-wider">
-                                <th className="p-4 font-bold">Short ID / Time</th>
-                                <th className="p-4 font-bold">Customer</th>
+                                <th className="p-4 w-12 text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-gray-600 bg-transparent checked:bg-[#DFFF00]"
+                                        checked={filteredBookings.length > 0 && selectedIds.length === filteredBookings.length}
+                                        onChange={() => toggleSelectAll(filteredBookings)}
+                                    />
+                                </th>
+                                <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('booking_time')}>
+                                    <div className="flex items-center gap-1">
+                                        Booking Date
+                                        <ArrowUpDown size={12} className={sortConfig.key === 'booking_time' ? 'text-[#DFFF00]' : 'opacity-30'} />
+                                    </div>
+                                </th>
+                                <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('customer')}>
+                                    <div className="flex items-center gap-1">
+                                        Customer
+                                        <ArrowUpDown size={12} className={sortConfig.key === 'customer' ? 'text-[#DFFF00]' : 'opacity-30'} />
+                                    </div>
+                                </th>
                                 <th className="p-4 font-bold">Total</th>
                                 <th className="p-4 font-bold">Status</th>
                                 <th className="p-4 font-bold text-right">Actions</th>
@@ -277,14 +379,23 @@ export default function AdminBookings() {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {loading ? (
-                                <tr><td colSpan="5" className="p-8 text-center text-gray-500">Loading...</td></tr>
+                                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Loading...</td></tr>
                             ) : filteredBookings.length === 0 ? (
-                                <tr><td colSpan="5" className="p-8 text-center text-gray-500">No bookings found</td></tr>
+                                <tr><td colSpan="6" className="p-8 text-center text-gray-500">No bookings found</td></tr>
                             ) : (
                                 filteredBookings.map(booking => (
-                                    <tr key={booking.id} className="hover:bg-white/[0.02] transition-colors">
+                                    <tr key={booking.id} className={`hover:bg-white/[0.02] transition-colors ${selectedIds.includes(booking.id) ? 'bg-white/[0.03]' : ''}`}>
+                                        <td className="p-4 text-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="rounded border-gray-600 bg-transparent checked:bg-[#DFFF00]"
+                                                checked={selectedIds.includes(booking.id)}
+                                                onChange={() => toggleSelect(booking.id)}
+                                            />
+                                        </td>
                                         <td className="p-4">
-                                            <div className="flex flex-col gap-1">
+                                            <div className="flex flex-col gap-1.5">
+                                                {/* Booking Time (Primary) */}
                                                 <div className="flex items-center gap-2">
                                                     <span className="bg-[#DFFF00] text-black text-xs font-bold px-1.5 py-0.5 rounded">
                                                         #{getShortId(booking.tracking_token)}
@@ -292,20 +403,30 @@ export default function AdminBookings() {
                                                     <span className="text-white font-bold text-sm">
                                                         {new Date(booking.booking_time).toLocaleDateString()}
                                                     </span>
+                                                    <span className="text-gray-400 text-xs">
+                                                        {new Date(booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
                                                 </div>
-                                                <span className="text-gray-500 text-xs flex items-center gap-1">
-                                                    <Clock size={10} />
-                                                    {new Date(booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                                                {/* Order Time (Secondary) */}
+                                                <div className="flex items-center gap-1.5 text-xs text-gray-600 pl-1 border-l-2 border-gray-800">
+                                                    <History size={10} />
+                                                    <span>Order: {new Date(booking.created_at).toLocaleString('th-TH', { 
+                                                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                                                    })}</span>
+                                                </div>
+
+                                                <span className="text-gray-500 text-xs font-mono mt-0.5">
+                                                    {booking.tables_layout?.table_name || 'N/A'} 
+                                                    {booking.booking_type === 'pickup' && <span className="ml-2 text-blue-400">PICKUP</span>}
                                                 </span>
-                                                <span className="text-gray-400 text-xs font-mono">
-                                                    {booking.tables_layout?.table_name || 'N/A'}
-                                                </span>
-                                                {booking.booking_type === 'pickup' && <span className="bg-blue-900/50 text-blue-300 text-[10px] px-1 rounded w-fit">PICKUP</span>}
                                             </div>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-medium text-sm">{booking.pickup_contact_name || booking.profiles?.full_name || 'Unique User'}</span>
+                                                <span className="text-white font-medium text-sm">
+                                                    {booking.pickup_contact_name || booking.profiles?.display_name || 'Guest User'}
+                                                </span>
                                                 <span className="text-gray-500 text-xs flex items-center gap-1 mt-1">
                                                     <Phone size={10} />
                                                     {booking.pickup_contact_phone || booking.profiles?.phone_number || '-'}
@@ -350,11 +471,14 @@ export default function AdminBookings() {
                                                     <button onClick={() => updateStatus(booking, 'completed')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg" title="Complete (Check Bill)">
                                                         <Check size={16} />
                                                     </button>
-
                                                 )}
                                                 
                                                 <div className="w-px bg-white/10 mx-1"></div>
-                                                <button onClick={() => handleDelete(booking)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors" title="Delete Booking (PIN Required)">
+                                                <button 
+                                                    onClick={() => handleDelete(booking)} 
+                                                    className={`p-2 rounded-lg transition-colors ${booking.status === 'completed' ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
+                                                    title={booking.status === 'completed' ? "Delete Booking (PIN Required)" : "Only Completed orders can be deleted"}
+                                                >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>

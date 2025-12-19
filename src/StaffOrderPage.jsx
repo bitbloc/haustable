@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
@@ -137,10 +137,15 @@ export default function StaffOrderPage() {
     const [printModal, setPrintModal] = useState({ isOpen: false, booking: null })
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
 
+    // Locked Handlers
+    const onLockRequest = useCallback(() => console.log('Screen locked!'), [])
+    const onLockRelease = useCallback(() => console.log('Screen unlocked!'), [])
+    const onLockError = useCallback(() => console.error('Wake Lock error'), [])
+
     const { isSupported, isLocked, request, release } = useWakeLock({
-        onRequest: () => console.log('Screen locked!'),
-        onRelease: () => console.log('Screen unlocked!'),
-        onError: () => console.error('Wake Lock error')
+        onRequest: onLockRequest,
+        onRelease: onLockRelease,
+        onError: onLockError
     })
     
     // Audio Refs
@@ -193,7 +198,7 @@ export default function StaffOrderPage() {
                 clearInterval(pollInterval)
             }
         }
-    }, [isAuthenticated, isSoundChecked])
+    }, [isAuthenticated, isSoundChecked]) // Removed request/release/isSupported dependencies to prevent loops if they are stable
 
     // Load History when tab/date changes
     useEffect(() => {
@@ -206,7 +211,7 @@ export default function StaffOrderPage() {
     useEffect(() => {
         if (!isAuthenticated || !isSoundChecked) return
         if (orders.some(o => o.status === 'pending')) {
-            if (!isPlaying && soundUrl) playAlarm()
+            playAlarm() // playAlarm now has internal guards
         } else {
             stopAlarm()
         }
@@ -214,17 +219,30 @@ export default function StaffOrderPage() {
 
     // --- Audio Control ---
     const playAlarm = () => {
+        if (isPlaying) return // Guard against spam
         if (!audioRef.current.src && soundUrl) audioRef.current.src = soundUrl
-        const playPromise = audioRef.current.play()
-        if (playPromise !== undefined) {
-             playPromise.then(() => setIsPlaying(true)).catch(e => console.error(e))
+        
+        try {
+            const playPromise = audioRef.current.play()
+            if (playPromise !== undefined) {
+                 playPromise.then(() => setIsPlaying(true)).catch(e => {
+                     console.error("Audio Play Error:", e)
+                     setIsPlaying(false)
+                 })
+            }
+        } catch (e) {
+            console.error("Audio Critical Error:", e)
         }
     }
 
     const stopAlarm = () => {
-        audioRef.current.pause()
-        audioRef.current.currentTime = 0
-        setIsPlaying(false)
+        try {
+            audioRef.current.pause()
+            audioRef.current.currentTime = 0
+            setIsPlaying(false)
+        } catch (e) {
+            console.error("Audio Stop Error:", e)
+        }
     }
 
     // --- Notification ---
@@ -236,21 +254,27 @@ export default function StaffOrderPage() {
     const showSystemNotification = (title, body) => {
         if (Notification.permission === 'granted') {
             try {
-                const n = new Notification(title, {
+                // Android PWA stability adjustments:
+                // requireInteraction can sometimes cause issues on older WebViews, keep true for now but wrap safe.
+                const options = {
                     body: body,
                     icon: '/icons/icon-192x192.png',
                     vibrate: [200, 100, 200],
-                    tag: 'new-order', // Group notifications
-                    renotify: true,   // Vibrate/Sound even if replacing old one
-                    requireInteraction: true, // Keep on screen until clicked (Desktop/Android)
-                    silent: false     // Explicitly ask for sound (Android)
-                })
+                    tag: 'new-order',
+                    renotify: true,
+                    silent: false
+                }
+
+                // Check environment before adding specific flags if needed
+                if ('requireInteraction' in Notification.prototype) {
+                    options.requireInteraction = true
+                }
+
+                const n = new Notification(title, options)
                 
-                // Focus window on click
                 n.onclick = function(e) {
                     e.preventDefault()
                     window.focus()
-                    // Try to navigate/refresh if needed
                     n.close()
                 }
             } catch (e) {
@@ -492,6 +516,12 @@ export default function StaffOrderPage() {
                             <span className="text-xs font-bold bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">iOS</span>
                             <p className="text-xs text-gray-500 leading-relaxed">
                                 <strong>ระวังจอดับ:</strong> หากพับหน้าจอ Apple จะตัดการเชื่อมต่อ แนะนำให้เปิดจิค้างไว้ หรือใช้โหมด <em>Guided Access</em>
+                            </p>
+                        </div>
+                        <div className="flex gap-2 items-start">
+                            <span className="text-xs font-bold bg-red-100 text-red-800 px-1.5 py-0.5 rounded">Sound</span>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                <strong>ปิดโหมดเงียบ (Silent Mode):</strong> บน iPhone ต้องสับสวิตช์ข้างเครื่องให้เป็นโหมดเปิดเสียง จึงจะได้ยินเสียงแจ้งเตือน
                             </p>
                         </div>
                         <div className="flex gap-2 items-start">
