@@ -28,9 +28,12 @@ export default function Home({ session }) {
 
     // Staff Auto-Redirect (PWA Support)
     // If installed as PWA for staff, it starts at /, so we redirect if logged in.
+    // BUT we allow escaping to Home if 'skip_staff_redirect' is set (session based).
     useEffect(() => {
         const isStaffAuth = localStorage.getItem('staff_auth') === 'true'
-        if (isStaffAuth) {
+        const shouldSkip = sessionStorage.getItem('skip_staff_redirect') === 'true'
+        
+        if (isStaffAuth && !shouldSkip) {
             window.location.href = '/staff'
         }
     }, [])

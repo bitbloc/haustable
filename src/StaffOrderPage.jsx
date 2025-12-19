@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useToast } from './context/ToastContext'
 import ConfirmationModal from './components/ConfirmationModal'
@@ -453,9 +453,21 @@ export default function StaffOrderPage() {
                             </div>
                         </div>
                     </div>
-                     <button onClick={handleLogout} className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition-colors">
-                        <LogOut className="w-5 h-5" />
-                    </button>
+                     <div className="flex gap-2">
+                        <button 
+                            onClick={() => {
+                                sessionStorage.setItem('skip_staff_redirect', 'true')
+                                window.location.href = '/'
+                            }} 
+                            className="p-2 bg-white/50 hover:bg-white text-gray-700 rounded-full transition-colors"
+                            title="Go to Customer View"
+                        >
+                            <Home className="w-5 h-5" />
+                        </button>
+                        <button onClick={handleLogout} className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition-colors">
+                            <LogOut className="w-5 h-5" />
+                        </button>
+                     </div>
                 </div>
 
                 {/* Tabs */}
