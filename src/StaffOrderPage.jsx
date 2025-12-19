@@ -719,6 +719,11 @@ export default function StaffOrderPage() {
                     )}
                 </div>
             )}
+
+
+            <div className="mt-8 mb-4 max-w-sm mx-auto">
+                <InstallPrompt />
+            </div>
         </div>
     )
 }
