@@ -151,6 +151,15 @@ export default function StaffOrderPage() {
         init()
     }, [])
 
+    // --- Debounce Helper ---
+    const debounceRef = useRef(null)
+    const debouncedFetchLiveOrders = (silent = false) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            fetchLiveOrders(silent)
+        }, 500)
+    }
+
     // Authenticated Setup
     useEffect(() => {
         let pollInterval
@@ -246,13 +255,13 @@ export default function StaffOrderPage() {
                             if (prev.find(o => o.id === newOrder.id)) return prev
                             return [...prev, { ...newOrder, isOptimistic: true }]
                         })
-                        fetchLiveOrders()
+                        debouncedFetchLiveOrders()
                     }
                 }
             )
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, () => fetchLiveOrders(true))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, () => debouncedFetchLiveOrders(true))
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings' }, () => {
-                fetchLiveOrders(true)
+                debouncedFetchLiveOrders(true)
                 if (activeTab === 'history') fetchHistoryOrders()
             })
             .subscribe((status) => {
@@ -485,6 +494,14 @@ export default function StaffOrderPage() {
                 isDangerous={confirmModal.isDangerous}
             />
 
+            {/* Offline Sticky Banner */}
+            {!isConnected && (
+                <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-center py-2 z-[9999] font-bold text-sm shadow-md flex items-center justify-center gap-2 animate-in slide-in-from-top duration-300">
+                    <X className="w-4 h-4" />
+                    OFFLINE: Check Internet Connection
+                </div>
+            )}
+
             {printModal.isOpen && (
                 <SlipModal 
                     booking={printModal.booking} 
@@ -494,7 +511,7 @@ export default function StaffOrderPage() {
             )}
 
             {/* Header */}
-            <div className="flex flex-col gap-4 mb-6 sticky top-0 z-20 pt-2 bg-[#F4F4F4]/95 backdrop-blur-sm -mx-4 px-4 pb-4 border-b border-gray-200">
+            <div className={`flex flex-col gap-4 mb-6 sticky z-20 pt-2 bg-[#F4F4F4]/95 backdrop-blur-sm -mx-4 px-4 pb-4 border-b border-gray-200 ${!isConnected ? 'top-8' : 'top-0'} transition-all`}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[#1A1A1A] text-white rounded-full flex items-center justify-center shadow-md">
@@ -502,10 +519,6 @@ export default function StaffOrderPage() {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold tracking-tight">Orders</h1>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                                 <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                                {isConnected ? 'Online' : 'Offline'}
-                            </div>
                         </div>
                     </div>
                      <div className="flex gap-2">

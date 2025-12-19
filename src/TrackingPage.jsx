@@ -206,25 +206,26 @@ export default function TrackingPage() {
   const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'completed'].includes(currentStatus)
   const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
   const canSaveSlip = isBookingConfirmed || isPickupReady
+  const isCancelled = ['cancelled', 'void', 'rejected'].includes(currentStatus)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32 font-inter text-gray-900 selection:bg-black selection:text-white">
       
       {/* 1. Header Area with Gradient */}
-      <div className="bg-gradient-to-b from-white to-gray-50 pt-10 pb-6 px-6 text-center">
+      <div className={`pt-10 pb-6 px-6 text-center ${isCancelled ? 'bg-red-50' : 'bg-gradient-to-b from-white to-gray-50'}`}>
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4"
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
           >
-              <CheckCircle size={14} />
-              {isPickup ? 'Order Received' : 'Booking Received'}
+              {isCancelled ? <XCircle size={14} /> : <CheckCircle size={14} />}
+              {isCancelled ? 'Cancelled' : (isPickup ? 'Order Received' : 'Booking Received')}
           </motion.div>
-          <h1 className="text-3xl font-bold mb-2">
-              {isPickup ? 'สั่งอาหารสำเร็จ!' : 'จองโต๊ะสำเร็จ!'}
+          <h1 className={`text-3xl font-bold mb-2 ${isCancelled ? 'text-red-600' : 'text-[#1A1A1A]'}`}>
+              {isCancelled ? 'รายการถูกยกเลิก' : (isPickup ? 'สั่งอาหารสำเร็จ!' : 'จองโต๊ะสำเร็จ!')}
           </h1>
           <p className="text-gray-500 text-sm">
-             ขอบคุณที่ใช้บริการครับ
+             {isCancelled ? 'กรุณาติดต่อร้านค้าเพื่อสอบถามข้อมูลเพิ่มเติม' : 'ขอบคุณที่ใช้บริการครับ'}
           </p>
       </div>
 
@@ -232,7 +233,7 @@ export default function TrackingPage() {
       <div className="px-6 mb-8">
           <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-gray-100 text-center relative overflow-hidden">
              {/* Decorative background blob */}
-             <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-400/10 rounded-full blur-3xl" />
+             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl ${isCancelled ? 'bg-red-400/10' : 'bg-yellow-400/10'}`} />
              
              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Your Short ID</p>
              <div className="text-5xl font-mono font-bold tracking-tighter text-black mb-4">
@@ -249,36 +250,67 @@ export default function TrackingPage() {
                  </button>
              </div>
 
-             <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-xs font-medium flex gap-2 items-start text-left">
+             <div className={`${isCancelled ? 'bg-red-50 text-red-600' : 'bg-red-50 text-red-600'} px-4 py-3 rounded-xl text-xs font-medium flex gap-2 items-start text-left`}>
                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                 โปรดเก็บลิงก์นี้ไว้ เพื่อใช้ตรวจสอบสถานะอาหารและคิวของคุณ
+                 {isCancelled 
+                    ? 'รายการนี้ถูกยกเลิก โปรดติดต่อร้านค้าหากมีข้อสงสัย'
+                    : 'โปรดเก็บลิงก์นี้ไว้ เพื่อใช้ตรวจสอบสถานะอาหารและคิวของคุณ'
+                 }
              </div>
           </div>
       </div>
 
       {/* 3. Action Buttons */}
       <div className="px-6 mb-10 space-y-3">
-          <button 
-            onClick={handleShareLine}
-            className="w-full bg-[#06C755] hover:bg-[#05b64d] text-white py-4 rounded-xl font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-              <Share2 size={20} />
-              ส่งเข้า LINE
-          </button>
+          {/* Contact Actions for Cancelled - Prominent */}
+          {isCancelled && (
+              <div className="grid grid-cols-2 gap-3 mb-4 animate-in fade-in slide-in-from-bottom-4">
+                  <a 
+                     href={`tel:${settings.contact_phone || '0812345678'}`}
+                     className="bg-black text-white p-4 rounded-xl shadow-lg shadow-black/20 flex flex-col items-center justify-center gap-2 hover:bg-gray-900 transition-all active:scale-95"
+                  >
+                     <Phone size={24}/>
+                     <span className="text-xs font-bold">Call Shop</span>
+                  </a>
+                  <a 
+                     href={settings.contact_line_url || "#"} 
+                     target="_blank" rel="noreferrer"
+                     className="bg-[#06C755] text-white p-4 rounded-xl shadow-lg shadow-green-500/20 flex flex-col items-center justify-center gap-2 hover:bg-[#05b64d] transition-all active:scale-95"
+                  >
+                     <Share2 size={24}/> {/* Using Share2 icon logic as placeholder if needed, or specific component */}
+                     <span className="text-xs font-bold">Line Chat</span>
+                  </a>
+              </div>
+          )}
+
+          {!isCancelled && (
+             <button 
+                onClick={handleShareLine}
+                className="w-full bg-[#06C755] hover:bg-[#05b64d] text-white py-4 rounded-xl font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                <Share2 size={20} />
+                ส่งเข้า LINE
+            </button>
+          )}
           
           <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={handleAddToCalendar}
-                className="w-full bg-white border border-gray-200 text-gray-900 py-3 rounded-xl font-bold hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm"
+                disabled={isCancelled}
+                className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
+                    ${isCancelled 
+                        ? 'bg-gray-50 border-transparent text-gray-300 cursor-not-allowed opacity-50' 
+                        : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50 active:scale-[0.98]'}
+                `}
               >
                   <CalendarIcon size={18} />
                   Add to Calendar
               </button>
               <button 
                 onClick={handleDownloadSlip}
-                disabled={!canSaveSlip || downloadingSlip}
+                disabled={!canSaveSlip || downloadingSlip || isCancelled}
                 className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
-                    ${canSaveSlip 
+                    ${(canSaveSlip && !isCancelled)
                         ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900 active:scale-[0.98]' 
                         : 'bg-gray-100 border-transparent text-gray-400 cursor-not-allowed'}
                 `}
@@ -287,7 +319,7 @@ export default function TrackingPage() {
                   {downloadingSlip ? 'Saving...' : 'Save Slip'}
               </button>
           </div>
-            {!canSaveSlip && (
+            {!canSaveSlip && !isCancelled && (
                 <p className="text-center text-xs text-red-400 mt-2">
                     {isPickup ? '*บันทึกได้เมื่ออาหารเสร็จแล้ว' : '*บันทึกได้เมื่อยืนยันโต๊ะแล้ว'}
                 </p>
@@ -297,32 +329,44 @@ export default function TrackingPage() {
       {/* 4. Status Tracker */}
       <div className="px-6 mb-8">
           <h3 className="font-bold text-gray-900 mb-4">สถานะล่าสุด</h3>
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <div className="relative pl-2">
-                  <div className="absolute left-[19px] top-2 bottom-4 w-[2px] bg-gray-100"/>
-                  <div className="space-y-6">
-                      {steps.map((step, idx) => {
-                          const isCurrent = idx === currentStepIndex
-                          // Show only current, previous, and next step to save space? No, show all but simplify.
-                          const isActive = idx <= currentStepIndex
-                          return (
-                              <div key={step.key} className={`relative flex items-center gap-4 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
-                                  <div className={`
-                                      w-10 h-10 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-sm
-                                      ${isActive ? step.bg + ' ' + step.color : 'bg-gray-100 text-gray-300'}
-                                      ${isCurrent ? 'ring-2 ring-offset-2 ring-blackScale' : ''}
-                                  `}>
-                                      <step.icon size={16} />
-                                  </div>
-                                  <div>
-                                      <p className="text-sm font-bold text-gray-900">{step.label}</p>
-                                      {isCurrent && <p className="text-xs text-orange-500 animate-pulse">{step.sub}</p>}
-                                  </div>
-                              </div>
-                          )
-                      })}
-                  </div>
-              </div>
+          <div className={`rounded-3xl p-6 shadow-sm border ${isCancelled ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100'}`}>
+              
+                {isCancelled ? (
+                     <div className="text-center py-8">
+                         <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+                             <XCircle size={32} />
+                         </div>
+                         <h2 className="text-xl font-bold text-red-700 mb-2">Order Cancelled</h2>
+                         <p className="text-sm text-red-600/80">
+                             ขออภัย รายการนี้ถูกยกเลิก<br/>โปรดติดต่อเจ้าหน้าที่
+                         </p>
+                     </div>
+                ) : (
+                    <div className="relative pl-2">
+                        <div className="absolute left-[19px] top-2 bottom-4 w-[2px] bg-gray-100"/>
+                        <div className="space-y-6">
+                            {steps.map((step, idx) => {
+                                const isCurrent = idx === currentStepIndex
+                                const isActive = idx <= currentStepIndex
+                                return (
+                                    <div key={step.key} className={`relative flex items-center gap-4 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                                        <div className={`
+                                            w-10 h-10 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-sm
+                                            ${isActive ? step.bg + ' ' + step.color : 'bg-gray-100 text-gray-300'}
+                                            ${isCurrent ? 'ring-2 ring-offset-2 ring-blackScale' : ''}
+                                        `}>
+                                            <step.icon size={16} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-900">{step.label}</p>
+                                            {isCurrent && <p className="text-xs text-orange-500 animate-pulse">{step.sub}</p>}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
           </div>
       </div>
 
