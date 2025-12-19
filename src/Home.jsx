@@ -26,6 +26,15 @@ export default function Home({ session }) {
         return { isOpen, text: isOpen ? 'OPEN' : 'CLOSED' }
     }
 
+    // Staff Auto-Redirect (PWA Support)
+    // If installed as PWA for staff, it starts at /, so we redirect if logged in.
+    useEffect(() => {
+        const isStaffAuth = localStorage.getItem('staff_auth') === 'true'
+        if (isStaffAuth) {
+            window.location.href = '/staff'
+        }
+    }, [])
+
     useEffect(() => {
         // 1. Safety Timeout (Ensures "LOADING" never stays forever)
         const safetyTimer = setTimeout(() => {
