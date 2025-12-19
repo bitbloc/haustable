@@ -194,13 +194,18 @@ export default function AdminBookings() {
         setSlipData({ booking, type })
     }
 
+    // Helper
+    const getShortId = (token) => token ? token.slice(-4).toUpperCase() : '----'
+
     // Filter Logic
     const filteredBookings = bookings.filter(b => {
         const matchesStatus = filter === 'all' || b.status === filter
+        const shortId = getShortId(b.tracking_token)
         const matchesSearch =
             (b.pickup_contact_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (b.pickup_contact_phone || '').includes(searchTerm) ||
-            (b.id || '').includes(searchTerm)
+            (b.id || '').includes(searchTerm) ||
+            shortId.includes(searchTerm.toUpperCase())
         return matchesStatus && matchesSearch
     })
 
@@ -223,6 +228,7 @@ export default function AdminBookings() {
                     <button onClick={fetchBookings} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white text-sm font-bold transition-colors">
                         Refresh
                     </button>
+                    {/* Add Quick Links if needed */}
                 </div>
             </div>
 
@@ -233,7 +239,7 @@ export default function AdminBookings() {
                     <Search className="absolute left-3 top-3 text-gray-500 w-4 h-4" />
                     <input
                         type="text"
-                        placeholder="Search Name, Phone, ID..."
+                        placeholder="Search Name, Phone, ID (#ABCD)..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         className="w-full bg-[#111] border border-white/10 pl-10 pr-4 py-2.5 rounded-xl text-white text-sm outline-none focus:border-[#DFFF00]"
@@ -260,7 +266,7 @@ export default function AdminBookings() {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-white/5 text-gray-500 text-xs uppercase tracking-wider">
-                                <th className="p-4 font-bold">Booking Info</th>
+                                <th className="p-4 font-bold">Short ID / Time</th>
                                 <th className="p-4 font-bold">Customer</th>
                                 <th className="p-4 font-bold">Total</th>
                                 <th className="p-4 font-bold">Status</th>
@@ -276,18 +282,23 @@ export default function AdminBookings() {
                                 filteredBookings.map(booking => (
                                     <tr key={booking.id} className="hover:bg-white/[0.02] transition-colors">
                                         <td className="p-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-white font-bold text-sm">
-                                                    {new Date(booking.booking_time).toLocaleDateString()}
-                                                </span>
-                                                <span className="text-gray-500 text-xs flex items-center gap-1 mt-1">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="bg-[#DFFF00] text-black text-xs font-bold px-1.5 py-0.5 rounded">
+                                                        #{getShortId(booking.tracking_token)}
+                                                    </span>
+                                                    <span className="text-white font-bold text-sm">
+                                                        {new Date(booking.booking_time).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <span className="text-gray-500 text-xs flex items-center gap-1">
                                                     <Clock size={10} />
                                                     {new Date(booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
-                                                <span className="text-[#DFFF00] text-xs font-mono mt-1">
+                                                <span className="text-gray-400 text-xs font-mono">
                                                     {booking.tables_layout?.table_name || 'N/A'}
                                                 </span>
-                                                {booking.booking_type === 'pickup' && <span className="bg-blue-900/50 text-blue-300 text-[10px] px-1 rounded w-fit mt-1">PICKUP</span>}
+                                                {booking.booking_type === 'pickup' && <span className="bg-blue-900/50 text-blue-300 text-[10px] px-1 rounded w-fit">PICKUP</span>}
                                             </div>
                                         </td>
                                         <td className="p-4">

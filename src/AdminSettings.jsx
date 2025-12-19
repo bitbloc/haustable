@@ -49,7 +49,9 @@ export default function AdminSettings() {
         sms_api_key: '',
         sms_api_secret: '',
         admin_phone_contact: '',
-        staff_pin_code: ''
+        staff_pin_code: '',
+        contact_phone: '',
+        contact_map_url: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -401,6 +403,8 @@ export default function AdminSettings() {
                             await handleSave('policy_dine_in', settings.policy_dine_in)
                             await handleSave('policy_pickup', settings.policy_pickup)
                             await handleSave('is_menu_system_enabled', settings.is_menu_system_enabled)
+                            await handleSave('contact_phone', settings.contact_phone)
+                            await handleSave('contact_map_url', settings.contact_map_url)
                             alert('บันทึกการตั้งค่าเรียบร้อย!')
                         }}
                         className="flex items-center gap-2 bg-[#DFFF00] text-black px-4 py-2 rounded-full font-bold text-sm hover:scale-105 transition-transform"
@@ -427,6 +431,29 @@ export default function AdminSettings() {
                         placeholder="e.g. IN THE HAUS..."
                         className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
                     />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Contact Phone</label>
+                        <input
+                            type="text"
+                            value={settings.contact_phone || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, contact_phone: e.target.value }))}
+                            placeholder="e.g. 0812345678"
+                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand font-mono"
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Google Maps URL</label>
+                        <input
+                            type="text"
+                            value={settings.contact_map_url || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, contact_map_url: e.target.value }))}
+                            placeholder="https://maps.google.com/..."
+                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                        />
+                     </div>
                 </div>
 
                 {/* --- New Policy & Rate Settings --- */}
