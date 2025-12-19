@@ -5,6 +5,7 @@ import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
 import { ToastProvider } from './context/ToastContext'
 import { BookingProvider } from './context/BookingContext'
+import { Toaster } from 'sonner' // Added
 
 // Pages
 import Home from './Home'
@@ -79,6 +80,7 @@ function App() {
 
   return (
     <ToastProvider>
+      <Toaster position="top-center" richColors closeButton />
       <BookingProvider>
         <Router>
           <Routes>

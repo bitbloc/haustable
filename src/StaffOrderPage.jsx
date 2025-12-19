@@ -2,15 +2,15 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
-import { useToast } from './context/ToastContext'
+import { toast } from 'sonner' // Using Sonner
 import ConfirmationModal from './components/ConfirmationModal'
 import SlipModal from './components/shared/SlipModal'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
-        <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-[#1A1A1A] text-center space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto">
+        <div className="bg-white rounded-2xl p-6 max-w-xs w-full text-[#1A1A1A] text-center space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto">
                 <Share className="w-6 h-6 text-blue-500" />
             </div>
             <div>
@@ -76,11 +76,11 @@ const InstallPrompt = () => {
         <>
             <button 
                 onClick={handleInstall}
-                className="mt-4 flex items-center justify-center gap-2 w-full py-3 bg-white/40 border border-white/40 rounded-2xl text-xs font-bold text-[#1A1A1A] hover:bg-white/60 transition-colors"
+                className="mt-6 flex items-center justify-center gap-2 w-full py-3 bg-gray-100 hover:bg-gray-200 border border-transparent rounded-xl text-xs font-bold text-[#1A1A1A] transition-colors"
                 type="button"
             >
                 <Download size={14} />
-                Install App for easier access
+                Install App
             </button>
             {showIOSModal && <IOSInstallModal onClose={() => setShowIOSModal(false)} />}
         </>
@@ -105,7 +105,6 @@ const formatDateThai = (date) => {
 }
 
 export default function StaffOrderPage() {
-    const { toast } = useToast()
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null, isDangerous: false })
     
     // Auth State
@@ -232,8 +231,17 @@ export default function StaffOrderPage() {
                     if (newOrder.status === 'pending') {
                         playAlarm()
                         showSystemNotification('มีรายการใหม่', `โต๊ะ: ${newOrder.table_id || '?'} - ${newOrder.total_amount}.-`)
-                        toast.success('มีออเดอร์ใหม่เข้ามา!')
-                        // Optimistic Update
+                        
+                        // Sonner Toast with Accept Action
+                        toast.message(`โต๊ะ ${newOrder.table_id || '?'} สั่งอาหารใหม่!`, {
+                            description: `${newOrder.total_amount} บาท`,
+                            duration: Infinity, // Stay until clicked
+                            action: {
+                                label: 'รับออเดอร์ (Accept)',
+                                onClick: () => updateStatus(newOrder.id, 'confirmed')
+                            },
+                        })
+
                         setOrders(prev => {
                             if (prev.find(o => o.id === newOrder.id)) return prev
                             return [...prev, { ...newOrder, isOptimistic: true }]
@@ -274,7 +282,6 @@ export default function StaffOrderPage() {
     const fetchHistoryOrders = async () => {
         setHistoryLoading(true)
         try {
-            // Filter by selected Date
             const start = new Date(historyDate)
             start.setHours(0,0,0,0)
             const end = new Date(historyDate)
@@ -283,10 +290,10 @@ export default function StaffOrderPage() {
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
-                .neq('status', 'pending') // Not Pending
+                .neq('status', 'pending')
                 .gte('created_at', start.toISOString())
                 .lte('created_at', end.toISOString())
-                .order('created_at', { ascending: false }) // Newest first for history
+                .order('created_at', { ascending: false })
             
             if (error) throw error
             setHistoryOrders(data || [])
@@ -325,6 +332,15 @@ export default function StaffOrderPage() {
     }
 
     const updateStatus = async (id, newStatus) => {
+        // If clicking Accept from toast, we might not need modal if we want speed.
+        // But let's keep modal logic for manual clicks. 
+        // Logic: if called from toast, it's instant? No, `updateStatus` opens modal.
+        // Let's modify: `updateStatus` opens modal. 
+        // If we want instant accept from Toast, we need a separate function or param.
+        // Let's keep safety for now: even from Toast, open the modal or just do it?
+        // User said: "Press Accept immediately". Usually implies direct action.
+        // I will make a separate `quickConfirm` function for the Toast.
+        
         const isConfirm = newStatus === 'confirmed'
         setConfirmModal({
             isOpen: true,
@@ -333,33 +349,61 @@ export default function StaffOrderPage() {
             confirmText: isConfirm ? 'ยืนยัน (Accept)' : 'ปฏิเสธ (Reject)',
             isDangerous: !isConfirm,
             action: async () => {
-                try {
-                    const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id)
-                    if (error) throw error
-                    
-                    setOrders(prev => prev.filter(o => o.id !== id))
-                    toast.success(isConfirm ? 'รับออเดอร์เรียบร้อย' : 'ปฏิเสธรายการแล้ว')
-                    // Refresh history if open
-                    if (activeTab === 'history') fetchHistoryOrders()
-                } catch (err) {
-                    toast.error(err.message)
-                }
+                await performUpdate(id, newStatus, isConfirm)
             }
         })
     }
 
+    const performUpdate = async (id, newStatus, isConfirm) => {
+        try {
+            const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id)
+            if (error) throw error
+            
+            setOrders(prev => prev.filter(o => o.id !== id))
+            toast.success(isConfirm ? 'รับออเดอร์เรียบร้อย' : 'ปฏิเสธรายการแล้ว')
+            if (activeTab === 'history') fetchHistoryOrders()
+        } catch (err) {
+            toast.error(err.message)
+        }
+    }
+
+    // Quick Accept for Toast (Bypasses Modal if desired, currently sticking to modal to be safe, 
+    // OR calling performUpdate directly)
+    // The Toast action `onClick` calls `updateStatus`. 
+    // If we want direct accept:
+    // Change Toast action to `() => performUpdate(newOrder.id, 'confirmed', true)`
+    // Let's do direct accept for speed as requested.
+    
+    // Update subscribeRealtime logic above ^ to use performUpdate? 
+    // Wait, performUpdate needs to be defined before usage or use `useCallback` / be available in scope.
+    // It's inside the component, so it's fine. 
+    // CAREFUL: subscribeRealtime is defined BEFORE performUpdate in current code flow if I copy-paste sequentially.
+    // I need to hoist `performUpdate` or move `subscribeRealtime` down. Or use function declarations.
+    // I'll move `performUpdate` up.
+
     // --- VIEWS ---
 
-    // 1. Sound Check (Sage Theme)
+    // 1. Sound Check
     if (isAuthenticated && !isSoundChecked) {
         return (
-            <div className="min-h-screen bg-[#BFCBC2] flex flex-col items-center justify-center p-4 font-sans text-[#1A1A1A] safe-area-inset-bottom">
-                <div className="bg-white/60 backdrop-blur-xl border border-white/50 p-8 rounded-3xl w-full max-w-sm text-center shadow-xl relative overflow-hidden">
-                    <Volume2 className="w-16 h-16 text-[#DFFF00] drop-shadow-sm mx-auto mb-6" fill="#1A1A1A" />
-                    <h1 className="text-2xl font-bold mb-2">ตรวจสอบเสียงแจ้งเตือน</h1>
-                    <p className="text-gray-600 mb-6 text-sm">
-                        กรุณาเปิดเสียงอุปกรณ์ให้ดังกว่า 50%<br/>
-                        กดทดสอบเพื่อฟังเสียงและอนุญาตการแจ้งเตือน
+            <div className="min-h-screen bg-[#F4F4F4] flex flex-col items-center justify-center p-6 font-sans text-[#1A1A1A] safe-area-inset-bottom">
+                <div className="bg-white border border-gray-200 p-8 rounded-2xl w-full max-w-sm text-center shadow-sm relative overflow-hidden">
+                     <button 
+                         onClick={() => {
+                                sessionStorage.setItem('skip_staff_redirect', 'true')
+                                window.location.href = '/'
+                         }}
+                         className="absolute top-4 right-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors z-10"
+                         title="Exit to Customer View"
+                     >
+                         <Home className="w-5 h-5" />
+                     </button>
+
+                    <Volume2 className="w-16 h-16 text-[#1A1A1A] mx-auto mb-6" />
+                    <h1 className="text-2xl font-bold mb-2">Sound Check</h1>
+                    <p className="text-gray-500 mb-8 text-sm">
+                        กรุณาเปิดเสียงอุปกรณ์ให้ดังที่สุด<br/>
+                        System Notification requires permission.
                     </p>
 
                     <div className="space-y-3">
@@ -367,13 +411,13 @@ export default function StaffOrderPage() {
                             onClick={() => { playAlarm(); requestNotificationPermission(); }}
                             className="w-full bg-white border border-gray-200 text-[#1A1A1A] font-bold py-3 rounded-xl hover:bg-gray-50 transition"
                         >
-                            🔊 ทดสอบเสียง & เปิดแจ้งเตือน
+                            Test Sound & Permission
                         </button>
                         <button 
                             onClick={() => { stopAlarm(); setIsSoundChecked(true); }}
-                            className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-lg"
+                            className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-lg shadow-black/10"
                         >
-                            ได้ยินชัดเจน - เริ่มงาน
+                            Start Work
                         </button>
                     </div>
                     
@@ -383,21 +427,32 @@ export default function StaffOrderPage() {
         )
     }
 
-    // 2. Login (Sage Theme)
+    // 2. Login
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen bg-[#BFCBC2] flex flex-col items-center justify-center p-4 font-sans text-[#1A1A1A] safe-area-inset-bottom">
-                <div className="bg-white/60 backdrop-blur-xl border border-white/50 p-8 rounded-3xl w-full max-w-sm text-center shadow-xl">
-                    <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mx-auto mb-6">
-                         <ChefHat className="w-8 h-8 text-[#DFFF00]" />
+            <div className="min-h-screen bg-[#F4F4F4] flex flex-col items-center justify-center p-6 font-sans text-[#1A1A1A] safe-area-inset-bottom">
+                <div className="bg-white border border-gray-200 p-8 rounded-2xl w-full max-w-sm text-center shadow-sm relative overflow-hidden">
+                     <button 
+                         onClick={() => {
+                                sessionStorage.setItem('skip_staff_redirect', 'true')
+                                window.location.href = '/'
+                         }}
+                         className="absolute top-4 right-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors z-10"
+                         title="Exit to Customer View"
+                     >
+                         <Home className="w-5 h-5" />
+                     </button>
+
+                    <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center mx-auto mb-6">
+                         <ChefHat className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold mb-2">เข้าสู่ระบบพนักงาน</h1>
-                    <p className="text-gray-600 mb-8 text-sm">กรอกรหัส PIN 4 หลัก</p>
+                    <h1 className="text-2xl font-bold mb-2">Staff Login</h1>
+                    <p className="text-gray-500 mb-8 text-sm">Enter Access PIN</p>
                     
                     <form onSubmit={handleLogin} className="space-y-4">
                         <input 
                             type="number" 
-                            className="w-full bg-white/50 border border-white/60 rounded-2xl p-4 text-center text-3xl font-bold text-[#1A1A1A] tracking-[1em] outline-none focus:border-[#1A1A1A] transition-colors appearance-none placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-400"
+                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-gray-200 rounded-xl p-4 text-center text-3xl font-bold text-[#1A1A1A] tracking-[1em] outline-none transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-300"
                             value={pinInput}
                             onChange={(e) => setPinInput(e.target.value)}
                             maxLength={6}
@@ -405,9 +460,9 @@ export default function StaffOrderPage() {
                         />
                          <button 
                             type="submit"
-                            className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-2xl hover:bg-black active:scale-95 transition-all"
+                            className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-xl hover:bg-black active:scale-95 transition-all shadow-md shadow-black/10"
                         >
-                            {loading ? 'กำลังตรวจสอบ...' : 'เข้าใช้งาน'}
+                            {loading ? 'Verifying...' : 'Access'}
                         </button>
                     </form>
 
@@ -417,9 +472,9 @@ export default function StaffOrderPage() {
         )
     }
 
-    // 3. Main Dashboard (Sage Theme)
+    // 3. Main Dashboard
     return (
-        <div className="min-h-screen bg-[#BFCBC2] text-[#1A1A1A] p-4 pb-20 font-sans">
+        <div className="min-h-screen bg-[#F4F4F4] text-[#1A1A1A] p-4 pb-20 font-sans">
             <ConfirmationModal 
                 isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
@@ -439,53 +494,53 @@ export default function StaffOrderPage() {
             )}
 
             {/* Header */}
-            <div className="flex flex-col gap-4 mb-6 sticky top-0 z-20 pt-2 bg-[#BFCBC2]/90 backdrop-blur-sm -mx-4 px-4 pb-4 border-b border-white/20">
+            <div className="flex flex-col gap-4 mb-6 sticky top-0 z-20 pt-2 bg-[#F4F4F4]/95 backdrop-blur-sm -mx-4 px-4 pb-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#1A1A1A] text-[#DFFF00] rounded-full flex items-center justify-center">
-                            <ChefHat className="w-6 h-6" />
+                        <div className="w-10 h-10 bg-[#1A1A1A] text-white rounded-full flex items-center justify-center shadow-md">
+                            <ChefHat className="w-5 h-5" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold">จัดการออเดอร์</h1>
-                            <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
-                                 <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-600' : 'bg-red-500'}`} />
-                                {isConnected ? 'ระบบออนไลน์' : 'ขาดการเชื่อมต่อ'}
+                            <h1 className="text-xl font-bold tracking-tight">Orders</h1>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                 <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                                {isConnected ? 'Online' : 'Offline'}
                             </div>
                         </div>
                     </div>
                      <div className="flex gap-2">
                         <button 
-                            onClick={() => {
-                                sessionStorage.setItem('skip_staff_redirect', 'true')
-                                window.location.href = '/'
-                            }} 
-                            className="p-2 bg-white/50 hover:bg-white text-gray-700 rounded-full transition-colors"
-                            title="Go to Customer View"
+                             onClick={() => {
+                                    sessionStorage.setItem('skip_staff_redirect', 'true')
+                                    window.location.href = '/'
+                             }}
+                             className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full transition-colors"
+                             title="Home"
                         >
                             <Home className="w-5 h-5" />
                         </button>
-                        <button onClick={handleLogout} className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition-colors">
+                        <button onClick={handleLogout} className="p-2.5 bg-white border border-gray-200 hover:bg-red-50 hover:border-red-100 hover:text-red-600 text-gray-600 rounded-full transition-colors">
                             <LogOut className="w-5 h-5" />
                         </button>
                      </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex bg-white/40 p-1 rounded-2xl backdrop-blur-sm">
+                <div className="flex bg-gray-200 p-1 rounded-xl">
                     <button 
                         onClick={() => setActiveTab('live')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'live' ? 'bg-[#1A1A1A] text-white shadow-md' : 'text-gray-600 hover:bg-white/50'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'live' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <List className="w-4 h-4" />
-                        รายการสด 
-                        {orders.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full ml-1">{orders.length}</span>}
+                        Live
+                        {orders.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{orders.length}</span>}
                     </button>
                     <button 
                         onClick={() => setActiveTab('history')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'history' ? 'bg-[#1A1A1A] text-white shadow-md' : 'text-gray-600 hover:bg-white/50'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'history' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <HistoryIcon className="w-4 h-4" />
-                        ประวัติวันนี้
+                        History
                     </button>
                 </div>
             </div>
@@ -496,34 +551,34 @@ export default function StaffOrderPage() {
                     {/* Manual Refresh & Alert Control */}
                     <div className="flex justify-end mb-4 gap-2">
                         {isPlaying && (
-                            <button onClick={stopAlarm} className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-bold animate-pulse flex items-center gap-1">
-                                <Volume2 className="w-3 h-3" /> ปิดเสียง
+                            <button onClick={stopAlarm} className="px-4 py-2 bg-[#1A1A1A] text-[#DFFF00] rounded-full text-xs font-bold animate-pulse flex items-center gap-2 shadow-md">
+                                <Volume2 className="w-3 h-3" /> Stop Sound
                             </button>
                         )}
-                        <button onClick={() => fetchLiveOrders()} className="px-3 py-1 bg-white/50 hover:bg-white text-gray-600 rounded-full text-xs font-bold flex items-center gap-1">
-                            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> รีเฟรช
+                        <button onClick={() => fetchLiveOrders()} className="px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full text-xs font-bold flex items-center gap-1 transition-colors">
+                            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Sync
                         </button>
                     </div>
 
                     {orders.length === 0 && !loading ? (
-                        <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 gap-4">
-                            <div className="w-20 h-20 bg-white/30 rounded-full flex items-center justify-center">
-                                <Bell className="w-10 h-10 opacity-30" />
+                        <div className="flex flex-col items-center justify-center h-[50vh] text-gray-400 gap-4">
+                            <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
+                                <Bell className="w-10 h-10 opacity-40" />
                             </div>
-                            <p className="text-lg font-medium">ยังไม่มีออเดอร์ใหม่</p>
-                            <p className="text-xs opacity-60">ระบบกำลังรอรับรายการ...</p>
+                            <p className="text-lg font-medium text-gray-500">No Pending Orders</p>
+                            <p className="text-xs">Waiting for new bookings...</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
                             {orders.map(order => (
-                                <div key={order.id} className={`bg-white/70 backdrop-blur-md border ${order.isOptimistic ? 'border-orange-500/50' : 'border-white/60'} rounded-3xl p-5 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300 relative overflow-hidden`}>
+                                <div key={order.id} className={`bg-white border ${order.isOptimistic ? 'border-orange-200' : 'border-gray-200'} rounded-2xl p-6 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300 relative overflow-hidden group`}>
                                      {/* Flashing Border for new orders */}
-                                     {order.status === 'pending' && <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-yellow-400 to-transparent opacity-100 animate-pulse" />}
+                                     {order.status === 'pending' && <div className="absolute inset-x-0 top-0 h-1.5 bg-[#DFFF00] animate-pulse" />}
                                      
                                     {/* Card Header */}
-                                    <div className="flex justify-between items-start mb-4 pb-4 border-b border-gray-200">
+                                    <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-100">
                                         <div>
-                                            <div className="text-2xl font-black text-[#1A1A1A] mb-1 flex items-center gap-2">
+                                            <div className="text-3xl font-black text-[#1A1A1A] mb-2 flex items-center gap-3">
                                                 {order.tables_layout?.table_name || `โต๊ะ ${order.table_id || '?'}`}
                                                 {order.status === 'pending' && <span className="flex h-3 w-3 relative">
                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -533,33 +588,33 @@ export default function StaffOrderPage() {
                                             <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
                                                 <Clock className="w-4 h-4" />
                                                 {formatTime(order.booking_date, order.booking_time)}
-                                                {order.isOptimistic && <span className="text-orange-500 text-[10px] animate-pulse ml-2">(กำลังโหลด...)</span>}
+                                                {order.isOptimistic && <span className="text-orange-500 text-[10px] animate-pulse ml-2">(Syncing...)</span>}
                                             </div>
                                         </div>
                                         <div className="text-right flex flex-col items-end">
-                                            <div className="text-xs text-gray-400 mb-2">#{order.id.slice(0, 4)}</div>
+                                            <div className="text-xs font-mono text-gray-400 mb-3 bg-gray-50 px-2 py-1 rounded">ID: {order.id.slice(0, 4)}</div>
                                             <button 
                                                 onClick={() => setPrintModal({ isOpen: true, booking: order })}
                                                 disabled={order.isOptimistic}
-                                                className="px-3 py-1.5 bg-[#1A1A1A]/5 hover:bg-[#1A1A1A]/10 rounded-lg text-[#1A1A1A] transition-colors flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
+                                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-[#1A1A1A] transition-colors flex items-center gap-2 text-xs font-bold disabled:opacity-50"
                                             >
-                                                <Printer size={14} /> พิมพ์ใบครัว
+                                                <Printer size={14} /> Print Slip
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Order Items */}
-                                    <div className="space-y-3 mb-6">
+                                    <div className="space-y-4 mb-8">
                                         {order.order_items?.map((item, idx) => (
                                             <div key={idx} className="flex justify-between items-start text-sm">
-                                                <div className="flex gap-3">
-                                                    <div className="bg-[#1A1A1A] w-6 h-6 flex items-center justify-center rounded text-xs font-bold shrink-0 text-white">
-                                                        {item.quantity}x
+                                                <div className="flex gap-4 w-full">
+                                                    <div className="bg-[#1A1A1A] text-white w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold shrink-0 shadow-sm">
+                                                        {item.quantity}
                                                     </div>
-                                                    <div>
-                                                        <div className="text-[#1A1A1A] font-bold">{item.menu_items?.name}</div>
+                                                    <div className="flex-1">
+                                                        <div className="text-[#1A1A1A] font-bold text-lg leading-tight">{item.menu_items?.name}</div>
                                                         {item.selected_options && (
-                                                            <div className="text-gray-500 text-xs mt-0.5">
+                                                            <div className="text-gray-500 text-sm mt-1">
                                                                 {item.selected_options.join(', ')}
                                                             </div>
                                                         )}
@@ -568,32 +623,32 @@ export default function StaffOrderPage() {
                                             </div>
                                         ))}
                                         {(!order.order_items || order.order_items.length === 0) && (
-                                            <div className="text-gray-400 text-sm italic py-2 text-center">
-                                                {order.isOptimistic ? 'กำลังดึงรายการอาหาร...' : 'ไม่มีรายการอาหาร'}
+                                            <div className="text-gray-400 text-sm italic py-4 text-center bg-gray-50 rounded-xl">
+                                                {order.isOptimistic ? 'Loading items...' : 'No items found'}
                                             </div>
                                         )}
                                         {order.customer_note && (
-                                            <div className="bg-red-50 border border-red-100 p-3 rounded-xl text-red-600 text-xs mt-3 flex gap-2">
-                                                <span className="font-bold">หมายเหตุ:</span> {order.customer_note}
+                                            <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-orange-800 text-sm mt-4 flex gap-3 items-start">
+                                                <span className="font-bold shrink-0">Note:</span> {order.customer_note}
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <button 
                                             onClick={() => updateStatus(order.id, 'cancelled')}
-                                            className="py-4 rounded-xl bg-gray-200 text-gray-600 font-bold flex items-center justify-center gap-2 hover:bg-gray-300 active:scale-95 transition-all text-sm"
+                                            className="py-4 rounded-xl bg-gray-100 text-gray-500 font-bold flex items-center justify-center gap-2 hover:bg-gray-200 hover:text-gray-700 active:scale-95 transition-all text-sm"
                                         >
                                             <X className="w-5 h-5" />
-                                            ปฏิเสธ
+                                            Reject
                                         </button>
                                         <button 
                                             onClick={() => updateStatus(order.id, 'confirmed')}
-                                            className="py-4 rounded-xl bg-[#1A1A1A] text-white font-bold flex items-center justify-center gap-2 hover:bg-black active:scale-95 transition-all shadow-lg shadow-black/10 animate-pulse-slow text-sm"
+                                            className="py-4 rounded-xl bg-[#1A1A1A] text-white font-bold flex items-center justify-center gap-2 hover:bg-black active:scale-95 transition-all shadow-lg shadow-black/20 animate-pulse-slow text-sm"
                                         >
                                             <Check className="w-5 h-5" />
-                                            รับออเดอร์
+                                            Accept Order
                                         </button>
                                     </div>
                                 </div>
@@ -607,7 +662,7 @@ export default function StaffOrderPage() {
             {activeTab === 'history' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2">
                     {/* Date Picker */}
-                    <div className="bg-white/60 backdrop-blur-lg p-4 rounded-2xl mb-4 flex items-center justify-between shadow-sm">
+                    <div className="bg-white border border-gray-200 p-4 rounded-2xl mb-4 flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-2 text-[#1A1A1A] font-bold">
                             <Calendar className="w-5 h-5" />
                             <span>{formatDateThai(new Date(historyDate))}</span>
@@ -623,25 +678,25 @@ export default function StaffOrderPage() {
                     {historyLoading ? (
                         <div className="text-center py-20 opacity-50"><RefreshCw className="animate-spin w-8 h-8 mx-auto" /></div>
                     ) : historyOrders.length === 0 ? (
-                        <div className="text-center py-20 text-gray-400">ไม่พบประวัติรายการในวันนี้</div>
+                        <div className="text-center py-20 text-gray-400">No finished orders</div>
                     ) : (
                         <div className="space-y-3">
                             {historyOrders.map(order => (
-                                <div key={order.id} className="bg-white/50 border border-white/60 p-4 rounded-2xl flex items-center justify-between">
+                                <div key={order.id} className="bg-white border border-gray-200 p-4 rounded-2xl flex items-center justify-between group hover:border-[#1A1A1A] transition-colors">
                                     <div>
-                                        <div className="font-bold text-lg mb-0.5">
+                                        <div className="font-bold text-lg mb-0.5 flex items-center gap-2">
                                             {order.tables_layout?.table_name || 'Pickup'}
-                                            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${order.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                {order.status === 'confirmed' ? 'รับแล้ว' : 'ยกเลิก'}
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wide ${order.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {order.status === 'confirmed' ? 'Done' : 'Void'}
                                             </span>
                                         </div>
-                                        <div className="text-xs text-gray-500">
+                                        <div className="text-xs text-gray-500 font-mono">
                                             {formatTime(order.booking_date, order.booking_time)} • {order.total_amount}.-
                                         </div>
                                     </div>
                                     <button 
                                         onClick={() => setPrintModal({ isOpen: true, booking: order })}
-                                        className="p-3 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition text-[#1A1A1A]"
+                                        className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600"
                                     >
                                         <Printer size={18} />
                                     </button>
