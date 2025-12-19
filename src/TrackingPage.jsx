@@ -4,7 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import { MapPin, Phone, Copy, Share2, Clock, CheckCircle, ChefHat, Utensils, XCircle, AlertCircle, ArrowRight, Download, Calendar as CalendarIcon, Lock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from './context/LanguageContext'
-import html2canvas from 'html2canvas'
+import { toPng } from 'html-to-image' // Switched to html-to-image
 import QRCode from 'qrcode'
 
 // --- CONSTANTS ---
@@ -146,25 +146,31 @@ export default function TrackingPage() {
 
       setDownloadingSlip(true)
       try {
-          // Force render sync?
+          // Force render sync
           await new Promise(r => setTimeout(r, 100))
 
-          const canvas = await html2canvas(slipRef.current, {
-              scale: 2,
+          const dataUrl = await toPng(slipRef.current, {
+              cacheBust: true,
               backgroundColor: '#ffffff',
-              logging: false,
-              useCORS: true // Safe now with dataUrl
+              pixelRatio: 2,
+              skipAutoScale: true,
+              style: {
+                  fontFamily: 'Inter, sans-serif'
+              }
           })
           
-          const image = canvas.toDataURL("image/png")
           const link = document.createElement('a')
-          link.href = image
+          link.href = dataUrl
           link.download = `Slip-${data.short_id}.png`
           link.click()
           
       } catch (err) {
           console.error("Slip Error:", err)
-          alert("ไม่สามารถบันทึกรูปได้: " + err.message)
+          if (err.message && err.message.includes('lab')) {
+             alert("ขออภัย Browser ของคุณไม่รองรับการบันทึกภาพนี้ (Color Format Error) \nแนะนำให้แคปหน้าจอแทนครับ")
+          } else {
+             alert("ไม่สามารถบันทึกรูปได้: " + err.message)
+          }
       } finally {
           setDownloadingSlip(false)
       }
@@ -395,7 +401,7 @@ export default function TrackingPage() {
 
       {/* Hidden Slip Component for Capture */}
       <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
-          <div ref={slipRef} className="w-[400px] bg-white p-8 text-center text-black font-inter border border-gray-200">
+          <div ref={slipRef} className="w-[400px] bg-white p-8 text-center text-black font-inter border border-gray-200" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
                <div className="mb-6">
                    <h2 className="text-2xl font-bold tracking-tight">IN THE HAUS</h2>
                    <p className="text-xs text-gray-400 uppercase tracking-widest">Booking Slip</p>

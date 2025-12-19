@@ -270,6 +270,19 @@ export default function StaffOrderPage() {
     }, [])
 
     // --- Data Fetching ---
+    const [optionMap, setOptionMap] = useState({})
+
+    useEffect(() => {
+        const fetchOptions = async () => {
+            const { data } = await supabase.from('option_choices').select('id, name')
+            if (data) {
+                const map = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {})
+                setOptionMap(map)
+            }
+        }
+        fetchOptions()
+    }, [])
+
     const subscribeRealtime = () => {
          const channel = supabase
             .channel('staff-orders')
@@ -680,11 +693,22 @@ export default function StaffOrderPage() {
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="text-[#1A1A1A] font-bold text-lg leading-tight">{item.menu_items?.name}</div>
-                                                        {item.selected_options && (
-                                                            <div className="text-gray-500 text-sm mt-1">
-                                                                {item.selected_options.join(', ')}
-                                                            </div>
-                                                        )}
+                                                        {(() => {
+                                                            let text = ''
+                                                            if (Array.isArray(item.selected_options)) {
+                                                                text = item.selected_options.join(', ')
+                                                            } else if (item.selected_options && typeof item.selected_options === 'object') {
+                                                                const ids = Object.values(item.selected_options).flat()
+                                                                text = ids.map(id => optionMap[id] || id).join(', ')
+                                                            }
+                                                            
+                                                            if (!text) return null
+                                                            return (
+                                                                <div className="text-gray-500 text-sm mt-1">
+                                                                    {text}
+                                                                </div>
+                                                            )
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>
