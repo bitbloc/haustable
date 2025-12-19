@@ -134,6 +134,8 @@ export function useBooking() {
             // Only use Line Token if NO Supabase User (e.g. Guest Mode?) 
             const lineIdToken = !user && (state.lineIdToken || (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null))
 
+            let finalBookingData = null
+
             if (user) {
                  // --- STANDALONE USER FLOW (Direct Insert) ---
                  console.log("Submitting as Authenticated User:", user.id)
@@ -155,6 +157,7 @@ export function useBooking() {
                 }).select().single()
 
                 if (bookingError) throw bookingError
+                finalBookingData = bookingData
 
                 if (orderItemsPayload.length > 0) {
                     const items = orderItemsPayload.map(item => ({ booking_id: bookingData.id, ...item }))
@@ -174,13 +177,13 @@ export function useBooking() {
 
                 if (error) throw error
                 if (!data.success) throw new Error(data.error || 'Booking Failed')
-                return { success: true, data: data.data }
+                finalBookingData = data.data
 
             } else {
                  throw new Error('Please Login (Login with LINE or Email)')
             }
 
-            return { success: true, data: bookingData }
+            return { success: true, data: finalBookingData }
 
         } catch (error) {
             return { success: false, error: error.message }
