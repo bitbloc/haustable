@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home } from 'lucide-react'
-import { useWakeLock } from './hooks/useWakeLock'
-import { toast } from 'sonner' // Using Sonner
-import ConfirmationModal from './components/ConfirmationModal'
 import SlipModal from './components/shared/SlipModal'
+import ViewSlipModal from './components/shared/ViewSlipModal'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon } from 'lucide-react'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
@@ -134,6 +132,7 @@ export default function StaffOrderPage() {
     
     // Printing
     const [printModal, setPrintModal] = useState({ isOpen: false, booking: null })
+    const [viewSlipUrl, setViewSlipUrl] = useState(null)
 
     const { isSupported, isLocked, request, release } = useWakeLock({
         onRequest: () => console.log('Screen locked!'),
@@ -577,6 +576,13 @@ export default function StaffOrderPage() {
                 />
             )}
 
+            {viewSlipUrl && (
+                <ViewSlipModal 
+                    url={viewSlipUrl} 
+                    onClose={() => setViewSlipUrl(null)} 
+                />
+            )}
+
             {/* Header */}
             <div className={`flex flex-col gap-4 mb-6 sticky z-20 pt-2 bg-[#F4F4F4]/95 backdrop-blur-sm -mx-4 px-4 pb-4 border-b border-gray-200 ${!isConnected ? 'top-8' : 'top-0'} transition-all`}>
                 <div className="flex items-center justify-between">
@@ -675,13 +681,23 @@ export default function StaffOrderPage() {
                                             <div className="text-xs font-mono text-gray-400 mb-3 bg-gray-50 px-2 py-1 rounded">
                                                 #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
                                             </div>
-                                            <button 
-                                                onClick={() => setPrintModal({ isOpen: true, booking: order })}
-                                                disabled={order.isOptimistic}
-                                                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-[#1A1A1A] transition-colors flex items-center gap-2 text-xs font-bold disabled:opacity-50"
-                                            >
-                                                <Printer size={14} /> Print Slip
-                                            </button>
+                                            <div className="flex gap-2">
+                                                {order.payment_slip_url && (
+                                                    <button 
+                                                        onClick={() => setViewSlipUrl(order.payment_slip_url)}
+                                                        className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition-colors flex items-center gap-2 text-xs font-bold"
+                                                    >
+                                                        <ImageIcon size={14} /> View Slip
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    onClick={() => setPrintModal({ isOpen: true, booking: order })}
+                                                    disabled={order.isOptimistic}
+                                                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-[#1A1A1A] transition-colors flex items-center gap-2 text-xs font-bold disabled:opacity-50"
+                                                >
+                                                    <Printer size={14} /> Print Slip
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 

@@ -7,25 +7,8 @@ import { useLanguage } from './context/LanguageContext'
 import { toPng } from 'html-to-image' // Switched to html-to-image
 import QRCode from 'qrcode'
 
-// --- CONSTANTS ---
-const BOOKING_STEPS = [
-  { key: 'pending', label: 'รอพนักงานยืนยัน', sub: 'Waiting for Confirmation', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-  { key: 'confirmed', label: 'จองโต๊ะสำเร็จ', sub: 'Table Reserved', icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-50' },
-  { key: 'seated', label: 'เช็คอินแล้ว', sub: 'Arrived', icon: Utensils, color: 'text-green-500', bg: 'bg-green-50' },
-  { key: 'completed', label: 'เสร็จสิ้น', sub: 'Completed', icon: CheckCircle, color: 'text-gray-400', bg: 'bg-gray-100' },
-]
-
-const PICKUP_STEPS = [
-  { key: 'pending', label: 'รอรับออเดอร์', sub: 'Order Sent', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-  { key: 'confirmed', label: 'กำลังเตรียม', sub: 'Preparing', icon: ChefHat, color: 'text-orange-500', bg: 'bg-orange-50' }, 
-  { key: 'preparing', label: 'กำลังปรุงอาหาร', sub: 'Cooking', icon: ChefHat, color: 'text-orange-500', bg: 'bg-orange-50' },
-  { key: 'ready', label: 'อาหารเสร็จแล้ว', sub: 'Ready for Pickup', icon: Utensils, color: 'text-white', bg: 'bg-green-500' }, 
-  { key: 'completed', label: 'รับสินค้าแล้ว', sub: 'Collected', icon: CheckCircle, color: 'text-gray-400', bg: 'bg-gray-100' },
-]
-
 export default function TrackingPage() {
   const { token } = useParams()
-  // eslint-disable-next-line no-unused-vars
   const { t } = useLanguage() 
   const [data, setData] = useState(null)
   const [settings, setSettings] = useState({})
@@ -37,6 +20,22 @@ export default function TrackingPage() {
   const [qrDataUrl, setQrDataUrl] = useState('')
   
   const slipRef = useRef(null)
+
+  // --- TRANS STEPS ---
+  const BOOKING_STEPS = [
+    { key: 'pending', label: t('stepPending'), sub: 'Waiting', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+    { key: 'confirmed', label: t('stepConfirmed'), sub: 'Confirmed', icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { key: 'seated', label: t('stepSeated'), sub: 'Arrived', icon: Utensils, color: 'text-green-500', bg: 'bg-green-50' },
+    { key: 'completed', label: t('stepCompleted'), sub: 'Completed', icon: CheckCircle, color: 'text-gray-400', bg: 'bg-gray-100' },
+  ]
+  
+  const PICKUP_STEPS = [
+    { key: 'pending', label: t('stepPickupPending'), sub: 'Received', icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+    { key: 'confirmed', label: t('stepPickupConfirmed'), sub: 'Preparing', icon: ChefHat, color: 'text-orange-500', bg: 'bg-orange-50' }, 
+    { key: 'preparing', label: t('stepPickupPreparing'), sub: 'Cooking', icon: ChefHat, color: 'text-orange-500', bg: 'bg-orange-50' },
+    { key: 'ready', label: t('stepPickupReady'), sub: 'Ready', icon: Utensils, color: 'text-white', bg: 'bg-green-500' }, 
+    { key: 'completed', label: t('stepPickupCompleted'), sub: 'Collected', icon: CheckCircle, color: 'text-gray-400', bg: 'bg-gray-100' },
+  ]
 
   // Fetch App Settings
   useEffect(() => {
@@ -75,7 +74,7 @@ export default function TrackingPage() {
   // Generate QR
   useEffect(() => {
       if (token) {
-          const url = `${window.location.origin}/t/${token}` // Use token or short_id URL
+          const url = `${window.location.host}/t/${token}`
           QRCode.toDataURL(url, { width: 200, margin: 2 }, (err, url) => {
               if (!err) setQrDataUrl(url)
           })
@@ -119,13 +118,13 @@ export default function TrackingPage() {
 
   const handleShareLine = () => {
       const url = window.location.href
-      const text = `เช็คสถานะออเดอร์ #${data?.short_id} ของฉันได้ที่นี่: ${url}`
+      const text = `${t('trackingTitle')} #${data?.short_id}: ${url}`
       window.location.href = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`
   }
 
   const handleCopyLink = () => {
       navigator.clipboard.writeText(window.location.href)
-      alert('คัดลอกลิงก์เรียบร้อย!')
+      alert(t('copyLink') + '!')
   }
 
   const handleAddToCalendar = () => {
@@ -193,7 +192,7 @@ export default function TrackingPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-2">เกิดข้อผิดพลาด</h2>
             <p className="text-gray-500 text-sm mb-8 leading-relaxed">{error}</p>
             <a href="/" className="block w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-all">
-                กลับหน้าหลัก
+                {t('backToHome')}
             </a>
         </div>
       </div>
@@ -225,13 +224,13 @@ export default function TrackingPage() {
             className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
           >
               {isCancelled ? <XCircle size={14} /> : <CheckCircle size={14} />}
-              {isCancelled ? 'Cancelled' : (isPickup ? 'Order Received' : 'Booking Received')}
+              {isCancelled ? t('orderCancelled') : (isPickup ? t('orderReceived') : t('bookingReceived'))}
           </motion.div>
           <h1 className={`text-3xl font-bold mb-2 ${isCancelled ? 'text-red-600' : 'text-[#1A1A1A]'}`}>
-              {isCancelled ? 'รายการถูกยกเลิก' : (isPickup ? 'สั่งอาหารสำเร็จ!' : 'จองโต๊ะสำเร็จ!')}
+              {isCancelled ? t('orderCancelled') : (isPickup ? t('orderSuccess') : t('bookingSuccess'))}
           </h1>
           <p className="text-gray-500 text-sm">
-             {isCancelled ? 'กรุณาติดต่อร้านค้าเพื่อสอบถามข้อมูลเพิ่มเติม' : 'ขอบคุณที่ใช้บริการครับ'}
+             {isCancelled ? t('contactShop') : t('thankYouService')}
           </p>
       </div>
 
@@ -241,14 +240,14 @@ export default function TrackingPage() {
              {/* Decorative background blob */}
              <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl ${isCancelled ? 'bg-red-400/10' : 'bg-yellow-400/10'}`} />
              
-             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Your Short ID</p>
+             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t('yourShortId')}</p>
              <div className="text-5xl font-mono font-bold tracking-tighter text-black mb-4">
                  #{data.short_id}
              </div>
              
              <div className="bg-gray-50 rounded-xl p-3 mb-4 flex items-center justify-between gap-3 border border-gray-100">
                  <div className="flex-1 min-w-0">
-                     <p className="text-[10px] text-gray-400 text-left mb-0.5 uppercase font-bold">Tracking Link</p>
+                     <p className="text-[10px] text-gray-400 text-left mb-0.5 uppercase font-bold">{t('trackingLink')}</p>
                      <p className="text-xs text-blue-600 truncate font-mono text-left">{window.location.host}/t/{data.short_id}</p>
                  </div>
                  <button onClick={handleCopyLink} className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-100 transition-colors text-gray-600">
@@ -259,8 +258,8 @@ export default function TrackingPage() {
              <div className={`${isCancelled ? 'bg-red-50 text-red-600' : 'bg-red-50 text-red-600'} px-4 py-3 rounded-xl text-xs font-medium flex gap-2 items-start text-left`}>
                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
                  {isCancelled 
-                    ? 'รายการนี้ถูกยกเลิก โปรดติดต่อร้านค้าหากมีข้อสงสัย'
-                    : 'โปรดเก็บลิงก์นี้ไว้ เพื่อใช้ตรวจสอบสถานะอาหารและคิวของคุณ'
+                    ? t('cancelledWarning')
+                    : t('keepLinkWarning')
                  }
              </div>
           </div>
@@ -269,24 +268,26 @@ export default function TrackingPage() {
        {/* 2.5 Order Summary & Table */}
        {!isCancelled && (
         <div className="px-6 mb-8">
-            <h3 className="font-bold text-gray-900 mb-4">ข้อมูลการจอง</h3>
+            <h3 className="font-bold text-gray-900 mb-4">{t('bookingInfo')}</h3>
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                {/* Table Name */}
-                <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
-                    <span className="text-sm font-medium text-gray-500">หมายเลขโต๊ะ (Table)</span>
-                    <span className="text-2xl font-bold bg-black text-white px-4 py-2 rounded-xl">
-                        {data.table_name || 'TBA'}
-                    </span>
-                </div>
+                {/* Table Name - Hidden for Pickup */}
+                {!isPickup && (
+                    <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
+                        <span className="text-sm font-medium text-gray-500">{t('tableNumber')}</span>
+                        <span className="text-2xl font-bold bg-black text-white px-4 py-2 rounded-xl">
+                            {data.table_name || 'TBA'}
+                        </span>
+                    </div>
+                )}
 
                 {/* Date & Time */}
                 <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-100">
                     <div>
-                        <span className="block text-xs text-gray-400 mb-1">วันที่ (Date)</span>
+                        <span className="block text-xs text-gray-400 mb-1">{t('dateDate')}</span>
                         <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
                     </div>
                     <div className="text-right">
-                         <span className="block text-xs text-gray-400 mb-1">เวลา (Time)</span>
+                         <span className="block text-xs text-gray-400 mb-1">{t('dateTime')}</span>
                          <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                 </div>
@@ -297,7 +298,7 @@ export default function TrackingPage() {
                         onClick={() => setIsAccordionOpen(!isAccordionOpen)}
                         className="w-full flex items-center justify-between p-4 hover:bg-gray-100 transition-colors"
                     >
-                         <span className="font-bold text-sm text-gray-700">รายการอาหาร ({data.items?.length || 0})</span>
+                         <span className="font-bold text-sm text-gray-700">{t('orderItems')} ({data.items?.length || 0})</span>
                          <ArrowRight size={16} className={`text-gray-400 transition-transform ${isAccordionOpen ? 'rotate-90' : ''}`}/>
                     </button>
                     <AnimatePresence>
@@ -328,7 +329,7 @@ export default function TrackingPage() {
                                         ))}
                                     </div>
                                     <div className="border-t border-dashed border-gray-300 mt-4 pt-4 flex justify-between items-center bg-white p-3 rounded-lg">
-                                         <span className="text-sm font-bold text-gray-900">Total</span>
+                                         <span className="text-sm font-bold text-gray-900">{t('totalPrice')}</span>
                                          <span className="text-lg font-bold text-green-600">{data.total_amount.toLocaleString()}.-</span>
                                     </div>
                                 </div>
@@ -350,7 +351,7 @@ export default function TrackingPage() {
                      className="bg-black text-white p-4 rounded-xl shadow-lg shadow-black/20 flex flex-col items-center justify-center gap-2 hover:bg-gray-900 transition-all active:scale-95"
                   >
                      <Phone size={24}/>
-                     <span className="text-xs font-bold">Call Shop</span>
+                     <span className="text-xs font-bold">{t('callShop')}</span>
                   </a>
                   <a 
                      href={settings.contact_line_url || "#"} 
@@ -358,7 +359,7 @@ export default function TrackingPage() {
                      className="bg-[#06C755] text-white p-4 rounded-xl shadow-lg shadow-green-500/20 flex flex-col items-center justify-center gap-2 hover:bg-[#05b64d] transition-all active:scale-95"
                   >
                      <Share2 size={24}/> {/* Using Share2 icon logic as placeholder if needed, or specific component */}
-                     <span className="text-xs font-bold">Line Chat</span>
+                     <span className="text-xs font-bold">{t('lineChat')}</span>
                   </a>
               </div>
           )}
@@ -369,7 +370,7 @@ export default function TrackingPage() {
                 className="w-full bg-[#06C755] hover:bg-[#05b64d] text-white py-4 rounded-xl font-bold shadow-lg shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                 <Share2 size={20} />
-                ส่งเข้า LINE
+                {t('sendToLine')}
             </button>
           )}
           
@@ -384,7 +385,7 @@ export default function TrackingPage() {
                 `}
               >
                   <CalendarIcon size={18} />
-                  Add to Calendar
+                  {t('addToCalendar')}
               </button>
               <button 
                 onClick={handleDownloadSlip}
@@ -396,19 +397,19 @@ export default function TrackingPage() {
                 `}
               >
                   {canSaveSlip ? <Download size={18} /> : <Lock size={18} />}
-                  {downloadingSlip ? 'Saving...' : 'Save Slip'}
+                  {downloadingSlip ? t('saving') : t('saveSlip')}
               </button>
           </div>
             {!canSaveSlip && !isCancelled && (
                 <p className="text-center text-xs text-red-400 mt-2">
-                    {isPickup ? '*บันทึกได้เมื่ออาหารเสร็จแล้ว' : '*บันทึกได้เมื่อยืนยันโต๊ะแล้ว'}
+                    {isPickup ? t('slipNotePickup') : t('slipNoteBooking')}
                 </p>
             )}
       </div>
 
       {/* 4. Status Tracker */}
       <div className="px-6 mb-8">
-          <h3 className="font-bold text-gray-900 mb-4">สถานะล่าสุด</h3>
+          <h3 className="font-bold text-gray-900 mb-4">{t('statusLatest')}</h3>
           <div className={`rounded-3xl p-6 shadow-sm border ${isCancelled ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100'}`}>
               
                 {isCancelled ? (
@@ -416,9 +417,9 @@ export default function TrackingPage() {
                          <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
                              <XCircle size={32} />
                          </div>
-                         <h2 className="text-xl font-bold text-red-700 mb-2">Order Cancelled</h2>
-                         <p className="text-sm text-red-600/80">
-                             ขออภัย รายการนี้ถูกยกเลิก<br/>โปรดติดต่อเจ้าหน้าที่
+                         <h2 className="text-xl font-bold text-red-700 mb-2">{t('orderCancelled')}</h2>
+                         <p className="text-sm text-red-600/80 whitespace-pre-line">
+                             {t('statusCancelledBody')}
                          </p>
                      </div>
                 ) : (
@@ -460,7 +461,7 @@ export default function TrackingPage() {
                 <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center">
                     <MapPin size={20}/>
                 </div>
-                <span className="text-xs font-bold text-gray-700">Google Maps</span>
+                <span className="text-xs font-bold text-gray-700">{t('mapGoogle')}</span>
              </a>
              <a 
                 href={`tel:${settings.contact_phone || '0812345678'}`}
@@ -469,7 +470,7 @@ export default function TrackingPage() {
                 <div className="w-10 h-10 bg-green-50 text-green-600 rounded-full flex items-center justify-center">
                     <Phone size={20}/>
                 </div>
-                <span className="text-xs font-bold text-gray-700">Call Shop</span>
+                <span className="text-xs font-bold text-gray-700">{t('callButton')}</span>
              </a>
       </div>
 
@@ -500,7 +501,7 @@ export default function TrackingPage() {
                        <span className="font-bold">{new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                    </div>
                    {/* Table or Pickup Info */}
-                   {(data.table_name || data.tables_layout?.table_name) && (
+                   {!isPickup && (data.table_name || data.tables_layout?.table_name) && (
                          <div className="flex justify-between">
                              <span className="text-gray-500">Table</span>
                              <span className="font-bold">{data.table_name || data.tables_layout?.table_name}</span>

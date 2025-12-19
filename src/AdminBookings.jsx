@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2 } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
+import ViewSlipModal from './components/shared/ViewSlipModal'
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -11,6 +12,7 @@ export default function AdminBookings() {
 
     // Modal State
     const [slipData, setSlipData] = useState(null) // { booking, type }
+    const [viewSlipUrl, setViewSlipUrl] = useState(null)
 
     useEffect(() => {
         fetchBookings()
@@ -327,6 +329,11 @@ export default function AdminBookings() {
                                                 <button onClick={() => handlePrint(booking, 'customer')} className="p-2 bg-gray-700/50 hover:bg-gray-600 text-gray-200 rounded-lg" title="Customer Bill">
                                                     <Printer size={16} />
                                                 </button>
+                                                {booking.payment_slip_url && (
+                                                    <button onClick={() => setViewSlipUrl(booking.payment_slip_url)} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg" title="View Slip">
+                                                        <Search size={16} />
+                                                    </button>
+                                                )}
                                                 <div className="w-px bg-white/10 mx-1"></div>
 
                                                 {booking.status === 'pending' && (
@@ -366,6 +373,13 @@ export default function AdminBookings() {
                     booking={slipData.booking}
                     type={slipData.type}
                     onClose={() => setSlipData(null)}
+                />
+            )}
+
+            {viewSlipUrl && (
+                <ViewSlipModal 
+                    url={viewSlipUrl} 
+                    onClose={() => setViewSlipUrl(null)} 
                 />
             )}
         </div>
