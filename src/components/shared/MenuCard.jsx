@@ -13,6 +13,7 @@ const PlusIcon = ({ size }) => (
 // The custom PlusIcon component is no longer needed as Lucide's Plus and Minus are used directly.
 
 const MenuCard = ({ item, mode, onAdd, onRemove, qty, t }) => {
+    const hasOptions = item.menu_item_options && item.menu_item_options.length > 0
     const [ripples, setRipples] = useState([])
 
     const createRipple = (e) => {
