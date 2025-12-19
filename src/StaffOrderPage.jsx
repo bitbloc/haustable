@@ -350,6 +350,8 @@ export default function StaffOrderPage() {
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString()
             const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString()
             
+            console.log("Fetching orders for range:", startOfDay, "to", endOfDay)
+
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
@@ -357,7 +359,12 @@ export default function StaffOrderPage() {
                 .gte('booking_time', startOfDay) // Use range instead of .eq('booking_date')
                 .lte('booking_time', endOfDay)
                 .order('booking_time', { ascending: true })
-            if (error) throw error
+            
+            if (error) {
+                console.error("Supabase Fetch Error:", error)
+                throw error
+            }
+            console.log("Orders found:", data?.length, data)
             setOrders(data || [])
         } catch (err) {
             console.error(err)
