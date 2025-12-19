@@ -233,13 +233,41 @@ export default function StaffOrderPage() {
 
     const showSystemNotification = (title, body) => {
         if (Notification.permission === 'granted') {
-            new Notification(title, {
-                body: body,
-                icon: '/icons/icon-192x192.png',
-                vibrate: [200, 100, 200]
-            })
+            try {
+                const n = new Notification(title, {
+                    body: body,
+                    icon: '/icons/icon-192x192.png',
+                    vibrate: [200, 100, 200],
+                    tag: 'new-order', // Group notifications
+                    renotify: true,   // Vibrate/Sound even if replacing old one
+                    requireInteraction: true, // Keep on screen until clicked (Desktop/Android)
+                    silent: false     // Explicitly ask for sound (Android)
+                })
+                
+                // Focus window on click
+                n.onclick = function(e) {
+                    e.preventDefault()
+                    window.focus()
+                    // Try to navigate/refresh if needed
+                    n.close()
+                }
+            } catch (e) {
+                console.error("Notification Error:", e)
+            }
         }
     }
+
+    // iOS Background Warning
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                // We cannot send a toast while hidden effectively, but we can set title 
+                console.log("App hidden: WebSocket may pause on iOS")
+            }
+        }
+        document.addEventListener("visibilitychange", handleVisibilityChange)
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }, [])
 
     // --- Data Fetching ---
     const subscribeRealtime = () => {
@@ -439,6 +467,21 @@ export default function StaffOrderPage() {
                         >
                             Start Work
                         </button>
+                    </div>
+
+                    <div className="mt-8 text-left space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex gap-2 items-start">
+                            <span className="text-xs font-bold bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">iOS</span>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                <strong>ระวังจอดับ:</strong> หากพับหน้าจอ Apple จะตัดการเชื่อมต่อ แนะนำให้เปิดจิค้างไว้ หรือใช้โหมด <em>Guided Access</em>
+                            </p>
+                        </div>
+                        <div className="flex gap-2 items-start">
+                             <span className="text-xs font-bold bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Android</span>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                ระบบทำงานเบื้องหลังได้ดี แต่ควรปิดโหมดประหยัดพลังงาน
+                            </p>
+                        </div>
                     </div>
                     
                     <InstallPrompt />
