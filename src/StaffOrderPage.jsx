@@ -254,20 +254,12 @@ export default function StaffOrderPage() {
     const showSystemNotification = (title, body) => {
         if (Notification.permission === 'granted') {
             try {
-                // Android PWA stability adjustments:
-                // requireInteraction can sometimes cause issues on older WebViews, keep true for now but wrap safe.
+                // Minimal options to prevent Android native crashes
                 const options = {
                     body: body,
                     icon: '/icons/icon-192x192.png',
-                    vibrate: [200, 100, 200],
                     tag: 'new-order',
-                    renotify: true,
-                    silent: false
-                }
-
-                // Check environment before adding specific flags if needed
-                if ('requireInteraction' in Notification.prototype) {
-                    options.requireInteraction = true
+                    renotify: true
                 }
 
                 const n = new Notification(title, options)
