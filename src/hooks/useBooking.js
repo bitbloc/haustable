@@ -72,7 +72,7 @@ export function useBooking() {
     }
 
     // Submit Booking
-    const submitBooking = async () => {
+    const submitBooking = async (promotionData = null) => { // Modified to accept promotion
         try {
             if (!state.contactName || !state.contactPhone) throw new Error('กรุณากรอกข้อมูลให้ครบ')
             if (!state.isAgreed) throw new Error('Please agree to terms')
@@ -118,7 +118,10 @@ export function useBooking() {
                 pickup_contact_name: state.contactName,
                 pickup_contact_phone: state.contactPhone,
                 customer_note: customerNoteContent,
-                pax: state.pax
+                pax: state.pax,
+                // Promotion Fields
+                promotion_code_id: promotionData?.id || null, // NEW
+                discount_amount: promotionData?.discountAmount || 0 // NEW
             }
 
             const orderItemsPayload = state.cart.map(item => ({

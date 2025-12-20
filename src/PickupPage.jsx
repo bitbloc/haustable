@@ -9,6 +9,8 @@ import { getThaiDate, toThaiISO } from './utils/timeUtils'
 import MenuCard from './components/shared/MenuCard'
 import ViewToggle from './components/shared/ViewToggle'
 import OptionSelectionModal from './components/shared/OptionSelectionModal'
+import { usePromotion } from './hooks/usePromotion' // NEW
+import { Tag, AlertCircle } from 'lucide-react'
 
 // --- Main Page ---
 export default function PickupPage() {
@@ -155,7 +157,33 @@ export default function PickupPage() {
         setCart(prev => prev.filter((_, i) => i !== index))
     }
 
+
+    
+    // Logic
     const cartTotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0)
+
+    // Promotion Hook
+    const { 
+        promoCode, setPromoCode, 
+        appliedPromo, promoError, isValidating, 
+        applyCode, removePromo, revalidatePromo 
+    } = usePromotion()
+
+     // Calculate Final Total
+     const discountAmount = appliedPromo?.discountAmount || 0
+     const finalTotal = Math.max(0, cartTotal - discountAmount)
+ 
+     // Revalidate when cartTotal changes
+     useEffect(() => {
+         if (appliedPromo) {
+             revalidatePromo(cartTotal, 'ordering')
+         }
+     }, [cartTotal])
+ 
+     const handleApplyCode = async () => {
+         if (!promoCode) return
+         await applyCode(promoCode, cartTotal, 'ordering')
+     }
 
     const filteredMenu = menuItems.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -195,11 +223,12 @@ export default function PickupPage() {
                 booking_type: 'pickup',
                 status: 'pending',
                 booking_time: bookingDateTime,
-                total_amount: cartTotal,
-                payment_slip_url: fileName,
                 pickup_contact_name: contactName,
                 pickup_contact_phone: contactPhone,
-                customer_note: customerNoteContent
+                customer_note: customerNoteContent,
+                // Promos
+                promotion_code_id: appliedPromo?.id || null, // NEW
+                discount_amount: appliedPromo?.discountAmount || 0 // NEW
             }
             const orderItemsPayload = cart.map(item => ({
                 menu_item_id: item.id,
@@ -408,7 +437,60 @@ export default function PickupPage() {
                                             <span className="font-bold font-mono text-gray-900">{item.totalPricePerUnit * item.qty}.-</span>
                                         </div>
                                     ))}
-                                    <div className="border-t border-gray-100 mt-2 pt-2 flex justify-between font-bold text-base"><span>{t('total')}</span><span>{cartTotal}.-</span></div>
+                                    <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
+                                         <div className="flex justify-between text-base text-gray-500"><span>{t('subtotal')}</span><span>{cartTotal}.-</span></div>
+                                         
+                                         {/* PROMO INPUT */}
+                                         <div className="py-2">
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Promo Code" 
+                                                    value={promoCode}
+                                                    onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                                                    disabled={!!appliedPromo}
+                                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold uppercase placeholder:normal-case outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-400"
+                                                />
+                                                {appliedPromo ? (
+                                                    <button onClick={removePromo} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg font-bold text-xs border border-red-100 hover:bg-red-100">
+                                                        Remove
+                                                    </button>
+                                                ) : (
+                                                    <button 
+                                                        onClick={handleApplyCode} 
+                                                        disabled={!promoCode || isValidating}
+                                                        className="bg-black text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50"
+                                                    >
+                                                        {isValidating ? '...' : 'Apply'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                             {/* Error Message */}
+                                            {promoError && (
+                                                <p className="text-red-500 text-xs font-bold flex items-center gap-1 mt-1">
+                                                    <AlertCircle size={12} /> {promoError}
+                                                </p>
+                                            )}
+                                            {/* Valid Message */}
+                                            {appliedPromo && (
+                                                <div className="flex items-center gap-2 text-green-600 text-xs font-bold bg-green-50 p-2 rounded border border-green-100 mt-2">
+                                                    <Tag size={12} /> Code {appliedPromo.code} applied!
+                                                </div>
+                                            )}
+                                         </div>
+
+                                         {appliedPromo && (
+                                            <div className="flex justify-between text-base text-green-600 font-bold">
+                                                <span>{t('discount')}</span>
+                                                <span>- {discountAmount}.-</span>
+                                            </div>
+                                         )}
+
+                                         <div className="flex justify-between font-bold text-xl pt-2 border-t border-gray-100">
+                                            <span>{t('total')}</span>
+                                            <span>{finalTotal}.-</span>
+                                         </div>
+                                    </div>
                                 </div>
 
                                 <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 text-xs leading-relaxed">
@@ -427,7 +509,7 @@ export default function PickupPage() {
                                 </div>
 
                                 <button onClick={handleSubmit} disabled={submitting || !isAgreed || !pickupTime || !slipFile} className="w-full bg-[#DFFF00] text-black py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-[#cce600] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all mt-4">
-                                    {submitting ? t('processing') : `${t('confirmOrder')} ${cartTotal}.-`}
+                                    {submitting ? t('processing') : `${t('confirmOrder')} ${finalTotal}.-`}
                                 </button>
                             </div>
                         </motion.div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Tag, AlertCircle } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
+import { usePromotion } from '../../hooks/usePromotion' // NEW
 import ImageModal from '../shared/ImageModal'
 
 export default function BookingCheckout() {
@@ -15,7 +16,30 @@ export default function BookingCheckout() {
     const [submitting, setSubmitting] = useState(false)
     const [isSlipModalOpen, setIsSlipModalOpen] = useState(false)
 
+    // Promotion Hook
+    const { 
+        promoCode, setPromoCode, 
+        appliedPromo, promoError, isValidating, 
+        applyCode, removePromo, revalidatePromo 
+    } = usePromotion()
+
     const cartTotal = cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
+    
+    // Calculate Final Total
+    const discountAmount = appliedPromo?.discountAmount || 0
+    const finalTotal = Math.max(0, cartTotal - discountAmount)
+
+    // Revalidate when cartTotal changes
+    React.useEffect(() => {
+        if (appliedPromo) {
+            revalidatePromo(cartTotal, 'booking')
+        }
+    }, [cartTotal, revalidatePromo])
+
+    const handleApplyCode = async () => {
+        if (!promoCode) return
+        await applyCode(promoCode, cartTotal, 'booking')
+    }
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -25,7 +49,8 @@ export default function BookingCheckout() {
 
     const handleSubmit = async () => {
         setSubmitting(true)
-        const result = await submitBooking()
+        // Pass promotion data to submitBooking
+        const result = await submitBooking(appliedPromo) 
         setSubmitting(false)
 
         if (result.success) {
@@ -131,11 +156,68 @@ export default function BookingCheckout() {
 
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
                 <h3 className="font-bold text-sm uppercase">2. {t('paymentTitle')}</h3>
-                <div className="bg-gray-50 p-4 rounded-xl text-center space-y-2">
-                    <p className="text-gray-500 text-xs">{t('totalPrice')}</p>
-                    <p className="text-3xl font-bold font-mono tracking-tight">{cartTotal}.-</p>
+                
+                {/* PROMOTION SECTION */}
+                <div className="bg-gray-50 p-4 rounded-xl space-y-3">
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="Promo Code" 
+                            value={promoCode}
+                            onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                            disabled={!!appliedPromo}
+                            className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold uppercase placeholder:normal-case outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-400"
+                        />
+                        {appliedPromo ? (
+                            <button onClick={removePromo} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg font-bold text-xs border border-red-100 hover:bg-red-100">
+                                Remove
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={handleApplyCode} 
+                                disabled={!promoCode || isValidating}
+                                className="bg-black text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50"
+                            >
+                                {isValidating ? '...' : 'Apply'}
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Error Message */}
+                    {promoError && (
+                        <p className="text-red-500 text-xs font-bold flex items-center gap-1">
+                            <AlertCircle size={12} /> {promoError}
+                        </p>
+                    )}
+
+                    {/* Valid Message */}
+                    {appliedPromo && (
+                        <div className="flex items-center gap-2 text-green-600 text-xs font-bold bg-green-50 p-2 rounded border border-green-100">
+                            <Tag size={12} /> Code {appliedPromo.code} applied!
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-xl space-y-2">
+                    <div className="flex justify-between text-xs text-gray-400 uppercase font-bold">
+                        <span>Subtotal</span>
+                        <span>{cartTotal}.-</span>
+                    </div>
+                    
+                    {appliedPromo && (
+                        <div className="flex justify-between text-xs text-green-600 uppercase font-bold">
+                            <span>Discount</span>
+                            <span>- {discountAmount}.-</span>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-end border-t border-gray-200 pt-2 mt-2">
+                         <span className="text-gray-500 text-xs">{t('totalPrice')}</span>
+                         <span className="text-3xl font-bold font-mono tracking-tight">{finalTotal}.-</span>
+                    </div>
+
                     {settings.minSpend > 0 && (
-                        <p className="text-[10px] text-gray-400">Min Spend: {settings.minSpend * pax}.-</p>
+                        <p className="text-[10px] text-gray-400 text-right">Min Spend: {settings.minSpend * pax}.-</p>
                     )}
                 </div>
 

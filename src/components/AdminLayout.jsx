@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar } from 'lucide-react';
+import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BookingMonitor from './admin/BookingMonitor';
 
@@ -53,9 +53,10 @@ export default function AdminLayout({ children }) {
 
     const menuItems = [
         { path: '/admin', icon: LayoutDashboard, label: 'Overview' },
-        { path: '/admin/bookings', icon: Calendar, label: 'Bookings' }, // Assuming this exists or is part of Overview? Actually keeping Overview as is.
-        { path: '/admin/members', icon: Users, label: 'Members' }, // NEW
+        { path: '/admin/bookings', icon: Calendar, label: 'Bookings' },
+        { path: '/admin/members', icon: Users, label: 'Members' },
         { path: '/admin/menu', icon: Utensils, label: 'Menu' },
+        { path: '/admin/promotions', icon: Tag, label: 'Promotions' }, // NEW
         { path: '/admin/editor', icon: Move, label: 'Floor Plan' },
         { path: '/admin/settings', icon: Settings, label: 'Settings' },
     ];

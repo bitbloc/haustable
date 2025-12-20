@@ -17,6 +17,7 @@ import AdminTableEditor from './AdminTableEditor'
 import AdminMenu from './admin/AdminMenuPage'
 import AdminBookings from './AdminBookings'
 import AdminMembers from './AdminMembers'
+import AdminPromotions from './components/admin/AdminPromotions' // NEW
 import StaffOrderPage from './StaffOrderPage'
 import TrackingPage from './TrackingPage'
 
@@ -98,6 +99,7 @@ function App() {
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="members" element={<AdminMembers />} />
               <Route path="menu" element={<AdminMenu />} />
+              <Route path="promotions" element={<AdminPromotions />} />
               <Route path="editor" element={<AdminTableEditor />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
