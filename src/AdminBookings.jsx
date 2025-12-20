@@ -32,6 +32,7 @@ export default function AdminBookings() {
                 .select(`
                     *,
                     tables_layout (table_name),
+                    promotion_codes (code),
                     order_items (
                         quantity,
                         price_at_time,
@@ -409,7 +410,14 @@ export default function AdminBookings() {
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <span className="text-white font-mono">{booking.total_amount?.toLocaleString()}.-</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-white font-mono">{booking.total_amount?.toLocaleString()}.-</span>
+                                                {booking.discount_amount > 0 && (
+                                                    <span className="text-green-500 text-[10px] font-mono">
+                                                        -{booking.discount_amount} ({booking.promotion_codes?.code})
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="p-4">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[booking.status] || 'bg-gray-500/20 text-gray-400'}`}>

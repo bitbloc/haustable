@@ -44,6 +44,12 @@ export default function OrderSummary({ data }) {
                                 </div>
                             ))}
                         </div>
+                        {data.discount_amount > 0 && (
+                            <div className="flex justify-between items-center px-3 py-2 text-sm text-green-600 border-t border-dashed border-gray-200 mt-2">
+                                <span>Discount ({data.promotion_codes?.code || 'PROMO'})</span>
+                                <span className="font-bold">-{data.discount_amount.toLocaleString()}.-</span>
+                            </div>
+                        )}
                         <div className="border-t border-dashed border-gray-300 mt-4 pt-4 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
                              <span className="text-sm font-bold text-gray-900">{t('totalPrice')}</span>
                              <span className="text-lg font-bold text-green-600">{data.total_amount.toLocaleString()}.-</span>

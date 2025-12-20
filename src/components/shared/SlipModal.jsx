@@ -82,10 +82,20 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }).join('') || '<div style="text-align:center; color:#999">No items</div>'
 
+        const discountHtml = booking.discount_amount > 0 ? `
+            <div style="display: flex; justify-content: space-between; color: #000; font-size: 14px; margin-top: 10px;">
+                <span>Discount (${booking.promotion_codes?.code || 'PROMO'})</span>
+                <span>-${booking.discount_amount.toLocaleString()}.-</span>
+            </div>
+        ` : ''
+
         const totalHtml = isKitchen ? '' : `
-            <div style="margin-top: 20px; padding-top: 10px; border-top: 2px solid #000; display: flex; justify-content: space-between; font-weight: bold; font-size: 18px;">
-                <span>TOTAL</span>
-                <span>${booking.total_amount?.toLocaleString()}.-</span>
+            <div style="margin-top: 20px; padding-top: 10px; border-top: 2px solid #000;">
+                ${discountHtml}
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-top: 5px;">
+                    <span>TOTAL</span>
+                    <span>${booking.total_amount?.toLocaleString()}.-</span>
+                </div>
             </div>
         `
         const noteHtml = booking.customer_note ? `
@@ -114,7 +124,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div>Table: <strong style="font-size: 16px;">${tableName}</strong></div>
                         <div>Date: ${dateStr}</div>
                         <div>Order ID: #${booking.id.slice(0, 8)}</div>
-                        ${!isKitchen ? `<div>Customer: ${booking.pickup_contact_name || '-'}</div>` : ''}
+                        ${!isKitchen ? `<div>Customer: ${booking.profiles?.display_name || booking.profiles?.first_name ? `คุณ ${booking.profiles.display_name || booking.profiles.first_name}` : (booking.pickup_contact_name || '-')}</div>` : ''}
                     </div>
 
                     <div style="margin-bottom: 20px;">${itemsHtml}</div>
@@ -156,7 +166,7 @@ export default function SlipModal({ booking, type, onClose }) {
                             <div className="flex justify-between"><span>Table:</span> <span className="font-bold text-base">{booking.tables_layout?.table_name || 'N/A'}</span></div>
                             <div className="flex justify-between"><span>Date:</span> <span>{new Date(booking.booking_time).toLocaleString('th-TH')}</span></div>
                             <div className="flex justify-between"><span>Order ID:</span> <span>#{booking.id.slice(0, 8)}</span></div>
-                            {!isKitchen && <div className="flex justify-between"><span>Customer:</span> <span>{booking.pickup_contact_name || '-'}</span></div>}
+                            {!isKitchen && <div className="flex justify-between"><span>Customer:</span> <span>{booking.profiles?.display_name || booking.profiles?.first_name ? `คุณ ${booking.profiles.display_name || booking.profiles.first_name}` : (booking.pickup_contact_name || '-')}</span></div>}
                         </div>
 
                         {/* Items */}
@@ -188,9 +198,17 @@ export default function SlipModal({ booking, type, onClose }) {
 
                         {/* Total or Note */}
                         {!isKitchen && (
-                            <div className="border-t-2 border-black pt-2 flex justify-between font-bold text-lg mt-6">
-                                <span>TOTAL</span>
-                                <span>{booking.total_amount?.toLocaleString()}.-</span>
+                            <div className="border-t-2 border-black pt-2 mt-6">
+                                {booking.discount_amount > 0 && (
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>Discount ({booking.promotion_codes?.code || 'PROMO'})</span>
+                                        <span>-{booking.discount_amount.toLocaleString()}.-</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between font-bold text-lg">
+                                    <span>TOTAL</span>
+                                    <span>{booking.total_amount?.toLocaleString()}.-</span>
+                                </div>
                             </div>
                         )}
 

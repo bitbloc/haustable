@@ -47,6 +47,8 @@ serve(async (req) => {
       .select(`
         *,
         tables_layout ( table_name ),
+        promotion_codes ( code ),
+        profiles ( display_name, first_name, last_name ),
         order_items (
           quantity,
           price_at_time,
@@ -114,6 +116,9 @@ serve(async (req) => {
       items: items,
       table_name: booking.tables_layout?.table_name,
       total_amount: booking.total_amount,
+      discount_amount: booking.discount_amount,
+      promotion_codes: booking.promotion_codes,
+      profiles: booking.profiles,
       token_expires_at: booking.token_expires_at
     };
 

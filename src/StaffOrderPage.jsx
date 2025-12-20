@@ -350,7 +350,7 @@ export default function StaffOrderPage() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .in('status', ['pending', 'confirmed'])
                 .order('booking_time', { ascending: true })
             
@@ -378,7 +378,7 @@ export default function StaffOrderPage() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .neq('status', 'pending')
                 .gte('created_at', start.toISOString())
                 .lte('created_at', end.toISOString())
@@ -399,7 +399,7 @@ export default function StaffOrderPage() {
             const now = new Date().toISOString()
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .eq('status', 'confirmed')
                 .gte('booking_time', now)
                 .order('booking_time', { ascending: true })
@@ -451,12 +451,15 @@ export default function StaffOrderPage() {
         // I will make a separate `quickConfirm` function for the Toast.
         
         const isConfirm = newStatus === 'confirmed'
+        const isComplete = newStatus === 'completed' 
+        const isDangerous = newStatus === 'cancelled' || newStatus === 'void'
+
         setConfirmModal({
             isOpen: true,
-            title: isConfirm ? 'รับออเดอร์?' : 'ปฏิเสธรายการ?',
-            message: isConfirm ? 'ส่งรายการเข้าครัว' : 'ยกเลิกรายการนี้ถาวร',
-            confirmText: isConfirm ? 'ยืนยัน (Accept)' : 'ปฏิเสธ (Reject)',
-            isDangerous: !isConfirm,
+            title: isConfirm ? 'รับออเดอร์?' : (isComplete ? 'เช็คบิล (Complete)?' : 'ปฏิเสธรายการ?'),
+            message: isConfirm ? 'ส่งรายการเข้าครัว' : (isComplete ? 'จบรายการและเคลียร์โต๊ะ' : 'ยกเลิกรายการนี้ถาวร'),
+            confirmText: isConfirm ? 'ยืนยัน (Accept)' : (isComplete ? 'เช็คบิล (Complete)' : 'ปฏิเสธ (Reject)'),
+            isDangerous: isDangerous,
             action: async () => {
                 await performUpdate(id, newStatus, isConfirm)
             }
@@ -734,7 +737,7 @@ export default function StaffOrderPage() {
                                                 <span className="text-gray-300">|</span>
                                                 {order.booking_type === 'pickup' ? (
                                                      <span className="text-blue-600 flex items-center gap-2">
-                                                        Pickup ({order.customer_name})
+                                                        Pickup ({order.profiles?.display_name || order.profiles?.first_name ? `คุณ ${order.profiles.display_name || order.profiles.first_name}` : order.pickup_contact_name})
                                                      </span>
                                                 ) : (
                                                     <span className="text-[#1A1A1A]">
@@ -814,6 +817,16 @@ export default function StaffOrderPage() {
                                         {order.customer_note && (
                                             <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl text-orange-800 text-sm mt-4 flex gap-3 items-start">
                                                 <span className="font-bold shrink-0">Note:</span> {order.customer_note}
+                                            </div>
+                                        )}
+                                        {/* Discount Display */}
+                                        {(order.discount_amount > 0 || order.promotion_codes?.code) && (
+                                            <div className="bg-green-50 border border-green-100 p-4 rounded-xl text-green-800 text-sm mt-2 flex justify-between items-center">
+                                                <span className="font-bold flex items-center gap-2">
+                                                    <span className="bg-green-200 px-2 py-0.5 rounded text-xs">Promo</span>
+                                                    {order.promotion_codes?.code || 'DISCOUNT'}
+                                                </span>
+                                                <span className="font-bold">-{order.discount_amount?.toLocaleString()}.-</span>
                                             </div>
                                         )}
                                     </div>

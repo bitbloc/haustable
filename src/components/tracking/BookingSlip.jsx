@@ -61,7 +61,7 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled }) {
         `}
       >
           {canSave ? <Download size={18} /> : <Lock size={18} />}
-          {downloading ? t('saving') : t('saveSlip')}
+          {downloading ? t('saving') : `${t('saveSlip')} (#${data.short_id || data.id?.slice(0,4)})`}
       </button>
 
       {/* Hidden Slip Render Area */}
@@ -106,7 +106,7 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled }) {
                        </div>
                        
                        <div className="space-y-3 mb-8 text-sm">
-                           <SlipRow label="Guest" value={data.customer_name} />
+                           <SlipRow label="Guest" value={data.profiles?.display_name || data.profiles?.first_name ? `คุณ ${data.profiles.display_name || data.profiles.first_name}` : (data.customer_name || data.pickup_contact_name || '-')} />
                            <SlipRow label="Date" value={new Date(data.booking_time).toLocaleDateString()} />
                            <SlipRow label="Time" value={new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} />
                            
@@ -117,6 +117,13 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled }) {
 
                            {data.items?.length > 0 && (
                                 <SlipRow label="Items" value={`${data.items.length} items`} />
+                           )}
+
+                           {(data.discount_amount > 0 || data.promotion_codes?.code) && (
+                                <div className="flex justify-between items-baseline text-green-600">
+                                    <span className="text-xs uppercase font-medium tracking-wide">Discount</span>
+                                    <span className="font-bold">-{data.discount_amount?.toLocaleString()}.-</span>
+                                </div>
                            )}
                            
                            <div className="flex justify-between border-t-2 border-dashed border-gray-200 pt-4 mt-6">
