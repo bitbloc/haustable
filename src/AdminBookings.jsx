@@ -293,6 +293,7 @@ export default function AdminBookings() {
             </div>
 
             {/* Batch Action Bar */}
+            {selectedIds.length > 0 && (
                 <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between animate-fade-in gap-4">
                     <span className="text-red-400 text-sm font-medium pl-2">
                         {selectedIds.length} orders selected
