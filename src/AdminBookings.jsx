@@ -3,6 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2, ArrowUpDown, History } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
+import AdminPinModal from './components/AdminPinModal'
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -10,9 +11,9 @@ export default function AdminBookings() {
     const [filter, setFilter] = useState('all') // all, pending, confirmed, completed, cancelled
     const [searchTerm, setSearchTerm] = useState('')
 
-    // Modal State
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
+    const [pinModal, setPinModal] = useState({ isOpen: false, targets: [] })
 
     // New State for Batch/Sort
     const [selectedIds, setSelectedIds] = useState([])
@@ -144,8 +145,7 @@ export default function AdminBookings() {
             alert("Protected: Only 'Completed' or 'Cancelled' orders can be deleted.")
             return
         }
-        
-        await executeDelete([booking])
+        setPinModal({ isOpen: true, targets: [booking] })
     }
 
     // Batch Delete Handler
@@ -168,15 +168,12 @@ export default function AdminBookings() {
 
         if (!confirm(confirmMsg)) return
 
-        await executeDelete(validBookings)
-        setSelectedIds([]) // Clear selection
+        setPinModal({ isOpen: true, targets: validBookings })
     }
 
-    // Core Delete Logic (Shared)
-    const executeDelete = async (targets) => {
-        const inputPin = prompt("Please enter Staff PIN to confirm deletion:")
-        if (!inputPin) return
-
+    // Core Delete Logic (Executed by Modal)
+    const executeDelete = async (pin) => {
+        const targets = pinModal.targets
         try {
             setLoading(true)
              // 1. Verify PIN
@@ -188,11 +185,18 @@ export default function AdminBookings() {
             
             const correctPin = setting?.value
 
-            if (inputPin !== correctPin) {
-                alert("Incorrect PIN!")
+            if (pin !== correctPin) {
+                alert("Incorrect PIN!") // Better to show error in modal, but modal closes on submit. 
+                // Let's rely on simple alert for pin error after modal or handle it better?
+                // Actually the AdminPinModal in previous step doesn't do async check.
+                // It calls onConfirm(pin).
+                // We should change AdminPinModal logic or do check here.
+                // Done: Check here. If fail, maybe re-open or just alert.
                 return
             }
-
+            
+            setPinModal({ isOpen: false, targets: [] }) // Close modal only if PIN might be right, wait, we checked pin.
+            
             // 2. Delete Slip Images
             const slipsToDelete = targets.map(b => b.payment_slip_url).filter(Boolean)
             if (slipsToDelete.length > 0) {
@@ -204,15 +208,21 @@ export default function AdminBookings() {
 
             // 3. Delete Booking Records
             const targetIds = targets.map(b => b.id)
-            const { error: dbError } = await supabase
+            const { error: dbError, count } = await supabase
                 .from('bookings')
-                .delete()
+                .delete({ count: 'exact' }) // Request count
                 .in('id', targetIds)
 
             if (dbError) throw dbError
 
+            // Verify count
+            if (count === 0 && targets.length > 0) {
+                throw new Error("Deletion permission denied or records already gone.")
+            }
+
             // 4. Update UI
             setBookings(prev => prev.filter(b => !targetIds.includes(b.id)))
+            setSelectedIds([]) 
             alert(`Successfully deleted ${targets.length} bookings.`)
 
         } catch (err) {
@@ -506,6 +516,14 @@ export default function AdminBookings() {
                     onClose={() => setViewSlipUrl(null)} 
                 />
             )}
+
+            <AdminPinModal
+                isOpen={pinModal.isOpen}
+                onClose={() => setPinModal({ isOpen: false, targets: [] })}
+                onConfirm={(pin) => executeDelete(pin)}
+                title="Confirm Deletion"
+                message={`Verifying PIN to delete ${pinModal.targets.length} bookings.`}
+            />
         </div>
     )
 }
