@@ -206,7 +206,10 @@ export default function BookingCheckout() {
                     
                     {appliedPromo && (
                         <div className="flex justify-between text-xs text-green-600 uppercase font-bold">
-                            <span>Discount</span>
+                            <span>
+                                Discount 
+                                {appliedPromo.discountType === 'percent' && <span className="ml-1 text-[10px] bg-green-100 px-1 rounded">{appliedPromo.discountValue}%</span>}
+                            </span>
                             <span>- {discountAmount}.-</span>
                         </div>
                     )}

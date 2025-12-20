@@ -36,7 +36,9 @@ export function usePromotion() {
                 setAppliedPromo({
                     id: data.promo_id,
                     code: data.code,
-                    discountAmount: data.discount_amount
+                    discountAmount: data.discount_amount,
+                    discountType: data.discount_type, // NEW
+                    discountValue: data.discount_value // NEW
                 })
                 setPromoCode(data.code) // Ensure casing matches DB
                 setPromoError(null)
@@ -81,7 +83,10 @@ export function usePromotion() {
                 // Update discount amount (it might be % based and changed with subtotal)
                 setAppliedPromo(prev => ({
                     ...prev,
-                    discountAmount: data.discount_amount
+                    discountAmount: data.discount_amount,
+                    // Also update these in case logic changed valid status or others
+                    discountType: data.discount_type, 
+                    discountValue: data.discount_value
                 }))
             }
         } catch (err) {

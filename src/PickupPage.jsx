@@ -481,7 +481,10 @@ export default function PickupPage() {
 
                                          {appliedPromo && (
                                             <div className="flex justify-between text-base text-green-600 font-bold">
-                                                <span>{t('discount')}</span>
+                                                <span>
+                                                    {t('discount')}
+                                                    {appliedPromo.discountType === 'percent' && <span className="ml-2 text-xs bg-green-100 px-1.5 py-0.5 rounded-md align-middle">{appliedPromo.discountValue}%</span>}
+                                                </span>
                                                 <span>- {discountAmount}.-</span>
                                             </div>
                                          )}
