@@ -108,12 +108,15 @@ export function useBooking() {
             const customerNoteContent = `Booking ${state.selectedTable.table_name} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '')
 
             // Prepare Booking Payload
+            const discountAmount = promotionData?.discountAmount || 0
+            const finalTotal = Math.max(0, cartTotal - discountAmount) // Logic: Post-Discount Total
+
             const bookingPayload = {
                 booking_type: 'dine_in',
                 status: 'pending',
                 booking_time: bookingDateTime,
                 table_id: state.selectedTable.id,
-                total_amount: cartTotal,
+                total_amount: finalTotal, // CORRECTED: Now sending Final Amount
                 payment_slip_url: fileName,
                 pickup_contact_name: state.contactName,
                 pickup_contact_phone: state.contactPhone,

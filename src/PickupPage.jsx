@@ -227,8 +227,9 @@ export default function PickupPage() {
                 pickup_contact_phone: contactPhone,
                 customer_note: customerNoteContent,
                 // Promos
-                promotion_code_id: appliedPromo?.id || null, // NEW
-                discount_amount: appliedPromo?.discountAmount || 0 // NEW
+                promotion_code_id: appliedPromo?.id || null, 
+                discount_amount: appliedPromo?.discountAmount || 0,
+                total_amount: finalTotal // CORRECTED: Was missing or wrong scope? It was hardcoded or cartTotal before.
             }
             const orderItemsPayload = cart.map(item => ({
                 menu_item_id: item.id,
