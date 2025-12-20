@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2, ArrowUpDown, History } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
-import AdminPinModal from './components/AdminPinModal'
+import HoldToDeleteButton from './components/HoldToDeleteButton'
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -13,7 +13,6 @@ export default function AdminBookings() {
 
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
-    const [pinModal, setPinModal] = useState({ isOpen: false, targets: [] })
 
     // New State for Batch/Sort
     const [selectedIds, setSelectedIds] = useState([])
@@ -140,62 +139,15 @@ export default function AdminBookings() {
     }
 
     // Secure Delete Handler (Single)
-    const handleDelete = async (booking) => {
-        if (booking.status !== 'completed' && booking.status !== 'cancelled') {
-            alert("Protected: Only 'Completed' or 'Cancelled' orders can be deleted.")
-            return
-        }
-        setPinModal({ isOpen: true, targets: [booking] })
-    }
-
-    // Batch Delete Handler
-    const handleBatchDelete = async () => {
-        if (selectedIds.length === 0) return
-
-        // 1. Filter for valid bookings (must be 'completed' or 'cancelled')
-        const validBookings = bookings.filter(b => selectedIds.includes(b.id) && (b.status === 'completed' || b.status === 'cancelled'))
-        const invalidCount = selectedIds.length - validBookings.length
-
-        if (validBookings.length === 0) {
-            alert("None of the selected orders can be deleted. Only 'Completed' or 'Cancelled' orders are deletable.")
-            return
-        }
-
-        let confirmMsg = `Are you sure you want to delete ${validBookings.length} completed orders?`
-        if (invalidCount > 0) {
-            confirmMsg += `\n(${invalidCount} non-completed orders will be skipped)`
-        }
-
-        if (!confirm(confirmMsg)) return
-
-        setPinModal({ isOpen: true, targets: validBookings })
-    }
-
-    // Core Delete Logic (Executed by Modal)
-    const executeDelete = async (pin) => {
-        const targets = pinModal.targets
+    // Removed handleDelete wrapper as HoldToDelete calls executeDelete directly
+    
+    // Batch Delete Handler (Modified to just select targets)
+    // The visual button in header will trigger executeDelete
+    
+    // Core Delete Logic (No PIN)
+    const executeDelete = async (targets) => {
         try {
             setLoading(true)
-             // 1. Verify PIN
-            const { data: setting } = await supabase
-                .from('app_settings')
-                .select('value')
-                .eq('key', 'staff_pin_code')
-                .single()
-            
-            const correctPin = setting?.value
-
-            if (pin !== correctPin) {
-                alert("Incorrect PIN!") // Better to show error in modal, but modal closes on submit. 
-                // Let's rely on simple alert for pin error after modal or handle it better?
-                // Actually the AdminPinModal in previous step doesn't do async check.
-                // It calls onConfirm(pin).
-                // We should change AdminPinModal logic or do check here.
-                // Done: Check here. If fail, maybe re-open or just alert.
-                return
-            }
-            
-            setPinModal({ isOpen: false, targets: [] }) // Close modal only if PIN might be right, wait, we checked pin.
             
             // 2. Delete Slip Images
             const slipsToDelete = targets.map(b => b.payment_slip_url).filter(Boolean)
@@ -341,18 +293,30 @@ export default function AdminBookings() {
             </div>
 
             {/* Batch Action Bar */}
-            {selectedIds.length > 0 && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between animate-fade-in">
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between animate-fade-in gap-4">
                     <span className="text-red-400 text-sm font-medium pl-2">
                         {selectedIds.length} orders selected
                     </span>
-                    <button 
-                        onClick={handleBatchDelete}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition-colors"
-                    >
-                        <Trash2 size={16} />
-                        Delete Selected
-                    </button>
+                    
+                    {/* Filter Selected (ensure only deletable ones are passed) */}
+                     {(() => {
+                        const validBookings = bookings.filter(b => selectedIds.includes(b.id) && (b.status === 'completed' || b.status === 'cancelled'))
+                        
+                        // Disable if no valid bookings
+                        if (validBookings.length === 0) return (
+                            <div className="text-xs text-red-500/50">Only Completed/Cancelled orders can be deleted</div>
+                        )
+
+                        return (
+                             <div className="flex items-center gap-2">
+                                <span className="text-[10px] uppercase text-red-500/60 font-bold tracking-wider">Hold 5s to Delete</span>
+                                <HoldToDeleteButton 
+                                    onConfirm={() => executeDelete(validBookings)}
+                                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg flex items-center gap-2 font-bold transition-colors"
+                                />
+                             </div>
+                        )
+                    })()}
                 </div>
             )}
 
@@ -484,13 +448,12 @@ export default function AdminBookings() {
                                                 )}
                                                 
                                                 <div className="w-px bg-white/10 mx-1"></div>
-                                                <button 
-                                                    onClick={() => handleDelete(booking)} 
-                                                    className={`p-2 rounded-lg transition-colors ${(booking.status === 'completed' || booking.status === 'cancelled') ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
-                                                    title={(booking.status === 'completed' || booking.status === 'cancelled') ? "Delete Booking (PIN Required)" : "Only Completed or Cancelled orders can be deleted"}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="w-px bg-white/10 mx-1"></div>
+                                                <HoldToDeleteButton 
+                                                    onConfirm={() => executeDelete([booking])}
+                                                    disabled={booking.status !== 'completed' && booking.status !== 'cancelled'}
+                                                    className={`p-2 rounded-lg transition-colors ${(booking.status === 'completed' || booking.status === 'cancelled') ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-600'}`}
+                                                />
                                             </div>
                                         </td>
                                     </tr>
@@ -517,13 +480,6 @@ export default function AdminBookings() {
                 />
             )}
 
-            <AdminPinModal
-                isOpen={pinModal.isOpen}
-                onClose={() => setPinModal({ isOpen: false, targets: [] })}
-                onConfirm={(pin) => executeDelete(pin)}
-                title="Confirm Deletion"
-                message={`Verifying PIN to delete ${pinModal.targets.length} bookings.`}
-            />
         </div>
     )
 }
