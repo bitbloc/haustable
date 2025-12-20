@@ -246,7 +246,7 @@ export default function AdminPromotions() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto text-gray-900">
                         <div className="p-6 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
                             <h2 className="text-xl font-bold">{editingCode ? 'Edit Code' : 'Create New Code'}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
