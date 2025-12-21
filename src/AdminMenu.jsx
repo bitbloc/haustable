@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient';
 import { Plus, X, Star } from 'lucide-react';
 import {
     DndContext,
-    closestCorners,
+    rectIntersection,
     KeyboardSensor,
     PointerSensor,
     useSensor,
@@ -94,46 +94,61 @@ export default function AdminMenu() {
     const handleDragOver = (event) => {
         const { active, over } = event;
         if (!over) return;
-
-        const activeItemLocal = menuItems.find(i => i.id === active.id);
+    
+        const activeId = active.id;
+        const overId = over.id;
+    
+        // Find Item objects
+        const activeItemLocal = menuItems.find(i => i.id === activeId);
+        const overItemLocal = menuItems.find(i => i.id === overId);
+    
         if (!activeItemLocal) return;
-
+    
         // 1. Identify Target Group
         let targetGroup = null;
-        const overItemLocal = menuItems.find(i => i.id === over.id);
-
+    
         if (overItemLocal) {
+            // Dragging over another Item -> inherit its group
             targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
         } else {
-             // Dropping on Container
-             if (over.id === 'container-recommend') targetGroup = 'recommend';
-             else if (over.id.startsWith('container-')) targetGroup = over.id.replace('container-', '');
+            // Dragging over Empty Container
+            if (overId === 'container-recommend') targetGroup = 'recommend';
+            else if (overId.startsWith('container-')) targetGroup = overId.replace('container-', '');
         }
-        
-        if (!targetGroup) return;
-
-        // 2. Strict Rules: No cross-category unless Recommend
-        if (targetGroup !== 'recommend' && targetGroup !== activeItemLocal.category) {
-            return;
+    
+        // Security Check: No cross-category dragging (except Recommend)
+        const sourceCategory = activeItemLocal.category;
+        if (targetGroup && targetGroup !== 'recommend' && targetGroup !== sourceCategory) {
+            return; // Block invalid drops
         }
-
-        // 3. Promote/Demote State Change Logic
-        const isCurrentlyRecommended = activeItemLocal.is_recommended;
-        const isTargetRecommend = (targetGroup === 'recommend');
-        
-        if (isCurrentlyRecommended !== isTargetRecommend) {
-             setMenuItems((items) => {
-                 const activeIndex = items.findIndex((i) => i.id === active.id);
-                 if (activeIndex === -1) return items;
-
-                 const newItems = [...items];
-                 // Update status immediately for fluid UI
-                 newItems[activeIndex] = { 
-                     ...newItems[activeIndex], 
-                     is_recommended: isTargetRecommend 
-                 };
-                 return newItems;
-             });
+    
+        // 2. Optimistic Update (Move state temporarily for smooth UI)
+        const isActiveRecommend = activeItemLocal.is_recommended;
+        const isOverRecommend = targetGroup === 'recommend';
+    
+        // Case A: Crossing Zones (Recommend <-> Regular)
+        if (isActiveRecommend !== isOverRecommend) {
+            setMenuItems((items) => {
+                const activeIndex = items.findIndex((i) => i.id === activeId);
+                const overIndex = items.findIndex((i) => i.id === overId);
+    
+                if (activeIndex === -1) return items;
+    
+                const newItems = [...items];
+                
+                // Toggle status immediately
+                newItems[activeIndex] = { 
+                    ...newItems[activeIndex], 
+                    is_recommended: isOverRecommend 
+                };
+    
+                // Move in array to prevent flickering if target is specific item
+                if (overIndex >= 0) {
+                     return arrayMove(newItems, activeIndex, overIndex);
+                }
+                
+                return newItems;
+            });
         }
     };
 
@@ -219,7 +234,7 @@ export default function AdminMenu() {
     return (
         <DndContext 
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={rectIntersection}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
@@ -241,7 +256,7 @@ export default function AdminMenu() {
                 {/* Recommend Menu */}
                 <div 
                     id="container-recommend"
-                    className={`mb-10 p-4 border rounded-3xl transition-colors duration-300 min-h-[150px] ${
+                    className={`mb-10 p-4 border rounded-3xl transition-colors duration-300 min-h-[200px] ${
                         activeItem && activeItem.is_recommended === false 
                         ? 'border-[#DFFF00] bg-[#DFFF00]/10' 
                         : 'border-[#DFFF00]/20 bg-[#DFFF00]/5' 
