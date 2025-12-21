@@ -61,15 +61,20 @@ export default function SlipModal({ booking, type, onClose }) {
             const name = item.menu_items?.name || 'Unknown Item'
 
             // Map IDs to Names
-            let opts = ''
+            let optsHtml = ''
             if (item.selected_options) {
+                let optionsList = []
                 if (Array.isArray(item.selected_options)) {
-                     opts = item.selected_options.map(opt => typeof opt === 'object' ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` : opt).join(', ')
+                     optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
                 } else if (typeof item.selected_options === 'object') {
                     const ids = Object.values(item.selected_options).flat()
                     if (ids.length > 0) {
-                        opts = ids.map(id => getOptionName(id)).join(', ')
+                        optionsList = ids.map(id => getOptionName(id))
                     }
+                }
+                
+                if (optionsList.length > 0) {
+                    optsHtml = optionsList.map(opt => `<div style="font-size: 12px; color: #555; margin-left: 20px;">+ ${opt}</div>`).join('')
                 }
             }
 
@@ -81,7 +86,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         <span>${item.quantity}x ${name}</span>
                         ${price}
                     </div>
-                    ${opts ? `<div style="font-size: 12px; color: #555; margin-left: 20px;">+ ${opts}</div>` : ''}
+                    ${optsHtml}
                 </div>
             `
         }).join('') || '<div style="text-align:center; color:#999">No items</div>'
@@ -177,13 +182,13 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div className="space-y-3 mb-4">
                             {booking.order_items?.map((item, idx) => {
                                 // Map Options in Render
-                                let optionText = ''
+                                let optionsList = []
                                 if (item.selected_options) {
                                     if (Array.isArray(item.selected_options)) {
-                                         optionText = item.selected_options.map(opt => typeof opt === 'object' ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` : opt).join(', ')
+                                         optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
                                     } else if (typeof item.selected_options === 'object') {
                                         const ids = Object.values(item.selected_options).flat()
-                                        optionText = ids.map(id => optionMap[id] || id).join(', ')
+                                        optionsList = ids.map(id => optionMap[id] || id)
                                     }
                                 }
 
@@ -193,9 +198,11 @@ export default function SlipModal({ booking, type, onClose }) {
                                             <span>{item.quantity}x {item.menu_items?.name}</span>
                                             {!isKitchen && <span>{(item.price_at_time * item.quantity).toLocaleString()}</span>}
                                         </div>
-                                        {optionText && (
-                                            <div className="text-[10px] text-gray-500 ml-4 mt-0.5">
-                                                + {optionText}
+                                        {optionsList.length > 0 && (
+                                            <div className="text-[10px] text-gray-500 ml-4 mt-0.5 flex flex-col">
+                                                {optionsList.map((opt, i) => (
+                                                    <span key={i}>+ {opt}</span>
+                                                ))}
                                             </div>
                                         )}
                                     </div>

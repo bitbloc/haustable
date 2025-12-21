@@ -103,27 +103,28 @@ const InstallPrompt = () => {
 
 // Helper for formatting time (Moved to utils but kept here for existing render references if any, mapped to util)
 // Helper Component for Options
+// Helper Component for Options
 const renderOrderOptions = (item, optionMap) => {
-    let text = '';
+    let options = [];
     
     if (Array.isArray(item.selected_options)) {
         // [{name: 'Sweet', price: 0}, ...]
-        text = item.selected_options
-            .map(opt => typeof opt === 'object' 
-                ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` 
-                : opt
-            ).join(', ');
+        options = item.selected_options.map(opt => 
+            typeof opt === 'object' ? opt.name : opt
+        );
     } else if (item.selected_options && typeof item.selected_options === 'object') {
         // Map of IDs
         const ids = Object.values(item.selected_options).flat();
-        text = ids.map(id => optionMap[id] || id).join(', ');
+        options = ids.map(id => optionMap[id] || id);
     }
 
-    if (!text) return null;
+    if (options.length === 0) return null;
 
     return (
-        <div className="text-gray-500 text-sm mt-1 font-medium">
-            └ {text}
+        <div className="text-gray-500 text-sm mt-1 font-medium flex flex-col gap-0.5">
+            {options.map((opt, i) => (
+                <div key={i}>└ {opt}</div>
+            ))}
         </div>
     );
 };

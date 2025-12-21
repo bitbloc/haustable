@@ -120,7 +120,7 @@ const translations = {
         lineChat: 'แชทไลน์ (LINE)',
         sendToLine: 'ส่งเข้า LINE',
         addToCalendar: 'ลงปฏิทิน',
-        saveSlip: 'บันทึกใบเสร็จ',
+        saveSlip: 'บันทึกใบรับออเดอร์',
         saving: 'กำลังบันทึก...',
         slipNotePickup: '*บันทึกได้เมื่ออาหารเสร็จแล้ว',
         slipNoteBooking: '*บันทึกได้เมื่อยืนยันโต๊ะแล้ว',
@@ -138,7 +138,7 @@ const translations = {
         stepPickupPending: 'รอรับออเดอร์',
         stepPickupConfirmed: 'กำลังเตรียม',
         stepPickupPreparing: 'กำลังปรุงอาหาร',
-        stepPickupReady: 'อาหารเสร็จแล้ว',
+        stepPickupReady: 'พร้อมรับออเดอร์',
         stepPickupCompleted: 'รับสินค้าแล้ว',
 
         // Booking Components
