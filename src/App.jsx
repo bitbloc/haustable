@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
-import { ToastProvider } from './context/ToastContext'
+// import { ToastProvider } from './context/ToastContext' -> Removed
 import { BookingProvider } from './context/BookingContext'
 import { Toaster } from 'sonner' // Added
 
@@ -80,7 +80,7 @@ function App() {
   }, [])
 
   return (
-    <ToastProvider>
+    <div className="app-container">
       <Toaster position="top-center" richColors closeButton />
       <BookingProvider>
         <Router>
@@ -109,7 +109,7 @@ function App() {
           </Routes>
         </Router>
       </BookingProvider>
-    </ToastProvider>
+    </div>
   )
 }
 

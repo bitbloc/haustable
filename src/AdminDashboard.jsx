@@ -4,7 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import { RotateCcw } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
-import { useToast } from './context/ToastContext'
+import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 
 // Components
@@ -12,7 +12,7 @@ import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 
 export default function AdminDashboard() {
-    const { toast } = useToast()
+    // const { toast } = useToast() -> Removed, uses import now
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
 
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings

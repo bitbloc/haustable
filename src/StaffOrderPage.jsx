@@ -308,26 +308,43 @@ export default function StaffOrderPage() {
             .channel('staff-orders')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bookings' }, 
                 async (payload) => {
-                    const newOrder = payload.new
-                    if (newOrder.status === 'pending') {
+                    const newOrderId = payload.new.id
+                    
+                    // Fetch full details for notification & state
+                    const { data: fullOrder, error } = await supabase
+                        .from('bookings')
+                        .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                        .eq('id', newOrderId)
+                        .single()
+
+                    if (error || !fullOrder) {
+                        console.error("Error fetching new order details:", error)
+                        debouncedFetchLiveOrders() // Fallback
+                        return
+                    }
+
+                    if (fullOrder.status === 'pending') {
                         playAlarm()
-                        showSystemNotification('มีรายการใหม่', `โต๊ะ: ${newOrder.table_id || '?'} - ${newOrder.total_amount}.-`)
+                        
+                        const tableName = fullOrder.tables_layout?.table_name || 'Pickup'
+                        const price = fullOrder.total_amount
+                        
+                        showSystemNotification('มีรายการใหม่', `โต๊ะ: ${tableName} - ${price}.-`)
                         
                         // Sonner Toast with Accept Action
-                        toast.message(`โต๊ะ ${newOrder.table_id || '?'} สั่งอาหารใหม่!`, {
-                            description: `${newOrder.total_amount} บาท`,
-                            duration: Infinity, // Stay until clicked
+                        toast.message(`โต๊ะ ${tableName} สั่งอาหารใหม่!`, {
+                            description: `${price} บาท`,
+                            duration: Infinity, 
                             action: {
                                 label: 'รับออเดอร์ (Accept)',
-                                onClick: () => updateStatus(newOrder.id, 'confirmed')
+                                onClick: () => updateStatus(fullOrder.id, 'confirmed')
                             },
                         })
 
                         setOrders(prev => {
-                            if (prev.find(o => o.id === newOrder.id)) return prev
-                            return [...prev, { ...newOrder, isOptimistic: true }]
+                            if (prev.find(o => o.id === fullOrder.id)) return prev
+                            return [...prev, fullOrder]
                         })
-                        debouncedFetchLiveOrders()
                     }
                 }
             )
