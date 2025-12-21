@@ -63,9 +63,13 @@ export default function SlipModal({ booking, type, onClose }) {
             // Map IDs to Names
             let opts = ''
             if (item.selected_options) {
-                const ids = Object.values(item.selected_options).flat()
-                if (ids.length > 0) {
-                    opts = ids.map(id => getOptionName(id)).join(', ')
+                if (Array.isArray(item.selected_options)) {
+                     opts = item.selected_options.map(opt => typeof opt === 'object' ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` : opt).join(', ')
+                } else if (typeof item.selected_options === 'object') {
+                    const ids = Object.values(item.selected_options).flat()
+                    if (ids.length > 0) {
+                        opts = ids.map(id => getOptionName(id)).join(', ')
+                    }
                 }
             }
 
@@ -175,8 +179,12 @@ export default function SlipModal({ booking, type, onClose }) {
                                 // Map Options in Render
                                 let optionText = ''
                                 if (item.selected_options) {
-                                    const ids = Object.values(item.selected_options).flat()
-                                    optionText = ids.map(id => optionMap[id] || id).join(', ')
+                                    if (Array.isArray(item.selected_options)) {
+                                         optionText = item.selected_options.map(opt => typeof opt === 'object' ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` : opt).join(', ')
+                                    } else if (typeof item.selected_options === 'object') {
+                                        const ids = Object.values(item.selected_options).flat()
+                                        optionText = ids.map(id => optionMap[id] || id).join(', ')
+                                    }
                                 }
 
                                 return (

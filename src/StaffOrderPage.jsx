@@ -809,7 +809,7 @@ export default function StaffOrderPage() {
                                                         {(() => {
                                                             let text = ''
                                                             if (Array.isArray(item.selected_options)) {
-                                                                text = item.selected_options.join(', ')
+                                                                text = item.selected_options.map(opt => typeof opt === 'object' ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` : opt).join(', ')
                                                             } else if (item.selected_options && typeof item.selected_options === 'object') {
                                                                 const ids = Object.values(item.selected_options).flat()
                                                                 text = ids.map(id => optionMap[id] || id).join(', ')
