@@ -4,6 +4,7 @@ import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, AlertTriangle } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
+import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { formatThaiTimeOnly, formatThaiDateLong } from './utils/timeUtils'
@@ -140,21 +141,18 @@ export default function StaffOrderPage() {
 
     // Locked Handlers
     const onLockRequest = useCallback(() => console.log('Screen locked!'), [])
-    const onLockRelease = useCallback(() => console.log('Screen unlocked!'), [])
     const onLockError = useCallback(() => console.error('Wake Lock error'), [])
 
     const { isSupported, isLocked, request, release } = useWakeLock({
         onRequest: onLockRequest,
-        onRelease: onLockRelease,
         onError: onLockError
     })
     
-    // Audio Refs
-    const audioRef = useRef(new Audio())
+    // Audio Hook
     const [soundUrl, setSoundUrl] = useState(null)
-    const [isPlaying, setIsPlaying] = useState(false)
+    const { play, stop, isPlaying, error: audioError } = useAudioAlert(soundUrl)
 
-    // Init
+    // Init Logic to get Sound URL
     useEffect(() => {
         const init = async () => {
             const savedAuth = localStorage.getItem('staff_auth')
@@ -163,11 +161,38 @@ export default function StaffOrderPage() {
             const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
             if (data?.value) {
                 setSoundUrl(data.value)
-                audioRef.current.src = data.value
-                audioRef.current.loop = true
             }
         }
         init()
+    }, [])
+
+    // --- Title Flashing for Background ---
+    useEffect(() => {
+        let interval
+        if (orders.some(o => o.status === 'pending') && document.hidden) {
+             let toggle = false
+             interval = setInterval(() => {
+                 document.title = toggle ? "🔔 🔔 🔔" : `(${orders.length}) New Order!`
+                 toggle = !toggle
+             }, 1000)
+        } else {
+            document.title = "Staff View | In The Haus"
+        }
+        return () => {
+            if (interval) clearInterval(interval)
+            document.title = "Staff View | In The Haus"
+        }
+    }, [orders]) // document.hidden is not reactive, but visibilitychange listener below can handle reset if needed, or rely on orders update.
+    // Actually, we need to LISTEN to visibility change to start/stop flashing if orders exist.
+    
+    useEffect(() => {
+        const handleVis = () => {
+            if (!document.hidden) {
+                document.title = "Staff View | In The Haus"
+            }
+        }
+        document.addEventListener("visibilitychange", handleVis)
+        return () => document.removeEventListener("visibilitychange", handleVis)
     }, [])
 
     // --- Debounce Helper ---
@@ -195,11 +220,32 @@ export default function StaffOrderPage() {
             return () => {
                 supabase.removeChannel(channel)
                 if (isLocked) release()
-                stopAlarm()
+                stop()
                 clearInterval(pollInterval)
             }
         }
-    }, [isAuthenticated, isSoundChecked]) // Removed request/release/isSupported dependencies to prevent loops if they are stable
+    }, [isAuthenticated, isSoundChecked]) 
+
+    // Alarm Logic
+    useEffect(() => {
+        if (!isAuthenticated || !isSoundChecked) return
+        if (orders.some(o => o.status === 'pending')) {
+            play()
+        } else {
+            stop()
+        }
+    }, [orders, isAuthenticated, isSoundChecked, soundUrl, play, stop])
+    
+    // Handle Audio Error (Permissions)
+    useEffect(() => {
+        if (audioError) {
+             toast.error(audioError, {
+                 description: "Tap here to unmute",
+                 action: { label: "Unmute", onClick: () => play() },
+                 duration: Infinity
+             })
+        }
+    }, [audioError, play])
 
     // Load History or Schedule when tab changes
     useEffect(() => {
@@ -219,33 +265,7 @@ export default function StaffOrderPage() {
         }
     }, [orders, isAuthenticated, isSoundChecked, soundUrl])
 
-    // --- Audio Control ---
-    const playAlarm = () => {
-        if (isPlaying) return // Guard against spam
-        if (!audioRef.current.src && soundUrl) audioRef.current.src = soundUrl
-        
-        try {
-            const playPromise = audioRef.current.play()
-            if (playPromise !== undefined) {
-                 playPromise.then(() => setIsPlaying(true)).catch(e => {
-                     console.error("Audio Play Error:", e)
-                     setIsPlaying(false)
-                 })
-            }
-        } catch (e) {
-            console.error("Audio Critical Error:", e)
-        }
-    }
 
-    const stopAlarm = () => {
-        try {
-            audioRef.current.pause()
-            audioRef.current.currentTime = 0
-            setIsPlaying(false)
-        } catch (e) {
-            console.error("Audio Stop Error:", e)
-        }
-    }
 
     // --- Notification ---
     const requestNotificationPermission = async () => {
@@ -256,21 +276,31 @@ export default function StaffOrderPage() {
     const showSystemNotification = (title, body) => {
         if (Notification.permission === 'granted') {
             try {
-                // Minimal options to prevent Android native crashes
+                // Aggressive Notification Options for background visibility
                 const options = {
                     body: body,
                     icon: '/icons/icon-192x192.png',
-                    tag: 'new-order',
-                    renotify: true
+                    tag: 'new-order', // Replaces previous notification with same tag
+                    renotify: true,   // Play sound/vibrate again even if replacing
+                    requireInteraction: true, // Keep on screen until clicked (Chrome)
+                    silent: false
                 }
 
-                const n = new Notification(title, options)
-                
-                n.onclick = function(e) {
-                    e.preventDefault()
-                    window.focus()
-                    n.close()
+                // If Service Worker Registration is available, use it (More robust on Android)
+                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                     navigator.serviceWorker.ready.then(registration => {
+                         registration.showNotification(title, options)
+                     })
+                } else {
+                    // Fallback to standard API
+                    const n = new Notification(title, options)
+                    n.onclick = function(e) {
+                        e.preventDefault()
+                        window.focus()
+                        n.close()
+                    }
                 }
+
             } catch (e) {
                 console.error("Notification Error:", e)
             }
@@ -372,7 +402,7 @@ export default function StaffOrderPage() {
     }
 
     const triggerNewOrderAlert = (order) => {
-        playAlarm() 
+        play() 
         const tableName = order.tables_layout?.table_name || 'Pickup'
         const price = order.total_amount
         showSystemNotification('มีรายการใหม่', `โต๊ะ: ${tableName} - ${price}.-`)
@@ -480,7 +510,7 @@ export default function StaffOrderPage() {
         setIsSoundChecked(false)
         localStorage.removeItem('staff_auth')
         setPinInput('')
-        stopAlarm()
+        stop()
     }
 
     const updateStatus = async (id, newStatus) => {
@@ -563,13 +593,13 @@ export default function StaffOrderPage() {
 
                     <div className="space-y-3">
                          <button 
-                            onClick={() => { playAlarm(); requestNotificationPermission(); }}
+                            onClick={() => { play(); requestNotificationPermission(); }}
                             className="w-full bg-white border border-gray-200 text-[#1A1A1A] font-bold py-3 rounded-xl hover:bg-gray-50 transition"
                         >
                             Test Sound & Permission
                         </button>
                         <button 
-                            onClick={() => { stopAlarm(); setIsSoundChecked(true); }}
+                            onClick={() => { stop(); setIsSoundChecked(true); }}
                             className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-lg shadow-black/10"
                         >
                             Start Work
