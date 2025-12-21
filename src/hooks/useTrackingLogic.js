@@ -17,6 +17,7 @@ export function useTrackingLogic(token) {
       if (apiError) throw apiError
       if (resData.error) {
         if (resData.code === 'TOKEN_EXPIRED') throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
+        if (resData.code === 'NOT_FOUND') throw new Error('ไม่พบข้อมูลการจอง (Booking not found)')
         throw new Error(resData.error)
       }
 
