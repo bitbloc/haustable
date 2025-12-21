@@ -19,23 +19,14 @@ export const fetchAndSortMenu = async () => {
     }, {})
 
     const sortedMenu = (menuRaw || []).sort((a, b) => {
-        // 1. Group by Category (Already implicit if grouped, but good for flat list)
-        // (Assuming input is already filtered/flat, but if mixed categories exist:)
-        // const catOrderA = categoryOrder[a.category] ?? 999;
-        // const catOrderB = categoryOrder[b.category] ?? 999;
-        // if (catOrderA !== catOrderB) return catOrderA - catOrderB;
-
-        // 2. Recommended Priority (VIP Lane)
-        if (a.is_recommended !== b.is_recommended) {
-            return a.is_recommended ? -1 : 1;
-        }
+        // 1. Group by Category (Already implicit if grouped)
         
-        // 3. Strict Display Order (Standard Lane)
+        // 2. Strict Display Order (Manual Sort)
         const orderA = a.display_order ?? 999999;
         const orderB = b.display_order ?? 999999;
         if (orderA !== orderB) return orderA - orderB;
 
-        // 4. Fallback (Name)
+        // 3. Fallback (Name)
         return a.name.localeCompare(b.name)
     })
 

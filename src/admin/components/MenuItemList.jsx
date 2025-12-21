@@ -451,10 +451,7 @@ export default function MenuItemList() {
                 {categories.map(cat => {
                     const items = menuItems
                             .filter(i => i.category_id === cat.id || (!i.category_id && i.category === cat.name))
-                            .sort((a,b) => {
-                                if (a.is_recommended !== b.is_recommended) return a.is_recommended ? -1 : 1
-                                return (a.display_order || 9999) - (b.display_order || 9999)
-                            }) 
+                            .sort((a,b) => (a.display_order || 9999) - (b.display_order || 9999)) 
 
                     if (items.length === 0) return null
 
