@@ -11,6 +11,7 @@ import { useTrackingLogic } from './hooks/useTrackingLogic'
 import { useStatusConfig } from './hooks/useStatusConfig'
 import BookingSlip from './components/tracking/BookingSlip'
 import StatusTracker from './components/tracking/StatusTracker'
+import OrderSummary from './components/tracking/OrderSummary'
 import SlipPreviewModal from './components/tracking/SlipPreviewModal'
 
 export default function TrackingPage() {
