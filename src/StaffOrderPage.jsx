@@ -1041,9 +1041,23 @@ export default function StaffOrderPage() {
                                             <span className="text-xs font-mono text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
                                                  #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
                                             </span>
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wide ${order.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                {order.status === 'confirmed' ? 'Done' : 'Void'}
-                                            </span>
+                                            {(() => {
+                                                const getStatusConfig = (s) => {
+                                                    switch(s) {
+                                                        case 'completed': return { label: 'Completed', color: 'bg-green-100 text-green-800' }
+                                                        case 'cancelled': return { label: 'Cancel', color: 'bg-red-100 text-red-800' }
+                                                        case 'void': return { label: 'VOID', color: 'bg-red-100 text-red-800 font-black' }
+                                                        case 'confirmed': return { label: 'Active', color: 'bg-blue-100 text-blue-800' }
+                                                        default: return { label: s, color: 'bg-gray-100 text-gray-600' }
+                                                    }
+                                                }
+                                                const config = getStatusConfig(order.status)
+                                                return (
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wide ${config.color}`}>
+                                                        {config.label}
+                                                    </span>
+                                                )
+                                            })()}
                                         </div>
                                         <div className="text-xs text-gray-500 font-mono">
                                             {formatTime(order.booking_date, order.booking_time)} • {order.total_amount}.-
