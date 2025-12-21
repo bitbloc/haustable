@@ -230,7 +230,8 @@ export default function PickupPage() {
                 promotion_code_id: appliedPromo?.id || null, 
                 discount_amount: appliedPromo?.discountAmount || 0,
                 total_amount: finalTotal,
-                tracking_token: crypto.randomUUID() // Ensure token exists
+                tracking_token: crypto.randomUUID(), // Ensure token exists
+                payment_slip_url: fileName // Add Slip URL (Filename path)
             }
             const orderItemsPayload = cart.map(item => ({
                 menu_item_id: item.id,

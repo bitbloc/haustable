@@ -106,7 +106,7 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled }) {
                        </div>
                        
                        <div className="space-y-3 mb-8 text-sm">
-                           <SlipRow label="Guest" value={data.profiles?.display_name || data.profiles?.first_name ? `คุณ ${data.profiles.display_name || data.profiles.first_name}` : (data.customer_name || data.pickup_contact_name || '-')} />
+                           <SlipRow label="Guest" value={data.profiles?.display_name ? `คุณ ${data.profiles.display_name}` : (data.customer_name || data.pickup_contact_name || '-')} />
                            <SlipRow label="Date" value={new Date(data.booking_time).toLocaleDateString()} />
                            <SlipRow label="Time" value={new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} />
                            

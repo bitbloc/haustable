@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2, ArrowUpDown, History } from 'lucide-react'
+import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, ChefHat, FileText, Trash2, ArrowUpDown, History, Image as ImageIcon } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
@@ -435,7 +435,7 @@ export default function AdminBookings() {
                                                 </button>
                                                 {booking.payment_slip_url && (
                                                     <button onClick={() => setViewSlipUrl(booking.payment_slip_url)} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg" title="View Slip">
-                                                        <Search size={16} />
+                                                        <ImageIcon size={16} />
                                                     </button>
                                                 )}
                                                 <div className="w-px bg-white/10 mx-1"></div>

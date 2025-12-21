@@ -313,7 +313,7 @@ export default function StaffOrderPage() {
                     // Fetch full details for notification & state
                     const { data: fullOrder, error } = await supabase
                         .from('bookings')
-                        .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                        .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                         .eq('id', newOrderId)
                         .single()
 
@@ -367,7 +367,7 @@ export default function StaffOrderPage() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .in('status', ['pending', 'confirmed'])
                 .order('booking_time', { ascending: true })
             
@@ -395,7 +395,7 @@ export default function StaffOrderPage() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .neq('status', 'pending')
                 .gte('created_at', start.toISOString())
                 .lte('created_at', end.toISOString())
@@ -416,7 +416,7 @@ export default function StaffOrderPage() {
             const now = new Date().toISOString()
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (first_name, last_name, display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .eq('status', 'confirmed')
                 .gte('booking_time', now)
                 .order('booking_time', { ascending: true })
@@ -1016,12 +1016,22 @@ export default function StaffOrderPage() {
                                             {formatTime(order.booking_date, order.booking_time)} • {order.total_amount}.-
                                         </div>
                                     </div>
-                                    <button 
-                                        onClick={() => setPrintModal({ isOpen: true, booking: order })}
-                                        className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600"
-                                    >
-                                        <Printer size={18} />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        {order.payment_slip_url && (
+                                            <button 
+                                                onClick={() => setViewSlipUrl(order.payment_slip_url)}
+                                                className="p-3 bg-blue-50 rounded-xl hover:bg-blue-600 hover:text-white transition-colors text-blue-600"
+                                            >
+                                                <ImageIcon size={18} />
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={() => setPrintModal({ isOpen: true, booking: order })}
+                                            className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600"
+                                        >
+                                            <Printer size={18} />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

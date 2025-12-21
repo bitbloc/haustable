@@ -21,38 +21,22 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 
+
 async function checkBookings() {
-    // Latest token from previous step
-    const testToken = '38052b32-8e74-4724-9614-09269f225890' 
-
-    console.log(`Testing query for token: ${testToken}`)
-
-    const { data: booking, error } = await supabase
-      .from("bookings")
-      .select(`
-        *,
-        tables_layout ( table_name ),
-        promotion_codes ( code ),
-        profiles ( display_name, first_name, last_name ),
-        order_items (
-          quantity,
-          price_at_time,
-          selected_options,
-          menu_items ( name, image_url )
-        )
-      `)
-      .eq("tracking_token", testToken)
-      .single()
+    console.log("Checking latest 5 PICKUP bookings...")
+    const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select('id, booking_type, payment_slip_url, status')
+        .eq('booking_type', 'pickup')
+        .order('created_at', { ascending: false })
+        .limit(5)
 
     if (error) {
-        console.error("Query Failed:", error)
-    } else {
-        console.log("Query Successful!")
-        console.log("Status:", booking.status)
-        console.log("Expiry:", booking.token_expires_at)
-        console.log("Table:", booking.tables_layout)
-        console.log("Items:", booking.order_items?.length)
+        console.error("Error fetching bookings:", error)
+        return
     }
+
+    console.table(bookings)
 }
 
 checkBookings()
