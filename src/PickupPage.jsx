@@ -229,7 +229,8 @@ export default function PickupPage() {
                 // Promos
                 promotion_code_id: appliedPromo?.id || null, 
                 discount_amount: appliedPromo?.discountAmount || 0,
-                total_amount: finalTotal // CORRECTED: Was missing or wrong scope? It was hardcoded or cartTotal before.
+                total_amount: finalTotal,
+                tracking_token: crypto.randomUUID() // Ensure token exists
             }
             const orderItemsPayload = cart.map(item => ({
                 menu_item_id: item.id,

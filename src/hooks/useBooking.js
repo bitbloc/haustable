@@ -124,7 +124,8 @@ export function useBooking() {
                 pax: state.pax,
                 // Promotion Fields
                 promotion_code_id: promotionData?.id || null, // NEW
-                discount_amount: promotionData?.discountAmount || 0 // NEW
+                discount_amount: promotionData?.discountAmount || 0, // NEW
+                tracking_token: crypto.randomUUID() // Ensure token exists
             }
 
             const orderItemsPayload = state.cart.map(item => ({
