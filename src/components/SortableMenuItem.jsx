@@ -1,20 +1,24 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Pencil, Trash2, Star } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, Star, Lock } from 'lucide-react';
 
 export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }) {
+  const isRecommended = item.is_recommended;
+
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef, // แยกตัวจับลากออกจากกล่องหลัก
     transform,
     transition,
     isDragging
   } = useSortable({ 
     id: item.id,
+    disabled: isRecommended, // Disable Drag for Recommend items (Fixed position)
     data: { 
         category_id: item.category,
-        is_recommended: item.is_recommended
+        is_recommended: isRecommended
     }
   });
 
@@ -25,64 +29,96 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }
     touchAction: 'none'
   };
 
+  // 🎨 Style Config
+  const baseCardStyle = "relative bg-[#18181b] border rounded-2xl overflow-hidden transition-all";
+  const recommendCardStyle = "relative bg-neutral-900 border-neutral-800 rounded-2xl overflow-hidden opacity-90"; // ตัวเทา
+  
+  const currentStyle = isRecommended ? recommendCardStyle : baseCardStyle;
+  const currentBorder = isOverlay ? 'border-[#DFFF00] shadow-[0_0_30px_rgba(223,255,0,0.3)] scale-105 z-50' : (isRecommended ? 'border-neutral-800' : 'border-white/10 hover:border-white/20');
+
+  // --- Mobile Rendering ---
   if (isMobile) {
     return (
       <div 
         ref={setNodeRef} 
         style={style} 
-        className={`flex items-center gap-3 p-3 bg-white/5 border rounded-xl ${isOverlay ? 'border-[#DFFF00] shadow-xl bg-[#1a1a1a]' : 'border-white/10'}`}
+        className={`flex items-center gap-3 p-3 rounded-xl border ${currentBorder} ${isRecommended ? 'bg-neutral-900' : 'bg-white/5'}`}
       >
-        {/* DRAG HANDLE */}
-        <div {...attributes} {...listeners} className="text-gray-500 cursor-grab active:cursor-grabbing p-2">
-            <GripVertical size={20} />
-        </div>
+        {/* DRAG HANDLE (Only for Regular Items) */}
+        {!isRecommended ? (
+            <div 
+                ref={setActivatorNodeRef} 
+                {...attributes} 
+                {...listeners} 
+                className="text-gray-500 cursor-grab active:cursor-grabbing p-2 hover:text-white"
+            >
+                <GripVertical size={20} />
+            </div>
+        ) : (
+            <div className="p-2 text-gray-700">
+                <Lock size={16} />
+            </div>
+        )}
 
         {/* CONTENT */}
-        <img src={item.image_url || '/placeholder.png'} className="w-12 h-12 rounded-lg object-cover bg-gray-800" />
+        <img src={item.image_url || '/placeholder.png'} className={`w-12 h-12 rounded-lg object-cover ${isRecommended ? 'grayscale-[0.5]' : ''}`} />
         <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-white truncate">{item.name}</h3>
+            <h3 className={`font-bold truncate ${isRecommended ? 'text-gray-400' : 'text-white'}`}>{item.name}</h3>
             <div className="flex justify-between items-center">
-                <p className="text-[#DFFF00] text-sm">{item.price}.-</p>
-                {item.is_recommended && <Star size={14} fill="#DFFF00" className="text-[#DFFF00]" />}
+                <p className={`text-sm ${isRecommended ? 'text-gray-500' : 'text-[#DFFF00]'}`}>{item.price}.-</p>
+                {isRecommended && <div className="text-[10px] bg-neutral-800 text-gray-500 px-2 py-0.5 rounded border border-neutral-700">FIXED</div>}
             </div>
         </div>
 
         {/* ACTIONS */}
         <div className="flex gap-2">
-           <button onClick={() => onEdit(item)} className="p-2 text-gray-400 hover:text-white"><Pencil size={16}/></button>
-           <button onClick={() => onDelete(item.id)} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
+           <button onClick={() => onEdit(item)} className="p-2 text-gray-500 hover:text-white transition-colors"><Pencil size={16}/></button>
+           {!isRecommended && <button onClick={() => onDelete(item.id)} className="p-2 text-gray-500 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>}
         </div>
       </div>
     );
   }
 
-  // Desktop Card View
+  // --- Desktop Rendering ---
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes} 
-      {...listeners}
-      className={`relative group bg-[#18181b] border rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing transition-all hover:border-white/20 ${isOverlay ? 'border-[#DFFF00] shadow-[0_0_30px_rgba(223,255,0,0.3)] z-50 scale-105' : 'border-white/10'}`}
+      className={`group ${currentStyle} ${currentBorder}`}
     >
-      <div className="aspect-[4/3] bg-gray-800 relative">
-         <img src={item.image_url || '/placeholder.png'} className="w-full h-full object-cover" />
-         {item.is_recommended && (
-             <div className="absolute top-2 right-2 bg-[#DFFF00] text-black text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                <Star size={12} fill="black" /> Recommended
+        {/* Drag Handle (Desktop) - 6 Dots at Top Right Corner */}
+        {!isRecommended && (
+             <div 
+                ref={setActivatorNodeRef}
+                {...attributes} 
+                {...listeners}
+                className="absolute top-2 right-2 z-20 cursor-grab active:cursor-grabbing p-2 bg-black/50 backdrop-blur-md rounded-lg text-white/50 hover:text-white hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100"
+             >
+                <GripVertical size={16} />
+             </div>
+        )}
+
+      <div className={`aspect-[4/3] relative ${isRecommended ? 'bg-neutral-800' : 'bg-gray-800'}`}>
+         <img src={item.image_url || '/placeholder.png'} className={`w-full h-full object-cover transition-all ${isRecommended ? 'grayscale-[0.5] opacity-70' : ''}`} />
+         
+         {isRecommended && (
+             <div className="absolute top-2 right-2 bg-neutral-800/90 backdrop-blur border border-white/5 text-gray-400 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                <Star size={12} className="text-gray-500" fill="currentColor" /> Recommend
              </div>
          )}
       </div>
+      
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-            <h3 className="font-bold text-lg text-white line-clamp-1">{item.name}</h3>
-            <p className="text-[#DFFF00] font-mono text-lg">{item.price}</p>
+            <h3 className={`font-bold text-lg line-clamp-1 ${isRecommended ? 'text-gray-400' : 'text-white'}`}>{item.name}</h3>
+            <p className={`font-mono text-lg ${isRecommended ? 'text-gray-500' : 'text-[#DFFF00]'}`}>{item.price}</p>
         </div>
-        <div className="flex justify-between items-center mt-2">
-            <span className="text-xs text-gray-500 uppercase tracking-wider">{item.category}</span>
-             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onPointerDown={(e) => e.stopPropagation()} onClick={() => onEdit(item)} className="p-2 hover:bg-white/10 rounded-lg text-gray-300 transition-colors"><Pencil size={18} /></button>
-                <button onPointerDown={(e) => e.stopPropagation()} onClick={() => onDelete(item.id)} className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg transition-colors"><Trash2 size={18} /></button>
+        
+        <div className="flex justify-between items-center mt-4 border-t border-white/5 pt-3">
+            <span className="text-xs text-gray-600 uppercase tracking-wider font-medium">{item.category}</span>
+             <div className="flex gap-1">
+                <button onClick={() => onEdit(item)} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"><Pencil size={16} /></button>
+                {!isRecommended && <button onClick={() => onDelete(item.id)} className="p-2 hover:bg-red-500/10 text-gray-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 size={16} /></button>}
              </div>
         </div>
       </div>
