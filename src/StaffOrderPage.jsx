@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, AlertTriangle } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
@@ -102,16 +102,36 @@ const InstallPrompt = () => {
 }
 
 // Helper for formatting time (Moved to utils but kept here for existing render references if any, mapped to util)
+// Helper Component for Options
+const renderOrderOptions = (item, optionMap) => {
+    let text = '';
+    
+    if (Array.isArray(item.selected_options)) {
+        // [{name: 'Sweet', price: 0}, ...]
+        text = item.selected_options
+            .map(opt => typeof opt === 'object' 
+                ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` 
+                : opt
+            ).join(', ');
+    } else if (item.selected_options && typeof item.selected_options === 'object') {
+        // Map of IDs
+        const ids = Object.values(item.selected_options).flat();
+        text = ids.map(id => optionMap[id] || id).join(', ');
+    }
+
+    if (!text) return null;
+
+    return (
+        <div className="text-gray-500 text-sm mt-1 font-medium">
+            └ {text}
+        </div>
+    );
+};
+
+// Helper for formatting time
 const formatTime = (dateString, timeString) => {
-    if (!dateString) return ''
-    // Use the util but construct ISO if needed or just use timeString if valid
-    // The util takes ISO string.
-    // If we have timeString like "12:00:00", we can just return it trimmed?
-    // Let's stick to the util logic for consistency if we passed ISO.
-    // But original used dateString+timeString.
-    // Let's just use the logic from util: formatThaiTimeOnly accepts ISO.
-    // We can construct a dummy ISO.
-    return timeString?.slice(0, 5) || ''
+    if (!timeString) return '';
+    return timeString.substring(0, 5);
 }
 
 // Thai Date Helper (Mapped to util)
@@ -255,15 +275,6 @@ export default function StaffOrderPage() {
         }
     }, [isAuthenticated, activeTab, historyDate])
 
-    // Alarm Logic
-    useEffect(() => {
-        if (!isAuthenticated || !isSoundChecked) return
-        if (orders.some(o => o.status === 'pending')) {
-            playAlarm() // playAlarm now has internal guards
-        } else {
-            stopAlarm()
-        }
-    }, [orders, isAuthenticated, isSoundChecked, soundUrl])
 
 
 
@@ -380,22 +391,27 @@ export default function StaffOrderPage() {
 
         if (error || !fullOrder) return
 
-        // Update State
+        // Update State & Re-sort
         setOrders(prev => {
+            let newOrders = [];
             const exists = prev.find(o => o.id === fullOrder.id)
+            
             if (exists) {
                 // Update existing
-                return prev.map(o => o.id === fullOrder.id ? fullOrder : o)
+                newOrders = prev.map(o => o.id === fullOrder.id ? fullOrder : o)
             } else {
-                // Add new (if status relevant)
-                 if (['pending', 'confirmed'].includes(fullOrder.status)) {
-                     return [...prev, fullOrder].sort((a, b) => a.booking_time.localeCompare(b.booking_time))
-                 }
-                 return prev
+                // Add new
+                if (['pending', 'confirmed'].includes(fullOrder.status)) {
+                    newOrders = [...prev, fullOrder]
+                } else {
+                    return prev
+                }
             }
+            
+            // Sort to ensure order
+            return newOrders.sort((a, b) => a.booking_time.localeCompare(b.booking_time))
         })
 
-        // Notification Logic for New Pending Orders
         if (isNew && fullOrder.status === 'pending') {
              triggerNewOrderAlert(fullOrder)
         }
@@ -782,7 +798,7 @@ export default function StaffOrderPage() {
                     {/* Manual Refresh & Alert Control */}
                     <div className="flex justify-end mb-4 gap-2">
                         {isPlaying && (
-                            <button onClick={stopAlarm} className="px-4 py-2 bg-[#1A1A1A] text-[#DFFF00] rounded-full text-xs font-bold animate-pulse flex items-center gap-2 shadow-md">
+                            <button onClick={stop} className="px-4 py-2 bg-[#1A1A1A] text-[#DFFF00] rounded-full text-xs font-bold animate-pulse flex items-center gap-2 shadow-md">
                                 <Volume2 className="w-3 h-3" /> Stop Sound
                             </button>
                         )}
@@ -869,22 +885,7 @@ export default function StaffOrderPage() {
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="text-[#1A1A1A] font-bold text-lg leading-tight">{item.menu_items?.name}</div>
-                                                        {(() => {
-                                                            let text = ''
-                                                            if (Array.isArray(item.selected_options)) {
-                                                                text = item.selected_options.map(opt => typeof opt === 'object' ? `${opt.name}${opt.price ? ` (${opt.price})` : ''}` : opt).join(', ')
-                                                            } else if (item.selected_options && typeof item.selected_options === 'object') {
-                                                                const ids = Object.values(item.selected_options).flat()
-                                                                text = ids.map(id => optionMap[id] || id).join(', ')
-                                                            }
-                                                            
-                                                            if (!text) return null
-                                                            return (
-                                                                <div className="text-gray-500 text-sm mt-1">
-                                                                    {text}
-                                                                </div>
-                                                            )
-                                                        })()}
+                                                        {renderOrderOptions(item, optionMap)}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1026,9 +1027,12 @@ export default function StaffOrderPage() {
                                                     <div className="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">Pre-order Items</div>
                                                     <div className="space-y-1">
                                                         {order.order_items.map((item, i) => (
-                                                            <div key={i} className="flex justify-between text-sm text-gray-600">
+                                                        <div key={i} className="flex flex-col text-sm text-gray-600 mb-2">
+                                                            <div className="flex justify-between">
                                                                 <span>{item.quantity}x {item.menu_items?.name}</span>
                                                             </div>
+                                                            {renderOrderOptions(item, optionMap)}
+                                                        </div>
                                                         ))}
                                                     </div>
                                                 </div>
