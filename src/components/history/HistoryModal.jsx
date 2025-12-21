@@ -69,7 +69,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                         {activeOrders.map(order => (
                                             <Link 
                                                 key={order.id}
-                                                to={`/t/${order.short_id}`}
+                                                to={`/t/${order.tracking_token}`}
                                                 onClick={onClose}
                                                 className="block"
                                             >
@@ -85,7 +85,9 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                     <div className="flex justify-between items-start mb-4">
                                                         <div>
                                                             <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-2xl font-black font-mono tracking-tight">#{order.short_id}</span>
+                                                                <span className="text-2xl font-black font-mono tracking-tight">
+                                                                    #{getShortId(order.tracking_token)}
+                                                                </span>
                                                                 <StatusBadge status={order.status} />
                                                             </div>
                                                             <p className="text-xs text-gray-400 font-medium">
@@ -133,7 +135,9 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                     </div>
                                                     <div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-mono font-bold text-gray-900">#{order.short_id}</span>
+                                                            <span className="font-mono font-bold text-gray-900">
+                                                                #{getShortId(order.tracking_token)}
+                                                            </span>
                                                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 uppercase font-bold">
                                                                 {order.status}
                                                             </span>
@@ -145,7 +149,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                 </div>
                                                 
                                                 <Link 
-                                                    to={`/t/${order.short_id}`}
+                                                    to={`/t/${order.tracking_token}`}
                                                     onClick={onClose}
                                                     className="p-2 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                                                 >
@@ -177,4 +181,8 @@ function StatusBadge({ status }) {
             {status}
         </span>
     )
+}
+
+function getShortId(token) {
+    return token ? token.slice(-4).toUpperCase() : '----'
 }
