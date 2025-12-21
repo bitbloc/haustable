@@ -159,7 +159,7 @@ export default function TrackingPage() {
              <div className="bg-gray-50 rounded-xl p-3 mb-4 flex items-center justify-between gap-3 border border-gray-100">
                  <div className="flex-1 min-w-0">
                      <p className="text-[10px] text-gray-400 text-left mb-0.5 uppercase font-bold">{t('trackingLink')}</p>
-                     <p className="text-xs text-blue-600 truncate font-mono text-left">{window.location.host}/t/{data.short_id}</p>
+                     <p className="text-xs text-blue-600 truncate font-mono text-left">{window.location.origin}/t/{data.tracking_token}</p>
                  </div>
                  <button onClick={handleCopyLink} className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-100 transition-colors text-gray-600">
                      <Copy size={16} />

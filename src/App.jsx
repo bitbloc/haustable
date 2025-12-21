@@ -91,6 +91,7 @@ function App() {
               <Route path="/booking" element={<BookingPage />} />
               <Route path="/pickup" element={<PickupPage />} />
               <Route path="/tracking/:token" element={<TrackingPage />} />
+              <Route path="/t/:token" element={<TrackingPage />} />
             </Route>
 
             {/* Admin Routes */}
