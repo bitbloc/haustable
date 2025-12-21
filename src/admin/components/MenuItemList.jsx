@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, Star, AlertCircle, Camera, ShoppingBag } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
 
 export default function MenuItemList() {
     const [menuItems, setMenuItems] = useState([])
@@ -273,6 +273,46 @@ export default function MenuItemList() {
         }
     }
 
+    // --- Drag & Drop for Menu Items ---
+    const handleReorderGroup = (catId, newItemsOrder) => {
+        // newItemsOrder is the *subset* of items for this category, reordered.
+        // We need to merge this back into the main `menuItems` state.
+        
+        // 1. Get items NOT in this category
+        const otherItems = menuItems.filter(i => !(i.category_id === catId || (!i.category_id && i.category === categories.find(c=>c.id===catId)?.name)))
+        
+        // 2. Assign temporary display_order to newItemsOrder based on index to keep state consistent visually
+        const updatedGroup = newItemsOrder.map((item, index) => ({
+            ...item,
+            display_order: index
+        }))
+
+        // 3. Merge
+        setMenuItems([...otherItems, ...updatedGroup])
+    }
+
+    const saveItemOrder = async (items) => {
+        // Items passed here are the *reordered* list for a specific category
+        try {
+            console.log("Saving item order...", items.length)
+             const updates = items.map((item, index) => ({
+                id: item.id,
+                // We only need to update key fields to be safe, ideally just display_order but upsert needs keys
+                // If we use `update` in loop it's safer for partial updates but slower.
+                // Given typical menu size, upsert is okay if we include required fields or if table accepts partial upsert on PK.
+                // Supabase upsert requires all Non-Nullable columns if row doesn't exist? No, if ID matches it updates.
+                // BUT we must pass whatever columns we want to change.
+                display_order: index
+            }))
+
+            const { error } = await supabase.from('menu_items').upsert(updates, { onConflict: 'id', ignoreDuplicates: false })
+            if (error) throw error
+            console.log("Item order saved")
+        } catch (err) {
+            console.error("Failed to save item order", err)
+        }
+    }
+
     return (
         <div className="text-white pb-20">
             {/* Header */}
@@ -289,24 +329,40 @@ export default function MenuItemList() {
             {/* List View */}
             <div className="space-y-8">
                 {categories.map(cat => {
-                    const items = menuItems.filter(i => i.category_id === cat.id || (!i.category_id && i.category === cat.name))
+                    const items = menuItems
+                            .filter(i => i.category_id === cat.id || (!i.category_id && i.category === cat.name))
+                            .sort((a,b) => (a.display_order || 9999) - (b.display_order || 9999)) // Ensure sort visually
+
                     if (items.length === 0) return null
+
                     return (
                         <div key={cat.id}>
                             <h3 className="text-xl font-bold text-[#DFFF00] mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
                                 {cat.name} <span className="text-xs text-gray-500 font-normal">({items.length})</span>
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            
+                            <Reorder.Group 
+                                axis="y" 
+                                values={items} 
+                                onReorder={(newOrder) => handleReorderGroup(cat.id, newOrder)}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                            >
                                 {items.map(item => (
-                                    <div key={item.id} className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all cursor-pointer relative" onClick={() => handleEdit(item)}>
-                                        <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative">
+                                    <Reorder.Item 
+                                        key={item.id} 
+                                        value={item}
+                                        onDragEnd={() => saveItemOrder(items)} // Save the *current* items list order
+                                        className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all cursor-grab active:cursor-grabbing relative relative select-none"
+                                        onClick={() => handleEdit(item)}
+                                    >
+                                        <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative pointer-events-none">
                                             {item.image_url ? (
                                                 <img src={item.image_url} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>
                                             )}
                                         </div>
-                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                        <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
                                             <div>
                                                 <div className="flex justify-between items-start">
                                                     <h4 className="font-bold truncate text-base">{item.name}</h4>
@@ -324,15 +380,16 @@ export default function MenuItemList() {
                                         <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10" onClick={(e) => e.stopPropagation()}>
                                             <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-gray-400' : 'text-gray-600'}`}>Pick-up</span>
                                             <button
+                                                onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
                                                 onClick={(e) => handleTogglePickup(e, item)}
-                                                className={`w-8 h-4 rounded-full p-0.5 transition-colors ${item.is_pickup_available !== false ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                                                className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
                                             >
                                                 <div className={`w-3 h-3 bg-black rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
                                             </button>
                                         </div>
-                                    </div>
+                                    </Reorder.Item>
                                 ))}
-                            </div>
+                            </Reorder.Group>
                         </div>
                     )
                 })}
