@@ -38,7 +38,7 @@ export default function AdminMenu() {
     const [formData, setFormData] = useState({ name: '', price: '', category: 'Main', is_available: true, is_pickup_available: true, is_recommended: false });
     const [imageFile, setImageFile] = useState(null);
     const [activeId, setActiveId] = useState(null);
-    const [activeItem, setActiveItem] = useState(null); // Track the actual item object for validation
+    const [activeItem, setActiveItem] = useState(null); 
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     useEffect(() => {
@@ -70,11 +70,11 @@ export default function AdminMenu() {
         })
     );
 
-    // Group items logic
+    // Group items: Recommend vs Regular (Mutually Exclusive)
     const sections = {
         recommend: menuItems.filter(i => i.is_recommended),
         regular: menuItems
-            .filter(i => !i.is_recommended)
+            .filter(i => !i.is_recommended) // Filter out recommended items
             .reduce((acc, item) => {
                  if (!acc[item.category]) acc[item.category] = [];
                  acc[item.category].push(item);
@@ -94,39 +94,44 @@ export default function AdminMenu() {
     const handleDragOver = (event) => {
         const { active, over } = event;
         if (!over) return;
-        if (active.id === over.id) return;
 
         const activeItemLocal = menuItems.find(i => i.id === active.id);
-        const overItemLocal = menuItems.find(i => i.id === over.id);
-        
         if (!activeItemLocal) return;
 
+        // 1. Identify Target Group
         let targetGroup = null;
+        const overItemLocal = menuItems.find(i => i.id === over.id);
+
         if (overItemLocal) {
             targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
         } else {
+             // Dropping on Container
              if (over.id === 'container-recommend') targetGroup = 'recommend';
              else if (over.id.startsWith('container-')) targetGroup = over.id.replace('container-', '');
         }
         
         if (!targetGroup) return;
 
-        const currentGroup = activeItemLocal.is_recommended ? 'recommend' : activeItemLocal.category;
-        const sourceCategory = activeItemLocal.category;
-
-        if (targetGroup !== 'recommend' && targetGroup !== sourceCategory) {
+        // 2. Strict Rules: No cross-category unless Recommend
+        if (targetGroup !== 'recommend' && targetGroup !== activeItemLocal.category) {
             return;
         }
 
-        const isTargetRecommend = targetGroup === 'recommend';
+        // 3. Promote/Demote State Change Logic
+        const isCurrentlyRecommended = activeItemLocal.is_recommended;
+        const isTargetRecommend = (targetGroup === 'recommend');
         
-        if (activeItemLocal.is_recommended !== isTargetRecommend) {
-             setMenuItems(prev => {
-                 const newItems = [...prev];
-                 const index = newItems.findIndex(i => i.id === active.id);
-                 if (index !== -1) {
-                     newItems[index] = { ...newItems[index], is_recommended: isTargetRecommend };
-                 }
+        if (isCurrentlyRecommended !== isTargetRecommend) {
+             setMenuItems((items) => {
+                 const activeIndex = items.findIndex((i) => i.id === active.id);
+                 if (activeIndex === -1) return items;
+
+                 const newItems = [...items];
+                 // Update status immediately for fluid UI
+                 newItems[activeIndex] = { 
+                     ...newItems[activeIndex], 
+                     is_recommended: isTargetRecommend 
+                 };
                  return newItems;
              });
         }
@@ -139,44 +144,27 @@ export default function AdminMenu() {
 
         if (!over) return;
         
-        const item = menuItems.find(i => i.id === active.id);
-        if (!item) return;
+        if (active.id === over.id) return;
 
-        let targetGroup = null;
-        const overItemLocal = menuItems.find(i => i.id === over.id);
-        if (overItemLocal) {
-            targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
-        } else if (over.id.startsWith('container-')) {
-            targetGroup = over.id === 'container-recommend' ? 'recommend' : over.id.replace('container-', '');
+        // Finalize Reorder
+        const oldIndex = menuItems.findIndex((i) => i.id === active.id);
+        const newIndex = menuItems.findIndex((i) => i.id === over.id);
+
+        let finalItems = menuItems;
+        if (oldIndex !== -1 && newIndex !== -1) {
+            finalItems = arrayMove(menuItems, oldIndex, newIndex);
         }
 
-        if (!targetGroup) return;
+        setMenuItems(finalItems);
 
-        if (targetGroup !== 'recommend' && targetGroup !== item.category) {
-            return;
-        }
+        // Persist to DB
+        const updates = finalItems.map((i, index) => ({
+            id: i.id,
+            sort_order: index,
+            is_recommended: i.is_recommended
+        }));
 
-        if (active.id !== over.id) {
-             setMenuItems((items) => {
-                const oldIndex = items.findIndex((i) => i.id === active.id);
-                const newIndex = items.findIndex((i) => i.id === over.id);
-                return arrayMove(items, oldIndex, newIndex);
-            });
-            
-             const oldIndex = menuItems.findIndex((i) => i.id === active.id);
-             const newIndex = menuItems.findIndex((i) => i.id === over.id);
-             let finalItems = menuItems;
-             if (oldIndex !== -1 && newIndex !== -1) {
-                 finalItems = arrayMove(menuItems, oldIndex, newIndex);
-             }
-             
-            const updates = finalItems.map((i, index) => ({
-                id: i.id,
-                sort_order: index,
-                is_recommended: i.is_recommended
-            }));
-            await supabase.from('menu_items').upsert(updates);
-        }
+        await supabase.from('menu_items').upsert(updates);
     };
 
     const handleSubmit = async (e) => {
@@ -240,7 +228,7 @@ export default function AdminMenu() {
                 <div className="flex justify-between items-center mb-8 sticky top-0 bg-[#09090b] z-40 py-4 border-b border-white/5">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Menu Management</h1>
-                        <p className="text-gray-500 hidden md:block">Drag & Drop เพื่อจัดเรียง • แยก Recommend และรายการตามหมวดหมู่</p>
+                        <p className="text-gray-500 hidden md:block">Drag & Drop เพื่อจัดเรียง • แนะนำให้ลากเมนูขึ้น "Recommend" เพื่อโปรโมท</p>
                     </div>
                     <button
                         onClick={() => { resetForm(); setIsModalOpen(true); }}
