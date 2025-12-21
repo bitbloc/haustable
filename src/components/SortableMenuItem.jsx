@@ -3,19 +3,21 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil, Trash2, Star, Lock } from 'lucide-react';
 
 export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }) {
+  if (!item) return null; // Safety check
+
   const isRecommended = item.is_recommended;
 
   const {
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef, // แยกตัวจับลากออกจากกล่องหลัก
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging
   } = useSortable({ 
     id: item.id,
-    disabled: isRecommended, // Disable Drag for Recommend items (Fixed position)
+    disabled: isRecommended, 
     data: { 
         category_id: item.category,
         is_recommended: isRecommended
@@ -29,9 +31,8 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }
     touchAction: 'none'
   };
 
-  // 🎨 Style Config
   const baseCardStyle = "relative bg-[#18181b] border rounded-2xl overflow-hidden transition-all";
-  const recommendCardStyle = "relative bg-neutral-900 border-neutral-800 rounded-2xl overflow-hidden opacity-90"; // ตัวเทา
+  const recommendCardStyle = "relative bg-neutral-900 border-neutral-800 rounded-2xl overflow-hidden opacity-90";
   
   const currentStyle = isRecommended ? recommendCardStyle : baseCardStyle;
   const currentBorder = isOverlay ? 'border-[#DFFF00] shadow-[0_0_30px_rgba(223,255,0,0.3)] scale-105 z-50' : (isRecommended ? 'border-neutral-800' : 'border-white/10 hover:border-white/20');
@@ -44,7 +45,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }
         style={style} 
         className={`flex items-center gap-3 p-3 rounded-xl border ${currentBorder} ${isRecommended ? 'bg-neutral-900' : 'bg-white/5'}`}
       >
-        {/* DRAG HANDLE (Only for Regular Items) */}
+        {/* DRAG HANDLE */}
         {!isRecommended ? (
             <div 
                 ref={setActivatorNodeRef} 
@@ -86,13 +87,13 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }
       style={style}
       className={`group ${currentStyle} ${currentBorder}`}
     >
-        {/* Drag Handle (Desktop) - 6 Dots at Top Right Corner */}
+        {/* Drag Handle (Desktop) - ALWAYS VISIBLE but dim */}
         {!isRecommended && (
              <div 
                 ref={setActivatorNodeRef}
                 {...attributes} 
                 {...listeners}
-                className="absolute top-2 right-2 z-20 cursor-grab active:cursor-grabbing p-2 bg-black/50 backdrop-blur-md rounded-lg text-white/50 hover:text-white hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100"
+                className="absolute top-2 right-2 z-20 cursor-grab active:cursor-grabbing p-2 bg-black/40 backdrop-blur-md rounded-lg text-white/50 hover:text-white hover:bg-black/80 transition-all"
              >
                 <GripVertical size={16} />
              </div>

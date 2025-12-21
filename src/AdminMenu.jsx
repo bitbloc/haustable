@@ -39,9 +39,12 @@ export default function AdminMenu() {
     const [imageFile, setImageFile] = useState(null);
     const [activeId, setActiveId] = useState(null);
     const [activeItem, setActiveItem] = useState(null); 
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    // Safe initialization for SSR
+    const [isMobile, setIsMobile] = useState(false); 
 
     useEffect(() => {
+        // Run checks only on client side
+        setIsMobile(window.innerWidth < 768);
         fetchMenu();
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener('resize', handleResize);
