@@ -48,7 +48,7 @@ serve(async (req) => {
         *,
         tables_layout ( table_name ),
         promotion_codes ( code ),
-        profiles ( display_name, first_name, last_name ),
+        profiles ( display_name ),
         order_items (
           quantity,
           price_at_time,
