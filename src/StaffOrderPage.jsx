@@ -645,6 +645,15 @@ export default function StaffOrderPage() {
                     </div>
                     
                     <InstallPrompt />
+
+                    <div className="pt-4 mt-4 border-t border-gray-100">
+                        <button 
+                            onClick={() => window.location.href = '/staff.html'}
+                            className="text-xs text-gray-400 hover:text-gray-600 underline"
+                        >
+                            Switch to Sunmi T2 Mode (Staff App)
+                        </button>
+                    </div>
                 </div>
             </div>
         )
@@ -690,6 +699,15 @@ export default function StaffOrderPage() {
                     </form>
 
                     <InstallPrompt />
+                    
+                    <div className="pt-4 mt-4 border-t border-gray-100">
+                        <button 
+                            onClick={() => window.location.href = '/staff.html'}
+                            className="text-xs text-gray-400 hover:text-gray-600 underline"
+                        >
+                            Switch to Sunmi T2 Mode (Staff App)
+                        </button>
+                    </div>
                 </div>
             </div>
         )
