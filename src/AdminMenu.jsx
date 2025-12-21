@@ -38,6 +38,7 @@ export default function AdminMenu() {
     const [formData, setFormData] = useState({ name: '', price: '', category: 'Main', is_available: true, is_pickup_available: true, is_recommended: false });
     const [imageFile, setImageFile] = useState(null);
     const [activeId, setActiveId] = useState(null);
+    const [activeItem, setActiveItem] = useState(null); // Track the actual item object for validation
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     useEffect(() => {
@@ -53,7 +54,7 @@ export default function AdminMenu() {
             .from('menu_items')
             .select('*')
             .order('sort_order', { ascending: true })
-            .order('created_at', { ascending: false }); // Fallback
+            .order('created_at', { ascending: false });
         setMenuItems(data || []);
         setLoading(false);
     };
@@ -61,7 +62,7 @@ export default function AdminMenu() {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Prevent accidental drags
+                distance: 8,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -69,93 +70,153 @@ export default function AdminMenu() {
         })
     );
 
-    const handleDragStart = (event) => {
-        setActiveId(event.active.id);
+    // Group items logic
+    const sections = {
+        recommend: menuItems.filter(i => i.is_recommended),
+        regular: menuItems
+            .filter(i => !i.is_recommended)
+            .reduce((acc, item) => {
+                 if (!acc[item.category]) acc[item.category] = [];
+                 acc[item.category].push(item);
+                 return acc;
+            }, {})
     };
 
-    const onDragOver = (event) => {
+    // Helper to get defined categories (ensure order if needed, or just Object.keys)
+    // We can just use the categories found in the data, plus standard ones to ensure they appear even if empty?
+    // For now, let's just use keys from data to avoid empty empty sections unless critical.
+    const categories = Object.keys(sections.regular).sort(); 
+
+    const handleDragStart = (event) => {
+        const { active } = event;
+        setActiveId(active.id);
+        const item = menuItems.find(i => i.id === active.id);
+        setActiveItem(item);
+    };
+
+    const handleDragOver = (event) => {
         const { active, over } = event;
         if (!over) return;
         if (active.id === over.id) return;
+
+        // Find containers (using data attribute or inferring?)
+        // dnd-kit `over.data.current.sortable.containerId` helps if we set id on SortableContext?
+        // But simpler: check the item's category or "recommend" status in our LOCAL state.
         
-        // Strategy: We visualize items in two groups (VIP and Regular)
-        // But we treat them as one flat list in state to simplify "moving between groups".
-        // The VISUAL grouping is derived from `item.is_recommended`.
-        // If we drag a Regular item into the VIP list, we need to anticipate the switch.
+        const activeItemLocal = menuItems.find(i => i.id === active.id);
+        const overItemLocal = menuItems.find(i => i.id === over.id);
         
-        // However, dnd-kit's SortableContext requires the items passed to it to match what's in the DOM.
-        // So we strictly use two SortableContexts.
+        if (!activeItemLocal) return; // Should not happen
+
+        // Determine "Target Group" based on over item
+        // If sorting over a placeholder or empty container, logic differs. 
+        // Assuming we drag over ITEMS for now.
         
-        // To allow moving between them, we need to update the state during DragOver.
-        // We check if the active item is moving into a different group.
+        let targetGroup = null;
+        if (overItemLocal) {
+            targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
+        } else {
+            // Dragging over a Droppable Container (e.g. Empty Category)
+            // We need to allow dropping into empty containers. 
+            // We'll give containers IDs like "container-recommend" or "container-Main"
+             if (over.id === 'container-recommend') targetGroup = 'recommend';
+             else if (over.id.startsWith('container-')) targetGroup = over.id.replace('container-', '');
+        }
         
-        const activeItem = menuItems.find(i => i.id === active.id);
-        const overItem = menuItems.find(i => i.id === over.id);
+        if (!targetGroup) return;
+
+        // LOGIC:
+        // 1. Recommend -> Recommend: OK
+        // 2. Recommend -> Regular (Matching Category): OK (Update is_recommended = false)
+        // 3. Recommend -> Regular (Mismatch): BLOCK
+        // 4. Regular -> Recommend: OK (Update is_recommended = true)
+        // 5. Regular -> Regular (Matching Category): OK
+        // 6. Regular -> Regular (Mismatch): BLOCK
+
+        const currentGroup = activeItemLocal.is_recommended ? 'recommend' : activeItemLocal.category;
+        const sourceCategory = activeItemLocal.category; // Always the valid 'home' category
+
+        // Allow move if:
+        // - Target is Recommend
+        // - Target is Source Category (whether currently Recommended or not)
         
-        if (!activeItem || !overItem) return;
+        // If Target is DIFFERENT regular category, BLOCK.
+        if (targetGroup !== 'recommend' && targetGroup !== sourceCategory) {
+            // INVALID MOVE. Do nothing (visuals will revert on drop)
+            return;
+        }
+
+        // Apply Optimistic Update
+        // Check if we need to change group (Regular <-> Recommend)
+        const isTargetRecommend = targetGroup === 'recommend';
         
-        // Using "is_recommended" as the Group Identifier
-        if (activeItem.is_recommended !== overItem.is_recommended) {
-            setMenuItems((items) => {
-                const activeIndex = items.findIndex(i => i.id === active.id);
-                const overIndex = items.findIndex(i => i.id === over.id);
-                
-                if (activeIndex === -1 || overIndex === -1) return items;
-                
-                // Copy
-                const newItems = [...items];
-                // Remove active
-                const [movedItem] = newItems.splice(activeIndex, 1);
-                // Update its group
-                movedItem.is_recommended = overItem.is_recommended;
-                
-                // Insert at new position
-                // Note: Index calculation is tricky when groups are mixed in the flat array?
-                // Actually, if we use a sort strategy, they might be scattered. 
-                // BUT fetchMenu orders them. 
-                // We should ensure the list remains sorted by Group? 
-                
-                // Simplified approach for DragOver: Just Insert.
-                // The SortableContexts will re-render with the new group membership.
-                newItems.splice(overIndex, 0, movedItem);
-                
-                return newItems;
-            });
+        if (activeItemLocal.is_recommended !== isTargetRecommend) {
+             setMenuItems(prev => {
+                 const newItems = [...prev];
+                 const index = newItems.findIndex(i => i.id === active.id);
+                 if (index !== -1) {
+                     newItems[index] = { ...newItems[index], is_recommended: isTargetRecommend };
+                     // We don't move it in array here, SortableContext will pick it up in new bucket next render
+                 }
+                 return newItems;
+             });
         }
     };
 
     const handleDragEnd = async (event) => {
         const { active, over } = event;
         setActiveId(null);
-        if (!over) return;
+        setActiveItem(null);
 
-        // If simple reorder within same group (or cross-group already handled by DragOver)
+        if (!over) return;
+        
+        // Re-validate Logic for Final Commit
+        const item = menuItems.find(i => i.id === active.id);
+        if (!item) return;
+
+        // Determine Target Group again
+        let targetGroup = null;
+        // Check if over is an item
+        const overItemLocal = menuItems.find(i => i.id === over.id);
+        if (overItemLocal) {
+            targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
+        } else if (over.id.startsWith('container-')) {
+            targetGroup = over.id === 'container-recommend' ? 'recommend' : over.id.replace('container-', '');
+        }
+
+        if (!targetGroup) return; // Dropped nowhere specific
+
+        // Strict Check: Can only drop in Recommend OR Original Category
+        if (targetGroup !== 'recommend' && targetGroup !== item.category) {
+            // Revert strictness: If user tried to drop in wrong category, we might have optimistically updated is_rec?
+            // If we did, we must revert it!
+            // But handleDragOver guards usually prevent visual move? 
+            // Actually, handleDragOver logic above only updates is_recommended if Valid.
+            // So if invalid, it stays as is.
+            return;
+        }
+
+        // Perform Reorder
         if (active.id !== over.id) {
-            setMenuItems((items) => {
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
+             setMenuItems((items) => {
+                const oldIndex = items.findIndex((i) => i.id === active.id);
+                const newIndex = items.findIndex((i) => i.id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
             
-            // We need to persist the *current state*.
-            // Wait for state update? No, use local calc.
-             const oldIndex = menuItems.findIndex((item) => item.id === active.id);
-             const newIndex = menuItems.findIndex((item) => item.id === over.id);
-             
+            // Persist
+             const oldIndex = menuItems.findIndex((i) => i.id === active.id);
+             const newIndex = menuItems.findIndex((i) => i.id === over.id);
              let finalItems = menuItems;
              if (oldIndex !== -1 && newIndex !== -1) {
                  finalItems = arrayMove(menuItems, oldIndex, newIndex);
              }
              
-             // Update logic:
-             // We need to ensure their recommended status is saved too (if DragOver changed it).
-             // And their new sort_order.
-             const updates = finalItems.map((item, index) => ({
-                id: item.id,
+            const updates = finalItems.map((i, index) => ({
+                id: i.id,
                 sort_order: index,
-                is_recommended: item.is_recommended
+                is_recommended: i.is_recommended
             }));
-            
             await supabase.from('menu_items').upsert(updates);
         }
     };
@@ -209,24 +270,19 @@ export default function AdminMenu() {
         setImageFile(null);
     };
 
-    const vipItems = menuItems.filter(i => i.is_recommended);
-    const regularItems = menuItems.filter(i => !i.is_recommended);
-    const vipIds = vipItems.map(i => i.id);
-    const regularIds = regularItems.map(i => i.id);
-
     return (
         <DndContext 
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
-            onDragOver={onDragOver}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
         >
             <div className="pb-20">
                 <div className="flex justify-between items-center mb-8 sticky top-0 bg-[#09090b] z-40 py-4 border-b border-white/5">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Menu Management</h1>
-                        <p className="text-gray-500 hidden md:block">Drag & Drop เพื่อจัดเรียง • แยก VIP Lane และรายการทั่วไป</p>
+                        <p className="text-gray-500 hidden md:block">Drag & Drop เพื่อจัดเรียง • แยก Recommend และรายการตามหมวดหมู่</p>
                     </div>
                     <button
                         onClick={() => { resetForm(); setIsModalOpen(true); }}
@@ -236,19 +292,27 @@ export default function AdminMenu() {
                     </button>
                 </div>
 
-                {/* VIP Lane */}
-                <div className="mb-10 p-4 border border-[#DFFF00]/20 rounded-3xl bg-[#DFFF00]/5">
+                {/* Recommend Menu */}
+                <div 
+                    id="container-recommend"
+                    className={`mb-10 p-4 border rounded-3xl transition-colors duration-300 ${
+                        activeItem && activeItem.is_recommended === false 
+                        ? 'border-[#DFFF00] bg-[#DFFF00]/10' // Highlight when dragging regular to recommend
+                        : 'border-[#DFFF00]/20 bg-[#DFFF00]/5' 
+                    }`}
+                >
                      <div className="flex items-center gap-2 mb-4 text-[#DFFF00]">
                         <Star fill="#DFFF00" size={20} />
-                        <h2 className="text-xl font-bold uppercase tracking-wider">VIP Lane (Recommended)</h2>
+                        <h2 className="text-xl font-bold uppercase tracking-wider">Recommend Menu (รวมดาว)</h2>
                     </div>
                     <SortableContext 
-                        items={vipIds} 
+                        id="recommend"
+                        items={sections.recommend.map(i => i.id)}
                         strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}
                     >
                         <div className={isMobile ? "space-y-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
-                            {vipItems.length === 0 && <p className="text-gray-500 text-sm">ลากเมนูมาที่นี่เพื่อแนะนำ</p>}
-                            {vipItems.map(item => (
+                            {sections.recommend.length === 0 && <p className="text-gray-500 text-sm p-4 text-center border border-dashed border-gray-700 rounded-xl">ลากเมนูมาที่นี่เพื่อแนะนำ</p>}
+                            {sections.recommend.map(item => (
                                 <SortableMenuItem 
                                     key={item.id} 
                                     item={item} 
@@ -261,25 +325,45 @@ export default function AdminMenu() {
                     </SortableContext>
                 </div>
 
-                {/* Regular Menu */}
-                 <div className="mb-4">
-                    <h2 className="text-xl font-bold text-white mb-4">All Menu</h2>
-                    <SortableContext 
-                        items={regularIds} 
-                        strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}
-                    >
-                        <div className={isMobile ? "space-y-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
-                            {regularItems.map(item => (
-                                <SortableMenuItem 
-                                    key={item.id} 
-                                    item={item} 
-                                    isMobile={isMobile} 
-                                    onEdit={(i) => { setEditingItem(i); setFormData(i); setIsModalOpen(true); }}
-                                    onDelete={handleDelete}
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
+                {/* Regular Menu by Category */}
+                <div className="space-y-8">
+                    {categories.map(cat => {
+                        const items = sections.regular[cat] || [];
+                        const isHomeCategory = activeItem && activeItem.category === cat;
+                        const isHighlight = activeItem && activeItem.is_recommended && isHomeCategory;
+
+                        return (
+                            <div 
+                                key={cat} 
+                                id={`container-${cat}`}
+                                className={`transition-all duration-300 rounded-3xl p-4 ${
+                                    isHighlight 
+                                    ? 'bg-white/5 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
+                                    : activeItem && !isHomeCategory ? 'opacity-30 blur-[1px]' : '' // Dim others
+                                }`}
+                            >
+                                <h2 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-[#DFFF00]">{cat} {activeItem && isHomeCategory && <span className="text-xs text-[#DFFF00] font-normal ml-2">(Original Home)</span>}</h2>
+                                <SortableContext 
+                                    id={cat}
+                                    items={items.map(i => i.id)}
+                                    strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}
+                                >
+                                    <div className={isMobile ? "space-y-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
+                                        {items.length === 0 && <p className="text-gray-600 text-sm">ยังไม่มีรายการในหมวดนี้</p>}
+                                        {items.map(item => (
+                                            <SortableMenuItem 
+                                                key={item.id} 
+                                                item={item} 
+                                                isMobile={isMobile} 
+                                                onEdit={(i) => { setEditingItem(i); setFormData(i); setIsModalOpen(true); }}
+                                                onDelete={handleDelete}
+                                            />
+                                        ))}
+                                    </div>
+                                </SortableContext>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Drag Overlay */}
@@ -293,6 +377,7 @@ export default function AdminMenu() {
                                     isMobile={isMobile} 
                                     onEdit={()=>{}} 
                                     onDelete={()=>{}} 
+                                    isOverlay 
                                 />
                             ) : null;
                         })()
@@ -326,6 +411,7 @@ export default function AdminMenu() {
                                             <option value="Appetizer">Appetizer</option>
                                             <option value="Drink">Drink</option>
                                             <option value="Dessert">Dessert</option>
+                                             {/* Dynamic options if needed, but fixed for now per existing code */}
                                         </select>
                                     </div>
                                 </div>
@@ -337,7 +423,7 @@ export default function AdminMenu() {
                                 
                                 <label className="flex items-center gap-3 p-3 bg-black rounded-xl border border-white/5 cursor-pointer hover:border-white/20">
                                     <input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="accent-[#DFFF00] w-5 h-5" />
-                                    <span className="text-white flex items-center gap-2"><Star size={16} fill={formData.is_recommended ? "#DFFF00" : "transparent"}/> รายการแนะนำ (VIP Lane)</span>
+                                    <span className="text-white flex items-center gap-2"><Star size={16} fill={formData.is_recommended ? "#DFFF00" : "transparent"}/> รายการแนะนำ (Recommend)</span>
                                 </label>
 
                                 <label className="flex items-center gap-3 p-3 bg-black rounded-xl border border-white/5 cursor-pointer hover:border-white/20">
