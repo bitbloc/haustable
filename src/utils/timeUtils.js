@@ -43,3 +43,15 @@ export const formatThaiDateOnly = (isoString) => {
         month: 'short',
     })
 }
+
+export const formatThaiDateLong = (isoString) => {
+    if (!isoString) return '-'
+    return new Date(isoString).toLocaleDateString('th-TH', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+    })
+}
+

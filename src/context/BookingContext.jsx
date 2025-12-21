@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useEffect, useMemo, useState } f
 import { bookingReducer, initialState } from './bookingReducer'
 import { supabase } from '../lib/supabaseClient'
 import { toThaiISO } from '../utils/timeUtils'
+import { fetchAndSortMenu } from '../utils/menuHelper'
 
 const BookingContext = createContext()
 
@@ -76,36 +77,7 @@ export function BookingProvider({ children }) {
                 })
 
                 // 2. BACKGROUND LOAD (Heavy Menu Data)
-                // Fetch menu items and categories asynchronously
-                const [
-                    { data: menuRaw },
-                    { data: categories }
-                ] = await Promise.all([
-                    supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').order('category'),
-                    supabase.from('menu_categories').select('*').order('display_order')
-                ])
-
-                // SMART SORT: 1. Category Order, 2. Available First, 3. Name
-                const categoryOrder = (categories || []).reduce((acc, cat, idx) => {
-                    acc[cat.name] = cat.display_order ?? idx
-                    return acc
-                }, {})
-
-                const sortedMenu = (menuRaw || []).sort((a, b) => {
-                    // 1. Recommended (Top Priority)
-                    if (a.is_recommended !== b.is_recommended) return (b.is_recommended ? 1 : 0) - (a.is_recommended ? 1 : 0)
-
-                    // 2. Availability (True first)
-                    if (a.is_available !== b.is_available) return (b.is_available ? 1 : 0) - (a.is_available ? 1 : 0)
-
-                    // 3. Category Order
-                    const orderA = categoryOrder[a.category] ?? 999
-                    const orderB = categoryOrder[b.category] ?? 999
-                    if (orderA !== orderB) return orderA - orderB
-
-                    // 4. Name
-                    return a.name.localeCompare(b.name)
-                })
+                const { menuItems: sortedMenu, categories } = await fetchAndSortMenu()
 
                 dispatch({
                     type: 'LOAD_MENU_SUCCESS',

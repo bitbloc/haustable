@@ -2,10 +2,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, AlertTriangle } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
+import { formatThaiTimeOnly, formatThaiDateLong } from './utils/timeUtils'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
@@ -99,22 +100,21 @@ const InstallPrompt = () => {
     )
 }
 
-// Helper for formatting time
+// Helper for formatting time (Moved to utils but kept here for existing render references if any, mapped to util)
 const formatTime = (dateString, timeString) => {
     if (!dateString) return ''
-    const d = new Date(dateString)
-    return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+    // Use the util but construct ISO if needed or just use timeString if valid
+    // The util takes ISO string.
+    // If we have timeString like "12:00:00", we can just return it trimmed?
+    // Let's stick to the util logic for consistency if we passed ISO.
+    // But original used dateString+timeString.
+    // Let's just use the logic from util: formatThaiTimeOnly accepts ISO.
+    // We can construct a dummy ISO.
+    return timeString?.slice(0, 5) || ''
 }
 
-// Thai Date Helper
-const formatDateThai = (date) => {
-    return date.toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long'
-    })
-}
+// Thai Date Helper (Mapped to util)
+const formatDateThai = (date) => formatThaiDateLong(date.toISOString())
 
 export default function StaffOrderPage() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null, isDangerous: false })
@@ -306,58 +306,84 @@ export default function StaffOrderPage() {
     const subscribeRealtime = () => {
          const channel = supabase
             .channel('staff-orders')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bookings' }, 
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, 
                 async (payload) => {
-                    const newOrderId = payload.new.id
+                    const { eventType, new: newRecord, old: oldRecord } = payload
                     
-                    // Fetch full details for notification & state
-                    const { data: fullOrder, error } = await supabase
-                        .from('bookings')
-                        .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
-                        .eq('id', newOrderId)
-                        .single()
-
-                    if (error || !fullOrder) {
-                        console.error("Error fetching new order details:", error)
-                        debouncedFetchLiveOrders() // Fallback
-                        return
-                    }
-
-                    if (fullOrder.status === 'pending') {
-                        playAlarm()
-                        
-                        const tableName = fullOrder.tables_layout?.table_name || 'Pickup'
-                        const price = fullOrder.total_amount
-                        
-                        showSystemNotification('มีรายการใหม่', `โต๊ะ: ${tableName} - ${price}.-`)
-                        
-                        // Sonner Toast with Accept Action
-                        toast.message(`โต๊ะ ${tableName} สั่งอาหารใหม่!`, {
-                            description: `${price} บาท`,
-                            duration: Infinity, 
-                            action: {
-                                label: 'รับออเดอร์ (Accept)',
-                                onClick: () => updateStatus(fullOrder.id, 'confirmed')
-                            },
-                        })
-
-                        setOrders(prev => {
-                            if (prev.find(o => o.id === fullOrder.id)) return prev
-                            return [...prev, fullOrder]
-                        })
+                    if (eventType === 'INSERT') {
+                        // New Order: Fetch & Add
+                        await fetchAndAddOrder(newRecord.id, true)
+                    } else if (eventType === 'UPDATE') {
+                        // Status or Info Update: Fetch Single & Merge
+                        // Optimisation: Only fetch if we are tracking this order or it should be in the list
+                        // If status changed to something we don't show (e.g. cancelled/completed) -> Remove
+                        if (['completed', 'cancelled', 'void'].includes(newRecord.status)) {
+                            setOrders(prev => prev.filter(o => o.id !== newRecord.id))
+                        } else {
+                            // Status is pending/confirmed, update it
+                            await fetchAndAddOrder(newRecord.id, false)
+                        }
+                    } else if (eventType === 'DELETE') {
+                        setOrders(prev => prev.filter(o => o.id !== oldRecord.id))
                     }
                 }
             )
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, () => debouncedFetchLiveOrders(true))
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings' }, () => {
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, () => {
+                // If items added, we might need to refresh totals or item lists.
+                // We can't easily know which booking ID from here without fetch.
+                // Fallback to debounced refresh for item changes.
                 debouncedFetchLiveOrders(true)
-                if (activeTab === 'history') fetchHistoryOrders()
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') setIsConnected(true)
                 if (status === 'CLOSED' || status === 'CHANNEL_ERROR') setIsConnected(false)
             })
          return channel
+    }
+
+    const fetchAndAddOrder = async (orderId, isNew = false) => {
+        const { data: fullOrder, error } = await supabase
+            .from('bookings')
+            .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+            .eq('id', orderId)
+            .single()
+
+        if (error || !fullOrder) return
+
+        // Update State
+        setOrders(prev => {
+            const exists = prev.find(o => o.id === fullOrder.id)
+            if (exists) {
+                // Update existing
+                return prev.map(o => o.id === fullOrder.id ? fullOrder : o)
+            } else {
+                // Add new (if status relevant)
+                 if (['pending', 'confirmed'].includes(fullOrder.status)) {
+                     return [...prev, fullOrder].sort((a, b) => a.booking_time.localeCompare(b.booking_time))
+                 }
+                 return prev
+            }
+        })
+
+        // Notification Logic for New Pending Orders
+        if (isNew && fullOrder.status === 'pending') {
+             triggerNewOrderAlert(fullOrder)
+        }
+    }
+
+    const triggerNewOrderAlert = (order) => {
+        playAlarm() 
+        const tableName = order.tables_layout?.table_name || 'Pickup'
+        const price = order.total_amount
+        showSystemNotification('มีรายการใหม่', `โต๊ะ: ${tableName} - ${price}.-`)
+        toast.message(`โต๊ะ ${tableName} สั่งอาหารใหม่!`, {
+            description: `${price} บาท`,
+            duration: Infinity, 
+            action: {
+                label: 'รับออเดอร์ (Accept)',
+                onClick: () => updateStatus(order.id, 'confirmed')
+            },
+        })
     }
 
     const fetchLiveOrders = async (silent = false) => {
@@ -637,9 +663,16 @@ export default function StaffOrderPage() {
 
             {/* Offline Sticky Banner */}
             {!isConnected && (
-                <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-center py-2 z-[9999] font-bold text-sm shadow-md flex items-center justify-center gap-2 animate-in slide-in-from-top duration-300">
+                <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-center py-2 z-[9999] font-bold text-sm shadow-md flex items-center justify-center gap-2">
                     <X className="w-4 h-4" />
                     OFFLINE: Check Internet Connection
+                </div>
+            )}
+            
+            {/* AUDITORY & VISUAL ALERT OVERLAY */}
+            {isAuthenticated && orders.some(o => o.status === 'pending') && (
+                <div className="fixed inset-0 pointer-events-none z-[50] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-red-500/10 animate-pulse border-[6px] border-red-500/50"></div>
                 </div>
             )}
 

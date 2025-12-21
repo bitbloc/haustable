@@ -9,7 +9,9 @@ import { getThaiDate, toThaiISO } from './utils/timeUtils'
 import MenuCard from './components/shared/MenuCard'
 import ViewToggle from './components/shared/ViewToggle'
 import OptionSelectionModal from './components/shared/OptionSelectionModal'
-import { usePromotion } from './hooks/usePromotion' // NEW
+import { usePromotion } from './hooks/usePromotion'
+import { useMenuData } from './hooks/useMenuData' // NEW
+import { useOrderSubmission } from './hooks/useOrderSubmission' // NEW
 import { Tag, AlertCircle } from 'lucide-react'
 
 // --- Main Page ---
@@ -19,7 +21,6 @@ export default function PickupPage() {
     const [viewMode, setViewMode] = useState('grid')
     const [step, setStep] = useState(1)
     const [menuItems, setMenuItems] = useState([])
-    const [categories, setCategories] = useState([]) 
     const [cart, setCart] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
     const [activeCategory, setActiveCategory] = useState('All')
@@ -42,33 +43,20 @@ export default function PickupPage() {
     const [openingTime, setOpeningTime] = useState('10:00')
     const [closingTime, setClosingTime] = useState('20:00')
 
-    // Load Menu & Settings
+    // --- Hooks ---
+    const { menuItems: allMenuItems, categories, loading: menuLoading } = useMenuData()
+    const { submitOrder, isSubmitting } = useOrderSubmission()
+
+    // Filter Menu for Pickup
     useEffect(() => {
-        const fetchMenu = async () => {
-            // 1. Menu & Categories
-            const { data: menuRaw } = await supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').order('category')
-            const { data: c } = await supabase.from('menu_categories').select('*').order('display_order')
-            setCategories(c || [])
+        if (allMenuItems) {
+            setMenuItems(allMenuItems.filter(item => item.is_pickup_available !== false))
+        }
+    }, [allMenuItems])
 
-            // Sort Logic
-            const categoryOrder = (c || []).reduce((acc, cat, idx) => {
-                acc[cat.name] = cat.display_order ?? idx
-                return acc
-            }, {})
-
-            const sortedMenu = (menuRaw || [])
-                .filter(item => item.is_pickup_available !== false) 
-                .sort((a, b) => {
-                    if (a.is_recommended !== b.is_recommended) return (b.is_recommended ? 1 : 0) - (a.is_recommended ? 1 : 0)
-                    if (a.is_available !== b.is_available) return (b.is_available ? 1 : 0) - (a.is_available ? 1 : 0)
-                    const orderA = categoryOrder[a.category] ?? 999
-                    const orderB = categoryOrder[b.category] ?? 999
-                    if (orderA !== orderB) return orderA - orderB
-                    return a.name.localeCompare(b.name)
-                })
-
-            setMenuItems(sortedMenu)
-
+    // Load Settings Only (Menu handled by hook)
+    useEffect(() => {
+        const fetchSettings = async () => {
             // 2. Settings
             const { data: settings } = await supabase.from('app_settings').select('*')
             if (settings) {
@@ -88,7 +76,7 @@ export default function PickupPage() {
                 if (profile?.phone_number) setContactPhone(profile.phone_number)
             }
         }
-        fetchMenu()
+        fetchSettings()
     }, [])
 
     // --- Helpers for Time Slots ---
@@ -199,107 +187,56 @@ export default function PickupPage() {
         if (!slipFile) return alert(t('uploadSlipDesc'))
         if (!pickupTime) return alert(t('selectPickupTime'))
 
-        setSubmitting(true)
-        try {
-            const { data: { user } } = await supabase.auth.getUser()
+        // Prepare Payload
+        const dateBasis = new Date()
+        if (pickupDate === 'tomorrow') {
+            dateBasis.setDate(dateBasis.getDate() + 1)
+        }
+        const dateStr = dateBasis.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) 
+        const bookingDateTime = toThaiISO(dateStr, pickupTime)
+        const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
 
-            const dateBasis = new Date()
-            if (pickupDate === 'tomorrow') {
-                dateBasis.setDate(dateBasis.getDate() + 1)
-            }
-            const dateStr = dateBasis.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) 
-            const bookingDateTime = toThaiISO(dateStr, pickupTime)
+        const bookingPayload = {
+            booking_type: 'pickup',
+            status: 'pending',
+            booking_time: bookingDateTime,
+            pickup_contact_name: contactName,
+            pickup_contact_phone: contactPhone,
+            customer_note: customerNoteContent,
+            promotion_code_id: appliedPromo?.id || null, 
+            discount_amount: appliedPromo?.discountAmount || 0,
+            total_amount: finalTotal,
+            tracking_token: crypto.randomUUID(),
+            payment_slip_url: null // Will be handled by hook if slipFile present
+        }
 
-            // Submit
-            const fileExt = slipFile.name.split('.').pop()
-            const fileName = `pickup_${Math.random()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage.from('slips').upload(fileName, slipFile)
-            if (uploadError) throw uploadError
+        const orderItemsPayload = cart.map(item => ({
+            menu_item_id: item.id,
+            quantity: item.qty,
+            price_at_time: item.totalPricePerUnit,
+            selected_options: item.optionsSummary 
+        }))
+        
+        // Use Line Token if not logged in (logic inside component for token fetch)
+        const { data: { user } } = await supabase.auth.getUser()
+        const lineIdToken = !user && (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
 
-            const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
-            
-            // Prepare Payload parts
-            const bookingPayload = {
-                booking_type: 'pickup',
-                status: 'pending',
-                booking_time: bookingDateTime,
-                pickup_contact_name: contactName,
-                pickup_contact_phone: contactPhone,
-                customer_note: customerNoteContent,
-                // Promos
-                promotion_code_id: appliedPromo?.id || null, 
-                discount_amount: appliedPromo?.discountAmount || 0,
-                total_amount: finalTotal,
-                tracking_token: crypto.randomUUID(), // Ensure token exists
-                payment_slip_url: fileName // Add Slip URL (Filename path)
-            }
-            const orderItemsPayload = cart.map(item => ({
-                menu_item_id: item.id,
-                quantity: item.qty,
-                price_at_time: item.totalPricePerUnit,
-                selected_options: item.optionsSummary 
-            }))
+        const result = await submitOrder({
+            bookingPayload,
+            orderItemsPayload,
+            slipFile,
+            lineIdToken
+        })
 
-
-            // Check Auth (Standard vs LINE)
-            // FIX: Prioritize Supabase Session (User) if available.
-            // (User fetched above at line 176)
-            
-            // Only use Line Token if NO Supabase User.
-            const lineIdToken = !user && (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
-
-            let trackingToken = null
-
-            if (user) {
-                // --- STANDARD USER FLOW (Direct Insert) ---
-                console.log("Submitting Pickup as Authenticated User:", user.id)
-                const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
-                    ...bookingPayload,
-                    user_id: user.id
-                }).select().single()
-
-                if (bookingError) throw bookingError
-                trackingToken = bookingData?.tracking_token
-
-                if (orderItemsPayload.length > 0) {
-                     const items = orderItemsPayload.map(item => ({
-                        booking_id: bookingData.id,
-                        ...item
-                    }))
-                    await supabase.from('order_items').insert(items)
-                }
-
-            } else if (lineIdToken) {
-                 // --- LINE USER FLOW (Edge Function) - FALLBACK ---
-                 console.warn("Submitting Pickup via Edge Function (No Supabase Session)...")
-                 const { data, error } = await supabase.functions.invoke('manage-booking', {
-                    body: { 
-                        action: 'create_booking', 
-                        idToken: lineIdToken,
-                        bookingData: { ...bookingPayload, orderItems: orderItemsPayload }
-                    }
-                })
-
-                if (error) throw error
-                if (!data.success) throw new Error(data.error || 'Booking Failed')
-                trackingToken = data.data?.tracking_token
-
-            } else {
-                throw new Error("Please Login before ordering.")
-            }
-
+        if (result.success) {
             alert(t('confirmOrder') + ' Success!')
-            
-            if (trackingToken) {
-                window.location.href = `/tracking/${trackingToken}`
+            if (result.trackingToken) {
+                window.location.href = `/tracking/${result.trackingToken}`
             } else {
                 navigate('/')
             }
-
-        } catch (error) {
-            alert('Error: ' + error.message)
-        } finally {
-            setSubmitting(false)
+        } else {
+            alert('Error: ' + result.error)
         }
     }
 
