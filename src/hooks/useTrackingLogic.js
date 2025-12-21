@@ -14,7 +14,13 @@ export function useTrackingLogic(token) {
         body: { token },
       })
 
-      if (apiError) throw apiError
+      if (apiError) {
+        // Handle 404 from Function (Booking not found)
+        if (apiError.status === 404 || (apiError.context && apiError.context.status === 404)) {
+            throw new Error('ไม่พบข้อมูลการจอง (Booking not found)')
+        }
+        throw apiError
+      }
       if (resData.error) {
         if (resData.code === 'TOKEN_EXPIRED') throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
         if (resData.code === 'NOT_FOUND') throw new Error('ไม่พบข้อมูลการจอง (Booking not found)')
