@@ -1,7 +1,152 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, Star, AlertCircle, Camera, ShoppingBag } from 'lucide-react'
-import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
+import { arrayMove, SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+// Sortable Item Component
+function SortableMenuItem({ item, handleEdit, handleTogglePickup }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: item.id })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : "auto",
+        opacity: isDragging ? 0.3 : 1
+    }
+
+    return (
+        <div 
+            ref={setNodeRef} 
+            style={style} 
+            {...attributes} 
+            {...listeners}
+            className={`group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all relative cursor-grab active:cursor-grabbing touch-none select-none ${isDragging ? 'border-[#DFFF00] ring-2 ring-[#DFFF00]' : ''}`}
+            onClick={(e) => !isDragging && handleEdit(item)}
+        >
+            <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative pointer-events-none">
+                {item.image_url ? (
+                    <img src={item.image_url} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>
+                )}
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
+                <div>
+                    <div className="flex justify-between items-start">
+                        <h4 className="font-bold truncate text-base">{item.name}</h4>
+                        <span className="text-[#DFFF00] font-mono font-bold">{item.price}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                    {item.is_recommended && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded flex items-center gap-1"><Star size={8} fill="currentColor" /> แนะนำ</span>}
+                    {!item.is_available && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">หมด</span>}
+                </div>
+            </div>
+
+            {/* Inline Pickup Toggle (Bottom Right) */}
+            <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10" 
+                onPointerDown={(e) => e.stopPropagation()} 
+                onClick={(e) => e.stopPropagation()}
+            >
+                <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-gray-400' : 'text-gray-600'}`}>Pick-up</span>
+                <button
+                    onClick={(e) => handleTogglePickup(e, item)}
+                    className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                >
+                    <div className={`w-3 h-3 bg-black rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+            </div>
+        </div>
+    )
+}
+
+export default function MenuItemList() {
+    const [menuItems, setMenuItems] = useState([])
+    const [categories, setCategories] = useState([])
+    const [optionGroups, setOptionGroups] = useState([])
+
+    const [loading, setLoading] = useState(true)
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [editingItem, setEditingItem] = useState(null)
+    const [imageFile, setImageFile] = useState(null)
+    const [previewUrl, setPreviewUrl] = useState(null)
+    const [imageRemoved, setImageRemoved] = useState(false)
+
+    const [formData, setFormData] = useState({
+        name: '',
+        price: '',
+        category_id: '',
+        description: '',
+        is_available: true,
+        is_recommended: false,
+        is_pickup_available: true
+    })
+
+    const [selectedOptionGroups, setSelectedOptionGroups] = useState([])
+    const [activeTab, setActiveTab] = useState('normal')
+
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    )
+
+    useEffect(() => {
+        fetchData()
+    }, [])
+
+    const fetchData = async () => {
+        setLoading(true)
+        const [menuRes, catRes, optRes] = await Promise.all([
+            supabase.from('menu_items').select(`*, menu_categories (name)`),
+            supabase.from('menu_categories').select('*').order('display_order'),
+            supabase.from('option_groups').select('*').order('name')
+        ])
+
+        if (menuRes.data) {
+             // Initial sort
+             const sortedItems = menuRes.data.sort((a,b) => (a.display_order || 9999) - (b.display_order || 9999))
+             setMenuItems(sortedItems)
+        }
+        if (catRes.data) setCategories(catRes.data)
+        if (optRes.data) setOptionGroups(optRes.data)
+        setLoading(false)
+    }
+
+    // ... (Keep existing helpers: handleCreate, handleEdit, handleTogglePickup, resizeImage, handleImageChange, handleRemoveImage, handleDelete, handleSubmit, toggleOptionGroup) ...
+    // Note: Due to size limits, assuming I should re-include or user context keeps them. 
+    // BUT replace_file_content must be complete replacement of the block.
+    // I will include the critical save logic and render logic, reusing the old helpers where possible but since I am replacing the file content significantly, I should probably output them to be safe OR ask to replace specific blocks.
+    // Wait, replace_file_content replaces a block.
+    // The previous tool usage implies I can't replace the ENTIRE file easily if it's too big/complex to generate cleanly without errors.
+    // I will replace the imports and the SortableMenuItem definition at top (done above in this tool call's ReplacementContent start).
+    // AND I will use a separate replace_call for the body logic if needed.
+    // Ah, I set EndLine to 583 (EOF).
+    // I need to provide the FULL content from Start (imports) to End.
+    // The previous content is huge.
+    // I will try to be efficient by just replacing the `MenuItemList` function body partially or using `multi_replace`.
+    // Actually, I can just replace the specific sections that need change:
+    // 1. Imports
+    // 2. `handleReorder` logic (fix API)
+    // 3. Render loop (use DndContext).
+    
+    // Changing strategy: I will use `replace_file_content` for imports, and then `replace_file_content` for the component body parts.
+    // This is safer. 
+    
+    // Let's abort this big replacement and do targeted replacements.
+    return null;
+}
+
 
 export default function MenuItemList() {
     const [menuItems, setMenuItems] = useState([])
@@ -273,40 +418,54 @@ export default function MenuItemList() {
         }
     }
 
-    // --- Drag & Drop for Menu Items ---
-    const handleReorderGroup = (catId, newItemsOrder) => {
-        // newItemsOrder is the *subset* of items for this category, reordered.
-        // We need to merge this back into the main `menuItems` state.
-        
-        // 1. Get items NOT in this category
-        const otherItems = menuItems.filter(i => !(i.category_id === catId || (!i.category_id && i.category === categories.find(c=>c.id===catId)?.name)))
-        
-        // 2. Assign temporary display_order to newItemsOrder based on index to keep state consistent visually
-        const updatedGroup = newItemsOrder.map((item, index) => ({
-            ...item,
-            display_order: index
-        }))
+    // --- Drag & Drop for Menu Items (dnd-kit) ---
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    )
 
-        // 3. Merge
-        setMenuItems([...otherItems, ...updatedGroup])
+    const handleDragEnd = async (event, catId) => {
+        const { active, over } = event
+        
+        if (active.id !== over?.id) {
+            setMenuItems((items) => {
+                const categoryItems = items
+                    .filter(i => i.category_id === catId || (!i.category_id && i.category === categories.find(c=>c.id===catId)?.name))
+                    .sort((a,b) => (a.display_order || 9999) - (b.display_order || 9999))
+                
+                const otherItems = items.filter(i => !categoryItems.find(ci => ci.id === i.id))
+
+                const oldIndex = categoryItems.findIndex((i) => i.id === active.id)
+                const newIndex = categoryItems.findIndex((i) => i.id === over.id)
+                
+                const reorderedSublist = arrayMove(categoryItems, oldIndex, newIndex).map((item, idx) => ({
+                    ...item,
+                    display_order: idx
+                }))
+
+                // Trigger Save immediately
+                saveItemOrder(reorderedSublist)
+
+                return [...otherItems, ...reorderedSublist]
+            })
+        }
     }
 
     const saveItemOrder = async (items) => {
         // Items passed here are the *reordered* list for a specific category
+        if (!items || items.length === 0) return
+        
         try {
             console.log("Saving item order...", items.length)
-             const updates = items.map((item, index) => ({
-                id: item.id,
-                // We only need to update key fields to be safe, ideally just display_order but upsert needs keys
-                // If we use `update` in loop it's safer for partial updates but slower.
-                // Given typical menu size, upsert is okay if we include required fields or if table accepts partial upsert on PK.
-                // Supabase upsert requires all Non-Nullable columns if row doesn't exist? No, if ID matches it updates.
-                // BUT we must pass whatever columns we want to change.
-                display_order: index
-            }))
+            
+            // Sequential Update Loop to avoid 400 Bad Request on Upsert
+            // This is safer for partial updates
+            await Promise.all(items.map(item => 
+                supabase.from('menu_items')
+                    .update({ display_order: item.display_order })
+                    .eq('id', item.id)
+            ))
 
-            const { error } = await supabase.from('menu_items').upsert(updates, { onConflict: 'id', ignoreDuplicates: false })
-            if (error) throw error
             console.log("Item order saved")
         } catch (err) {
             console.error("Failed to save item order", err)
@@ -331,7 +490,7 @@ export default function MenuItemList() {
                 {categories.map(cat => {
                     const items = menuItems
                             .filter(i => i.category_id === cat.id || (!i.category_id && i.category === cat.name))
-                            .sort((a,b) => (a.display_order || 9999) - (b.display_order || 9999)) // Ensure sort visually
+                            .sort((a,b) => (a.display_order || 9999) - (b.display_order || 9999)) 
 
                     if (items.length === 0) return null
 
@@ -341,55 +500,27 @@ export default function MenuItemList() {
                                 {cat.name} <span className="text-xs text-gray-500 font-normal">({items.length})</span>
                             </h3>
                             
-                            <Reorder.Group 
-                                axis="y" 
-                                values={items} 
-                                onReorder={(newOrder) => handleReorderGroup(cat.id, newOrder)}
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                            <DndContext 
+                                sensors={sensors} 
+                                collisionDetection={closestCenter}
+                                onDragEnd={(e) => handleDragEnd(e, cat.id)}
                             >
-                                {items.map(item => (
-                                    <Reorder.Item 
-                                        key={item.id} 
-                                        value={item}
-                                        onDragEnd={() => saveItemOrder(items)} // Save the *current* items list order
-                                        className="group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all cursor-grab active:cursor-grabbing relative relative select-none"
-                                        onClick={() => handleEdit(item)}
-                                    >
-                                        <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative pointer-events-none">
-                                            {item.image_url ? (
-                                                <img src={item.image_url} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
-                                            <div>
-                                                <div className="flex justify-between items-start">
-                                                    <h4 className="font-bold truncate text-base">{item.name}</h4>
-                                                    <span className="text-[#DFFF00] font-mono font-bold">{item.price}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-400 line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                {item.is_recommended && <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded flex items-center gap-1"><Star size={8} fill="currentColor" /> แนะนำ</span>}
-                                                {!item.is_available && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">หมด</span>}
-                                            </div>
-                                        </div>
-
-                                        {/* Inline Pickup Toggle (Bottom Right) */}
-                                        <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10" onClick={(e) => e.stopPropagation()}>
-                                            <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-gray-400' : 'text-gray-600'}`}>Pick-up</span>
-                                            <button
-                                                onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
-                                                onClick={(e) => handleTogglePickup(e, item)}
-                                                className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
-                                            >
-                                                <div className={`w-3 h-3 bg-black rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
-                                            </button>
-                                        </div>
-                                    </Reorder.Item>
-                                ))}
-                            </Reorder.Group>
+                                <SortableContext 
+                                    items={items.map(i => i.id)} 
+                                    strategy={rectSortingStrategy}
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {items.map(item => (
+                                            <SortableMenuItem 
+                                                key={item.id} 
+                                                item={item} 
+                                                handleEdit={handleEdit} 
+                                                handleTogglePickup={handleTogglePickup} 
+                                            />
+                                        ))}
+                                    </div>
+                                </SortableContext>
+                            </DndContext>
                         </div>
                     )
                 })}
