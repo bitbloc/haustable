@@ -24,7 +24,8 @@ export default defineConfig({
     react(),
     legacy({
       targets: ['chrome >= 60', 'android >= 7.1'],
-      additionalLegacyPolyfills: ['regenerator-runtime/runtime']
+      additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+      renderLegacyChunks: true,
     })
   ],
   define: {
