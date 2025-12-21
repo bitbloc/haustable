@@ -69,7 +69,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                         {activeOrders.map(order => (
                                             <Link 
                                                 key={order.id}
-                                                to={`/t/${order.tracking_token}`}
+                                                to={`/tracking/${order.tracking_token}`}
                                                 onClick={onClose}
                                                 className="block"
                                             >
@@ -149,7 +149,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                 </div>
                                                 
                                                 <Link 
-                                                    to={`/t/${order.tracking_token}`}
+                                                    to={`/tracking/${order.tracking_token}`}
                                                     onClick={onClose}
                                                     className="p-2 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                                                 >
