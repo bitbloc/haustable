@@ -463,18 +463,20 @@ export default function MenuItemList() {
 
             setMenuItems(finalItems);
             
-            // Persist
-             // Sync persistence (Upsert sort_order)
-             const updates = finalItems.map((i, index) => ({
-                id: i.id,
-                sort_order: index,
-                is_recommended: i.is_recommended
-            }));
-            
-            // Fire and forget update (or await if critical)
-            supabase.from('menu_items').upsert(updates).then(({error})=> {
-                if(error) console.error("Reorder fail", error);
-            });
+            // Persist (Batch Update -> Sequential Update to avoid Upsert Input Errors)
+            try {
+                await Promise.all(finalItems.map((item, index) => 
+                    supabase.from('menu_items')
+                        .update({ 
+                            sort_order: index, 
+                            is_recommended: item.is_recommended 
+                        })
+                        .eq('id', item.id)
+                ));
+            } catch (err) {
+                console.error("Reorder fail", err);
+                // Optional: Revert state if needed, but for drag-drop usually we just log
+            }
         }
     };
 
