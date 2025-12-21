@@ -6,8 +6,8 @@ import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSens
 import { arrayMove, SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-// Sortable Item Component
-function SortableMenuItem({ item, handleEdit, handleTogglePickup }) {
+// Sortable Item Component (Memoized for performance)
+const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit, handleTogglePickup, isOverlay = false }) {
     const {
         attributes,
         listeners,
@@ -24,13 +24,36 @@ function SortableMenuItem({ item, handleEdit, handleTogglePickup }) {
         opacity: isDragging ? 0.3 : 1
     }
 
+    // Overlay Style
+    if (isOverlay) {
+        return (
+            <div className="group bg-[#1a1a1a] border-[#DFFF00] ring-2 ring-[#DFFF00] rounded-xl p-3 flex gap-4 shadow-2xl cursor-grabbing select-none">
+                 <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative pointer-events-none">
+                    {item.image_url ? (
+                        <img src={item.image_url} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>
+                    )}
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
+                    <div>
+                         <div className="flex justify-between items-start">
+                            <h4 className="font-bold truncate text-base">{item.name}</h4>
+                            <span className="text-[#DFFF00] font-mono font-bold">{item.price}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div 
             ref={setNodeRef} 
             style={style} 
             {...attributes} 
             {...listeners}
-            className={`group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all relative cursor-grab active:cursor-grabbing touch-none select-none ${isDragging ? 'border-[#DFFF00] ring-2 ring-[#DFFF00]' : ''}`}
+            className={`group bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 hover:border-white/20 transition-all relative cursor-grab active:cursor-grabbing touch-none select-none ${isDragging ? 'opacity-30' : ''}`}
             onClick={(e) => !isDragging && handleEdit(item)}
         >
             <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative pointer-events-none">
@@ -69,7 +92,7 @@ function SortableMenuItem({ item, handleEdit, handleTogglePickup }) {
             </div>
         </div>
     )
-}
+})
 
 
 
@@ -98,6 +121,7 @@ export default function MenuItemList() {
 
     const [selectedOptionGroups, setSelectedOptionGroups] = useState([])
     const [activeTab, setActiveTab] = useState('normal') // normal, custom
+    const [activeDragItem, setActiveDragItem] = useState(null) // New State for Overlay
 
     useEffect(() => {
         fetchData()
@@ -345,15 +369,26 @@ export default function MenuItemList() {
     }
 
     // --- Drag & Drop for Menu Items (dnd-kit) ---
+    // Tuned Sensors for better feel
     const sensors = useSensors(
-        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+        useSensor(MouseSensor, { activationConstraint: { distance: 8 } }), // Reduced distance slightly
+        useSensor(TouchSensor, { 
+            activationConstraint: { delay: 100, tolerance: 8 } // Reduced delay significantly (250->100)
+        })
     )
+
+    const handleDragStart = (event) => {
+        const { active } = event
+        setActiveDragItem(menuItems.find(i => i.id === active.id))
+    }
 
     const handleDragEnd = async (event, catId) => {
         const { active, over } = event
+        setActiveDragItem(null)
         
-        if (active.id !== over?.id) {
+        if (!over) return
+
+        if (active.id !== over.id) {
             setMenuItems((items) => {
                 const categoryItems = items
                     .filter(i => i.category_id === catId || (!i.category_id && i.category === categories.find(c=>c.id===catId)?.name))
@@ -429,6 +464,7 @@ export default function MenuItemList() {
                             <DndContext 
                                 sensors={sensors} 
                                 collisionDetection={closestCenter}
+                                onDragStart={handleDragStart}
                                 onDragEnd={(e) => handleDragEnd(e, cat.id)}
                             >
                                 <SortableContext 
@@ -446,6 +482,14 @@ export default function MenuItemList() {
                                         ))}
                                     </div>
                                 </SortableContext>
+                                <DragOverlay>
+                                    {activeDragItem ? (
+                                        <SortableMenuItem 
+                                            item={activeDragItem} 
+                                            isOverlay 
+                                        />
+                                    ) : null}
+                                </DragOverlay>
                             </DndContext>
                         </div>
                     )
