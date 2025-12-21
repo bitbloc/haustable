@@ -19,11 +19,20 @@ export const fetchAndSortMenu = async () => {
     }, {})
 
     const sortedMenu = (menuRaw || []).sort((a, b) => {
-        // 1. Group by Category (Already implicit if grouped)
+        // 1. Recommended First (Top Priority)
+        // is_recommended might be boolean or null. Treat true as highest priority.
+        const recA = a.is_recommended === true;
+        const recB = b.is_recommended === true;
         
+        if (recA !== recB) {
+            return recA ? -1 : 1; 
+        }
+
         // 2. Strict Display Order (Manual Sort)
-        const orderA = a.display_order ?? 999999;
-        const orderB = b.display_order ?? 999999;
+        // Prefer 'sort_order' (new) over 'display_order' (legacy)
+        const orderA = a.sort_order ?? a.display_order ?? 999999;
+        const orderB = b.sort_order ?? b.display_order ?? 999999;
+        
         if (orderA !== orderB) return orderA - orderB;
 
         // 3. Fallback (Name)
