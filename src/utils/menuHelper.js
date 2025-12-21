@@ -41,3 +41,10 @@ export const fetchAndSortMenu = async () => {
 
     return { menuItems: sortedMenu, categories: categories || [] }
 }
+
+export const formatOptionName = (name) => {
+    if (!name) return ''
+    // Regex to remove patterns like (+10), ( + 20.-), (10.-)
+    // Matches parentheses containing numbers and symbols, possibly with 'plus' or 'minus'
+    return name.replace(/\(\s*[+-]?\s*\d+(\.\d+)?\s*(\.-)?\s*\)/g, '').trim()
+}

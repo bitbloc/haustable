@@ -1,167 +1,170 @@
 import { useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
-import QRCode from 'qrcode'
 import { Download, Lock } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
+import { formatOptionName } from '../../utils/menuHelper'
 
-export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled }) {
+export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled, isForCapture, optionMap = {} }) {
   const { t } = useLanguage()
-  const slipRef = useRef(null)
-  const [downloading, setDownloading] = useState(false)
-
-  const handleDownload = async () => {
-      if (!slipRef.current) return
-      if (!qrCodeUrl) return alert("QR Code ยังไม่พร้อม")
-
-      setDownloading(true)
-      try {
-          // Wait for fonts to be ready
-          await document.fonts.ready
-          // Small delay for render sync
-          await new Promise(r => setTimeout(r, 100))
-
-          const dataUrl = await toPng(slipRef.current, {
-              cacheBust: true,
-              backgroundColor: 'transparent', // We handle bg in the component
-              pixelRatio: 3, // High quality
-              skipAutoScale: true,
-              style: {
-                transform: 'scale(1)', // Reset any potential transforms
-              }
-          })
-          
-          const link = document.createElement('a')
-          link.href = dataUrl
-          link.download = `Slip-${data.short_id}.png`
-          link.click()
-          
-      } catch (err) {
-          console.error("Slip Error:", err)
-          if (err.message && err.message.includes('lab')) {
-             alert("ขออภัย Browser ของคุณไม่รองรับการบันทึกภาพนี้ (Color Format Error) \nแนะนำให้แคปหน้าจอแทนครับ")
-          } else {
-             alert("ไม่สามารถบันทึกรูปได้: " + err.message)
-          }
-      } finally {
-          setDownloading(false)
-      }
-  }
-
   const isPickup = data.booking_type === 'pickup'
 
   return (
-    <>
-      <button 
-        onClick={handleDownload}
-        disabled={!canSave || downloading || isCancelled}
-        className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
-            ${(canSave && !isCancelled)
-                ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900 active:scale-[0.98]' 
-                : 'bg-gray-100 border-transparent text-gray-400 cursor-not-allowed'}
-        `}
-      >
-          {canSave ? <Download size={18} /> : <Lock size={18} />}
-          {downloading ? t('saving') : `${t('saveSlip')} (#${data.short_id || data.id?.slice(0,4)})`}
-      </button>
-
-      {/* Hidden Slip Render Area */}
-      {/* Position fixed off-screen ensures it renders properly but is invisible to user */}
-      <div className="fixed -left-[9999px] top-0 pointer-events-none">
-          <div ref={slipRef} className="w-[400px] relative bg-transparent p-4">
-               {/* Paper Container with Zigzag Edges */}
-               <div className="relative bg-white text-black font-inter shadow-xl overflow-hidden" 
+    <div className="w-[380px] relative bg-transparent mx-auto">
+        {/* Paper Container with Zigzag Edges */}
+        <div className="relative bg-white text-black font-inter shadow-xl" 
+            style={{
+                filter: 'drop-shadow(0px 10px 20px rgba(0,0,0,0.15))',
+            }}
+        >   
+            {/* Header Zigzag */}
+            <div className="absolute top-0 left-0 w-full h-4 overflow-hidden" 
                     style={{
-                        filter: 'drop-shadow(0px 10px 20px rgba(0,0,0,0.15))',
-                        // CSS Mask for Zigzag Top and Bottom
-                        // We use a complex mask to create the sawtooth effect
-                        maskImage: `
-                            radial-gradient(circle at 10px 10px, transparent 10px, black 10px),
-                            radial-gradient(circle at 10px calc(100% - 10px), transparent 10px, black 10px)
-                        `,
-                        maskPosition: '0 0, 0 0', // This needs careful CSS, let's try a simpler robust approach for mask
-                        // Alternative safe approach: CSS radial-gradient background for edges
+                        background: 'linear-gradient(45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%)',
+                        backgroundSize: '16px 32px',
+                        backgroundPosition: '0 -16px',
+                        transform: 'rotate(180deg)'
                     }}
-                >   
-                   {/* Simplified approach for robust rendering: Use CSS Radial Gradients to "cut" the edges */}
-                   <div className="bg-white pb-8 pt-8 px-8 relative">
-                        {/* Top Zigzag Pattern */}
-                        <div className="absolute top-0 left-0 w-full h-4 overflow-hidden" 
-                             style={{
-                                 background: 'linear-gradient(45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%)',
-                                 backgroundSize: '16px 32px',
-                                 backgroundPosition: '0 -16px',
-                                 transform: 'rotate(180deg)'
-                             }}
-                        />
+            />
 
-                        {/* Content */}
-                       <div className="mb-6 text-center">
-                           <h2 className="text-3xl font-black tracking-tighter mb-1">IN THE HAUS</h2>
-                           <p className="text-[10px] text-gray-400 uppercase tracking-[0.3em]">Official Receipt</p>
-                       </div>
-                       
-                       <div className="border-t-2 border-dashed border-gray-200 py-6 mb-6 text-center">
-                           <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wider">Order ID</p>
-                           <div className="text-6xl font-mono font-bold tracking-tighter text-black">#{data.short_id}</div>
-                       </div>
-                       
-                       <div className="space-y-3 mb-8 text-sm">
-                           <SlipRow label="Guest" value={data.profiles?.display_name ? `คุณ ${data.profiles.display_name}` : (data.customer_name || data.pickup_contact_name || '-')} />
-                           <SlipRow label="Date" value={new Date(data.booking_time).toLocaleDateString()} />
-                           <SlipRow label="Time" value={new Date(data.booking_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} />
-                           
-                           {!isPickup && (data.table_name || data.tables_layout?.table_name) && (
-                                <SlipRow label="Table" value={data.table_name || data.tables_layout?.table_name} />
-                           )}
-                           {isPickup && <SlipRow label="Type" value="Take Away" />}
+            <div className="bg-white pb-8 pt-10 px-6 relative">
+                
+                {/* 1. Header & ID - SUPER PROMINENT */}
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-black tracking-tighter mb-2">IN THE HAUS</h2>
+                    <div className="inline-block border-2 border-black px-4 py-1 rounded-full mb-4">
+                        <p className="text-xs font-bold uppercase tracking-widest">{isPickup ? 'PICKUP ORDER' : 'DINE-IN'}</p>
+                    </div>
 
-                           {data.items?.length > 0 && (
-                                <SlipRow label="Items" value={`${data.items.length} items`} />
-                           )}
+                    <div className="border-y-2 border-black border-dashed py-4">
+                        <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider font-bold">Order ID</p>
+                        <div className="text-7xl font-mono font-bold tracking-tighter text-black leading-none">
+                            #{data.short_id}
+                        </div>
+                    </div>
+                </div>
+                
+                {/* 2. Customer & Table - PROMINENT */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Customer</p>
+                        <p className="font-bold text-lg leading-tight break-words">
+                            {data.profiles?.display_name || data.customer_name || 'Guest'}
+                        </p>
+                    </div>
+                    <div className="bg-black text-white p-3 rounded-lg flex flex-col justify-center items-center">
+                        <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">
+                            {isPickup ? 'Type' : 'Table'}
+                        </p>
+                        <p className="font-bold text-2xl leading-none">
+                            {isPickup ? 'TAKE AWAY' : (data.table_name || data.tables_layout?.table_name || 'TBA')}
+                        </p>
+                    </div>
+                </div>
+                
+                {/* 3. Items List - DETAILED */}
+                <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                        <span className="text-xs font-bold text-gray-400 uppercase">Order Details</span>
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                    </div>
 
-                           {(data.discount_amount > 0 || data.promotion_codes?.code) && (
-                                <div className="flex justify-between items-baseline text-green-600">
-                                    <span className="text-xs uppercase font-medium tracking-wide">Discount</span>
-                                    <span className="font-bold">-{data.discount_amount?.toLocaleString()}.-</span>
+                    <div className="space-y-4">
+                        {data.items?.map((item, idx) => {
+                             // Resolve Options
+                            let optionsList = []
+                            if (item.options) {
+                                if (Array.isArray(item.options)) {
+                                        optionsList = item.options.map(opt => typeof opt === 'object' ? opt.name : opt)
+                                } else if (typeof item.options === 'object') {
+                                    const ids = Object.values(item.options).flat()
+                                    optionsList = ids.map(id => optionMap[id] || id)
+                                }
+                            }
+
+                            return (
+                                <div key={idx} className="text-sm">
+                                    <div className="flex justify-between items-baseline font-bold text-gray-900">
+                                        <span><span className="mr-2 text-gray-400 text-xs font-normal">{item.quantity}x</span>{item.menu_items?.name || item.name}</span>
+                                        <span>{(item.price * item.quantity).toLocaleString()}</span>
+                                    </div>
+                                    {optionsList.length > 0 && (
+                                        <div className="pl-6 mt-1 text-xs text-gray-500 font-medium space-y-0.5">
+                                            {optionsList.map((opt, i) => (
+                                                <div key={i} className="flex items-center gap-1">
+                                                    <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                                    {formatOptionName(opt)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                           )}
-                           
-                           <div className="flex justify-between border-t-2 border-dashed border-gray-200 pt-4 mt-6">
-                               <span className="font-bold text-lg">Total</span>
-                               <span className="font-bold text-lg">{data.total_amount.toLocaleString()}.-</span>
-                           </div>
-                       </div>
-                       
-                       <div className="bg-gray-100 p-4 rounded-xl text-center border border-gray-200">
-                           <p className="text-[10px] text-gray-500 mb-3 uppercase tracking-wide font-bold">Scan to Track Status</p>
-                           {qrCodeUrl && (
-                                <img 
-                                    src={qrCodeUrl} 
-                                    className="w-32 h-32 mx-auto mix-blend-multiply"
-                                    alt="QR"
-                                />
-                           )}
-                       </div>
+                            )
+                        })}
+                        {(!data.items || data.items.length === 0) && (
+                            <p className="text-center text-gray-400 text-xs italic py-4">No items listed</p>
+                        )}
+                    </div>
+                </div>
 
-                       <div className="mt-8 text-center">
-                            <p className="text-[10px] text-gray-300 font-mono">
-                                Printed: {new Date().toLocaleString()}
-                            </p>
-                       </div>
+                {/* 4. Totals & Discounts */}
+                <div className="border-t-2 border-black border-dashed pt-4 mb-8">
+                     {/* Discount Details */}
+                     {(data.discount_amount > 0) && (
+                        <div className="bg-green-50 p-2 rounded border border-green-100 mb-3 flex justify-between items-center text-green-700">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold uppercase tracking-wide opacity-70">Discount Applied</span>
+                                <span className="text-sm font-bold flex items-center gap-1">
+                                    {data.promotion_codes?.code || 'PROMO'} 
+                                    {/* Try to infer type if available, otherwise just show amount */}
+                                    {/* Ideally backend sends this, but we show raw amount here */}
+                                </span>
+                            </div>
+                            <span className="font-bold text-lg">-{data.discount_amount.toLocaleString()}.-</span>
+                        </div>
+                    )}
 
-                       {/* Bottom Zigzag Pattern */}
-                       <div className="absolute bottom-0 left-0 w-full h-4 overflow-hidden" 
-                            style={{
-                                background: 'linear-gradient(45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%)',
-                                backgroundSize: '16px 32px',
-                                backgroundPosition: '0 16px'
-                            }}
-                       />
-                   </div>
-               </div>
-          </div>
-      </div>
-    </>
+                    <div className="flex justify-between items-baseline">
+                        <span className="font-black text-xl">TOTAL</span>
+                        <span className="font-black text-3xl">{data.total_amount?.toLocaleString()}.-</span>
+                    </div>
+                    <p className="text-right text-[10px] text-gray-400 mt-1">Include VAT & Service Charge</p>
+                </div>
+                
+                {/* 5. QR Code */}
+                <div className="bg-gray-100 p-4 rounded-xl text-center border border-gray-200">
+                    <div className="flex items-center justify-center gap-4">
+                        {qrCodeUrl && (
+                            <img 
+                                src={qrCodeUrl} 
+                                className="w-24 h-24 mix-blend-multiply"
+                                alt="QR"
+                            />
+                        )}
+                        <div className="text-left">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-bold mb-1">Scan to Track</p>
+                            <p className="text-xs font-bold text-black max-w-[120px]">Scan this code to check your order status.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-8 text-center border-t border-gray-100 pt-4">
+                        <p className="text-[10px] text-gray-400">
+                            Printed: {new Date().toLocaleString()}
+                        </p>
+                </div>
+            </div>
+
+            {/* Footer Zigzag */}
+            <div className="absolute bottom-0 left-0 w-full h-4 overflow-hidden" 
+                    style={{
+                        background: 'linear-gradient(45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%), linear-gradient(-45deg, transparent 33.333%, #ffffff 33.333%, #ffffff 66.667%, transparent 66.667%)',
+                        backgroundSize: '16px 32px',
+                        backgroundPosition: '0 16px'
+                    }}
+            />
+        </div>
+    </div>
   )
 }
 

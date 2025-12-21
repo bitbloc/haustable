@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
+import { formatOptionName } from '../../utils/menuHelper'
 
-export default function OrderSummary({ data }) {
+export default function OrderSummary({ data, optionMap = {} }) {
   const { t } = useLanguage()
   const [isAccordionOpen, setIsAccordionOpen] = useState(true)
 
@@ -27,22 +28,37 @@ export default function OrderSummary({ data }) {
                 >
                     <div className="p-4 pt-0 border-t border-gray-100">
                         <div className="space-y-3 mt-3">
-                            {data.items?.map((item, i) => (
+                            {data.items?.map((item, i) => {
+                                // Resolve Options
+                                let optionsList = []
+                                if (item.options) {
+                                    if (Array.isArray(item.options)) {
+                                         optionsList = item.options.map(opt => typeof opt === 'object' ? opt.name : opt)
+                                    } else if (typeof item.options === 'object') {
+                                        const ids = Object.values(item.options).flat()
+                                        optionsList = ids.map(id => optionMap[id] || id)
+                                    }
+                                }
+                                
+                                return (
                                 <div key={i} className="flex justify-between items-start text-sm group">
                                     <div className="flex gap-3">
                                         <div className="font-bold text-gray-400 w-4">{item.quantity}x</div>
                                         <div>
                                             <div className="text-gray-900 font-medium group-hover:text-black transition-colors">{item.name}</div>
-                                            {item.options && (
-                                                <div className="text-[10px] text-gray-500 mt-0.5">
-                                                    {Object.values(item.options).join(', ')}
+                                            {optionsList.length > 0 && (
+                                                <div className="text-[10px] text-gray-500 mt-1 flex flex-col gap-0.5">
+                                                    {optionsList.map((opt, idx) => (
+                                                        <span key={idx} className="block">+ {formatOptionName(opt)}</span>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                     <div className="text-gray-500 font-mono">{item.price * item.quantity}.-</div>
                                 </div>
-                            ))}
+                                )
+                            })}
                         </div>
                         {data.discount_amount > 0 && (
                             <div className="flex justify-between items-center px-3 py-2 text-sm text-green-600 border-t border-dashed border-gray-200 mt-2">

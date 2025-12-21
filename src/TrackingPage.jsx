@@ -11,27 +11,7 @@ import { useTrackingLogic } from './hooks/useTrackingLogic'
 import { useStatusConfig } from './hooks/useStatusConfig'
 import BookingSlip from './components/tracking/BookingSlip'
 import StatusTracker from './components/tracking/StatusTracker'
-import OrderSummary from './components/tracking/OrderSummary'
-
-// Helper for confetti
-const triggerCelebration = () => {
-  const count = 200
-  const defaults = {
-    origin: { y: 0.7 }
-  }
-
-  function fire(particleRatio, opts) {
-    confetti(Object.assign({}, defaults, opts, {
-      particleCount: Math.floor(count * particleRatio)
-    }))
-  }
-
-  fire(0.25, { spread: 26, startVelocity: 55 })
-  fire(0.2, { spread: 60 })
-  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
-  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
-  fire(0.1, { spread: 120, startVelocity: 45 })
-}
+import SlipPreviewModal from './components/tracking/SlipPreviewModal'
 
 export default function TrackingPage() {
   const { token } = useParams()
@@ -39,6 +19,22 @@ export default function TrackingPage() {
   const { data, loading, error, timeLeft } = useTrackingLogic(token)
   const { getSteps } = useStatusConfig()
   const [settings, setSettings] = useState({})
+  
+  // State for Slip Modal & Options
+  const [showSlipModal, setShowSlipModal] = useState(false)
+  const [optionMap, setOptionMap] = useState({})
+
+  // Fetch Options Map
+  useEffect(() => {
+    const fetchOptions = async () => {
+        const { data: opts } = await supabase.from('option_choices').select('id, name')
+        if (opts) {
+            const map = opts.reduce((acc, o) => ({...acc, [o.id]: o.name}), {})
+            setOptionMap(map)
+        }
+    }
+    fetchOptions()
+  }, [])
   
   // App Settings for Contact Info
   useEffect(() => {
@@ -206,7 +202,7 @@ export default function TrackingPage() {
                     </div>
                 </div>
 
-                <OrderSummary data={data} />
+                <OrderSummary data={data} optionMap={optionMap} />
             </div>
         </div>
        )}
@@ -258,16 +254,24 @@ export default function TrackingPage() {
                   {t('addToCalendar')}
               </button>
               
-              <BookingSlip 
+              <button 
+                onClick={() => setShowSlipModal(true)}
+                disabled={!canSaveSlip || isCancelled}
+                className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
+                    ${(canSaveSlip && !isCancelled)
+                        ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900 active:scale-[0.98]' 
+                        : 'bg-gray-100 border-transparent text-gray-400 cursor-not-allowed'}
+                `}
+              >
+                  {t('saveSlip')}
+              </button>
+              
+              {/* Slip Modal */}
+              <SlipPreviewModal 
+                isOpen={showSlipModal} 
+                onClose={() => setShowSlipModal(false)}
                 data={data}
-                // Generate simple QR for the slip link (handled internally by component usually or we pass data URL)
-                // For simplified flow, let's pass the URL if needed, but BookingSlip generates its own logic? 
-                // Wait, BookingSlip needs the QR data URL. Let's create it here or inside?
-                // The original code generated it inside useEffect. Let's do it inside the component or pass it.
-                // Let's pass the data URL to keep component pure.
-                qrCodeUrl={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.href)}`}
-                canSave={canSaveSlip}
-                isCancelled={isCancelled}
+                optionMap={optionMap}
               />
           </div>
             {!canSaveSlip && !isCancelled && (
