@@ -107,7 +107,6 @@ function App() {
 
             {/* Staff/Kitchen Route (Standalone) */}
             <Route path="/staff" element={<StaffOrderPage />} />
-            <Route path="/staff.html" element={<StaffOrderPage />} />
           </Routes>
         </Router>
       </BookingProvider>

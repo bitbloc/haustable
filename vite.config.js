@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import legacy from '@vitejs/plugin-legacy'
-import { resolve } from 'path'
 import os from 'os'
 
 function getLocalIp() {
@@ -20,24 +18,13 @@ function getLocalIp() {
 const localIp = getLocalIp()
 
 export default defineConfig({
-  plugins: [
-    react(),
-    legacy({
-      targets: ['chrome >= 60', 'android >= 7.1'],
-      additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-      renderLegacyChunks: true,
-    })
-  ],
+  plugins: [react()],
   define: {
     'process.env.HOST_IP': JSON.stringify(localIp)
   },
   build: {
     // วิธีแก้แบบ Pro: สั่งแยกไฟล์ Library ออกไปเป็นไฟล์ชื่อ vendor
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        staff: resolve(__dirname, 'staff.html')
-      },
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
