@@ -82,9 +82,6 @@ export default function AdminMenu() {
             }, {})
     };
 
-    // Helper to get defined categories (ensure order if needed, or just Object.keys)
-    // We can just use the categories found in the data, plus standard ones to ensure they appear even if empty?
-    // For now, let's just use keys from data to avoid empty empty sections unless critical.
     const categories = Object.keys(sections.regular).sort(); 
 
     const handleDragStart = (event) => {
@@ -99,55 +96,28 @@ export default function AdminMenu() {
         if (!over) return;
         if (active.id === over.id) return;
 
-        // Find containers (using data attribute or inferring?)
-        // dnd-kit `over.data.current.sortable.containerId` helps if we set id on SortableContext?
-        // But simpler: check the item's category or "recommend" status in our LOCAL state.
-        
         const activeItemLocal = menuItems.find(i => i.id === active.id);
         const overItemLocal = menuItems.find(i => i.id === over.id);
         
-        if (!activeItemLocal) return; // Should not happen
+        if (!activeItemLocal) return;
 
-        // Determine "Target Group" based on over item
-        // If sorting over a placeholder or empty container, logic differs. 
-        // Assuming we drag over ITEMS for now.
-        
         let targetGroup = null;
         if (overItemLocal) {
             targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
         } else {
-            // Dragging over a Droppable Container (e.g. Empty Category)
-            // We need to allow dropping into empty containers. 
-            // We'll give containers IDs like "container-recommend" or "container-Main"
              if (over.id === 'container-recommend') targetGroup = 'recommend';
              else if (over.id.startsWith('container-')) targetGroup = over.id.replace('container-', '');
         }
         
         if (!targetGroup) return;
 
-        // LOGIC:
-        // 1. Recommend -> Recommend: OK
-        // 2. Recommend -> Regular (Matching Category): OK (Update is_recommended = false)
-        // 3. Recommend -> Regular (Mismatch): BLOCK
-        // 4. Regular -> Recommend: OK (Update is_recommended = true)
-        // 5. Regular -> Regular (Matching Category): OK
-        // 6. Regular -> Regular (Mismatch): BLOCK
-
         const currentGroup = activeItemLocal.is_recommended ? 'recommend' : activeItemLocal.category;
-        const sourceCategory = activeItemLocal.category; // Always the valid 'home' category
+        const sourceCategory = activeItemLocal.category;
 
-        // Allow move if:
-        // - Target is Recommend
-        // - Target is Source Category (whether currently Recommended or not)
-        
-        // If Target is DIFFERENT regular category, BLOCK.
         if (targetGroup !== 'recommend' && targetGroup !== sourceCategory) {
-            // INVALID MOVE. Do nothing (visuals will revert on drop)
             return;
         }
 
-        // Apply Optimistic Update
-        // Check if we need to change group (Regular <-> Recommend)
         const isTargetRecommend = targetGroup === 'recommend';
         
         if (activeItemLocal.is_recommended !== isTargetRecommend) {
@@ -156,7 +126,6 @@ export default function AdminMenu() {
                  const index = newItems.findIndex(i => i.id === active.id);
                  if (index !== -1) {
                      newItems[index] = { ...newItems[index], is_recommended: isTargetRecommend };
-                     // We don't move it in array here, SortableContext will pick it up in new bucket next render
                  }
                  return newItems;
              });
@@ -170,13 +139,10 @@ export default function AdminMenu() {
 
         if (!over) return;
         
-        // Re-validate Logic for Final Commit
         const item = menuItems.find(i => i.id === active.id);
         if (!item) return;
 
-        // Determine Target Group again
         let targetGroup = null;
-        // Check if over is an item
         const overItemLocal = menuItems.find(i => i.id === over.id);
         if (overItemLocal) {
             targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
@@ -184,19 +150,12 @@ export default function AdminMenu() {
             targetGroup = over.id === 'container-recommend' ? 'recommend' : over.id.replace('container-', '');
         }
 
-        if (!targetGroup) return; // Dropped nowhere specific
+        if (!targetGroup) return;
 
-        // Strict Check: Can only drop in Recommend OR Original Category
         if (targetGroup !== 'recommend' && targetGroup !== item.category) {
-            // Revert strictness: If user tried to drop in wrong category, we might have optimistically updated is_rec?
-            // If we did, we must revert it!
-            // But handleDragOver guards usually prevent visual move? 
-            // Actually, handleDragOver logic above only updates is_recommended if Valid.
-            // So if invalid, it stays as is.
             return;
         }
 
-        // Perform Reorder
         if (active.id !== over.id) {
              setMenuItems((items) => {
                 const oldIndex = items.findIndex((i) => i.id === active.id);
@@ -204,7 +163,6 @@ export default function AdminMenu() {
                 return arrayMove(items, oldIndex, newIndex);
             });
             
-            // Persist
              const oldIndex = menuItems.findIndex((i) => i.id === active.id);
              const newIndex = menuItems.findIndex((i) => i.id === over.id);
              let finalItems = menuItems;
@@ -295,9 +253,9 @@ export default function AdminMenu() {
                 {/* Recommend Menu */}
                 <div 
                     id="container-recommend"
-                    className={`mb-10 p-4 border rounded-3xl transition-colors duration-300 ${
+                    className={`mb-10 p-4 border rounded-3xl transition-colors duration-300 min-h-[150px] ${
                         activeItem && activeItem.is_recommended === false 
-                        ? 'border-[#DFFF00] bg-[#DFFF00]/10' // Highlight when dragging regular to recommend
+                        ? 'border-[#DFFF00] bg-[#DFFF00]/10' 
                         : 'border-[#DFFF00]/20 bg-[#DFFF00]/5' 
                     }`}
                 >
@@ -336,10 +294,10 @@ export default function AdminMenu() {
                             <div 
                                 key={cat} 
                                 id={`container-${cat}`}
-                                className={`transition-all duration-300 rounded-3xl p-4 ${
+                                className={`transition-all duration-300 rounded-3xl p-4 min-h-[150px] ${
                                     isHighlight 
                                     ? 'bg-white/5 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
-                                    : activeItem && !isHomeCategory ? 'opacity-30 blur-[1px]' : '' // Dim others
+                                    : activeItem && !isHomeCategory ? 'opacity-30 blur-[1px]' : '' 
                                 }`}
                             >
                                 <h2 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-[#DFFF00]">{cat} {activeItem && isHomeCategory && <span className="text-xs text-[#DFFF00] font-normal ml-2">(Original Home)</span>}</h2>
@@ -411,7 +369,6 @@ export default function AdminMenu() {
                                             <option value="Appetizer">Appetizer</option>
                                             <option value="Drink">Drink</option>
                                             <option value="Dessert">Dessert</option>
-                                             {/* Dynamic options if needed, but fixed for now per existing code */}
                                         </select>
                                     </div>
                                 </div>
