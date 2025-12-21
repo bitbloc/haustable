@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient';
 import { Plus, X, Star } from 'lucide-react';
 import {
     DndContext,
-    closestCenter,
+    closestCorners,
     KeyboardSensor,
     PointerSensor,
     useSensor,
@@ -219,7 +219,7 @@ export default function AdminMenu() {
     return (
         <DndContext 
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={closestCorners}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
