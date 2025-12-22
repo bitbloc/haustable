@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
         result = { success: true, userId: targetUuid, sessionLink }
     }
 
-    else if (action === 'create_booking') {
+  else if (action === 'create_booking') {
         // Need to find the internal UUID first
          const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('line_user_id', lineUserId).single()
          if (!profile) throw new Error("Profile not found. Please register first.")
@@ -192,6 +192,28 @@ Deno.serve(async (req) => {
          }
          
          result = { success: true, booking }
+    }
+
+    else if (action === 'register_email_profile') {
+        const { userId, profileData } = await req.json()
+        if (!userId || !profileData) throw new Error("Missing Parameters")
+
+        // Use Admin Client to Bypass RLS
+        const { error: upsertError } = await supabaseAdmin.from('profiles').upsert({
+            id: userId,
+            display_name: profileData.display_name,
+            nickname: profileData.nickname,
+            phone_number: profileData.phone_number,
+            birth_day: profileData.birth_day,
+            birth_month: profileData.birth_month,
+            gender: profileData.gender,
+            line_user_id: profileData.line_user_id || null, 
+            role: 'customer'
+        })
+
+        if (upsertError) throw upsertError
+
+        result = { success: true }
     }
     
     else {

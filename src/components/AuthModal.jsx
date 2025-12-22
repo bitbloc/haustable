@@ -224,21 +224,26 @@ export default function AuthModal({ isOpen, onClose }) {
             })
             if (signUpError) throw signUpError
 
-            // 2. Profile
+            // 2. Profile (Via Edge Function to bypass RLS)
             if (data.user) {
-                const { error: profileError } = await supabase.from('profiles').upsert({
-                    id: data.user.id,
-                    display_name: name,
-                    nickname: nickname,
-                    phone_number: phone,
-                    birth_day: birthDay ? parseInt(birthDay) : null,
-                    birth_month: birthMonth ? parseInt(birthMonth) : null,
-                    gender: gender,
-                    line_user_id: lineUid, // Use correct column name
-                    role: 'customer'
+                const { error: profileError } = await supabase.functions.invoke('manage-booking', {
+                    body: {
+                        action: 'register_email_profile',
+                        userId: data.user.id,
+                        profileData: {
+                            display_name: name,
+                            nickname: nickname,
+                            phone_number: phone,
+                            birth_day: birthDay ? parseInt(birthDay) : null,
+                            birth_month: birthMonth ? parseInt(birthMonth) : null,
+                            gender: gender,
+                            line_user_id: lineUid || null
+                        }
+                    }
                 })
+
                 if (profileError) {
-                    console.error("Profile Error:", profileError)
+                    console.error("Profile Creation Failed:", profileError)
                     throw new Error("Failed to create profile: " + profileError.message)
                 }
             }
