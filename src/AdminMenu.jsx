@@ -194,7 +194,9 @@ export default function AdminMenu() {
         const activeIdStr = String(active.id);
         const overIdStr = String(over.id);
 
-        if (activeIdStr === overIdStr) return;
+        // NOTE: We do NOT return early here if IDs are equal, because we might have changed properties 
+        // (is_recommended, category) in handleDragOver, which constitutes a change that needs saving.
+        // if (activeIdStr === overIdStr) return;
 
         // Finalize Reorder
         const oldIndex = menuItems.findIndex((i) => String(i.id) === activeIdStr);
@@ -424,7 +426,7 @@ export default function AdminMenu() {
                 <DragOverlay dropAnimation={dropAnimation}>
                     {activeId ? (
                          (() => {
-                            const item = menuItems.find(i => i.id === activeId);
+                            const item = menuItems.find(i => String(i.id) === activeId);
                             return item ? (
                                 <SortableMenuItem 
                                     item={item} 
