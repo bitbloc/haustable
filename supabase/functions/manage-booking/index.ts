@@ -14,8 +14,41 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, idToken, profileData, bookingData } = await req.json()
+    const body = await req.json()
+    const { action } = body
 
+    // 0. Special Logic for Email Registration (No LINE Token needed)
+    if (action === 'register_email_profile') {
+        const adminClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        )
+
+        const { userId, profileData } = body
+        if (!userId || !profileData) throw new Error("Missing Parameters")
+
+        // Use Admin Client to Bypass RLS
+        const { error: upsertError } = await adminClient.from('profiles').upsert({
+            id: userId,
+            display_name: profileData.display_name,
+            nickname: profileData.nickname,
+            phone_number: profileData.phone_number,
+            birth_day: profileData.birth_day,
+            birth_month: profileData.birth_month,
+            gender: profileData.gender,
+            line_user_id: profileData.line_user_id || null, 
+            role: 'customer'
+        })
+
+        if (upsertError) throw upsertError
+
+        return new Response(JSON.stringify({ success: true }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        })
+    }
+
+    // --- LINE RELATED ACTIONS BELOW ---
+    const { idToken, profileData, bookingData } = body
     if (!idToken) throw new Error('Missing idToken')
 
     // 1. Verify ID Token with LINE
@@ -193,28 +226,8 @@ Deno.serve(async (req) => {
          
          result = { success: true, booking }
     }
-
-    else if (action === 'register_email_profile') {
-        const { userId, profileData } = await req.json()
-        if (!userId || !profileData) throw new Error("Missing Parameters")
-
-        // Use Admin Client to Bypass RLS
-        const { error: upsertError } = await supabaseAdmin.from('profiles').upsert({
-            id: userId,
-            display_name: profileData.display_name,
-            nickname: profileData.nickname,
-            phone_number: profileData.phone_number,
-            birth_day: profileData.birth_day,
-            birth_month: profileData.birth_month,
-            gender: profileData.gender,
-            line_user_id: profileData.line_user_id || null, 
-            role: 'customer'
-        })
-
-        if (upsertError) throw upsertError
-
-        result = { success: true }
-    }
+    
+    // NOTE: 'register_email_profile' is handled above early.
     
     else {
         throw new Error("Invalid Action")
