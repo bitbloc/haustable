@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
@@ -386,7 +386,7 @@ export default function StaffOrderPage() {
     const fetchAndAddOrder = async (orderId, isNew = false) => {
         const { data: fullOrder, error } = await supabase
             .from('bookings')
-            .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+            .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name, phone_number), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
             .eq('id', orderId)
             .single()
 
@@ -399,10 +399,15 @@ export default function StaffOrderPage() {
             
             if (exists) {
                 // Update existing
-                newOrders = prev.map(o => o.id === fullOrder.id ? fullOrder : o)
+                // If status changed to confirmed, remove from 'orders' (Live) because it's now in Schedule
+                if (fullOrder.status === 'confirmed') {
+                    newOrders = prev.filter(o => o.id !== fullOrder.id)
+                } else {
+                    newOrders = prev.map(o => o.id === fullOrder.id ? fullOrder : o)
+                }
             } else {
                 // Add new
-                if (['pending', 'confirmed'].includes(fullOrder.status)) {
+                if (fullOrder.status === 'pending') {
                     newOrders = [...prev, fullOrder]
                 } else {
                     return prev
@@ -415,6 +420,11 @@ export default function StaffOrderPage() {
 
         if (isNew && fullOrder.status === 'pending') {
              triggerNewOrderAlert(fullOrder)
+        }
+        
+        // Refresh Schedule if confirmed
+        if (fullOrder.status === 'confirmed') {
+            fetchScheduleOrders()
         }
     }
 
@@ -436,19 +446,19 @@ export default function StaffOrderPage() {
     const fetchLiveOrders = async (silent = false) => {
         if (!silent) setLoading(true)
         try {
-            console.log("Fetching ALL live orders (pending/confirmed)...")
+            console.log("Fetching Live orders (pending only)...")
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
-                .in('status', ['pending', 'confirmed'])
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name, phone_number), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .eq('status', 'pending')
                 .order('booking_time', { ascending: true })
             
             if (error) {
                 console.error("Supabase Fetch Error:", error)
                 throw error
             }
-            console.log("Orders found:", data?.length, data)
+            console.log("Pending Orders found:", data?.length, data)
             setOrders(data || [])
         } catch (err) {
             console.error(err)
@@ -486,12 +496,11 @@ export default function StaffOrderPage() {
     const fetchScheduleOrders = async () => {
         setLoading(true)
         try {
-            const now = new Date().toISOString()
+            // Fetch all confirmed orders (active tables)
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name, phone_number), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .eq('status', 'confirmed')
-                .gte('booking_time', now)
                 .order('booking_time', { ascending: true })
             
             if (error) throw error
@@ -781,7 +790,7 @@ export default function StaffOrderPage() {
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'schedule' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <Calendar className="w-4 h-4" />
-                        Schedule
+                        Table Schedule
                     </button>
                     <button 
                         onClick={() => setActiveTab('history')}
@@ -849,8 +858,19 @@ export default function StaffOrderPage() {
                                                 {order.status === 'confirmed' && <span className="bg-black text-white text-xs px-2 py-1 rounded-full font-bold ml-2">Active</span>}
                                             </div>
                                             <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
-                                                <Clock className="w-4 h-4" />
-                                                {formatTime(order.booking_date, order.booking_time)}
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="w-4 h-4" />
+                                                    {formatTime(order.booking_date, order.booking_time)}
+                                                </div>
+                                                {(order.profiles?.phone_number || order.pickup_contact_phone) && (
+                                                    <div className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full text-xs">
+                                                        <Phone className="w-3 h-3" />
+                                                        <a href={`tel:${order.profiles?.phone_number || order.pickup_contact_phone}`} className="hover:underline">
+                                                            {order.profiles?.phone_number || order.pickup_contact_phone}
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                
                                                 {order.isOptimistic && <span className="text-orange-500 text-[10px] animate-pulse ml-2">(Syncing...)</span>}
                                             </div>
                                         </div>
@@ -914,34 +934,22 @@ export default function StaffOrderPage() {
                                     </div>
 
                                     {/* Actions */}
-                                    {order.status === 'pending' ? (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <button 
-                                                onClick={() => updateStatus(order.id, 'cancelled')}
-                                                className="py-4 rounded-xl bg-gray-100 text-gray-500 font-bold flex items-center justify-center gap-2 hover:bg-gray-200 hover:text-gray-700 active:scale-95 transition-all text-sm"
-                                            >
-                                                <X className="w-5 h-5" />
-                                                Reject
-                                            </button>
-                                            <button 
-                                                onClick={() => updateStatus(order.id, 'confirmed')}
-                                                className="py-4 rounded-xl bg-[#1A1A1A] text-white font-bold flex items-center justify-center gap-2 hover:bg-black active:scale-95 transition-all shadow-lg shadow-black/20 animate-pulse-slow text-sm"
-                                            >
-                                                <Check className="w-5 h-5" />
-                                                Accept Order
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1">
-                                            <button 
-                                                onClick={() => updateStatus(order.id, 'completed')}
-                                                className="py-4 rounded-xl bg-[#DFFF00] text-[#1A1A1A] font-bold flex items-center justify-center gap-2 hover:bg-[#ccff00] active:scale-95 transition-all shadow-md text-sm border-2 border-black/5"
-                                            >
-                                                <Check className="w-5 h-5" />
-                                                Order Completed (Check Bill)
-                                            </button>
-                                        </div>
-                                    )}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button 
+                                            onClick={() => updateStatus(order.id, 'cancelled')}
+                                            className="py-4 rounded-xl bg-gray-100 text-gray-500 font-bold flex items-center justify-center gap-2 hover:bg-gray-200 hover:text-gray-700 active:scale-95 transition-all text-sm"
+                                        >
+                                            <X className="w-5 h-5" />
+                                            Reject
+                                        </button>
+                                        <button 
+                                            onClick={() => updateStatus(order.id, 'confirmed')}
+                                            className="py-4 rounded-xl bg-[#1A1A1A] text-white font-bold flex items-center justify-center gap-2 hover:bg-black active:scale-95 transition-all shadow-lg shadow-black/20 animate-pulse-slow text-sm"
+                                        >
+                                            <Check className="w-5 h-5" />
+                                            Accept Order
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -989,7 +997,15 @@ export default function StaffOrderPage() {
                                                              • {order.booking_type === 'pickup' ? 'Pickup' : `Table ${order.tables_layout?.table_name || '?'}`}
                                                         </span>
                                                      </div>
-                                                     <div className="text-sm text-gray-600 font-bold mb-3">{order.customer_name}</div>
+                                                     <div className="text-sm text-gray-600 font-bold mb-1">{order.customer_name}</div>
+                                                     {(order.profiles?.phone_number || order.pickup_contact_phone) && (
+                                                        <div className="flex items-center gap-1 text-blue-600 text-xs mb-3 font-medium">
+                                                            <Phone className="w-3 h-3" />
+                                                            <a href={`tel:${order.profiles?.phone_number || order.pickup_contact_phone}`} className="hover:underline">
+                                                                {order.profiles?.phone_number || order.pickup_contact_phone}
+                                                            </a>
+                                                        </div>
+                                                     )}
                                                      
                                                      <div className="flex flex-wrap gap-2">
                                                          {order.booking_type === 'pickup' ? (
@@ -1013,6 +1029,13 @@ export default function StaffOrderPage() {
                                                 </div>
                                                 
                                                 <div className="flex flex-col gap-2">
+                                                    <button 
+                                                        onClick={() => updateStatus(order.id, 'completed')}
+                                                        className="p-3 bg-[#DFFF00] rounded-xl hover:bg-[#ccff00] transition-colors text-[#1A1A1A] font-bold shadow-md active:scale-95 border border-black/5"
+                                                        title="Clear Table / Complete Order"
+                                                    >
+                                                        <Check size={18} />
+                                                    </button>
                                                     <button 
                                                         onClick={() => setPrintModal({ isOpen: true, booking: order })}
                                                         className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600 shadow-sm"
