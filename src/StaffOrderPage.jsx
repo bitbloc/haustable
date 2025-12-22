@@ -407,7 +407,7 @@ export default function StaffOrderPage() {
                 }
             } else {
                 // Add new
-                if (fullOrder.status === 'pending') {
+                if (['pending', 'confirmed', 'ready'].includes(fullOrder.status)) {
                     newOrders = [...prev, fullOrder]
                 } else {
                     return prev
@@ -422,8 +422,8 @@ export default function StaffOrderPage() {
              triggerNewOrderAlert(fullOrder)
         }
         
-        // Refresh Schedule if confirmed
-        if (fullOrder.status === 'confirmed') {
+        // Refresh Schedule if confirmed or ready
+        if (['confirmed', 'ready'].includes(fullOrder.status)) {
             fetchScheduleOrders()
         }
     }
@@ -500,7 +500,7 @@ export default function StaffOrderPage() {
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name, phone_number), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
-                .eq('status', 'confirmed')
+                .in('status', ['confirmed', 'ready'])
                 .order('booking_time', { ascending: true })
             
             if (error) throw error
@@ -550,14 +550,15 @@ export default function StaffOrderPage() {
         // I will make a separate `quickConfirm` function for the Toast.
         
         const isConfirm = newStatus === 'confirmed'
+        const isReady = newStatus === 'ready'
         const isComplete = newStatus === 'completed' 
         const isDangerous = newStatus === 'cancelled' || newStatus === 'void'
 
         setConfirmModal({
             isOpen: true,
-            title: isConfirm ? 'รับออเดอร์?' : (isComplete ? 'เช็คบิล (Complete)?' : 'ปฏิเสธรายการ?'),
-            message: isConfirm ? 'ส่งรายการเข้าครัว' : (isComplete ? 'จบรายการและเคลียร์โต๊ะ' : 'ยกเลิกรายการนี้ถาวร'),
-            confirmText: isConfirm ? 'ยืนยัน (Accept)' : (isComplete ? 'เช็คบิล (Complete)' : 'ปฏิเสธ (Reject)'),
+            title: isConfirm ? 'รับออเดอร์?' : (isReady ? 'ออเดอร์พร้อมส่ง?' : (isComplete ? 'จบรายการ (Complete)?' : 'ปฏิเสธรายการ?')),
+            message: isConfirm ? 'ส่งรายการเข้าครัว' : (isReady ? 'แจ้งลูกค้าว่าอาหารพร้อมแล้ว' : (isComplete ? 'จบรายการและเคลียร์โต๊ะ/ส่งมอบอาหาร' : 'ยกเลิกรายการนี้ถาวร')),
+            confirmText: isConfirm ? 'ยืนยัน (Accept)' : (isReady ? 'พร้อมส่ง (Ready)' : (isComplete ? 'จบรายการ (Complete)' : 'ปฏิเสธ (Reject)')),
             isDangerous: isDangerous,
             action: async () => {
                 await performUpdate(id, newStatus, isConfirm)
@@ -571,7 +572,15 @@ export default function StaffOrderPage() {
             if (error) throw error
             
             setOrders(prev => prev.filter(o => o.id !== id))
-            toast.success(isConfirm ? 'รับออเดอร์เรียบร้อย' : 'ปฏิเสธรายการแล้ว')
+            // Instant update for Schedule view as well
+            if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'void') {
+                setScheduleOrders(prev => prev.filter(o => o.id !== id))
+            } else {
+                 // If status updated to something else (e.g. ready), update the item in schedule
+                 setScheduleOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o))
+            }
+            
+            toast.success(isConfirm ? 'รับออเดอร์เรียบร้อย' : 'บันทึกสถานะเรียบร้อย')
             if (activeTab === 'history') fetchHistoryOrders()
         } catch (err) {
             toast.error(err.message)
@@ -790,7 +799,7 @@ export default function StaffOrderPage() {
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'schedule' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <Calendar className="w-4 h-4" />
-                        Table Schedule
+                        Schedule
                     </button>
                     <button 
                         onClick={() => setActiveTab('history')}
@@ -1030,29 +1039,59 @@ export default function StaffOrderPage() {
                                                                  Pickup
                                                              </span>
                                                          ) : (
-                                                             <span className="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded-md border border-gray-200">
-                                                                 Dine-in
-                                                             </span>
+                                                             <>
+                                                                <span className="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded-md border border-gray-200">
+                                                                    Dine-in
+                                                                </span>
+                                                                {order.pax && (
+                                                                     <span className="bg-orange-50 text-orange-700 text-xs font-bold px-2 py-1 rounded-md border border-orange-100">
+                                                                         {order.pax} Guests
+                                                                     </span>
+                                                                )}
+                                                             </>
                                                          )}
-                                                         <span className="bg-gray-50 text-gray-500 text-xs font-mono px-2 py-1 rounded-md border border-gray-200">
-                                                             #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
+                                                         <span className={`${order.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200'} text-xs font-bold px-2 py-1 rounded-md border`}>
+                                                             {order.status === 'ready' ? 'READY' : (order.status === 'confirmed' ? 'OVEN' : order.status)}
                                                          </span>
-                                                         {order.pax && (
-                                                             <span className="bg-orange-50 text-orange-700 text-xs font-bold px-2 py-1 rounded-md border border-orange-100">
-                                                                 {order.pax} Guests
-                                                             </span>
-                                                         )}
                                                      </div>
                                                 </div>
                                                 
                                                 <div className="flex flex-col gap-2">
-                                                    <button 
-                                                        onClick={() => updateStatus(order.id, 'completed')}
-                                                        className="p-3 bg-[#DFFF00] rounded-xl hover:bg-[#ccff00] transition-colors text-[#1A1A1A] font-bold shadow-md active:scale-95 border border-black/5"
-                                                        title="Clear Table / Complete Order"
-                                                    >
-                                                        <Check size={18} />
-                                                    </button>
+                                                    {order.booking_type === 'pickup' ? (
+                                                        // 2-Step for Pickup
+                                                        <>
+                                                            {order.status === 'confirmed' && (
+                                                                <button 
+                                                                    onClick={() => updateStatus(order.id, 'ready')}
+                                                                    className="p-3 bg-orange-100 rounded-xl hover:bg-orange-200 transition-colors text-orange-700 font-bold shadow-sm active:scale-95 border border-orange-200"
+                                                                    title="Mark as Ready (Cooking Done)"
+                                                                >
+                                                                    <ChefHat size={18} />
+                                                                </button>
+                                                            )}
+                                                            {order.status === 'ready' && (
+                                                                <button 
+                                                                    onClick={() => updateStatus(order.id, 'completed')}
+                                                                    className="p-3 bg-green-100 rounded-xl hover:bg-green-200 transition-colors text-green-700 font-bold shadow-sm active:scale-95 border border-green-200 animate-pulse"
+                                                                    title="Complete Order (Picked Up)"
+                                                                >
+                                                                    <Check size={18} />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        // 1-Step for Dine-in
+                                                        order.status === 'confirmed' && (
+                                                            <button 
+                                                                onClick={() => updateStatus(order.id, 'completed')}
+                                                                className="p-3 bg-[#DFFF00] rounded-xl hover:bg-[#ccff00] transition-colors text-[#1A1A1A] font-bold shadow-md active:scale-95 border border-black/5"
+                                                                title="Clear Table / Complete Order"
+                                                            >
+                                                                <Check size={18} />
+                                                            </button>
+                                                        )
+                                                    )}
+                                                    
                                                     <button 
                                                         onClick={() => setPrintModal({ isOpen: true, booking: order })}
                                                         className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600 shadow-sm"
