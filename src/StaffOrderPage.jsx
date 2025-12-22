@@ -407,7 +407,7 @@ export default function StaffOrderPage() {
                 }
             } else {
                 // Add new
-                if (['pending', 'confirmed', 'ready'].includes(fullOrder.status)) {
+                if (['pending', 'confirmed', 'ready', 'seated'].includes(fullOrder.status)) {
                     newOrders = [...prev, fullOrder]
                 } else {
                     return prev
@@ -422,8 +422,8 @@ export default function StaffOrderPage() {
              triggerNewOrderAlert(fullOrder)
         }
         
-        // Refresh Schedule if confirmed or ready
-        if (['confirmed', 'ready'].includes(fullOrder.status)) {
+        // Refresh Schedule if confirmed or ready or seated
+        if (['confirmed', 'ready', 'seated'].includes(fullOrder.status)) {
             fetchScheduleOrders()
         }
     }
@@ -500,7 +500,7 @@ export default function StaffOrderPage() {
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), profiles (display_name, phone_number), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
-                .in('status', ['confirmed', 'ready'])
+                .in('status', ['confirmed', 'ready', 'seated'])
                 .order('booking_time', { ascending: true })
             
             if (error) throw error
@@ -551,14 +551,15 @@ export default function StaffOrderPage() {
         
         const isConfirm = newStatus === 'confirmed'
         const isReady = newStatus === 'ready'
+        const isSeated = newStatus === 'seated'
         const isComplete = newStatus === 'completed' 
         const isDangerous = newStatus === 'cancelled' || newStatus === 'void'
 
         setConfirmModal({
             isOpen: true,
-            title: isConfirm ? 'รับออเดอร์?' : (isReady ? 'ออเดอร์พร้อมส่ง?' : (isComplete ? 'จบรายการ (Complete)?' : 'ปฏิเสธรายการ?')),
-            message: isConfirm ? 'ส่งรายการเข้าครัว' : (isReady ? 'แจ้งลูกค้าว่าอาหารพร้อมแล้ว' : (isComplete ? 'จบรายการและเคลียร์โต๊ะ/ส่งมอบอาหาร' : 'ยกเลิกรายการนี้ถาวร')),
-            confirmText: isConfirm ? 'ยืนยัน (Accept)' : (isReady ? 'พร้อมส่ง (Ready)' : (isComplete ? 'จบรายการ (Complete)' : 'ปฏิเสธ (Reject)')),
+            title: isConfirm ? 'รับออเดอร์?' : (isReady ? 'ออเดอร์พร้อมส่ง?' : (isSeated ? 'ลูกค้าเข้าโต๊ะ (Check-in)?' : (isComplete ? 'จบรายการ (Complete)?' : 'ปฏิเสธรายการ?'))),
+            message: isConfirm ? 'ส่งรายการเข้าครัว' : (isReady ? 'แจ้งลูกค้าว่าอาหารพร้อมแล้ว' : (isSeated ? 'เริ่มจับเวลาโต๊ะ' : (isComplete ? 'จบรายการและเคลียร์โต๊ะ/ส่งมอบอาหาร' : 'ยกเลิกรายการนี้ถาวร'))),
+            confirmText: isConfirm ? 'ยืนยัน (Accept)' : (isReady ? 'พร้อมส่ง (Ready)' : (isSeated ? 'เช็คอิน (Check-in)' : (isComplete ? 'จบรายการ (Complete)' : 'ปฏิเสธ (Reject)'))),
             isDangerous: isDangerous,
             action: async () => {
                 await performUpdate(id, newStatus, isConfirm)
@@ -1050,8 +1051,8 @@ export default function StaffOrderPage() {
                                                                 )}
                                                              </>
                                                          )}
-                                                         <span className={`${order.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200'} text-xs font-bold px-2 py-1 rounded-md border`}>
-                                                             {order.status === 'ready' ? 'READY' : (order.status === 'confirmed' ? 'OVEN' : order.status)}
+                                                         <span className={`${['ready', 'seated'].includes(order.status) ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200'} text-xs font-bold px-2 py-1 rounded-md border`}>
+                                                             {order.status === 'ready' ? 'READY' : (order.status === 'seated' ? 'SEATED' : (order.status === 'confirmed' ? 'CONFIRMED' : order.status))}
                                                          </span>
                                                      </div>
                                                 </div>
@@ -1080,16 +1081,27 @@ export default function StaffOrderPage() {
                                                             )}
                                                         </>
                                                     ) : (
-                                                        // 1-Step for Dine-in
-                                                        order.status === 'confirmed' && (
-                                                            <button 
-                                                                onClick={() => updateStatus(order.id, 'completed')}
-                                                                className="p-3 bg-[#DFFF00] rounded-xl hover:bg-[#ccff00] transition-colors text-[#1A1A1A] font-bold shadow-md active:scale-95 border border-black/5"
-                                                                title="Clear Table / Complete Order"
-                                                            >
-                                                                <Check size={18} />
-                                                            </button>
-                                                        )
+                                                        // 2-Step for Dine-in
+                                                        <>
+                                                            {order.status === 'confirmed' && (
+                                                                <button 
+                                                                    onClick={() => updateStatus(order.id, 'seated')}
+                                                                    className="p-3 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors text-blue-700 font-bold shadow-sm active:scale-95 border border-blue-200"
+                                                                    title="Check-in Customer (Seated)"
+                                                                >
+                                                                    <Check size={18} />
+                                                                </button>
+                                                            )}
+                                                            {order.status === 'seated' && (
+                                                                <button 
+                                                                    onClick={() => updateStatus(order.id, 'completed')}
+                                                                    className="p-3 bg-[#DFFF00] rounded-xl hover:bg-[#ccff00] transition-colors text-[#1A1A1A] font-bold shadow-md active:scale-95 border border-black/5"
+                                                                    title="Clear Table / Complete Order"
+                                                                >
+                                                                    <LogOut size={18} />
+                                                                </button>
+                                                            )}
+                                                        </>
                                                     )}
                                                     
                                                     <button 
