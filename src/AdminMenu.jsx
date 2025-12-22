@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient'; // Keep supabase for mutations
 import { fetchAndSortMenu } from './utils/menuHelper';
-import { Plus, X, Star, HelpCircle } from 'lucide-react';
+import { Plus, X, Star, HelpCircle, AlertTriangle } from 'lucide-react';
 import {
     DndContext,
     rectIntersection,
@@ -222,6 +222,24 @@ export default function AdminMenu() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const price = parseFloat(formData.price);
+            if (price < 0) {
+                alert('ราคาไม่สามารถติดลบได้ (Price cannot be negative)');
+                return;
+            }
+
+            // Duplicate Name Check
+            const duplicate = menuItems.find(i => 
+                i.name.trim().toLowerCase() === formData.name.trim().toLowerCase() &&
+                (!editingItem || i.id !== editingItem.id)
+            );
+
+            if (duplicate) {
+                if (!confirm(`มีเมนูชื่อ "${formData.name}" อยู่แล้ว คุณต้องการสร้างซ้ำหรือไม่?\n(Duplicate Name Detected. Continue?)`)) {
+                    return;
+                }
+            }
+
             let imageUrl = editingItem?.image_url || '';
             if (imageFile) {
                 const fileName = `menu_${Date.now()}.${imageFile.name.split('.').pop()}`;
@@ -233,7 +251,7 @@ export default function AdminMenu() {
 
             const payload = {
                 name: formData.name,
-                price: parseFloat(formData.price),
+                price: price,
                 category: formData.category,
                 is_available: formData.is_available,
                 is_pickup_available: formData.is_pickup_available,
@@ -241,9 +259,11 @@ export default function AdminMenu() {
                 image_url: imageUrl
             };
 
-            if (editingItem) {
+            if (editingItem && editingItem.id) {
+                // UPDATE ITEM
                 await supabase.from('menu_items').update(payload).eq('id', editingItem.id);
             } else {
+                // CREATE NEW ITEM
                 const maxSort = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.sort_order || 0)) : 0;
                 await supabase.from('menu_items').insert({ ...payload, sort_order: maxSort + 1 });
             }
@@ -266,7 +286,7 @@ export default function AdminMenu() {
         setFormData({ 
             name: '', 
             price: '', 
-            category: categories.length > 0 ? categories[0].name : '', 
+            category: categories.length > 0 ? categories[0].name : 'Main', // Fallback to 'Main' if empty
             is_available: true, 
             is_pickup_available: true, 
             is_recommended: false 
