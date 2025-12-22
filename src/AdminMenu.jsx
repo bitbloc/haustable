@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './lib/supabaseClient';
-import { Plus, X, Star } from 'lucide-react';
+import { supabase } from './lib/supabaseClient'; // Keep supabase for mutations
+import { fetchAndSortMenu } from './utils/menuHelper';
+import { Plus, X, Star, HelpCircle } from 'lucide-react';
 import {
     DndContext,
     rectIntersection,
@@ -32,10 +33,11 @@ const dropAnimation = {
 
 export default function AdminMenu() {
     const [menuItems, setMenuItems] = useState([]);
+    const [categories, setCategories] = useState([]); // Dynamic Categories
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
-    const [formData, setFormData] = useState({ name: '', price: '', category: 'Main', is_available: true, is_pickup_available: true, is_recommended: false });
+    const [formData, setFormData] = useState({ name: '', price: '', category: '', is_available: true, is_pickup_available: true, is_recommended: false });
     const [imageFile, setImageFile] = useState(null);
     const [activeId, setActiveId] = useState(null);
     const [activeItem, setActiveItem] = useState(null); 
@@ -53,12 +55,17 @@ export default function AdminMenu() {
 
     const fetchMenu = async () => {
         setLoading(true);
-        const { data } = await supabase
-            .from('menu_items')
-            .select('*')
-            .order('sort_order', { ascending: true })
-            .order('created_at', { ascending: false });
-        setMenuItems(data || []);
+        try {
+            const { menuItems: data, categories: cats } = await fetchAndSortMenu();
+            setMenuItems(data || []);
+            setCategories(cats || []);
+            // Set default category for form
+            if (cats && cats.length > 0 && formData.category === '') {
+                setFormData(prev => ({ ...prev, category: cats[0].name }));
+            }
+        } catch (error) {
+            console.error("Fetch Menu Error:", error);
+        }
         setLoading(false);
     };
 
@@ -74,23 +81,25 @@ export default function AdminMenu() {
     );
 
     // Group items: Recommend vs Regular (Mutually Exclusive)
+    // Group items: Recommend vs Regular (Mutually Exclusive)
     const sections = {
         recommend: menuItems.filter(i => i.is_recommended),
-        regular: menuItems
-            .filter(i => !i.is_recommended) // Filter out recommended items
-            .reduce((acc, item) => {
-                 if (!acc[item.category]) acc[item.category] = [];
-                 acc[item.category].push(item);
-                 return acc;
-            }, {})
-    };
-
-    const categories = Object.keys(sections.regular).sort(); 
+        // Group by valid categories first
+        regular: categories.reduce((acc, cat) => {
+             acc[cat.name] = menuItems.filter(i => !i.is_recommended && i.category === cat.name);
+             return acc;
+        }, {}),
+        // Catch-all for items with unknown categories
+        uncategorized: menuItems.filter(i => 
+            !i.is_recommended && 
+            !categories.some(c => c.name === i.category)
+        )
+    }; 
 
     const handleDragStart = (event) => {
         const { active } = event;
-        setActiveId(active.id);
-        const item = menuItems.find(i => i.id === active.id);
+        setActiveId(String(active.id)); // Enforce String
+        const item = menuItems.find(i => String(i.id) === String(active.id));
         setActiveItem(item);
     };
 
@@ -98,12 +107,12 @@ export default function AdminMenu() {
         const { active, over } = event;
         if (!over) return;
     
-        const activeId = active.id;
-        const overId = over.id;
+        const activeIdStr = String(active.id); // Enforce String
+        const overIdStr = String(over.id);     // Enforce String
     
         // Find Item objects
-        const activeItemLocal = menuItems.find(i => i.id === activeId);
-        const overItemLocal = menuItems.find(i => i.id === overId);
+        const activeItemLocal = menuItems.find(i => String(i.id) === activeIdStr);
+        const overItemLocal = menuItems.find(i => String(i.id) === overIdStr);
     
         if (!activeItemLocal) return;
     
@@ -114,38 +123,57 @@ export default function AdminMenu() {
             // Dragging over another Item -> inherit its group
             targetGroup = overItemLocal.is_recommended ? 'recommend' : overItemLocal.category;
         } else {
-            // Dragging over Empty Container
-            if (overId === 'container-recommend') targetGroup = 'recommend';
-            else if (overId.startsWith('container-')) targetGroup = overId.replace('container-', '');
+            // Dragging over Empty Container (SortableContext IDs are prefixed now)
+            if (overIdStr === 'ctx-recommend') targetGroup = 'recommend';
+            else if (overIdStr.startsWith('ctx-cat-')) targetGroup = overIdStr.replace('ctx-cat-', '');
+            else if (overIdStr === 'ctx-uncategorized') targetGroup = 'uncategorized';
+        }
+
+        // Handle Uncategorized drop -> Allow dropping into uncategorized buckets
+        if (targetGroup === 'uncategorized') {
+             // Allow move
         }
     
         // Security Check: No cross-category dragging (except Recommend)
+        // Allow moving TO recommend OR staying in same category
         const sourceCategory = activeItemLocal.category;
-        if (targetGroup && targetGroup !== 'recommend' && targetGroup !== sourceCategory) {
-            return; // Block invalid drops
-        }
-    
-        // 2. Optimistic Update (Move state temporarily for smooth UI)
+        
+        // Strict Mode: Can only move between Recommend <-> Original Category
+        // Or if we implementing "Move Category by Drag", then we allow it.
+        // Assuming user wants to Reorder ONLY, not change category via drag (except Recommend toggle)
+        
+        // However, if we want to allow fixing "Uncategorized" by dragging to a Category, we should allow it.
+        // Let's allow dragging ANYWHERE, and update the item's category if it changes zones!
+        // That is more intuitive for "Admin".
+
+        // Update 2024: Enable full cross-category drag
+        
+        // 2. Optimistic Update
         const isActiveRecommend = activeItemLocal.is_recommended;
         const isOverRecommend = targetGroup === 'recommend';
+        const isCategoryChange = targetGroup !== 'recommend' && targetGroup !== 'uncategorized' && targetGroup !== activeItemLocal.category;
     
-        // Case A: Crossing Zones (Recommend <-> Regular)
-        if (isActiveRecommend !== isOverRecommend) {
+        if (isActiveRecommend !== isOverRecommend || isCategoryChange) {
             setMenuItems((items) => {
-                const activeIndex = items.findIndex((i) => i.id === activeId);
-                const overIndex = items.findIndex((i) => i.id === overId);
+                const activeIndex = items.findIndex((i) => String(i.id) === activeIdStr);
+                const overIndex = items.findIndex((i) => String(i.id) === overIdStr);
     
                 if (activeIndex === -1) return items;
     
                 const newItems = [...items];
+                const updatedItem = { ...newItems[activeIndex] };
+
+                // Apply updates
+                updatedItem.is_recommended = isOverRecommend;
                 
-                // Toggle status immediately
-                newItems[activeIndex] = { 
-                    ...newItems[activeIndex], 
-                    is_recommended: isOverRecommend 
-                };
+                // If dropped into a specific category context (not recommend), update category
+                if (!isOverRecommend && targetGroup && targetGroup !== 'uncategorized') {
+                     updatedItem.category = targetGroup;
+                }
+
+                newItems[activeIndex] = updatedItem;
     
-                // Move in array to prevent flickering if target is specific item
+                // Move in array
                 if (overIndex >= 0) {
                      return arrayMove(newItems, activeIndex, overIndex);
                 }
@@ -162,11 +190,15 @@ export default function AdminMenu() {
 
         if (!over) return;
         
-        if (active.id === over.id) return;
+        // String conversion for safety
+        const activeIdStr = String(active.id);
+        const overIdStr = String(over.id);
+
+        if (activeIdStr === overIdStr) return;
 
         // Finalize Reorder
-        const oldIndex = menuItems.findIndex((i) => i.id === active.id);
-        const newIndex = menuItems.findIndex((i) => i.id === over.id);
+        const oldIndex = menuItems.findIndex((i) => String(i.id) === activeIdStr);
+        const newIndex = menuItems.findIndex((i) => String(i.id) === overIdStr);
 
         let finalItems = menuItems;
         if (oldIndex !== -1 && newIndex !== -1) {
@@ -176,10 +208,12 @@ export default function AdminMenu() {
         setMenuItems(finalItems);
 
         // Persist to DB
+        // We need to persist ALL fields that might have changed (sort_order, is_recommended, category)
         const updates = finalItems.map((i, index) => ({
             id: i.id,
             sort_order: index,
-            is_recommended: i.is_recommended
+            is_recommended: i.is_recommended,
+            category: i.category // Important if moved between categories
         }));
 
         await supabase.from('menu_items').upsert(updates);
@@ -229,7 +263,14 @@ export default function AdminMenu() {
     };
 
     const resetForm = () => {
-        setFormData({ name: '', price: '', category: 'Main', is_available: true, is_pickup_available: true, is_recommended: false });
+        setFormData({ 
+            name: '', 
+            price: '', 
+            category: categories.length > 0 ? categories[0].name : '', 
+            is_available: true, 
+            is_pickup_available: true, 
+            is_recommended: false 
+        });
         setEditingItem(null);
         setImageFile(null);
     };
@@ -258,7 +299,7 @@ export default function AdminMenu() {
 
                 {/* Recommend Menu */}
                 <div 
-                    id="container-recommend"
+                    id="ctx-recommend" /* PREFIXED ID */
                     className={`mb-10 p-4 border rounded-3xl transition-colors duration-300 min-h-[200px] ${
                         activeItem && activeItem.is_recommended === false 
                         ? 'border-[#DFFF00] bg-[#DFFF00]/10' 
@@ -270,8 +311,8 @@ export default function AdminMenu() {
                         <h2 className="text-xl font-bold uppercase tracking-wider">Recommend Menu (รวมดาว)</h2>
                     </div>
                     <SortableContext 
-                        id="recommend"
-                        items={sections.recommend.map(i => i.id)}
+                        id="ctx-recommend" /* PREFIXED ID */
+                        items={sections.recommend.map(i => String(i.id))} /* String IDs */
                         strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}
                     >
                         <div className={isMobile ? "space-y-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
@@ -292,24 +333,24 @@ export default function AdminMenu() {
                 {/* Regular Menu by Category */}
                 <div className="space-y-8">
                     {categories.map(cat => {
-                        const items = sections.regular[cat] || [];
-                        const isHomeCategory = activeItem && activeItem.category === cat;
+                        const items = sections.regular[cat.name] || [];
+                        const isHomeCategory = activeItem && activeItem.category === cat.name;
                         const isHighlight = activeItem && activeItem.is_recommended && isHomeCategory;
 
                         return (
                             <div 
-                                key={cat} 
-                                id={`container-${cat}`}
+                                key={cat.name} 
+                                id={`ctx-cat-${cat.name}`} /* PREFIXED ID */
                                 className={`transition-all duration-300 rounded-3xl p-4 min-h-[150px] ${
                                     isHighlight 
                                     ? 'bg-white/5 border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
                                     : activeItem && !isHomeCategory ? 'opacity-30 blur-[1px]' : '' 
                                 }`}
                             >
-                                <h2 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-[#DFFF00]">{cat} {activeItem && isHomeCategory && <span className="text-xs text-[#DFFF00] font-normal ml-2">(Original Home)</span>}</h2>
+                                <h2 className="text-xl font-bold text-white mb-4 pl-2 border-l-4 border-[#DFFF00]">{cat.name} {activeItem && isHomeCategory && <span className="text-xs text-[#DFFF00] font-normal ml-2">(Original Home)</span>}</h2>
                                 <SortableContext 
-                                    id={cat}
-                                    items={items.map(i => i.id)}
+                                    id={`ctx-cat-${cat.name}`} /* PREFIXED ID */
+                                    items={items.map(i => String(i.id))} /* String IDs */
                                     strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}
                                 >
                                     <div className={isMobile ? "space-y-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
@@ -328,6 +369,35 @@ export default function AdminMenu() {
                             </div>
                         );
                     })}
+
+                    {/* Uncategorized Section */}
+                    {sections.uncategorized.length > 0 && (
+                        <div 
+                            id="ctx-uncategorized"
+                            className="bg-red-500/5 border border-red-500/20 rounded-3xl p-4 min-h-[150px]"
+                        >
+                            <h2 className="text-xl font-bold text-red-400 mb-4 pl-2 border-l-4 border-red-500 flex items-center gap-2">
+                                <HelpCircle size={20} /> Uncategorized / Mismatch
+                            </h2>
+                            <SortableContext 
+                                id="ctx-uncategorized"
+                                items={sections.uncategorized.map(i => String(i.id))}
+                                strategy={isMobile ? verticalListSortingStrategy : rectSortingStrategy}
+                            >
+                                <div className={isMobile ? "space-y-3" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"}>
+                                    {sections.uncategorized.map(item => (
+                                        <SortableMenuItem 
+                                            key={item.id} 
+                                            item={item} 
+                                            isMobile={isMobile} 
+                                            onEdit={(i) => { setEditingItem(i); setFormData(i); setIsModalOpen(true); }}
+                                            onDelete={handleDelete}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </div>
+                    )}
                 </div>
 
                 {/* Drag Overlay */}
@@ -371,10 +441,10 @@ export default function AdminMenu() {
                                     <div className="flex-1 space-y-1">
                                         <label className="text-xs text-gray-400 ml-1">หมวดหมู่</label>
                                         <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-black border border-white/10 rounded-xl p-3 text-white outline-none">
-                                            <option value="Main">Main Course</option>
-                                            <option value="Appetizer">Appetizer</option>
-                                            <option value="Drink">Drink</option>
-                                            <option value="Dessert">Dessert</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                            ))}
+                                            <option value="Uncategorized">Other / Uncategorized</option>
                                         </select>
                                     </div>
                                 </div>

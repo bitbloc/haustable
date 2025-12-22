@@ -16,7 +16,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, isOverlay }
     transition,
     isDragging
   } = useSortable({ 
-    id: item.id,
+    id: String(item.id), // Enforce String ID
     disabled: isRecommended, 
     data: { 
         category_id: item.category,
