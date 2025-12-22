@@ -131,7 +131,7 @@ export default function SlipModal({ booking, type, onClose }) {
                     
                     <div class="meta">
                         <div>Table: <strong style="font-size: 16px;">${tableName}</strong></div>
-                        <div>Date: ${dateStr}</div>
+                        <div>${booking.booking_type === 'pickup' ? 'Pickup Time' : 'Reservation'}: ${dateStr}</div>
                         <div>Order ID: #${booking.id.slice(0, 8)}</div>
                         ${!isKitchen ? `<div>Customer: ${booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</div>` : ''}
                     </div>
@@ -173,7 +173,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         {/* Meta */}
                         <div className="border-b-2 border-black pb-3 mb-4 text-xs space-y-1">
                             <div className="flex justify-between"><span>Table:</span> <span className="font-bold text-base">{booking.tables_layout?.table_name || 'N/A'}</span></div>
-                            <div className="flex justify-between"><span>Date:</span> <span>{new Date(booking.booking_time).toLocaleString('th-TH')}</span></div>
+                            <div className="flex justify-between"><span>{booking.booking_type === 'pickup' ? 'Pickup Time' : 'Reservation'}:</span> <span>{new Date(booking.booking_time).toLocaleString('th-TH')}</span></div>
                             <div className="flex justify-between"><span>Order ID:</span> <span>#{booking.id.slice(0, 8)}</span></div>
                             {!isKitchen && <div className="flex justify-between"><span>Customer:</span> <span>{booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</span></div>}
                         </div>

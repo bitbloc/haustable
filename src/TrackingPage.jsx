@@ -224,11 +224,11 @@ export default function TrackingPage() {
                 {/* Date & Time */}
                 <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-100">
                     <div>
-                        <span className="block text-xs text-gray-400 mb-1">{t('dateDate')}</span>
+                        <span className="block text-xs text-gray-400 mb-1">{isPickup ? t('pickupDate') : t('dateDate')}</span>
                         <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
                     </div>
                     <div className="text-right">
-                         <span className="block text-xs text-gray-400 mb-1">{t('dateTime')}</span>
+                         <span className="block text-xs text-gray-400 mb-1">{isPickup ? t('pickupTime') : t('dateTime')}</span>
                          <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
                 </div>

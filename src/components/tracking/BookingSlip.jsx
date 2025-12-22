@@ -60,6 +60,16 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled, isF
                         </p>
                     </div>
                 </div>
+
+                {/* 2.5 Date & Time - NEW */}
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-6 text-center">
+                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">
+                        {isPickup ? 'Pickup Time' : 'Reservation Date'}
+                    </p>
+                    <p className="font-bold text-lg text-black">
+                         {new Date(data.booking_time).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' })}
+                    </p>
+                </div>
                 
                 {/* 3. Items List - DETAILED */}
                 <div className="mb-6">
