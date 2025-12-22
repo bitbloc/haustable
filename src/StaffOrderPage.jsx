@@ -7,7 +7,7 @@ import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
-import { formatThaiTimeOnly, formatThaiDateLong } from './utils/timeUtils'
+import { formatThaiTimeOnly, formatThaiDateLong, formatThaiTime } from './utils/timeUtils'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
@@ -994,13 +994,25 @@ export default function StaffOrderPage() {
                                                      <div className="text-3xl font-black text-[#1A1A1A] mb-1">
                                                         #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
                                                      </div>
-                                                     <div className="text-lg font-bold text-gray-700 mb-1">
+                                                     <div className="text-lg font-bold text-gray-700 mb-2">
                                                          {order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Guest User'}
                                                      </div>
-                                                     <div className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
-                                                         <span>{order.tables_layout?.table_name ? `Table ${order.tables_layout.table_name}` : 'Pickup'}</span>
-                                                         <span>•</span>
-                                                         <span>{formatTime(order.booking_date, order.booking_time)}</span>
+                                                     
+                                                     <div className="bg-gray-50 p-2 rounded-lg text-xs text-gray-600 mb-3 space-y-1">
+                                                         <div className="flex justify-between">
+                                                             <span className="text-gray-400">Created:</span>
+                                                             <span className="font-mono font-medium">{formatThaiTime(order.created_at)}</span>
+                                                         </div>
+                                                         <div className="flex justify-between">
+                                                             <span className="text-gray-400">Scheduled:</span>
+                                                             <span className="font-mono font-bold text-[#1A1A1A]">{formatThaiTime(order.booking_time)}</span>
+                                                         </div>
+                                                         <div className="flex justify-between border-t border-gray-200 pt-1 mt-1">
+                                                             <span className="text-gray-400">Location:</span>
+                                                             <span className="font-bold text-[#1A1A1A]">
+                                                                 {order.booking_type === 'pickup' ? 'Pickup Order' : `Table ${order.tables_layout?.table_name || '?'}`}
+                                                             </span>
+                                                         </div>
                                                      </div>
 
                                                      {(order.profiles?.phone_number || order.pickup_contact_phone) && (
