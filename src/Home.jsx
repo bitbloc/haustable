@@ -33,10 +33,10 @@ export default function Home({ session }) {
         const isStaffAuth = localStorage.getItem('staff_auth') === 'true'
         const shouldSkip = sessionStorage.getItem('skip_staff_redirect') === 'true'
         
-        if (isStaffAuth && !shouldSkip) {
+        if (isStaffAuth && !shouldSkip && userRole === 'admin') {
             window.location.href = '/staff'
         }
-    }, [])
+    }, [userRole])
 
     useEffect(() => {
         // 1. Safety Timeout (Ensures "LOADING" never stays forever)
