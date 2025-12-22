@@ -991,13 +991,18 @@ export default function StaffOrderPage() {
                                         <div className="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:border-[#1A1A1A] transition-all duration-300">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                     <div className="text-2xl font-black text-[#1A1A1A] flex items-center gap-2 mb-1">
-                                                        {formatTime(order.booking_date, order.booking_time)}
-                                                        <span className="text-base font-medium text-gray-400">
-                                                             • {order.booking_type === 'pickup' ? 'Pickup' : `Table ${order.tables_layout?.table_name || '?'}`}
-                                                        </span>
+                                                     <div className="text-3xl font-black text-[#1A1A1A] mb-1">
+                                                        #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
                                                      </div>
-                                                     <div className="text-sm text-gray-600 font-bold mb-1">{order.customer_name}</div>
+                                                     <div className="text-lg font-bold text-gray-700 mb-1">
+                                                         {order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Guest User'}
+                                                     </div>
+                                                     <div className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
+                                                         <span>{order.tables_layout?.table_name ? `Table ${order.tables_layout.table_name}` : 'Pickup'}</span>
+                                                         <span>•</span>
+                                                         <span>{formatTime(order.booking_date, order.booking_time)}</span>
+                                                     </div>
+
                                                      {(order.profiles?.phone_number || order.pickup_contact_phone) && (
                                                         <div className="flex items-center gap-1 text-blue-600 text-xs mb-3 font-medium">
                                                             <Phone className="w-3 h-3" />
