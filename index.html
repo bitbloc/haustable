@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="manifest" href="/manifest.json" />
+
+    <link rel="manifest" href="/manifest.json" id="app-manifest" />
+    <script>
+      // Dual-Manifest Strategy: Switch to Staff Manifest if in Staff Mode
+      try {
+        if (window.location.pathname.startsWith('/staff') || window.location.search.includes('mode=staff')) {
+          const manifestLink = document.getElementById('app-manifest');
+          if (manifestLink) {
+            manifestLink.setAttribute('href', '/manifest.staff.json');
+            // Optional: Adjust theme color if needed
+            // document.querySelector('meta[name="theme-color"]').setAttribute('content', '#000000'); 
+          }
+        }
+      } catch (e) {
+        console.error('Manifest switch failed:', e);
+      }
+    </script>
     <link rel="apple-touch-icon" href="/pwa-icon.png">
     <meta name="theme-color" content="#111111" />
     <meta name="mobile-web-app-capable" content="yes">

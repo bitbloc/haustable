@@ -100,7 +100,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
 
                                                     <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
                                                         <div className="flex items-center gap-2 text-sm font-bold text-black">
-                                                            {order.table_name ? `Table ${order.table_name}` : 'Pickup'}
+                                                            {order.booking_type === 'pickup' ? 'Pickup' : (order.table_name ? `Table ${order.table_name}` : 'Dine-in')}
                                                         </div>
                                                         <div className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 group-hover:bg-gray-800 transition-colors">
                                                             Track Status <ArrowRight size={14} />
