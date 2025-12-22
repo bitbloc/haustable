@@ -456,7 +456,7 @@ export default function AdminMenu() {
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1">
                                         <label className="text-xs text-gray-400 ml-1">ราคา</label>
-                                        <input type="number" required value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:border-[#DFFF00] outline-none" />
+                                        <input type="number" min="0" required value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="w-full bg-black border border-white/10 rounded-xl p-3 text-white focus:border-[#DFFF00] outline-none" />
                                     </div>
                                     <div className="flex-1 space-y-1">
                                         <label className="text-xs text-gray-400 ml-1">หมวดหมู่</label>
