@@ -288,7 +288,7 @@ export default function StaffOrderPage() {
     }
 
     const showSystemNotification = (title, body) => {
-        if (Notification.permission === 'granted') {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             try {
                 // Aggressive Notification Options for background visibility
                 const options = {

@@ -22,7 +22,12 @@ function urlBase64ToUint8Array(base64String) {
 export function usePushNotifications() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscription, setSubscription] = useState(null);
-  const [permission, setPermission] = useState(Notification.permission);
+  const [permission, setPermission] = useState(() => {
+    if (typeof Notification !== 'undefined') {
+      return Notification.permission;
+    }
+    return 'default';
+  });
 
   useEffect(() => {
     // Check if subscription exists
@@ -71,7 +76,9 @@ export function usePushNotifications() {
 
       setSubscription(sub);
       setIsSubscribed(true);
-      setPermission(Notification.permission);
+      if (typeof Notification !== 'undefined') {
+          setPermission(Notification.permission);
+      }
       alert("Notifications Enabled!");
       
       // Test Notification
