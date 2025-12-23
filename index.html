@@ -12,9 +12,13 @@
           const manifestLink = document.getElementById('app-manifest');
           if (manifestLink) {
             manifestLink.setAttribute('href', '/manifest.staff.json');
-            // Optional: Adjust theme color if needed
-            // document.querySelector('meta[name="theme-color"]').setAttribute('content', '#000000'); 
           }
+          
+          // Inject Eruda for Mobile Debugging
+          var script = document.createElement('script');
+          script.src = "//cdn.jsdelivr.net/npm/eruda";
+          document.body.appendChild(script);
+          script.onload = function () { eruda.init(); }
         }
       } catch (e) {
         console.error('Manifest switch failed:', e);
