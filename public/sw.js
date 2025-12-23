@@ -32,7 +32,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
     // API Requests: Network Only (or Network First) - managed by app mostly
-    if (event.request.url.includes('/rest/v1/')) {
+    if (event.request.url.includes('/rest/v1/') || event.request.url.includes('/functions/v1/')) {
         return; 
     }
 
