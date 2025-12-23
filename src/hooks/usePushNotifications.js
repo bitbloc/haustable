@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase'; // Adjust path if needed
+import { supabase } from '../lib/supabaseClient'; // Corrected path
 
 const PUBLIC_VAPID_KEY = "BIdzmSkckPWxlQPKaJDo7og5NvuzLgbAgFft3hW9J_80a0YAIY_9Aqg1e4ozrm44Zg0_gog_RzkYhLtJPVpLwYE";
 
