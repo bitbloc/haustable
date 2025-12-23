@@ -8,6 +8,7 @@ import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { formatThaiTimeOnly, formatThaiDateLong, formatThaiTime } from './utils/timeUtils'
+import { usePushNotifications } from './hooks/usePushNotifications'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
@@ -172,6 +173,7 @@ export default function StaffOrderPage() {
     // Audio Hook
     const [soundUrl, setSoundUrl] = useState(null)
     const { play, stop, isPlaying, error: audioError } = useAudioAlert(soundUrl)
+    const { isSubscribed, subscribeToPush, permission } = usePushNotifications()
 
     // Init Logic to get Sound URL
     useEffect(() => {
@@ -769,6 +771,16 @@ export default function StaffOrderPage() {
                         </div>
                     </div>
                      <div className="flex gap-2">
+                        {!isSubscribed && (
+                            <button
+                                onClick={subscribeToPush}
+                                className="p-2.5 bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-100 hover:text-blue-600 text-gray-600 rounded-full transition-colors relative"
+                                title="Enable Notifications"
+                            >
+                                <Bell className="w-5 h-5" />
+                                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                            </button>
+                        )}
                         <button 
                              onClick={() => {
                                     sessionStorage.setItem('skip_staff_redirect', 'true')
