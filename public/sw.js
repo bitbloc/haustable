@@ -58,35 +58,39 @@ self.addEventListener('fetch', event => {
 
 // Push Notification Listeners
 self.addEventListener('push', function(event) {
+  let data = { title: 'New Order', body: 'Check Staff View', url: '/staff' };
+  
   if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body,
-      icon: data.icon || '/pwa-icon.png',
-      badge: '/pwa-icon.png', // Android specific
-      vibrate: [100, 50, 100],
-      data: {
-        dateOfArrival: Date.now(),
-        primaryKey: '2',
-        url: data.url
-      },
-      actions: [
-        {
-            action: 'explore', 
-            title: 'View Details',
-            icon: '/check-solid.png'
-        },
-        { 
-            action: 'close', 
-            title: 'Close',
-            icon: '/cross-solid.png'
-        },
-      ]
-    };
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    );
+    try {
+      data = event.data.json();
+    } catch (e) {
+      console.log('Push data is not JSON:', event.data.text());
+      data.body = event.data.text();
+    }
   }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/pwa-icon.png',
+    badge: '/pwa-icon.png', 
+    vibrate: [200, 100, 200, 100, 200], // Intense vibration
+    tag: 'new-order', // Replace existing to avoid spam stacking
+    renotify: true, // Play sound/vibrate again
+    data: {
+      url: data.url || '/staff',
+      timestamp: Date.now()
+    },
+    actions: [
+      { action: 'open', title: 'Open Staff View' },
+    ],
+    // Android specific (High Priority)
+    priority: 2, 
+    visibility: 1
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
 });
 
 self.addEventListener('notificationclick', function(event) {

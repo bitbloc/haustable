@@ -7,6 +7,7 @@ import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
+import { OrderNotificationToast } from './components/shared/OrderNotificationToast'
 import { formatThaiTimeOnly, formatThaiDateLong, formatThaiTime } from './utils/timeUtils'
 import { usePushNotifications } from './hooks/usePushNotifications'
 
@@ -160,6 +161,9 @@ export default function StaffOrderPage() {
     // Printing
     const [printModal, setPrintModal] = useState({ isOpen: false, booking: null })
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
+    
+    // Custom Notification State
+    const [notification, setNotification] = useState({ visible: false, title: '', message: '', price: null, orderId: null })
 
     // Locked Handlers
     const onLockRequest = useCallback(() => console.log('Screen locked!'), [])
@@ -434,14 +438,17 @@ export default function StaffOrderPage() {
         play() 
         const tableName = order.tables_layout?.table_name || 'Pickup'
         const price = order.total_amount
+        
+        // 1. System Notification (Background)
         showSystemNotification('มีรายการใหม่', `โต๊ะ: ${tableName} - ${price}.-`)
-        toast.message(`โต๊ะ ${tableName} สั่งอาหารใหม่!`, {
-            description: `${price} บาท`,
-            duration: Infinity, 
-            action: {
-                label: 'รับออเดอร์ (Accept)',
-                onClick: () => updateStatus(order.id, 'confirmed')
-            },
+        
+        // 2. Custom In-App Toast (Foreground - Smooth Animation)
+        setNotification({
+            visible: true,
+            title: `โต๊ะ ${tableName}`,
+            message: 'มีรายการสั่งอาหารใหม่เข้าครัว',
+            price: price,
+            orderId: order.id
         })
     }
 
@@ -727,6 +734,19 @@ export default function StaffOrderPage() {
                 message={confirmModal.message}
                 confirmText={confirmModal.confirmText}
                 isDangerous={confirmModal.isDangerous}
+            />
+            
+            <OrderNotificationToast 
+                visible={notification.visible}
+                title={notification.title}
+                message={notification.message}
+                price={notification.price}
+                duration={0} // Keep until interaction
+                onClose={() => setNotification(prev => ({ ...prev, visible: false }))}
+                onAccept={() => {
+                    setNotification(prev => ({ ...prev, visible: false }))
+                    updateStatus(notification.orderId, 'confirmed')
+                }}
             />
 
             {/* Offline Sticky Banner */}

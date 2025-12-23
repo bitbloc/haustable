@@ -68,12 +68,21 @@ Deno.serve(async (req) => {
 
         return webpush.sendNotification(pushSubscription, payload)
             .catch(async (err) => {
-                console.error('Error sending push to:', sub.id, err.statusCode, err.message)
-                if (err.statusCode === 410 || err.statusCode === 404) {
-                    console.log(`Subscription ${sub.id} expired, deleting...`)
-                    await supabaseClient.from('push_subscriptions').delete().eq('id', sub.id)
+                // Check specifically for common "Gone" or "Not Found" status codes
+                // WebPush library throws an error object with statusCode
+                const statusCode = err.statusCode || err.code;
+                
+                if (statusCode === 410 || statusCode === 404) {
+                    console.log(`Subscription ${sub.id} expired (Status ${statusCode}). Deleting...`);
+                    // Clean up valid but dead subscription
+                    await supabaseClient
+                        .from('push_subscriptions')
+                        .delete()
+                        .eq('id', sub.id);
+                } else {
+                    console.error('Error sending push to:', sub.id, err.message);
                 }
-                return null
+                return null;
             })
     })
 
