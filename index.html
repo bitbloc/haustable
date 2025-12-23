@@ -3,43 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
-
-    <link rel="manifest" href="/manifest.json" id="app-manifest" />
-    <script>
-      // Dual-Manifest Strategy: Switch to Staff Manifest if in Staff Mode
-      try {
-        if (window.location.pathname.startsWith('/staff') || window.location.search.includes('mode=staff')) {
-          const manifestLink = document.getElementById('app-manifest');
-          if (manifestLink) {
-            manifestLink.setAttribute('href', '/manifest.staff.json');
-            
-            // iOS Specific: Update Title and Meta Tags for "Add to Home Screen"
-            document.title = "Haus Staff POS";
-            
-            let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-            if (!appleTitle) {
-                appleTitle = document.createElement('meta');
-                appleTitle.name = "apple-mobile-web-app-title";
-                document.head.appendChild(appleTitle);
-            }
-            appleTitle.content = "Staff POS";
-
-             // Optional: Update theme color for visual distinction
-            // document.querySelector('meta[name="theme-color"]').setAttribute('content', '#000000'); 
-          }
-          
-          // Inject Eruda for Mobile Debugging (Wait for body)
-          window.addEventListener('DOMContentLoaded', () => {
-              var script = document.createElement('script');
-              script.src = "//cdn.jsdelivr.net/npm/eruda";
-              document.body.appendChild(script);
-              script.onload = function () { eruda.init(); }
-          });
-        }
-      } catch (e) {
-        console.error('Manifest switch failed:', e);
-      }
-    </script>
+    <!-- Dynamic Manifest: Href set by JS below -->
+    <link rel="manifest" id="app-manifest" />
     <link rel="apple-touch-icon" href="/pwa-icon.png">
     <meta name="theme-color" content="#111111" />
     <meta name="mobile-web-app-capable" content="yes">
@@ -48,6 +13,58 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' * data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' * blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' *; img-src 'self' data: blob: *;">
     <title>Haus Table</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    
+    <script>
+      // Dual-Manifest Strategy & iOS Fix
+      // Placed at the end of HEAD to override static title and ensure correct manifest injection
+      (function() {
+        try {
+          const manifestLink = document.getElementById('app-manifest');
+          const isStaffMode = window.location.pathname.startsWith('/staff') || window.location.search.includes('mode=staff');
+
+          if (isStaffMode) {
+            // STAFF MODE
+            console.log('Switching to Staff PWA Mode');
+            
+            // 1. Set Staff Manifest
+            if (manifestLink) manifestLink.setAttribute('href', '/manifest.staff.json');
+
+            // 2. Override Title (iOS "Add to Home Screen" uses this or the apple-meta below)
+            document.title = "Haus Staff POS";
+
+            // 3. Set iOS Specific Meta Tag (Highest Priority for iOS Name)
+            let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (!appleTitle) {
+                appleTitle = document.createElement('meta');
+                appleTitle.name = "apple-mobile-web-app-title";
+                document.head.appendChild(appleTitle);
+            }
+            appleTitle.content = "Staff POS";
+
+          } else {
+             // CUSTOMER/DEFAULT MODE
+             if (manifestLink) manifestLink.setAttribute('href', '/manifest.json');
+          }
+        } catch (e) {
+          console.error('PWA Setup failed:', e);
+          // Fallback
+          const manifestLink = document.getElementById('app-manifest');
+           if (manifestLink && !manifestLink.getAttribute('href')) {
+             manifestLink.setAttribute('href', '/manifest.json');
+           }
+        }
+      })();
+
+      // Inject Eruda for Mobile Debugging (Wait for body)
+      window.addEventListener('DOMContentLoaded', () => {
+          if (window.location.pathname.startsWith('/staff') || window.location.search.includes('mode=staff')) {
+              var script = document.createElement('script');
+              script.src = "//cdn.jsdelivr.net/npm/eruda";
+              document.body.appendChild(script);
+              script.onload = function () { eruda.init(); }
+          }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
