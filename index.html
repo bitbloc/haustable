@@ -14,11 +14,13 @@
             manifestLink.setAttribute('href', '/manifest.staff.json');
           }
           
-          // Inject Eruda for Mobile Debugging
-          var script = document.createElement('script');
-          script.src = "//cdn.jsdelivr.net/npm/eruda";
-          document.body.appendChild(script);
-          script.onload = function () { eruda.init(); }
+          // Inject Eruda for Mobile Debugging (Wait for body)
+          window.addEventListener('DOMContentLoaded', () => {
+              var script = document.createElement('script');
+              script.src = "//cdn.jsdelivr.net/npm/eruda";
+              document.body.appendChild(script);
+              script.onload = function () { eruda.init(); }
+          });
         }
       } catch (e) {
         console.error('Manifest switch failed:', e);
