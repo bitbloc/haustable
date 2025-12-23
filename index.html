@@ -12,6 +12,20 @@
           const manifestLink = document.getElementById('app-manifest');
           if (manifestLink) {
             manifestLink.setAttribute('href', '/manifest.staff.json');
+            
+            // iOS Specific: Update Title and Meta Tags for "Add to Home Screen"
+            document.title = "Haus Staff POS";
+            
+            let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (!appleTitle) {
+                appleTitle = document.createElement('meta');
+                appleTitle.name = "apple-mobile-web-app-title";
+                document.head.appendChild(appleTitle);
+            }
+            appleTitle.content = "Staff POS";
+
+             // Optional: Update theme color for visual distinction
+            // document.querySelector('meta[name="theme-color"]').setAttribute('content', '#000000'); 
           }
           
           // Inject Eruda for Mobile Debugging (Wait for body)
