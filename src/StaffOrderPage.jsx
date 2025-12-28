@@ -963,16 +963,31 @@ export default function StaffOrderPage() {
                                                 <span className="font-bold shrink-0">Note:</span> {order.customer_note}
                                             </div>
                                         )}
-                                        {/* Discount Display */}
-                                        {(order.discount_amount > 0 || order.promotion_codes?.code) && (
-                                            <div className="bg-green-50 border border-green-100 p-4 rounded-xl text-green-800 text-sm mt-2 flex justify-between items-center">
-                                                <span className="font-bold flex items-center gap-2">
-                                                    <span className="bg-green-200 px-2 py-0.5 rounded text-xs">Promo</span>
-                                                    {order.promotion_codes?.code || 'DISCOUNT'}
-                                                </span>
-                                                <span className="font-bold">-{order.discount_amount?.toLocaleString()}.-</span>
+                                        {/* Price Summary Section */}
+                                        <div className="bg-gray-50 rounded-xl p-4 mt-4 space-y-2 border border-gray-100">
+                                            {/* Subtotal */}
+                                            <div className="flex justify-between items-center text-gray-500 text-sm font-medium">
+                                                <span>Subtotal</span>
+                                                <span>{((order.total_amount || 0) + (order.discount_amount || 0)).toLocaleString()}.-</span>
                                             </div>
-                                        )}
+                                            
+                                            {/* Discount */}
+                                            {(order.discount_amount > 0 || order.promotion_codes?.code) && (
+                                                <div className="flex justify-between items-center text-green-600 text-sm font-bold">
+                                                     <span className="flex items-center gap-2">
+                                                        Discount 
+                                                        {order.promotion_codes?.code && <span className="bg-green-100 px-1.5 py-0.5 rounded text-[10px] border border-green-200 uppercase">{order.promotion_codes.code}</span>}
+                                                     </span>
+                                                     <span>-{order.discount_amount?.toLocaleString()}.-</span>
+                                                </div>
+                                            )}
+
+                                            {/* Net Total */}
+                                            <div className="flex justify-between items-center border-t border-gray-200 pt-3 mt-2">
+                                                <span className="font-bold text-[#1A1A1A] text-base">Total Amount</span>
+                                                <span className="font-black text-2xl text-[#1A1A1A]">{order.total_amount?.toLocaleString()}.-</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Actions */}
