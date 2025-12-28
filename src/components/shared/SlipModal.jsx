@@ -133,7 +133,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div>Table: <strong style="font-size: 16px;">${tableName}</strong></div>
                         <div>${booking.booking_type === 'pickup' ? 'Pickup Time' : 'Reservation'}: ${dateStr}</div>
                         <div>Order ID: #${booking.id.slice(0, 8)}</div>
-                        ${!isKitchen ? `<div>Customer: ${booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</div>` : ''}
+                        <div>Customer: ${booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</div>
+                        <div>Phone: ${booking.profiles?.phone_number || booking.pickup_contact_phone || '-'}</div>
                     </div>
 
                     <div style="margin-bottom: 20px;">${itemsHtml}</div>
@@ -175,7 +176,8 @@ export default function SlipModal({ booking, type, onClose }) {
                             <div className="flex justify-between"><span>Table:</span> <span className="font-bold text-base">{booking.tables_layout?.table_name || 'N/A'}</span></div>
                             <div className="flex justify-between"><span>{booking.booking_type === 'pickup' ? 'Pickup Time' : 'Reservation'}:</span> <span>{new Date(booking.booking_time).toLocaleString('th-TH')}</span></div>
                             <div className="flex justify-between"><span>Order ID:</span> <span>#{booking.id.slice(0, 8)}</span></div>
-                            {!isKitchen && <div className="flex justify-between"><span>Customer:</span> <span>{booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</span></div>}
+                            <div className="flex justify-between"><span>Customer:</span> <span>{booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</span></div>
+                            <div className="flex justify-between"><span>Phone:</span> <span>{booking.profiles?.phone_number || booking.pickup_contact_phone || '-'}</span></div>
                         </div>
 
                         {/* Items */}
