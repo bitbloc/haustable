@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar, Tag } from 'lucide-react';
+import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar, Tag, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BookingMonitor from './admin/BookingMonitor';
 
@@ -56,6 +56,7 @@ export default function AdminLayout({ children }) {
         { path: '/admin/bookings', icon: Calendar, label: 'Bookings' },
         { path: '/admin/members', icon: Users, label: 'Members' },
         { path: '/admin/menu', icon: Utensils, label: 'Menu' },
+        { path: '/admin/tables', icon: LayoutGrid, label: 'Tables' },
         { path: '/admin/promotions', icon: Tag, label: 'Promotions' }, // NEW
         { path: '/admin/editor', icon: Move, label: 'Floor Plan' },
         { path: '/admin/settings', icon: Settings, label: 'Settings' },
