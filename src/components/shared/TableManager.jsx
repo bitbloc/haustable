@@ -83,6 +83,7 @@ export default function TableManager({ isStaffView = false }) {
         })
 
         if (currentBooking) {
+            // Also check if any booking in the list is walk_in? No, currentBooking is the one overlapping.
             return {
                 status: 'occupied',
                 type: currentBooking.booking_type === 'walk_in' ? 'walk_in' : 'online',
