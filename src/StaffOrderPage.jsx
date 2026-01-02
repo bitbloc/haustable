@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone } from 'lucide-react'
+import TableManager from './components/shared/TableManager' // Added
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone, LayoutGrid } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
@@ -149,7 +150,7 @@ export default function StaffOrderPage() {
     const [pinInput, setPinInput] = useState('')
     
     // Data State
-    const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'schedule'
+const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'schedule' | 'tables'
     const [orders, setOrders] = useState([]) // Live pending orders
     const [scheduleOrders, setScheduleOrders] = useState([]) // Upcoming confirmed orders
     const [historyOrders, setHistoryOrders] = useState([]) // History orders
@@ -841,8 +842,22 @@ export default function StaffOrderPage() {
                         <HistoryIcon className="w-4 h-4" />
                         History
                     </button>
+                    <button 
+                        onClick={() => setActiveTab('tables')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'tables' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                    >
+                        <LayoutGrid className="w-4 h-4" />
+                        Tables
+                    </button>
                 </div>
             </div>
+
+            {/* TABLES VIEW */}
+            {activeTab === 'tables' && (
+                <div className="flex-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <TableManager isStaffView={true} />
+                </div>
+            )}
 
             {/* LIVE ORDERS VIEW */}
             {activeTab === 'live' && (

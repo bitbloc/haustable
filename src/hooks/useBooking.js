@@ -53,21 +53,40 @@ export function useBooking() {
         if (!state.date || !state.time) return
 
         try {
-            const bookingDateTime = toThaiISO(state.date, state.time)
+            const requestedTime = toThaiISO(state.date, state.time)
+            // Default block duration for online bookings is 2 hours if not specified
+            const requestedStart = new Date(requestedTime)
+            const requestedEnd = new Date(requestedStart.getTime() + (2 * 60 * 60 * 1000))
+
+            // Fetch ALL active bookings for this date (Simple optimized fetch)
+            // We fetch the whole day to ensure we catch any overlapping "Long" bookings or "Multi-slot" bookings
+            const dateStr = state.date // YYYY-MM-DD
+            const dayStart = `${dateStr}T00:00:00`
+            const dayEnd = `${dateStr}T23:59:59`
+
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id')
-                .eq('booking_time', bookingDateTime)
-                .in('status', ['pending', 'confirmed'])
+                .select('table_id, booking_time, end_time')
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .gte('booking_time', dayStart)
+                .lte('booking_time', dayEnd)
 
             if (error) throw error
 
-            // We need a way to store this in state.
-            // I should add 'SET_BOOKED_TABLES' to reducer.
-            // For now, let's assume we might need to add that action.
-            // Wait, I missed `bookedTableIds` in the initialState! 
-            // I should update reducer to have `bookedTableIds`.
-            dispatch({ type: 'SET_BOOKED_TABLES', payload: data.map(b => b.table_id) })
+            const blockedIds = data.filter(b => {
+                const bStart = new Date(b.booking_time)
+                // If end_time exists use it, else default to 2 hours
+                const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + (2 * 60 * 60 * 1000))
+
+                // Overlap Check: (StartA < EndB) && (EndA > StartB)
+                return (requestedStart < bEnd) && (requestedEnd > bStart)
+            }).map(b => b.table_id)
+
+            // Also check for bookings that might start yesterday but end today? 
+            // Usually not an issue for restaurant open hours, but for robustness we could rely on current logic. 
+            // (Assuming restaurant closes at night).
+
+            dispatch({ type: 'SET_BOOKED_TABLES', payload: blockedIds })
         } catch (err) {
             console.error("Availability Check Failed", err)
         }
