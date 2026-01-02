@@ -25,6 +25,19 @@ export default function StepTableSelection() {
     // Fetch availability on mount (or whenever entering this step)
     useEffect(() => {
         refreshAvailability()
+
+        // Real-time Subscription
+        const channel = supabase
+            .channel('public:bookings')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+                console.log('Real-time update:', payload)
+                refreshAvailability()
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [date, time]) // Refresh if date/time changes, though usually they are set before entering
 
     // Toggle Expanded
