@@ -16,7 +16,7 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export default function CustomCalendar({ value, onChange, blockedDates = [] }) {
+export default function CustomCalendar({ value, onChange, blockedDates = [], isDateBlocked }) {
     const [currentMonth, setCurrentMonth] = useState(new Date())
 
     const renderHeader = () => {
@@ -77,9 +77,10 @@ export default function CustomCalendar({ value, onChange, blockedDates = [] }) {
                 {allDays.map((dayItem, idx) => {
                     formattedDate = format(dayItem, dateFormat)
 
-                    const isBlocked = blockedDates.some(b =>
+                    const isBlocked = (blockedDates.some(b => 
                         b.blocked_date === format(dayItem, 'yyyy-MM-dd')
-                    )
+                    )) || (isDateBlocked && isDateBlocked(dayItem))
+                    
                     const isPast = isBefore(dayItem, today)
                     const isSelected = value ? isSameDay(dayItem, new Date(value)) : false
                     const isDisabled = isPast || (isBlocked && !isSelected) // Allow seeing selected even if blocked (edge case), but mainly block.

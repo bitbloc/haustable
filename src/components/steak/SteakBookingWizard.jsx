@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useSteakBooking } from '../../hooks/useSteakBooking'
 import StepDateSelector from './StepDateSelector'
+import SteakStepTableSelection from './SteakStepTableSelection'
 import StepSteakSelection from './StepSteakSelection'
 import StepPreferences from './StepPreferences'
 import StepReviewOrder from './StepReviewOrder'
@@ -11,9 +12,10 @@ import StepReviewOrder from './StepReviewOrder'
 // Visual config
 const STEPS = [
     { id: 1, title: 'Reservation' },
-    { id: 2, title: 'Select Steak' },
-    { id: 3, title: 'Experience' },
-    { id: 4, title: 'Review' }
+    { id: 2, title: 'Select Table' },
+    { id: 3, title: 'Select Steak' },
+    { id: 4, title: 'Experience' },
+    { id: 5, title: 'Review' }
 ]
 
 export default function SteakBookingWizard() {
@@ -48,9 +50,10 @@ export default function SteakBookingWizard() {
     const renderStep = () => {
         switch(state.step) {
             case 1: return <StepDateSelector state={state} dispatch={dispatch} onNext={handleNext} isValid={isDateValid} />
-            case 2: return <StepSteakSelection state={state} dispatch={dispatch} onNext={handleNext} />
-            case 3: return <StepPreferences state={state} dispatch={dispatch} onNext={handleNext} />
-            case 4: return <StepReviewOrder state={state} dispatch={dispatch} onSubmit={submitSteakOrder} />
+            case 2: return <SteakStepTableSelection state={state} dispatch={dispatch} onNext={handleNext} />
+            case 3: return <StepSteakSelection state={state} dispatch={dispatch} onNext={handleNext} />
+            case 4: return <StepPreferences state={state} dispatch={dispatch} onNext={handleNext} />
+            case 5: return <StepReviewOrder state={state} dispatch={dispatch} onSubmit={submitSteakOrder} />
             default: return null
         }
     }

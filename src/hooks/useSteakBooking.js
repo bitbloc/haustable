@@ -20,7 +20,8 @@ const initialState = {
     slipFile: null,
     isLoading: false,
     error: null,
-    bookedTableIds: [] // For preventing double booking on table selection step
+    bookedTableIds: [], // For preventing double booking on table selection step
+    tables: [] // [NEW] Store fetched tables
 }
 
 function steakBookingReducer(state, action) {
@@ -73,22 +74,109 @@ function steakBookingReducer(state, action) {
 export function useSteakBooking() {
     const [state, dispatch] = useReducer(steakBookingReducer, initialState)
 
-    // Helper: Validate Next Day (Advance Booking)
+    // Helper: Validate Date 
+    // Logic: 
+    // 1. Must be >= Tomorrow (1 day advance)
+    // 2. Closed on Sat (6) and Sun (0)
+    // 3. Cutoff: If Now > 18:00, Tomorrow is invalid (Must be DayAfterTomorrow)
     const isDateValid = (dateStr) => {
         if (!dateStr) return false
         const selected = new Date(dateStr)
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        tomorrow.setHours(0, 0, 0, 0)
-        // Set selected time to midnight for comparison
+        const now = new Date()
+        const cutoffHour = 18
+
+        // Check Day of Week (0=Sun, 6=Sat)
+        const day = selected.getDay()
+        if (day === 0 || day === 6) return false
+
+        // Min Date Logic
+        const minDate = new Date()
+        minDate.setDate(minDate.getDate() + 1) // Default: Tomorrow
+        minDate.setHours(0,0,0,0)
+
+        // If after 18:00, move minDate to DayAfterTomorrow
+        if (now.getHours() >= cutoffHour) {
+            minDate.setDate(minDate.getDate() + 1)
+        }
+
         const selectedMidnight = new Date(selected)
         selectedMidnight.setHours(0, 0, 0, 0)
         
-        return selectedMidnight >= tomorrow
+        return selectedMidnight >= minDate
     }
 
-    // Load Stock / Menu Logic could go here or in the component using React Query / useEffect
-    // For MVP, we pass menu items in from the Page.
+    // --- Table Fetching & Logic ---
+    const fetchTables = async () => {
+         const { data, error } = await supabase
+            .from('tables')
+            .select('*')
+            .order('name')
+         if (error) console.error(error)
+         else dispatch({ type: 'UPDATE_FORM', payload: { field: 'tables', value: data || [] } })
+    }
+
+    const checkAvailability = async (date, time) => {
+        if (!date || !time) return
+        
+        dispatch({ type: 'SET_LOADING', payload: true })
+        
+        // Logic similar to standard booking: Check overlaps
+        // Assume 2 hour slots
+        const start = toThaiISO(date, time)
+        const endDate = new Date(start)
+        endDate.setHours(endDate.getHours() + 2)
+        const end = endDate.toISOString() // simplified for query
+
+        // Rough query: Get bookings that overlap
+        /*
+          Input: req_start, req_end
+          Overlap: (b.start < req_end) AND (b.end > req_start)
+        */
+        
+        // We need booked table IDs
+        // Simplification: We fetch all bookings for that DAY to avoid complex TZ queries for now, filtering in JS if needed or range query
+        const dayStart = new Date(date)
+        dayStart.setHours(0,0,0,0)
+        const dayEnd = new Date(date)
+        dayEnd.setHours(23,59,59,999)
+
+        const { data: bookings } = await supabase
+            .from('bookings')
+            .select('table_id, booking_time')
+            .gte('booking_time', dayStart.toISOString())
+            .lte('booking_time', dayEnd.toISOString())
+            .neq('status', 'cancelled')
+        
+        if (bookings) {
+             // Filter for time overlap
+             const bookedIds = bookings.filter(b => {
+                 const bStart = new Date(b.booking_time)
+                 const bEnd = new Date(bStart)
+                 bEnd.setHours(bEnd.getHours() + 2) // Assume 2hr duration
+
+                 const reqStart = new Date(start)
+                 const reqEnd = new Date(start)
+                 reqEnd.setHours(reqEnd.getHours() + 2)
+
+                 return (bStart < reqEnd && bEnd > reqStart)
+             }).map(b => b.table_id)
+
+             dispatch({ type: 'SET_BOOKED_TABLES', payload: bookedIds })
+        }
+        dispatch({ type: 'SET_LOADING', payload: false })
+    }
+
+    useEffect(() => {
+        fetchTables()
+    }, [])
+    
+    // Auto-check availability when date/time changes
+    useEffect(() => {
+        if (state.date && state.time) {
+            checkAvailability(state.date, state.time)
+        }
+    }, [state.date, state.time])
+
 
     const submitSteakOrder = async () => {
         dispatch({ type: 'SET_LOADING', payload: true })

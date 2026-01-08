@@ -12,14 +12,12 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
     // Let's mock or use standard list.
     const timeSlots = ["11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"]
 
-    const zones = [
-        { id: 'Any', label: 'Any Preference' },
-        { id: 'Indoor', label: 'Indoor (Air Conditioned)' },
-        { id: 'Outdoor', label: 'Outdoor (Garden View)' },
-        { id: 'Private', label: 'Private Room' }
-    ]
-
-    const [tempZone, setTempZone] = useState('Any') // Temporary local state for zone if we don't have table logic yet
+// Helper to block Sat/Sun in Calendar UI
+    const isDateBlocked = (date) => {
+        const d = new Date(date)
+        const day = d.getDay()
+        return day === 0 || day === 6 // 0=Sun, 6=Sat
+    }
 
     return (
         <div className="space-y-6 flex-1 overflow-y-auto pb-20">
@@ -32,8 +30,9 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
                     value={date} 
                     onChange={(d) => {
                         if (isValid(d)) dispatch({ type: 'SET_DATE_TIME', payload: { date: d, time: null } })
-                        else alert('Steak Pre-order requires 1 day advance notice.')
-                    }} 
+                        else alert('Steak Pre-order requires 1 day advance notice (cutoff 18:00) and is closed on Sat-Sun.')
+                    }}
+                    isDateBlocked={isDateBlocked}
                 />
             </div>
 
@@ -67,38 +66,15 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
                 </div>
             </div>
 
-             {/* Zone Preference (Simplified Table Selection) */}
-             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-400 uppercase">
-                    <MapPin size={14} /> Seating Preference
-                </div>
-                <div className="space-y-2">
-                    {zones.map(z => (
-                        <button
-                            key={z.id}
-                            onClick={() => {
-                                setTempZone(z.id)
-                                // Mock selecting a table object for validaton 
-                                dispatch({ type: 'SELECT_TABLE', payload: { id: z.id, table_name: z.label + ' Preference' } })
-                            }}
-                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex justify-between items-center ${tempZone === z.id ? 'border-black bg-gray-50' : 'border-gray-100 hover:border-gray-300'}`}
-                        >
-                            <span className="font-medium text-sm">{z.label}</span>
-                            {tempZone === z.id && <div className="w-2 h-2 rounded-full bg-green-500" />}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             {/* Next Button */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200">
                 <div className="max-w-2xl mx-auto">
                     <button
                         onClick={onNext}
-                        disabled={!date || !time || !tempZone}
+                        disabled={!date || !time}
                         className="w-full bg-[#1a1a1a] text-white py-4 rounded-full font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] transition-transform"
                     >
-                        Continue to Steak Selection
+                        Continue to Table Selection
                     </button>
                 </div>
             </div>
