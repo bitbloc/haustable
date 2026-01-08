@@ -27,7 +27,7 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
                 <img src={item.image_url || 'https://placehold.co/600x400'} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 {isSoldOut && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="text-white font-bold tracking-widest border-2 border-white px-4 py-1 text-sm uppercase">Sold Out</span>
+                        <span className="text-white font-bold tracking-widest border-2 border-white px-4 py-1 text-sm uppercase">หมด (Sold Out)</span>
                     </div>
                 )}
                 {/* Qty Badge */}
@@ -52,7 +52,7 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
                             onClick={handleAddClick} 
                             className="bg-black text-white px-4 py-2 rounded-full text-xs font-bold shrink-0 hover:bg-gray-800 transition-colors"
                         >
-                            + Add
+                            + เพิ่ม (Add)
                         </button>
                     )}
                 </div>
@@ -65,7 +65,7 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
                         className="absolute inset-0 bg-white/95 backdrop-blur-md z-20 p-5 flex flex-col"
                     >
-                        <h4 className="text-sm font-bold text-gray-400 uppercase mb-4">Select Doneness</h4>
+                        <h4 className="text-sm font-bold text-gray-400 uppercase mb-4">เลือกระดับความสุก (Select Doneness)</h4>
                         <div className="flex-1 overflow-y-auto space-y-2">
                              {donenessOptions.map(opt => (
                                  <button 
@@ -86,7 +86,7 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
                                  </button>
                              ))}
                         </div>
-                        <button onClick={() => setShowDoneness(false)} className="mt-4 text-xs text-center text-gray-400 underline">Cancel</button>
+                        <button onClick={() => setShowDoneness(false)} className="mt-4 text-xs text-center text-gray-400 underline">ยกเลิก (Cancel)</button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -145,7 +145,9 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
 
     return (
         <div className="flex-1 flex flex-col min-h-0 pb-24">
-            <h2 className="text-xl font-light mb-6 px-1">Choose your cut</h2>
+            <h2 className="text-xl font-light mb-6 px-1 flex items-center gap-2">
+                เลือกเนื้อที่คุณต้องการ <span className="text-sm text-gray-400 font-normal hidden sm:inline">(Choose your cut)</span>
+            </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 overflow-y-auto px-1 pb-4">
                 {steaks.map(item => (
@@ -164,15 +166,15 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
                  <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur border-t border-gray-200 z-30">
                     <div className="max-w-2xl mx-auto flex items-center justify-between">
                         <div>
-                            <div className="text-xs text-gray-500 uppercase font-bold">Total</div>
+                            <div className="text-xs text-gray-500 uppercase font-bold">ยอดรวม (Total)</div>
                             <div className="text-xl font-mono font-bold">฿{totalPrice.toLocaleString()}</div>
-                            <div className="text-xs text-gray-400">{totalQty} Steaks Selected</div>
+                            <div className="text-xs text-gray-400">{totalQty} ชิ้น (Items)</div>
                         </div>
                         <button
                             onClick={onNext}
                             className="bg-[#1a1a1a] text-[#DFFF00] px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
                         >
-                            Select Experience <Check size={16} />
+                            เลือกประสบการณ์ต่อ <span className="text-xs opacity-70 font-normal ml-1">(Next)</span> <Check size={16} />
                         </button>
                     </div>
                  </div>

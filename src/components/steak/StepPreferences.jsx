@@ -23,10 +23,10 @@ export default function StepPreferences({ state, dispatch, onNext }) {
     }, [])
 
     const occasions = [
-        { id: 'general', label: 'Casual Dining', icon: User },
-        { id: 'birthday', label: 'Birthday', icon: Cake },
-        { id: 'anniversary', label: 'Anniversary', icon: Heart },
-        { id: 'business', label: 'Business', icon: Briefcase },
+        { id: 'general', label: 'ทานทั่วไป (Casual)', icon: User },
+        { id: 'birthday', label: 'วันเกิด (Birthday)', icon: Cake },
+        { id: 'anniversary', label: 'วันครบรอบ (Anniversary)', icon: Heart },
+        { id: 'business', label: 'คุยธุรกิจ (Business)', icon: Briefcase },
     ]
 
     return (
@@ -34,7 +34,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
             
             {/* Occasion */}
             <div>
-                <h3 className="text-sm font-bold text-gray-400 uppercase mb-4">Occasion</h3>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">เนื่องในโอกาส <span className="text-xs text-gray-400 font-normal uppercase">(Occasion)</span></h3>
                 <div className="grid grid-cols-2 gap-3">
                     {occasions.map(occ => {
                         const Icon = occ.icon
@@ -54,7 +54,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
 
             {/* Extras Form */}
             <div className="space-y-4">
-                 <h3 className="text-sm font-bold text-gray-400 uppercase mb-4">Special Details</h3>
+                 <h3 className="text-sm font-bold text-gray-900 mb-4">รายละเอียดเพิ่มเติม <span className="text-xs text-gray-400 font-normal uppercase">(Special Details)</span></h3>
                  
                  {/* Cake / Decor */}
                  <div className="bg-white p-4 rounded-xl border border-gray-100 focus-within:ring-1 focus-within:ring-black">
@@ -83,7 +83,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
 
             {/* Wine */}
             <div>
-                <h3 className="text-sm font-bold text-gray-400 uppercase mb-4">Wine & Pairing</h3>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">ไวน์และเครื่องดื่ม <span className="text-xs text-gray-400 font-normal uppercase">(Wine & Pairing)</span></h3>
                 <div className="space-y-3">
                     <button
                         onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: 'bin2' } })}
@@ -105,7 +105,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                     >
                         <Wine size={24} />
                         <div className="text-left">
-                            <div className="font-bold text-sm">Bring Your Own Bottle</div>
+                            <div className="font-bold text-sm">นำไวน์มาเอง (BYOB)</div>
                             <div className="text-xs opacity-70">{config.steak_corkage_fee || 'Corkage Fee 100 THB/Bottle'}</div>
                         </div>
                     </button>
@@ -116,7 +116,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                     >
                         <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs">✕</div>
                         <div className="text-left">
-                            <div className="font-bold text-sm">No Wine Preference</div>
+                            <div className="font-bold text-sm">ไม่รับเครื่องดื่ม (No Benefit)</div>
                         </div>
                     </button>
                 </div>
@@ -124,7 +124,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
 
             {/* General Note */}
             <div className="bg-white p-4 rounded-xl border border-gray-100 focus-within:ring-1 focus-within:ring-black">
-                <label className="block text-xs font-bold text-gray-500 mb-2">Special Request (optional)</label>
+                <label className="block text-xs font-bold text-gray-500 mb-2">คำขอพิเศษอื่นๆ (Special Request)</label>
                 <textarea 
                     value={specialRequest} 
                     onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'specialRequest', value: e.target.value } })}
@@ -144,7 +144,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                         onClick={onNext}
                         className="w-full bg-[#1a1a1a] text-white py-4 rounded-full font-bold shadow-lg hover:scale-[1.02] transition-transform"
                     >
-                        Review Booking
+                        ตรวจสอบข้อมูล <span className="text-xs opacity-70 font-normal ml-1">(Review Booking)</span>
                     </button>
                 </div>
             </div>

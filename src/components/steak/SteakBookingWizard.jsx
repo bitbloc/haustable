@@ -12,11 +12,11 @@ import StepReviewOrder from './StepReviewOrder'
 
 // Visual config
 const STEPS = [
-    { id: 1, title: 'Reservation' },
-    { id: 2, title: 'Select Table' },
-    { id: 3, title: 'Select Steak' },
-    { id: 4, title: 'Experience' },
-    { id: 5, title: 'Review' }
+    { id: 1, title: 'จองโต๊ะ (Reservation)' },
+    { id: 2, title: 'เลือกโต๊ะ (Select Table)' },
+    { id: 3, title: 'เลือกเนื้อ (Select Steak)' },
+    { id: 4, title: 'ประสบการณ์ (Experience)' },
+    { id: 5, title: 'ยืนยัน (Review)' }
 ]
 
 export default function SteakBookingWizard() {

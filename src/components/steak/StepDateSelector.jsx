@@ -30,8 +30,8 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
             {/* Date */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
-                        <Calendar size={14} /> Date
+                    <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                        <Calendar size={16} /> วันที่ <span className="text-[10px] text-gray-400 font-normal uppercase">(Date)</span>
                     </div>
                 </div>
                 
@@ -52,8 +52,8 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
 
             {/* Time */}
             <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity ${!date ? 'opacity-50 pointer-events-none' : ''}`}>
-               <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-400 uppercase">
-                    <Clock size={14} /> Time
+               <div className="flex items-center gap-2 mb-4 text-sm font-bold text-gray-900">
+                    <Clock size={16} /> เวลา <span className="text-[10px] text-gray-400 font-normal uppercase">(Time)</span>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                     {timeSlots.map(t => (
@@ -70,8 +70,8 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
 
             {/* Pax */}
              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-400 uppercase">
-                    <Users size={14} /> Party Size
+                <div className="flex items-center gap-2 mb-4 text-sm font-bold text-gray-900">
+                    <Users size={16} /> จำนวนแขก <span className="text-[10px] text-gray-400 font-normal uppercase">(Party Size)</span>
                 </div>
                 <div className="flex items-center justify-between">
                     <button onClick={() => dispatch({ type: 'SET_PAX', payload: Math.max(1, pax - 1) })} className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center text-xl hover:bg-gray-50">-</button>
@@ -88,7 +88,7 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
                         disabled={!date || !time}
                         className="w-full bg-[#1a1a1a] text-white py-4 rounded-full font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] transition-transform"
                     >
-                        Continue to Table Selection
+                        ไปต่อ: เลือกโต๊ะ <span className="text-xs font-normal opacity-70 ml-1">(Next: Select Table)</span>
                     </button>
                 </div>
             </div>

@@ -68,7 +68,7 @@ export default function SteakStepTableSelection({
                 onClick={(e) => {
                     e.stopPropagation()
                     if (isBooked) {
-                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `Table Unavailable`, loading: false })
+                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `โต๊ะไม่ว่าง (Unavailable)`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
                     } else {
                         selectTable(table)
@@ -104,7 +104,9 @@ export default function SteakStepTableSelection({
             {/* Top Controls Overlay */}
             <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
                 <div className="bg-white/90 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-white/50 pointer-events-auto">
-                    <h2 className="text-lg font-bold text-black leading-none">Select Table</h2>
+                    <h2 className="text-lg font-bold text-black leading-none flex items-center gap-2">
+                        เลือกโต๊ะที่ต้องการ <span className="text-xs text-gray-400 font-normal">(Select Table)</span>
+                    </h2>
                     <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">
                         <span className="bg-gray-100 px-2 py-1 rounded-md">{date ? new Date(date).toLocaleDateString() : 'Date'}</span>
                         <span className="bg-gray-100 px-2 py-1 rounded-md">{time || 'Time'}</span>
@@ -178,7 +180,7 @@ export default function SteakStepTableSelection({
                                     
                                     {!tables || tables.length === 0 && (
                                         <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                                            Loading Map... or No Tables Found
+                                            กำลังโหลดแผนผัง... (Loading Map...)
                                         </div>
                                     )}
                                 </div>
@@ -221,7 +223,7 @@ export default function SteakStepTableSelection({
                                     </div>
                                     <p className="text-gray-500 text-xs mb-3">{selectedTable.capacity} Seats</p>
                                     <button onClick={onNext} className="w-full bg-black text-white py-2 rounded-lg font-bold text-xs shadow-md">
-                                        Select this Table
+                                        เลือกโต๊ะนี้ (Confirm Selection)
                                     </button>
                                 </div>
                             </div>

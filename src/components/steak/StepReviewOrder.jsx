@@ -40,7 +40,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
 
     return (
         <div className="flex-1 overflow-y-auto pb-32">
-            <h2 className="text-2xl font-light mb-6">Booking Summary</h2>
+            <h2 className="text-2xl font-light mb-6">สรุปการจอง <span className="text-sm text-gray-400 font-normal ml-2">(Booking Summary)</span></h2>
 
             {/* Booking Info Card */}
             <div className="bg-[#1a1a1a] text-white p-6 rounded-2xl shadow-lg mb-6 relative overflow-hidden">
@@ -48,19 +48,19 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                 
                 <div className="grid grid-cols-2 gap-y-6 relative z-10">
                     <div>
-                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><Calendar size={12} /> Date</div>
+                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><Calendar size={12} /> วันที่ (Date)</div>
                         <div className="font-bold text-lg">{date}</div>
                     </div>
                     <div>
-                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><Clock size={12} /> Time</div>
+                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><Clock size={12} /> เวลา (Time)</div>
                         <div className="font-bold text-lg">{time}</div>
                     </div>
                     <div>
-                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><Users size={12} /> Guests</div>
-                        <div className="font-bold text-lg">{pax} Pax</div>
+                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><Users size={12} /> จำนวนแขก (Pax)</div>
+                        <div className="font-bold text-lg">{pax} ท่าน</div>
                     </div>
                      <div>
-                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><MapPin size={12} /> Zone</div>
+                        <div className="text-xs text-gray-400 uppercase mb-1 flex items-center gap-1"><MapPin size={12} /> โซน (Zone)</div>
                         <div className="font-bold text-lg">{selectedTable?.table_name || 'N/A'}</div>
                     </div>
                 </div>
@@ -68,7 +68,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
 
             {/* Order Items */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-                <h3 className="text-sm font-bold text-gray-400 uppercase mb-4 border-b pb-2">Pre-order Items</h3>
+                <h3 className="text-sm font-bold text-gray-900 border-b pb-2 mb-4">รายการที่สั่งล่วงหน้า <span className="text-xs text-gray-400 font-normal uppercase">(Pre-order Items)</span></h3>
                 <div className="space-y-4">
                     {cart.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-start">
@@ -83,7 +83,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                         </div>
                     ))}
                     <div className="border-t pt-4 mt-4 flex justify-between items-end">
-                        <div className="text-xs text-gray-400 font-bold uppercase">Total Estimate</div>
+                        <div className="text-xs text-gray-400 font-bold uppercase">ยอดรวมโดยประมาณ (Total Estimate)</div>
                         <div className="font-mono text-2xl font-bold">฿{totalPrice.toLocaleString()}</div>
                     </div>
                 </div>
@@ -91,13 +91,13 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
 
             {/* Contact & Slip Form */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 space-y-4">
-                <h3 className="text-sm font-bold text-gray-400 uppercase mb-4">Contact & Payment</h3>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">ข้อมูลติดต่อและการชำระเงิน <span className="text-xs text-gray-400 font-normal uppercase">(Contact & Payment)</span></h3>
                 
                 {/* QR Code Section */}
                 {qrCodeUrl && (
                     <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl border border-gray-200 mb-4">
                         <div className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
-                            <QrCode size={14} /> Scan to Pay
+                            <QrCode size={14} /> สแกนเพื่อชำระเงิน (Scan to Pay)
                         </div>
                         <div className="bg-white p-2 rounded-lg shadow-sm">
                             <img src={qrCodeUrl} className="w-40 h-40 object-contain" alt="Payment QR" />
@@ -107,7 +107,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                 )}
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">Your Name <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">ชื่อของคุณ <span className="text-[10px] font-normal text-gray-400">(Your Name)</span> <span className="text-red-500">*</span></label>
                     <input 
                         type="text" placeholder="Your Name" 
                         value={contactName}
@@ -116,7 +116,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                     />
                 </div>
                 <div>
-                     <label className="block text-xs font-bold text-gray-500 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                     <label className="block text-xs font-bold text-gray-500 mb-1">เบอร์โทรศัพท์ <span className="text-[10px] font-normal text-gray-400">(Phone Number)</span> <span className="text-red-500">*</span></label>
                      <input 
                         type="tel" placeholder="Phone Number" 
                         value={contactPhone}
@@ -141,7 +141,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                     ) : (
                         <>
                             <Upload className="text-gray-400 mb-2" />
-                            <span className="text-gray-500 text-xs font-bold uppercase">Upload Payment Slip</span>
+                            <span className="text-gray-500 text-xs font-bold uppercase">อัพโหลดสลิปโอนเงิน (Upload Slip)</span>
                         </>
                     )}
                 </div>
@@ -163,10 +163,10 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                         {isLoading ? (
                             <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                         ) : (
-                            <>Confirm Booking</>
+                            <>ยืนยันการจอง <span className="text-xs font-normal opacity-70 ml-1">(Confirm Booking)</span></>
                         )}
                     </button>
-                    {!slipFile && <p className="text-[10px] text-center text-gray-400 mt-2">*Please upload slip to confirm</p>}
+                    {!slipFile && <p className="text-[10px] text-center text-gray-400 mt-2">*กรุณาอัพโหลดสลิปเพื่อยืนยัน (Please upload slip)</p>}
                 </div>
             </div>
         </div>
