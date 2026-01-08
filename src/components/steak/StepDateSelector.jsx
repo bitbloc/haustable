@@ -12,25 +12,39 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
     // Let's mock or use standard list.
     const timeSlots = ["11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"]
 
-// Helper to block Sat/Sun in Calendar UI
+    // Helper to block Sat/Sun in Calendar UI
     const isDateBlocked = (date) => {
-        const d = new Date(date)
-        const day = d.getDay()
-        return day === 0 || day === 6 // 0=Sun, 6=Sat
+        // Use the main validation logic, but we need to pass a string or ensure Date object handling matches
+        // isDateValid expects a string or date that can be parsed. 
+        // Let's pass the date object directly if isDateValid handles it, or formatted string.
+        // Looking at useSteakBooking: isDateValid(dateStr) -> new Date(dateStr).
+        // So passing Date object .toISOString() or similar is safest, or just the Date object if it handles it.
+        // Actually, let's just replicate the specific "invalid" logic here or wrap isValid.
+        // Since isValid is passed from hook, let's try to use it.
+        // Note: isDateValid checks if content is VALID. So isBlocked = !isValid.
+        return !isValid(date) 
     }
 
     return (
         <div className="space-y-6 flex-1 overflow-y-auto pb-20">
             {/* Date */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-400 uppercase">
-                    <Calendar size={14} /> Date
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase">
+                        <Calendar size={14} /> Date
+                    </div>
                 </div>
+                
+                {/* Rules Text */}
+                <div className="mb-4 text-xs text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">
+                    * จองล่วงหน้าก่อนหนึ่งวัน ตัดยอดและรายการจอง 18.00 น.
+                    <br/>(Book 1 day in advance. Cutoff at 18:00)
+                </div>
+
                 <CustomCalendar 
                     value={date} 
                     onChange={(d) => {
                         if (isValid(d)) dispatch({ type: 'SET_DATE_TIME', payload: { date: d, time: null } })
-                        else alert('Steak Pre-order requires 1 day advance notice (cutoff 18:00) and is closed on Sat-Sun.')
                     }}
                     isDateBlocked={isDateBlocked}
                 />
