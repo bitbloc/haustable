@@ -1,8 +1,26 @@
-import React from 'react'
-import { Wine, Cake, Heart, Briefcase, User, Info, AlertCircle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Wine, Cake, Heart, Briefcase, User, Info, AlertCircle, Phone } from 'lucide-react'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function StepPreferences({ state, dispatch, onNext }) {
     const { occasion, winePreference, specialRequest, dietaryRestrictions, cakeRequest } = state
+    const [config, setConfig] = useState({})
+
+    useEffect(() => {
+        const fetchConfig = async () => {
+            const { data } = await supabase.from('app_settings').select('*').in('key', [
+                'steak_qt_cake_label', 'steak_qt_cake_placeholder',
+                'steak_qt_dietary_label', 'steak_qt_dietary_placeholder',
+                'steak_wine_pairing_label', 'steak_wine_pairing_desc', 'steak_wine_pairing_price',
+                'steak_corkage_fee'
+            ])
+            if (data) {
+                const map = data.reduce((acc, item) => ({...acc, [item.key]: item.value}), {})
+                setConfig(map)
+            }
+        }
+        fetchConfig()
+    }, [])
 
     const occasions = [
         { id: 'general', label: 'Casual Dining', icon: User },
@@ -40,24 +58,24 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                  
                  {/* Cake / Decor */}
                  <div className="bg-white p-4 rounded-xl border border-gray-100 focus-within:ring-1 focus-within:ring-black">
-                    <label className="block text-xs font-bold text-gray-500 mb-2">Cake / Special Decoration Request</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-2">{config.steak_qt_cake_label || 'Cake / Special Decoration Request'}</label>
                     <input 
                         type="text" 
                         value={cakeRequest} 
                         onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'cakeRequest', value: e.target.value } })}
-                        placeholder="Need a cake? Write here..."
+                        placeholder={config.steak_qt_cake_placeholder || "Need a cake? Write here..."}
                         className="w-full outline-none text-sm placeholder-gray-300"
                     />
                  </div>
 
                  {/* Dietary */}
                  <div className="bg-white p-4 rounded-xl border border-gray-100 focus-within:ring-1 focus-within:ring-black">
-                    <label className="block text-xs font-bold text-gray-500 mb-2">Dietary Restrictions / Allergies</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-2">{config.steak_qt_dietary_label || 'Dietary Restrictions / Allergies'}</label>
                     <input 
                         type="text" 
                         value={dietaryRestrictions} 
                         onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'dietaryRestrictions', value: e.target.value } })}
-                        placeholder="e.g. No Nuts, Gluten Free..."
+                        placeholder={config.steak_qt_dietary_placeholder || "e.g. No Nuts, Gluten Free..."}
                         className="w-full outline-none text-sm placeholder-gray-300"
                     />
                  </div>
@@ -72,9 +90,12 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                         className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${winePreference === 'bin2' ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
                     >
                         <Wine size={24} />
-                        <div className="text-left">
-                            <div className="font-bold text-sm">Recommend Bin 2 Pairing</div>
-                            <div className="text-xs opacity-70">Perfect match for Wagyu</div>
+                        <div className="text-left flex-1">
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold text-sm">{config.steak_wine_pairing_label || 'Recommend Bin 2 Pairing'}</span>
+                                {config.steak_wine_pairing_price && <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{config.steak_wine_pairing_price}</span>}
+                            </div>
+                            <div className="text-xs opacity-70">{config.steak_wine_pairing_desc || 'Perfect match for Wagyu'}</div>
                         </div>
                     </button>
 
@@ -85,7 +106,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                         <Wine size={24} />
                         <div className="text-left">
                             <div className="font-bold text-sm">Bring Your Own Bottle</div>
-                            <div className="text-xs opacity-70">Corkage Fee 100 THB/Bottle</div>
+                            <div className="text-xs opacity-70">{config.steak_corkage_fee || 'Corkage Fee 100 THB/Bottle'}</div>
                         </div>
                     </button>
 
@@ -112,6 +133,11 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                 />
             </div>
 
+            {/* Contact Info */}
+            <div className="flex items-center gap-2 justify-center text-gray-400 text-xs py-2">
+                <Phone size={12} />
+                <span>For more details call 061-423-2455</span>
+            </div>
              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200">
                 <div className="max-w-2xl mx-auto">
                     <button

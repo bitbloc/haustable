@@ -73,7 +73,14 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
                                     onClick={() => confirmAdd(opt)}
                                     className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left"
                                  >
-                                    <div className={`w-3 h-3 rounded-full ${['Rare','Blue Rare'].includes(opt.name) ? 'bg-red-600' : ['Medium Rare'].includes(opt.name) ? 'bg-red-400' : ['Medium'].includes(opt.name) ? 'bg-pink-400' : 'bg-brown-600' }`} />
+                                    <div className={`w-3 h-3 rounded-full ${
+                                        (opt.name === 'Rare' || opt.name === 'Blue Rare') ? 'bg-red-600' : 
+                                        opt.name === 'Medium Rare' ? 'bg-red-400' : 
+                                        opt.name === 'Medium' ? 'bg-pink-400' : 
+                                        opt.name === 'Medium Well' ? 'bg-amber-600' :
+                                        opt.name === 'Well Done' ? 'bg-amber-900' :
+                                        'bg-gray-400' // Fallback
+                                    }`} />
                                     <span className="font-medium text-sm">{opt.name}</span>
                                     {item.is_recommended && opt.name === 'Medium Rare' && <span className="ml-auto text-[10px] bg-black text-white px-2 py-0.5 rounded">Chef's Rec</span>}
                                  </button>

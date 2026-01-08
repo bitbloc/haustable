@@ -618,6 +618,113 @@ export default function AdminSettings() {
                 <p className="text-[10px] text-gray-500 mt-2 text-center">Recommended: Landscape (16:9), High resolution, Max 2MB</p>
             </div>
 
+            {/* Steak Wizard Settings */}
+            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
+                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    🥩 Steak Wizard Config
+                </h2>
+                
+                {/* Special Details */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Special Details Texts</h3>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-1">Cake Request Label</label>
+                            <input 
+                                value={settings.steak_qt_cake_label || ''} 
+                                onChange={(e) => setSettings({...settings, steak_qt_cake_label: e.target.value})}
+                                onBlur={() => handleSave('steak_qt_cake_label', settings.steak_qt_cake_label)}
+                                placeholder="Cake / Special Decoration Request"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-1">Cake Placeholder</label>
+                            <input 
+                                value={settings.steak_qt_cake_placeholder || ''} 
+                                onChange={(e) => setSettings({...settings, steak_qt_cake_placeholder: e.target.value})}
+                                onBlur={() => handleSave('steak_qt_cake_placeholder', settings.steak_qt_cake_placeholder)}
+                                placeholder="Need a cake? Write here..."
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-1">Dietary Label</label>
+                            <input 
+                                value={settings.steak_qt_dietary_label || ''} 
+                                onChange={(e) => setSettings({...settings, steak_qt_dietary_label: e.target.value})}
+                                onBlur={() => handleSave('steak_qt_dietary_label', settings.steak_qt_dietary_label)}
+                                placeholder="Dietary Restrictions / Allergies"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                            />
+                        </div>
+                         <div>
+                            <label className="block text-xs text-gray-400 mb-1">Dietary Placeholder</label>
+                            <input 
+                                value={settings.steak_qt_dietary_placeholder || ''} 
+                                onChange={(e) => setSettings({...settings, steak_qt_dietary_placeholder: e.target.value})}
+                                onBlur={() => handleSave('steak_qt_dietary_placeholder', settings.steak_qt_dietary_placeholder)}
+                                placeholder="e.g. No Nuts"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Wine Section */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Wine & Pairing</h3>
+                    
+                    <div>
+                        <label className="block text-xs text-gray-400 mb-1">Pairing Option Label</label>
+                         <input 
+                            value={settings.steak_wine_pairing_label || ''} 
+                            onChange={(e) => setSettings({...settings, steak_wine_pairing_label: e.target.value})}
+                            onBlur={() => handleSave('steak_wine_pairing_label', settings.steak_wine_pairing_label)}
+                            placeholder="Recommend Bin 2 Pairing"
+                            className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-400 mb-1">Pairing Option Description</label>
+                         <input 
+                            value={settings.steak_wine_pairing_desc || ''} 
+                            onChange={(e) => setSettings({...settings, steak_wine_pairing_desc: e.target.value})}
+                            onBlur={() => handleSave('steak_wine_pairing_desc', settings.steak_wine_pairing_desc)}
+                            placeholder="Perfect match for Wagyu"
+                            className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                        />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                             <label className="block text-xs text-gray-400 mb-1">Pairing Option Price (Text only)</label>
+                             <input 
+                                value={settings.steak_wine_pairing_price || ''} 
+                                onChange={(e) => setSettings({...settings, steak_wine_pairing_price: e.target.value})}
+                                onBlur={() => handleSave('steak_wine_pairing_price', settings.steak_wine_pairing_price)}
+                                placeholder="e.g. + 2,100 THB"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                            />
+                        </div>
+                        <div>
+                             <label className="block text-xs text-gray-400 mb-1">Corkage Fee (Text)</label>
+                             <input 
+                                value={settings.steak_corkage_fee || ''} 
+                                onChange={(e) => setSettings({...settings, steak_corkage_fee: e.target.value})}
+                                onBlur={() => handleSave('steak_corkage_fee', settings.steak_corkage_fee)}
+                                placeholder="Corkage Fee 100 THB/Bottle"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Data Maintenance Section */}
             <div className="mt-8 bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
