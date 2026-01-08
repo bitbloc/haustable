@@ -108,7 +108,7 @@ export function useSteakBooking() {
     // --- Table Fetching & Logic ---
     const fetchTables = async () => {
          const { data, error } = await supabase
-            .from('tables')
+            .from('tables_layout')
             .select('*')
             .order('name')
          if (error) console.error(error)
