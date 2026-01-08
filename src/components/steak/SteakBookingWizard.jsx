@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '../../lib/supabaseClient'
 import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useSteakBooking } from '../../hooks/useSteakBooking'
@@ -22,6 +23,24 @@ export default function SteakBookingWizard() {
     const navigate = useNavigate()
     const { state, dispatch, submitSteakOrder, isDateValid } = useSteakBooking()
     const [direction, setDirection] = useState(1)
+    
+    // Auto-fill Contact Info
+    useEffect(() => {
+        const fetchUserString = async () => {
+             // 1. Try Supabase Auth
+             const { data: { user } } = await supabase.auth.getUser()
+             if (user) {
+                 // Try to get metadata
+                 const name = user.user_metadata?.full_name || user.user_metadata?.name || ''
+                 // Phone might be in metadata or phone auth
+                 const phone = user.phone || user.user_metadata?.phone || ''
+                 
+                 if (name) dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactName', value: name } })
+                 if (phone) dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactPhone', value: phone } })
+             }
+        }
+        fetchUserString()
+    }, [])
 
     // Sync title based on step? Or just static.
     

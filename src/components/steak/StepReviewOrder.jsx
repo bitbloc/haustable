@@ -1,6 +1,7 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, Users, MapPin, Upload, FileCheck, PartyPopper } from 'lucide-react'
+import { Calendar, Clock, Users, MapPin, Upload, FileCheck, PartyPopper, QrCode } from 'lucide-react'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function StepReviewOrder({ state, dispatch, onSubmit }) {
     const { 
@@ -10,9 +11,19 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
     } = state
 
     const fileInputRef = useRef(null)
+    const [qrCodeUrl, setQrCodeUrl] = useState(null)
 
     const totalPrice = cart.reduce((a, b) => a + (b.price * b.quantity), 0)
     const totalQty = cart.reduce((a, b) => a + b.quantity, 0)
+
+    // Fetch Payment QR
+    useEffect(() => {
+        const fetchQR = async () => {
+            const { data } = await supabase.from('app_settings').select('value').eq('key', 'payment_qr_url').single()
+            if (data?.value) setQrCodeUrl(data.value)
+        }
+        fetchQR()
+    }, [])
 
     const handleSubmit = async () => {
          const result = await onSubmit()
@@ -82,6 +93,19 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 space-y-4">
                 <h3 className="text-sm font-bold text-gray-400 uppercase mb-4">Contact & Payment</h3>
                 
+                {/* QR Code Section */}
+                {qrCodeUrl && (
+                    <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl border border-gray-200 mb-4">
+                        <div className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
+                            <QrCode size={14} /> Scan to Pay
+                        </div>
+                        <div className="bg-white p-2 rounded-lg shadow-sm">
+                            <img src={qrCodeUrl} className="w-40 h-40 object-contain" alt="Payment QR" />
+                        </div>
+                        <div className="text-[#1a1a1a] font-mono font-bold text-lg mt-2">฿{totalPrice.toLocaleString()}</div>
+                    </div>
+                )}
+
                 <input 
                     type="text" placeholder="Your Name" 
                     value={contactName}
