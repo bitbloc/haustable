@@ -298,13 +298,7 @@ export default function Home({ session }) {
                 )}
             </motion.div>
 
-            {/* 3. Actions */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-                className="flex flex-col w-full max-w-xs gap-4"
-            >
+
             {/* 3. Actions */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
