@@ -9,6 +9,7 @@ export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all') // all, pending, confirmed, completed, cancelled
+    const [typeFilter, setTypeFilter] = useState('all') // all, dine_in, pickup, steak
     const [searchTerm, setSearchTerm] = useState('')
 
     const [slipData, setSlipData] = useState(null) // { booking, type }
@@ -220,6 +221,7 @@ export default function AdminBookings() {
     // Filter & Sort Logic
     const filteredBookings = bookings.filter(b => {
         const matchesStatus = filter === 'all' || b.status === filter
+        const matchesType = typeFilter === 'all' || b.booking_type === typeFilter
         const shortId = getShortId(b.tracking_token)
         const nameToSearch = b.pickup_contact_name || b.profiles?.display_name || ''
         
@@ -228,7 +230,7 @@ export default function AdminBookings() {
             (b.pickup_contact_phone || '').includes(searchTerm) ||
             (b.id || '').includes(searchTerm) ||
             shortId.includes(searchTerm.toUpperCase())
-        return matchesStatus && matchesSearch
+        return matchesStatus && matchesType && matchesSearch
     }).sort((a, b) => {
         const aValue = sortConfig.key === 'customer' 
             ? (a.pickup_contact_name || a.profiles?.display_name || '') 
@@ -288,6 +290,20 @@ export default function AdminBookings() {
                             className={`px-4 py-2 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-all ${filter === s ? 'bg-[#DFFF00] text-black' : 'bg-[#111] text-gray-400 border border-white/10 hover:border-white/30'}`}
                         >
                             {s}
+                        </button>
+                    ))}
+                </div>
+
+
+                {/* Type Filters */}
+                <div className="md:col-span-3 flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                    {['all', 'dine_in', 'pickup', 'steak'].map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setTypeFilter(t)}
+                            className={`px-4 py-2 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-all flex items-center gap-2 ${typeFilter === t ? 'bg-white text-black' : 'bg-[#111] text-gray-400 border border-white/10 hover:border-white/30'}`}
+                        >
+                            {t === 'dine_in' ? 'Table' : t.replace('_', ' ')}
                         </button>
                     ))}
                 </div>
@@ -394,7 +410,8 @@ export default function AdminBookings() {
 
                                                 <span className="text-gray-500 text-xs font-mono mt-0.5">
                                                     {booking.tables_layout?.table_name || 'N/A'} 
-                                                    {booking.booking_type === 'pickup' && <span className="ml-2 text-blue-400">PICKUP</span>}
+                                                    {booking.booking_type === 'pickup' && <span className="ml-2 text-blue-400 font-bold">PICKUP</span>}
+                                                    {booking.booking_type === 'steak' && <span className="ml-2 text-[#DFFF00] font-bold">STEAK</span>}
                                                 </span>
                                             </div>
                                         </td>

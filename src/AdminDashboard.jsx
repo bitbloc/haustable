@@ -17,7 +17,7 @@ export default function AdminDashboard() {
 
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup
+    const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup, steak
 
     useEffect(() => {
         fetchData()
@@ -232,6 +232,12 @@ export default function AdminDashboard() {
                         className={`px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'pickup' ? 'bg-primary text-bgDark shadow-lg' : 'text-gray-400 hover:text-white'}`}
                     >
                         Pickup Only
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('steak')}
+                        className={`px-6 py-2 rounded-xl font-bold transition-all ${activeTab === 'steak' ? 'bg-primary text-bgDark shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Steak Pre-order
                     </button>
                 </div>
 

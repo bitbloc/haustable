@@ -16,10 +16,14 @@ export default function Home({ session }) {
     const [showAuthModal, setShowAuthModal] = useState(false)
 
     // Check Status Logic
-    const checkShopStatus = (s) => {
+    // Check Status Logic (Generic)
+    const checkServiceStatus = (s, modeKey) => {
         if (!s) return { isOpen: false, text: '...' }
-        if (s.shop_mode === 'manual_open') return { isOpen: true, text: 'OPEN' }
-        if (s.shop_mode === 'manual_close') return { isOpen: false, text: 'CLOSED' }
+        const mode = s[modeKey] || s['shop_mode'] || 'auto' // Fallback to old key or auto
+        
+        if (mode === 'manual_open') return { isOpen: true, text: 'OPEN' }
+        if (mode === 'manual_close') return { isOpen: false, text: 'CLOSED' }
+        
         const now = new Date()
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
         const isOpen = currentTime >= s.opening_time && currentTime < s.closing_time
@@ -55,7 +59,9 @@ export default function Home({ session }) {
                 if (data) {
                     const map = data.reduce((acc, i) => ({ ...acc, [i.key]: i.value }), {})
                     setSettings(map)
-                    setStatus(checkShopStatus(map))
+                    setSettings(map)
+                    // Default main status to Table Booking
+                    setStatus(checkServiceStatus(map, 'shop_mode_table'))
                 }
             } catch (err) {
                 console.error("Settings Load Exception:", err)
@@ -64,7 +70,7 @@ export default function Home({ session }) {
 
         fetchSettings()
 
-        const interval = setInterval(() => { if (settings) setStatus(checkShopStatus(settings)) }, 60000)
+        const interval = setInterval(() => { if (settings) setStatus(checkServiceStatus(settings, 'shop_mode_table')) }, 60000)
 
         return () => {
             clearTimeout(safetyTimer)
@@ -72,7 +78,7 @@ export default function Home({ session }) {
         }
     }, [])
 
-    useEffect(() => { if (settings) setStatus(checkShopStatus(settings)) }, [settings])
+    useEffect(() => { if (settings) setStatus(checkServiceStatus(settings, 'shop_mode_table')) }, [settings])
 
     // Fetch Role when session changes
     useEffect(() => {
@@ -281,7 +287,7 @@ export default function Home({ session }) {
                 </div>
 
                 {/* Time Info - Moved below card */}
-                {settings && settings.shop_mode === 'auto' && (
+                {settings && (
                     <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -299,43 +305,62 @@ export default function Home({ session }) {
                 transition={{ delay: 0.3, duration: 0.5 }}
                 className="flex flex-col w-full max-w-xs gap-4"
             >
-                {status.isOpen ? (
+            {/* 3. Actions */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="flex flex-col w-full max-w-xs gap-4"
+            >
+                {!session?.user ? (
+                    <div className="flex flex-col gap-4 animate-fade-in">
+                        <div className="text-red-500 font-bold bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-red-200 text-sm shadow-lg">
+                            ⚠️ กรุณา Log-in ก่อนสั่งอาหารหรือจองโต๊ะ
+                        </div>
+                        {/* Disabled State for Guests */}
+                         <div className="opacity-40 pointer-events-none grayscale flex flex-col gap-4">
+                            <Link to="#" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">{t('bookTable')}</Link>
+                            <Link to="#" className="group bg-[#DFFF00] text-black py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">🐂 Pre-order Steak</Link>
+                            <Link to="#" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">{t('orderPickup')}</Link>
+                        </div>
+                    </div>
+                ) : (
                     <>
-                        {!session?.user ? (
-                            <div className="flex flex-col gap-4 animate-fade-in">
-                                <div className="text-red-500 font-bold bg-white/80 backdrop-blur px-4 py-2 rounded-xl border border-red-200 text-sm shadow-lg">
-                                    ⚠️ กรุณา Log-in ก่อนสั่งอาหารหรือจองโต๊ะ
-                                </div>
-                                <div className="opacity-40 pointer-events-none grayscale flex flex-col gap-4">
-                                    <Link to="#" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">
-                                        {t('bookTable')}
-                                        <ArrowRight size={20} />
-                                    </Link>
-                                    <Link to="#" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg flex justify-center items-center gap-3">
-                                        {t('orderPickup')}
-                                    </Link>
-                                </div>
-                            </div>
+                        {/* 1. Book Table */}
+                        {checkServiceStatus(settings, 'shop_mode_table').isOpen ? (
+                            <Link to="/booking" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3 shadow-xl shadow-black/10">
+                                {t('bookTable')}
+                                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                            </Link>
                         ) : (
-                            <>
-                                <Link to="/booking" className="group bg-[#1A1A1A] text-[#DFFF00] py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3 shadow-xl shadow-black/10">
-                                    {t('bookTable')}
-                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                </Link>
-                                <Link to="/steak-preorder" className="group bg-[#DFFF00] text-black py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3 shadow-xl">
-                                    🐂 Beef Steak Pre-order
-                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                </Link>
-                                <Link to="/pickup" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg hover:bg-[#1A1A1A] hover:text-[#DFFF00] transition-all flex justify-center items-center gap-3 shadow-lg">
-                                    {t('orderPickup')}
-                                </Link>
-                            </>
+                            <div className="bg-gray-200 text-gray-400 py-4 rounded-full font-bold text-lg flex justify-center items-center gap-2 cursor-not-allowed border border-gray-300">
+                                <Clock size={16} /> Table Booking Closed
+                            </div>
+                        )}
+
+                        {/* 2. Steak Pre-order */}
+                        {checkServiceStatus(settings, 'shop_mode_steak').isOpen ? (
+                            <Link to="/steak-preorder" className="group bg-[#DFFF00] text-black py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3 shadow-xl">
+                                🐂 Beef Steak Pre-order
+                                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                            </Link>
+                        ) : (
+                            <div className="bg-gray-200 text-gray-400 py-4 rounded-full font-bold text-lg flex justify-center items-center gap-2 cursor-not-allowed border border-gray-300">
+                                <Clock size={16} /> Steak Pre-order Closed
+                            </div>
+                        )}
+
+                        {/* 3. Pickup */}
+                        {checkServiceStatus(settings, 'shop_mode_pickup').isOpen ? (
+                            <Link to="/pickup" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg hover:bg-[#1A1A1A] hover:text-[#DFFF00] transition-all flex justify-center items-center gap-3 shadow-lg">
+                                {t('orderPickup')}
+                            </Link>
+                        ) : (
+                            <div className="bg-gray-200 text-gray-400 py-4 rounded-full font-bold text-lg flex justify-center items-center gap-2 cursor-not-allowed border border-gray-300">
+                                <Clock size={16} /> Pickup Closed
+                            </div>
                         )}
                     </>
-                ) : (
-                    <div className="bg-gray-200 text-gray-400 py-4 rounded-full font-mono text-sm flex justify-center items-center gap-2 cursor-not-allowed border border-gray-300">
-                        <Clock size={16} /> {t('shopClosed')}
-                    </div>
                 )}
             </motion.div>
 

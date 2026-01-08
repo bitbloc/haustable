@@ -38,7 +38,9 @@ const InstallPWA = () => {
 
 export default function AdminSettings() {
     const [settings, setSettings] = useState({
-        shop_mode: 'auto',
+        shop_mode_table: 'auto',
+        shop_mode_pickup: 'auto',
+        shop_mode_steak: 'auto',
         opening_time: '10:00',
         closing_time: '20:00',
         floorplan_url: '',
@@ -270,42 +272,96 @@ export default function AdminSettings() {
                         </div>
                     </label>
 
-                    {/* Shop Status Control */}
-                    <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-6">
+                    {/* Shop Status Control - Split into 3 */}
+                    <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-8">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                            <Power size={20} className={settings.shop_mode === 'manual_close' ? 'text-red-500' : 'text-[#DFFF00]'} />
-                            Shop Status
+                             <Power size={20} className="text-[#DFFF00]" /> Shop Status Controls
                         </h2>
 
+                        {/* 1. Table Booking Status */}
                         <div className="space-y-3">
-                            {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                                <label key={mode} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${settings.shop_mode === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
-                                    <input
-                                        type="radio"
-                                        name="shop_mode"
-                                        checked={settings.shop_mode === mode}
-                                        onChange={() => handleSave('shop_mode', mode)}
-                                        className="accent-[#DFFF00] w-5 h-5"
-                                    />
-                                    <div>
-                                        <span className="block text-white font-bold capitalize">{mode.replace('_', ' ')}</span>
-                                        <span className="text-xs text-gray-500">
-                                            {mode === 'auto' ? 'Based on schedule' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
-                                        </span>
-                                    </div>
-                                </label>
-                            ))}
+                            <h3 className="text-sm font-bold text-gray-400 uppercase">🍽 Table Booking Status</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {['auto', 'manual_open', 'manual_close'].map((mode) => (
+                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_table === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                        <input
+                                            type="radio"
+                                            name="shop_mode_table"
+                                            checked={settings.shop_mode_table === mode}
+                                            onChange={() => handleSave('shop_mode_table', mode)}
+                                            className="accent-[#DFFF00] w-4 h-4"
+                                        />
+                                        <div>
+                                            <span className="block text-white font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
+                                            <span className="text-[10px] text-gray-500">
+                                                {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                            </span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Time Settings */}
-                        <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300 ${settings.shop_mode !== 'auto' ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Opens at</label>
-                                <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                        {/* 2. Pickup Status */}
+                        <div className="space-y-3 border-t border-white/10 pt-4">
+                            <h3 className="text-sm font-bold text-gray-400 uppercase">🛍 Pickup Status</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {['auto', 'manual_open', 'manual_close'].map((mode) => (
+                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_pickup === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                        <input
+                                            type="radio"
+                                            name="shop_mode_pickup"
+                                            checked={settings.shop_mode_pickup === mode}
+                                            onChange={() => handleSave('shop_mode_pickup', mode)}
+                                            className="accent-[#DFFF00] w-4 h-4"
+                                        />
+                                        <div>
+                                            <span className="block text-white font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
+                                            <span className="text-[10px] text-gray-500">
+                                                {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                            </span>
+                                        </div>
+                                    </label>
+                                ))}
                             </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Closes at</label>
-                                <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                        </div>
+
+                        {/* 3. Steak Pre-order Status */}
+                        <div className="space-y-3 border-t border-white/10 pt-4">
+                            <h3 className="text-sm font-bold text-gray-400 uppercase">🥩 Steak Pre-order Status</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {['auto', 'manual_open', 'manual_close'].map((mode) => (
+                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_steak === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                        <input
+                                            type="radio"
+                                            name="shop_mode_steak"
+                                            checked={settings.shop_mode_steak === mode}
+                                            onChange={() => handleSave('shop_mode_steak', mode)}
+                                            className="accent-[#DFFF00] w-4 h-4"
+                                        />
+                                        <div>
+                                            <span className="block text-white font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
+                                            <span className="text-[10px] text-gray-500">
+                                                {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                            </span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Time Settings - Shared? Or imply it affects all Auto modes */}
+                        <div className="pt-4 border-t border-white/10">
+                            <p className="text-[10px] text-gray-400 mb-3">* Time settings below apply to all "Auto" modes</p>
+                            <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300`}>
+                                <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Opens at</label>
+                                    <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Closes at</label>
+                                    <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                                </div>
                             </div>
                         </div>
                     </div>
