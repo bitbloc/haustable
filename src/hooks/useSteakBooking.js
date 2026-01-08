@@ -110,7 +110,7 @@ export function useSteakBooking() {
          const { data, error } = await supabase
             .from('tables_layout')
             .select('*')
-            .order('name')
+            .order('table_name')
          if (error) console.error(error)
          else dispatch({ type: 'UPDATE_FORM', payload: { field: 'tables', value: data || [] } })
     }
