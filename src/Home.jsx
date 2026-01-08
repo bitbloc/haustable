@@ -322,6 +322,10 @@ export default function Home({ session }) {
                                     {t('bookTable')}
                                     <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </Link>
+                                <Link to="/steak-preorder" className="group bg-[#DFFF00] text-black py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex justify-center items-center gap-3 shadow-xl">
+                                    🐂 Beef Steak Pre-order
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                </Link>
                                 <Link to="/pickup" className="group border border-[#1A1A1A] text-[#1A1A1A] py-4 rounded-full font-bold text-lg hover:bg-[#1A1A1A] hover:text-[#DFFF00] transition-all flex justify-center items-center gap-3 shadow-lg">
                                     {t('orderPickup')}
                                 </Link>
