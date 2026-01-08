@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, Users, MapPin, Upload, FileCheck, PartyPopper, QrCode } from 'lucide-react'
+import { Calendar, Clock, Users, MapPin, Upload, FileCheck, PartyPopper, QrCode, Cake, Heart, Wine } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function StepReviewOrder({ state, dispatch, onSubmit }) {
