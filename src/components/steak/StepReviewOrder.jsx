@@ -7,13 +7,19 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
     const { 
         date, time, pax, selectedTable, cart, 
         contactName, contactPhone, slipFile,
-        isLoading, error
+        isLoading, error,
+        addCake, addFlower, winePreference, config
     } = state
 
     const fileInputRef = useRef(null)
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
 
-    const totalPrice = cart.reduce((a, b) => a + (b.price * b.quantity), 0)
+    const cartTotal = cart.reduce((a, b) => a + (b.price * b.quantity), 0)
+    const cakePrice = addCake ? (config?.cakePrice || 0) : 0
+    const flowerPrice = addFlower ? (config?.flowerPrice || 0) : 0
+    const winePrice = winePreference?.price || 0
+    const totalPrice = cartTotal + cakePrice + flowerPrice + winePrice
+    
     const totalQty = cart.reduce((a, b) => a + b.quantity, 0)
 
     // Fetch Payment QR
@@ -82,6 +88,30 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                              <div className="font-mono text-sm">฿{(item.price * item.quantity).toLocaleString()}</div>
                         </div>
                     ))}
+                    {/* Extras */}
+                    {(addCake || addFlower || winePreference) && (
+                        <div className="border-t border-dashed my-4 pt-4 space-y-2">
+                             {addCake && (
+                                <div className="flex justify-between items-center text-sm">
+                                    <div className="flex items-center gap-2"><Cake size={14} className="text-pink-400" /> Cake Service</div>
+                                    <div className="font-mono">+฿{cakePrice.toLocaleString()}</div>
+                                </div>
+                             )}
+                             {addFlower && (
+                                <div className="flex justify-between items-center text-sm">
+                                    <div className="flex items-center gap-2"><Heart size={14} className="text-red-400" /> Flower Service</div>
+                                    <div className="font-mono">+฿{flowerPrice.toLocaleString()}</div>
+                                </div>
+                             )}
+                             {winePreference && winePreference.price > 0 && (
+                                <div className="flex justify-between items-center text-sm">
+                                    <div className="flex items-center gap-2"><Wine size={14} className="text-purple-400" /> {winePreference.name}</div>
+                                    <div className="font-mono">+฿{winePrice.toLocaleString()}</div>
+                                </div>
+                             )}
+                        </div>
+                    )}
+
                     <div className="border-t pt-4 mt-4 flex justify-between items-end">
                         <div className="text-xs text-gray-400 font-bold uppercase">ยอดรวมโดยประมาณ (Total Estimate)</div>
                         <div className="font-mono text-2xl font-bold">฿{totalPrice.toLocaleString()}</div>

@@ -41,6 +41,9 @@ export default function AdminSettings() {
         shop_mode_table: 'auto',
         shop_mode_pickup: 'auto',
         shop_mode_steak: 'auto',
+        steak_addon_cake_price: '1000',
+        steak_addon_flower_price: '1000',
+        steak_wine_list: '[]', // JSON string
         opening_time: '10:00',
         closing_time: '20:00',
         floorplan_url: '',
@@ -731,52 +734,124 @@ export default function AdminSettings() {
                     </div>
                 </div>
 
-                {/* Wine Section */}
-                <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Wine & Pairing</h3>
-                    
-                    <div>
-                        <label className="block text-xs text-gray-400 mb-1">Pairing Option Label</label>
-                         <input 
-                            value={settings.steak_wine_pairing_label || ''} 
-                            onChange={(e) => setSettings({...settings, steak_wine_pairing_label: e.target.value})}
-                            onBlur={() => handleSave('steak_wine_pairing_label', settings.steak_wine_pairing_label)}
-                            placeholder="Recommend Bin 2 Pairing"
-                            className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs text-gray-400 mb-1">Pairing Option Description</label>
-                         <input 
-                            value={settings.steak_wine_pairing_desc || ''} 
-                            onChange={(e) => setSettings({...settings, steak_wine_pairing_desc: e.target.value})}
-                            onBlur={() => handleSave('steak_wine_pairing_desc', settings.steak_wine_pairing_desc)}
-                            placeholder="Perfect match for Wagyu"
-                            className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
-                        />
-                    </div>
+                </div>
 
+                {/* Add-ons Configuration (Cake & Flower) */}
+                <div className="space-y-4 pt-4 border-t border-white/10">
+                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Add-ons Configuration</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                             <label className="block text-xs text-gray-400 mb-1">Pairing Option Price (Text only)</label>
-                             <input 
-                                value={settings.steak_wine_pairing_price || ''} 
-                                onChange={(e) => setSettings({...settings, steak_wine_pairing_price: e.target.value})}
-                                onBlur={() => handleSave('steak_wine_pairing_price', settings.steak_wine_pairing_price)}
-                                placeholder="e.g. + 2,100 THB"
+                            <label className="block text-xs text-gray-400 mb-1">Cake Service Price (THB)</label>
+                            <input 
+                                type="number"
+                                value={settings.steak_addon_cake_price || ''} 
+                                onChange={(e) => setSettings({...settings, steak_addon_cake_price: e.target.value})}
+                                onBlur={() => handleSave('steak_addon_cake_price', settings.steak_addon_cake_price)}
+                                placeholder="1000"
                                 className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
                             />
                         </div>
                         <div>
-                             <label className="block text-xs text-gray-400 mb-1">Corkage Fee (Text)</label>
-                             <input 
-                                value={settings.steak_corkage_fee || ''} 
-                                onChange={(e) => setSettings({...settings, steak_corkage_fee: e.target.value})}
-                                onBlur={() => handleSave('steak_corkage_fee', settings.steak_corkage_fee)}
-                                placeholder="Corkage Fee 100 THB/Bottle"
+                            <label className="block text-xs text-gray-400 mb-1">Flower Service Price (THB)</label>
+                            <input 
+                                type="number"
+                                value={settings.steak_addon_flower_price || ''} 
+                                onChange={(e) => setSettings({...settings, steak_addon_flower_price: e.target.value})}
+                                onBlur={() => handleSave('steak_addon_flower_price', settings.steak_addon_flower_price)}
+                                placeholder="1000"
                                 className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
                             />
                         </div>
+                    </div>
+                </div>
+
+                {/* Wine List Manager */}
+                <div className="space-y-4 pt-4 border-t border-white/10">
+                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Wine List Manager</h3>
+                    
+                    {/* Render List */}
+                    <div className="space-y-2">
+                        {(() => {
+                            let wines = []
+                            try { wines = JSON.parse(settings.steak_wine_list || '[]') } catch (e) { wines = [] }
+                            
+                            return wines.map((wine, idx) => (
+                                <div key={idx} className="bg-black/40 border border-white/10 p-3 rounded-xl flex items-center justify-between gap-4">
+                                    <div className="flex-1 grid grid-cols-3 gap-2">
+                                        <input 
+                                            placeholder="Wine Name"
+                                            value={wine.name}
+                                            onChange={(e) => {
+                                                const newWines = [...wines]
+                                                newWines[idx].name = e.target.value
+                                                setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
+                                            }}
+                                            onBlur={() => handleSave('steak_wine_list', JSON.stringify(wines))}
+                                            className="bg-transparent border border-white/5 rounded px-2 py-1 text-white text-xs"
+                                        />
+                                        <input 
+                                            placeholder="Price (THB)"
+                                            type="number"
+                                            value={wine.price}
+                                            onChange={(e) => {
+                                                const newWines = [...wines]
+                                                newWines[idx].price = parseInt(e.target.value) || 0
+                                                setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
+                                            }}
+                                            onBlur={() => handleSave('steak_wine_list', JSON.stringify(wines))}
+                                            className="bg-transparent border border-white/5 rounded px-2 py-1 text-white text-xs font-mono"
+                                        />
+                                        <input 
+                                            placeholder="Description"
+                                            value={wine.description || ''}
+                                            onChange={(e) => {
+                                                const newWines = [...wines]
+                                                newWines[idx].description = e.target.value
+                                                setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
+                                            }}
+                                            onBlur={() => handleSave('steak_wine_list', JSON.stringify(wines))}
+                                            className="bg-transparent border border-white/5 rounded px-2 py-1 text-gray-400 text-xs"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            const newWines = wines.filter((_, i) => i !== idx)
+                                            setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
+                                            handleSave('steak_wine_list', JSON.stringify(newWines))
+                                        }}
+                                        className="text-red-500 hover:text-red-400 p-2"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))
+                        })()}
+                    </div>
+
+                    {/* Add Button */}
+                    <button
+                        onClick={() => {
+                            let wines = []
+                            try { wines = JSON.parse(settings.steak_wine_list || '[]') } catch (e) { wines = [] }
+                            const newWines = [...wines, { name: '', price: 0, description: '' }]
+                            setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
+                            handleSave('steak_wine_list', JSON.stringify(newWines))
+                        }}
+                        className="w-full py-2 border border-dashed border-white/20 text-gray-400 text-xs rounded-xl hover:border-[#DFFF00] hover:text-[#DFFF00] transition-colors"
+                    >
+                        + Add New Wine
+                    </button>
+
+                    {/* Keep Corkage Config */}
+                    <div className="pt-2">
+                         <label className="block text-xs text-gray-400 mb-1">Corkage Fee (Text)</label>
+                         <input 
+                            value={settings.steak_corkage_fee || ''} 
+                            onChange={(e) => setSettings({...settings, steak_corkage_fee: e.target.value})}
+                            onBlur={() => handleSave('steak_corkage_fee', settings.steak_corkage_fee)}
+                            placeholder="Corkage Fee 100 THB/Bottle"
+                            className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                        />
                     </div>
                 </div>
             </div>

@@ -3,20 +3,42 @@ import { Wine, Cake, Heart, Briefcase, User, Info, AlertCircle, Phone } from 'lu
 import { supabase } from '../../lib/supabaseClient'
 
 export default function StepPreferences({ state, dispatch, onNext }) {
-    const { occasion, winePreference, specialRequest, dietaryRestrictions, cakeRequest } = state
+    const { 
+        occasion, winePreference, specialRequest, dietaryRestrictions, 
+        addCake, cakeDetail, addFlower, flowerDetail 
+    } = state
     const [config, setConfig] = useState({})
 
     useEffect(() => {
         const fetchConfig = async () => {
             const { data } = await supabase.from('app_settings').select('*').in('key', [
-                'steak_qt_cake_label', 'steak_qt_cake_placeholder',
+                'steak_addon_cake_price', 'steak_addon_flower_price',
                 'steak_qt_dietary_label', 'steak_qt_dietary_placeholder',
-                'steak_wine_pairing_label', 'steak_wine_pairing_desc', 'steak_wine_pairing_price',
-                'steak_corkage_fee'
+                'steak_wine_list', 'steak_corkage_fee'
             ])
             if (data) {
                 const map = data.reduce((acc, item) => ({...acc, [item.key]: item.value}), {})
+                
+                // Parse Wine List
+                try {
+                    map.wineList = JSON.parse(map.steak_wine_list || '[]')
+                } catch (e) {
+                    map.wineList = []
+                }
+
                 setConfig(map)
+                
+                // Update config into hook state for price calc
+                dispatch({ 
+                    type: 'UPDATE_FORM', 
+                    payload: { 
+                        field: 'config', 
+                        value: {
+                            cakePrice: parseInt(map.steak_addon_cake_price || 0),
+                            flowerPrice: parseInt(map.steak_addon_flower_price || 0)
+                        } 
+                    } 
+                })
             }
         }
         fetchConfig()
@@ -56,16 +78,64 @@ export default function StepPreferences({ state, dispatch, onNext }) {
             <div className="space-y-4">
                  <h3 className="text-sm font-bold text-gray-900 mb-4">รายละเอียดเพิ่มเติม <span className="text-xs text-gray-400 font-normal uppercase">(Special Details)</span></h3>
                  
-                 {/* Cake / Decor */}
-                 <div className="bg-white p-4 rounded-xl border border-gray-100 focus-within:ring-1 focus-within:ring-black">
-                    <label className="block text-xs font-bold text-gray-500 mb-2">{config.steak_qt_cake_label || 'Cake / Special Decoration Request'}</label>
-                    <input 
-                        type="text" 
-                        value={cakeRequest} 
-                        onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'cakeRequest', value: e.target.value } })}
-                        placeholder={config.steak_qt_cake_placeholder || "Need a cake? Write here..."}
-                        className="w-full outline-none text-sm placeholder-gray-300"
-                    />
+                 {/* Cake Add-on */}
+                 <div className={`p-4 rounded-xl border transition-all ${addCake ? 'bg-white border-black ring-1 ring-black' : 'bg-white border-gray-100'}`}>
+                    <label className="flex items-center gap-3 cursor-pointer mb-2">
+                        <input 
+                            type="checkbox" 
+                            checked={addCake} 
+                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'addCake', value: e.target.checked } })}
+                            className="w-5 h-5 accent-black"
+                        />
+                        <div>
+                            <span className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                                <Cake size={16} /> รับเค้ก (Receive Cake)
+                            </span>
+                            <span className="text-xs text-gray-500 block">
+                                +{parseInt(config.steak_addon_cake_price || 1000).toLocaleString()} THB (Adjustable)
+                            </span>
+                        </div>
+                    </label>
+                    
+                    {addCake && (
+                        <input 
+                            type="text" 
+                            value={cakeDetail} 
+                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'cakeDetail', value: e.target.value } })}
+                            placeholder="รายละเอียดเค้ก (Cake Message / Details)..."
+                            className="w-full mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-gray-300 transition-colors"
+                        />
+                    )}
+                 </div>
+
+                 {/* Flower Add-on */}
+                 <div className={`p-4 rounded-xl border transition-all ${addFlower ? 'bg-white border-black ring-1 ring-black' : 'bg-white border-gray-100'}`}>
+                    <label className="flex items-center gap-3 cursor-pointer mb-2">
+                        <input 
+                            type="checkbox" 
+                            checked={addFlower} 
+                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'addFlower', value: e.target.checked } })}
+                            className="w-5 h-5 accent-black"
+                        />
+                        <div>
+                            <span className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                                <Heart size={16} /> รับดอกไม้ (Receive Flower)
+                            </span>
+                             <span className="text-xs text-gray-500 block">
+                                +{parseInt(config.steak_addon_flower_price || 1000).toLocaleString()} THB (Adjustable)
+                            </span>
+                        </div>
+                    </label>
+                    
+                    {addFlower && (
+                        <input 
+                            type="text" 
+                            value={flowerDetail} 
+                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'flowerDetail', value: e.target.value } })}
+                            placeholder="ประเภท/สีดอกไม้ หรือข้อความ (Flower Type/Color)..."
+                            className="w-full mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-gray-300 transition-colors"
+                        />
+                    )}
                  </div>
 
                  {/* Dietary */}
@@ -85,23 +155,30 @@ export default function StepPreferences({ state, dispatch, onNext }) {
             <div>
                 <h3 className="text-sm font-bold text-gray-900 mb-4">ไวน์และเครื่องดื่ม <span className="text-xs text-gray-400 font-normal uppercase">(Wine & Pairing)</span></h3>
                 <div className="space-y-3">
-                    <button
-                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: 'bin2' } })}
-                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${winePreference === 'bin2' ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
-                    >
-                        <Wine size={24} />
-                        <div className="text-left flex-1">
-                            <div className="flex justify-between items-center">
-                                <span className="font-bold text-sm">{config.steak_wine_pairing_label || 'Recommend Bin 2 Pairing'}</span>
-                                {config.steak_wine_pairing_price && <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">{config.steak_wine_pairing_price}</span>}
-                            </div>
-                            <div className="text-xs opacity-70">{config.steak_wine_pairing_desc || 'Perfect match for Wagyu'}</div>
-                        </div>
-                    </button>
+                    {/* Dynamic Wine List */}
+                    {config.wineList && config.wineList.map((wine, idx) => {
+                        const isSelected = winePreference?.name === wine.name
+                        return (
+                            <button
+                                key={idx}
+                                onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: wine } })}
+                                className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${isSelected ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
+                            >
+                                <Wine size={24} />
+                                <div className="text-left flex-1">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold text-sm">{wine.name}</span>
+                                        <span className="text-xs font-mono bg-gray-100 opacity-80 text-black px-2 py-1 rounded">+{wine.price?.toLocaleString()}</span>
+                                    </div>
+                                    <div className="text-xs opacity-70 mt-1">{wine.description}</div>
+                                </div>
+                            </button>
+                        )
+                    })}
 
                     <button
-                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: 'corkage' } })}
-                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${winePreference === 'corkage' ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
+                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: { name: 'BYOB', price: 0, type: 'corkage' } } })}
+                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${winePreference?.type === 'corkage' ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
                     >
                         <Wine size={24} />
                         <div className="text-left">
@@ -111,8 +188,8 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                     </button>
 
                      <button
-                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: 'none' } })}
-                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${winePreference === 'none' ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
+                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: null } })}
+                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${!winePreference ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
                     >
                         <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs">✕</div>
                         <div className="text-left">

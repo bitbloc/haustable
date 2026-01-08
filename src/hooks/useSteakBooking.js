@@ -10,10 +10,20 @@ const initialState = {
     selectedTable: null,
     cart: [], // { id, name, price, doneness: { name, id }, quantity, options: {} }
     occasion: 'general', // general, birthday, anniversary, business
-    winePreference: 'none', // none, bin2, corkage
+    winePreference: null, // { id, name, price, description } or null
+    addCake: false,
+    cakeDetail: '',
+    addFlower: false,
+    flowerDetail: '',
+    
     specialRequest: '',
     dietaryRestrictions: '',
-    cakeRequest: '',
+    
+    // Config Prices (Loaded on mount/step)
+    config: {
+        cakePrice: 0,
+        flowerPrice: 0
+    },
     contactName: '',
     contactPhone: '',
     isAgreed: false,
@@ -61,6 +71,10 @@ function steakBookingReducer(state, action) {
         }
 
         case 'UPDATE_FORM':
+            // Merge config if passed
+            if (action.payload.field === 'config') {
+                 return { ...state, config: { ...state.config, ...action.payload.value } }
+            }
             return { ...state, [action.payload.field]: action.payload.value }
             
         case 'SET_LOADING': return { ...state, isLoading: action.payload }
@@ -197,12 +211,23 @@ export function useSteakBooking() {
                  slipUrl = publicUrl
             }
 
-            // 2. Construct Customer Note with details
+            // 2. Add-ons Calculation
+            const cartTotal = state.cart.reduce((sum, i) => sum + (i.price * i.quantity), 0)
+            const cakeTotal = state.addCake ? (state.config.cakePrice || 0) : 0
+            const flowerTotal = state.addFlower ? (state.config.flowerPrice || 0) : 0
+            const wineTotal = state.winePreference?.price || 0
+            
+            const totalAmount = cartTotal + cakeTotal + flowerTotal + wineTotal
+
+            // 3. Construct Customer Note
+            const wineText = state.winePreference ? `${state.winePreference.name} (+${state.winePreference.price})` : 'No Wine'
+            
             const details = [
                 `[Steak Pre-order]`,
                 `Occasion: ${state.occasion}`,
-                `Wine: ${state.winePreference}`,
-                state.cakeRequest ? `Cake: ${state.cakeRequest}` : null,
+                `Wine: ${wineText}`,
+                state.addCake ? `[ADD-ON] Cake (+${cakeTotal}): ${state.cakeDetail}` : null,
+                state.addFlower ? `[ADD-ON] Flower (+${flowerTotal}): ${state.flowerDetail}` : null,
                 state.dietaryRestrictions ? `Allergies: ${state.dietaryRestrictions}` : null,
                 state.specialRequest ? `Note: ${state.specialRequest}` : null
             ].filter(Boolean).join('\n')
@@ -213,7 +238,7 @@ export function useSteakBooking() {
                 status: 'pending', // Pending payment check
                 booking_time: toThaiISO(state.date, state.time),
                 table_id: state.selectedTable.id,
-                total_amount: state.cart.reduce((sum, i) => sum + (i.price * i.quantity), 0),
+                total_amount: totalAmount,
                 payment_slip_url: slipUrl,
                 pickup_contact_name: state.contactName,
                 pickup_contact_phone: state.contactPhone,
