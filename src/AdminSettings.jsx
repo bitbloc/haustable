@@ -854,7 +854,7 @@ export default function AdminSettings() {
                         />
                     </div>
                 </div>
-            </div>
+
 
             {/* Data Maintenance Section */}
             <div className="mt-8 bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
