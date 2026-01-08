@@ -106,18 +106,27 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                     </div>
                 )}
 
-                <input 
-                    type="text" placeholder="Your Name" 
-                    value={contactName}
-                    onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactName', value: e.target.value } })}
-                    className="w-full p-4 bg-gray-50 rounded-xl outline-none text-sm font-bold focus:ring-1 focus:ring-black"
-                />
-                 <input 
-                    type="tel" placeholder="Phone Number" 
-                    value={contactPhone}
-                    onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactPhone', value: e.target.value } })}
-                    className="w-full p-4 bg-gray-50 rounded-xl outline-none text-sm font-bold focus:ring-1 focus:ring-black"
-                />
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">Your Name <span className="text-red-500">*</span></label>
+                    <input 
+                        type="text" placeholder="Your Name" 
+                        value={contactName}
+                        onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactName', value: e.target.value } })}
+                        className="w-full p-4 bg-gray-50 rounded-xl outline-none text-sm font-bold focus:ring-1 focus:ring-black"
+                    />
+                </div>
+                <div>
+                     <label className="block text-xs font-bold text-gray-500 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                     <input 
+                        type="tel" placeholder="Phone Number" 
+                        value={contactPhone}
+                        onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactPhone', value: e.target.value } })}
+                        className="w-full p-4 bg-gray-50 rounded-xl outline-none text-sm font-bold focus:ring-1 focus:ring-black"
+                    />
+                    <div className="text-[10px] text-gray-400 mt-1">
+                        * Required for order tracking and contact (บังคับใส่เพื่อ tracking และติดต่อกลับ)
+                    </div>
+                </div>
 
                 <div 
                     onClick={() => fileInputRef.current?.click()}
