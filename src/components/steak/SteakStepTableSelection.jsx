@@ -22,7 +22,7 @@ export default function SteakStepTableSelection({
     useEffect(() => {
         const fetchSettings = async () => {
             const { data, error } = await supabase
-                .from('settings')
+                .from('app_settings')
                 .select('key, value')
                 .eq('key', 'floorplan_url')
                 .single()
