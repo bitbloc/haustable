@@ -15,18 +15,28 @@ export default function SteakStepTableSelection({
         selectedTable
     } = state
 
-    // Mock Settings (In real app, fetch from DB or Context)
-    const settings = {
-        floorplanUrl: 'https://images.unsplash.com/photo-1555243896-c709bfa0b567?q=80&w=2070&auto=format&fit=crop' // Placeholder or reuse legitimate one
-        // Note: Ideally pass real settings or fetch them
-    }
+    // State for Settings
+    const [floorplanUrl, setFloorplanUrl] = useState(null)
+
+    // Fetch Settings (Floorplan)
+    useEffect(() => {
+        const fetchSettings = async () => {
+            const { data, error } = await supabase
+                .from('settings')
+                .select('key, value')
+                .eq('key', 'floorplan_url')
+                .single()
+            
+            if (data && data.value) {
+                setFloorplanUrl(data.value)
+            }
+        }
+        fetchSettings()
+    }, [])
 
     const [isExpanded, setIsExpanded] = useState(false)
     const [previewImage, setPreviewImage] = useState(null)
     const [availabilityTooltip, setAvailabilityTooltip] = useState(null)
-
-    // Ensure we have correct settings (optional: fetch if needed)
-    // For now assuming the image bg or we can use a solid color if image fails.
 
     const toggleExpanded = () => setIsExpanded(!isExpanded)
 
@@ -151,10 +161,11 @@ export default function SteakStepTableSelection({
                             <TransformComponent wrapperClass="w-full h-full flex items-center justify-center bg-[#f0f0f0]" contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div
                                     className="relative w-[1000px] aspect-video bg-white shadow-2xl origin-center"
-                                    // Note: If you have a settings provider, use it here. 
-                                    // For now I'm omitting the BG image strictly to keep it clean or hardcoding a placeholder if needed
-                                    // style={{ backgroundImage: ... }} 
-                                    // In production, we'd fetch the floorplan image from settings table.
+                                    style={{
+                                        backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
+                                        backgroundSize: '100% 100%',
+                                        backgroundRepeat: 'no-repeat',
+                                    }}
                                     onClick={() => selectTable(null)}
                                 >
                                      {/* Grid Lines (Optional style) */}
