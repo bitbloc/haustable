@@ -1,16 +1,110 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Package, ChefHat, Calendar, AlertTriangle } from 'lucide-react'
+import { Package, ChefHat, Calendar, AlertTriangle, Edit2, X, Save } from 'lucide-react'
+
+// Modal Component for Editing Steak
+const EditSteakModal = ({ isOpen, onClose, steak, onSave }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        price: '',
+        description: '', // This covers 'Details' and potentially 'Quantity' (e.g. 200g)
+        image_url: ''
+    })
+
+    useEffect(() => {
+        if (steak) {
+            setFormData({
+                name: steak.name || '',
+                price: steak.price || '',
+                description: steak.description || '',
+                image_url: steak.image_url || ''
+            })
+        }
+    }, [steak])
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        onSave({ ...steak, ...formData })
+    }
+
+    if (!isOpen) return null
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#1a1a1a] w-full max-w-lg rounded-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-4 border-b border-white/10 flex justify-between items-center">
+                    <h2 className="font-bold text-lg">Edit Steak Details</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Name</label>
+                        <input 
+                            type="text" 
+                            className="w-full bg-black border border-white/20 rounded-lg p-3 outline-none focus:border-[#DFFF00]"
+                            value={formData.name}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Price (THB)</label>
+                        <input 
+                            type="number" 
+                            className="w-full bg-black border border-white/20 rounded-lg p-3 outline-none focus:border-[#DFFF00]"
+                            value={formData.price}
+                            onChange={(e) => setFormData({...formData, price: e.target.value})}
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Description / Details / Weight</label>
+                        <textarea 
+                            className="w-full bg-black border border-white/20 rounded-lg p-3 outline-none focus:border-[#DFFF00] h-24 resize-none"
+                            value={formData.description}
+                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            placeholder="e.g. 300g, Intense marbling..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Image URL (Optional)</label>
+                        <input 
+                            type="text" 
+                            className="w-full bg-black border border-white/20 rounded-lg p-3 outline-none focus:border-[#DFFF00]"
+                            value={formData.image_url}
+                            onChange={(e) => setFormData({...formData, image_url: e.target.value})}
+                            placeholder="https://..."
+                        />
+                    </div>
+
+                    <div className="pt-4 flex gap-3">
+                         <button type="button" onClick={onClose} className="flex-1 bg-white/5 py-3 rounded-xl font-bold hover:bg-white/10 transition-colors">Cancel</button>
+                         <button type="submit" className="flex-1 bg-[#DFFF00] text-black py-3 rounded-xl font-bold hover:bg-[#cce600] transition-colors flex items-center justify-center gap-2">
+                            <Save size={18} /> Save Changes
+                         </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
 
 export default function AdminSteakDashboard() {
     const [steaks, setSteaks] = useState([])
     const [prepList, setPrepList] = useState([])
-    const [activeTab, setActiveTab] = useState('stock') // stock | prep
+    const [activeTab, setActiveTab] = useState('stock') 
     const [loading, setLoading] = useState(true)
+    
+    // Edit Modal State
+    const [isEditOpen, setIsEditOpen] = useState(false)
+    const [editingItem, setEditingItem] = useState(null)
 
     const fetchSteaks = async () => {
-        // Fetch items from Steak Pre-order category
         const { data } = await supabase.from('menu_items')
             .select('*')
             .eq('category', 'Steak Pre-order')
@@ -19,17 +113,12 @@ export default function AdminSteakDashboard() {
     }
 
     const fetchPrepList = async () => {
-        // Fetch bookings for tomorrow (or selected date) that have steak items
-        // Logic: Get tomorrow date str
         const tomorrow = new Date()
         tomorrow.setDate(tomorrow.getDate() + 1)
-        const dateStr = tomorrow.toISOString().split('T')[0] // YYYY-MM-DD
-        
-        // Range
+        const dateStr = tomorrow.toISOString().split('T')[0]
         const start = `${dateStr}T00:00:00+07:00`
         const end = `${dateStr}T23:59:59+07:00`
 
-        // Query Bookings with Order Items
         const { data: bookings } = await supabase
             .from('bookings')
             .select('*, order_items(*, menu_items(*))')
@@ -37,7 +126,6 @@ export default function AdminSteakDashboard() {
             .lte('booking_time', end)
             .neq('status', 'cancelled')
         
-        // Filter only those containing 'Steak Pre-order' items
         const list = (bookings || []).filter(b => 
             b.order_items.some(oi => oi.menu_items?.category === 'Steak Pre-order')
         ).map(b => ({
@@ -59,6 +147,30 @@ export default function AdminSteakDashboard() {
         
         if (!error) {
             setSteaks(prev => prev.map(s => s.id === id ? { ...s, is_sold_out: !currentStatus } : s))
+        }
+    }
+
+    const openEdit = (item) => {
+        setEditingItem(item)
+        setIsEditOpen(true)
+    }
+
+    const handleSaveEdit = async (updatedItem) => {
+        const { error } = await supabase.from('menu_items')
+            .update({
+                name: updatedItem.name,
+                price: parseFloat(updatedItem.price),
+                description: updatedItem.description,
+                image_url: updatedItem.image_url
+            })
+            .eq('id', updatedItem.id)
+
+        if (!error) {
+            setSteaks(prev => prev.map(s => s.id === updatedItem.id ? updatedItem : s))
+            setIsEditOpen(false)
+            setEditingItem(null)
+        } else {
+            alert('Error updating item: ' + error.message)
         }
     }
 
@@ -93,18 +205,37 @@ export default function AdminSteakDashboard() {
                         {activeTab === 'stock' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {steaks.map(steak => (
-                                    <div key={steak.id} className={`bg-[#1a1a1a] rounded-xl p-4 border transition-all ${steak.is_sold_out ? 'border-red-900 opacity-60' : 'border-white/10'}`}>
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="font-bold text-lg">{steak.name}</h3>
-                                            {steak.is_sold_out && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded">SOLD OUT</span>}
+                                    <div key={steak.id} className={`bg-[#1a1a1a] rounded-xl p-4 border transition-all relative group ${steak.is_sold_out ? 'border-red-900 opacity-60' : 'border-white/10'}`}>
+                                        
+                                        {/* Edit Button (Visible on Hover/Always on Mobile) */}
+                                        <button 
+                                            onClick={() => openEdit(steak)}
+                                            className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-[#DFFF00] hover:text-black rounded-full transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100 z-10"
+                                            title="Edit Details"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+
+                                        <div className="flex justify-between items-start mb-4 pr-8">
+                                            <h3 className="font-bold text-lg leading-tight">{steak.name}</h3>
                                         </div>
-                                        <div className="flex items-center justify-between mt-4">
-                                            <span className="font-mono text-gray-400">฿{steak.price}</span>
+                                        
+                                        {/* Optional Image Preview */}
+                                        {steak.image_url && (
+                                            <div className="h-32 w-full bg-gray-900 rounded-lg mb-4 overflow-hidden">
+                                                <img src={steak.image_url} alt={steak.name} className="w-full h-full object-cover opacity-80" />
+                                            </div>
+                                        )}
+
+                                        <p className="text-xs text-gray-500 mb-4 line-clamp-2">{steak.description}</p>
+
+                                        <div className="flex items-center justify-between mt-auto">
+                                            <span className="font-mono text-gray-400">฿{steak.price.toLocaleString()}</span>
                                             <button 
                                                 onClick={() => toggleStock(steak.id, steak.is_sold_out)}
-                                                className={`px-4 py-2 rounded-lg text-xs font-bold ${steak.is_sold_out ? 'bg-green-900 text-green-100 hover:bg-green-800' : 'bg-red-900 text-red-100 hover:bg-red-800'}`}
+                                                className={`px-4 py-2 rounded-lg text-xs font-bold ${steak.is_sold_out ? 'bg-red-500 text-white' : 'bg-green-900 text-green-100 hover:bg-green-800'}`}
                                             >
-                                                {steak.is_sold_out ? 'Mark Available' : 'Mark Sold Out'}
+                                                {steak.is_sold_out ? 'SOLD OUT' : 'Available'}
                                             </button>
                                         </div>
                                     </div>
@@ -163,6 +294,14 @@ export default function AdminSteakDashboard() {
                     </>
                 )}
             </div>
+
+            {/* Modal Portal */}
+            <EditSteakModal 
+                isOpen={isEditOpen} 
+                onClose={() => setIsEditOpen(false)} 
+                steak={editingItem}
+                onSave={handleSaveEdit}
+            />
         </div>
     )
 }
