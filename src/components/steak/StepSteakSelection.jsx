@@ -115,7 +115,7 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
                 // Fetch Doneness Options
                 const { data: group } = await supabase.from('option_groups').select('id, selection_type').eq('name', 'Doneness').single()
                 if (group) {
-                    const { data: opts } = await supabase.from('option_choices').select('*').eq('option_group_id', group.id)
+                    const { data: opts } = await supabase.from('option_choices').select('*').eq('group_id', group.id)
                     setDonenessOpts(opts || [])
                 }
 
