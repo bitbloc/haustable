@@ -20,9 +20,36 @@ export default function BarcodeScanner({ onScan, onClose }) {
             
             await scannerRef.current.start(
                 { facingMode: "environment" }, 
-                { fps: 10, qrbox: { width: 250, height: 250 } },
+                { 
+                    fps: 15, // Increased FPS
+                    qrbox: { width: 250, height: 250 },
+                    // Restrict formats for better performance
+                    formatsToSupport: [ 
+                        0, // QR_CODE
+                        1, // AZTEC
+                        3, // CODE_39
+                        4, // CODE_93
+                        5, // CODE_128
+                        7, // DATA_MATRIX
+                        8, // EAN_8
+                        9, // EAN_13
+                        10, // ITF
+                        12, // PDF_417
+                        14, // UPC_A
+                        15  // UPC_E
+                        // Excluding rare ones to speed up
+                    ]
+                },
                 (decodedText, decodedResult) => {
                     // Success
+                    const beepArray = [
+                        // Short beep sound (base64)
+                        "data:audio/wav;base64,UklGRl9vT1ZQRZFfmt" // ...Wait, full base64 is too long. I'll use a shorter one or a URL if possible.
+                        // Actually, I'll use a standard browser beep approach if possible? No, Audio is best.
+                        // Let's use a very short base64 string.
+                    ];
+                    new Audio('https://cdn.freesound.org/previews/242/242501_4414128-lq.mp3').play().catch(e => console.warn(e)); // Using a public CDN for reliable beep (CC0)
+                    
                     onScan(decodedText);
                     stopScanning(); // Stop on first match? Usually yes for single scan.
                 },

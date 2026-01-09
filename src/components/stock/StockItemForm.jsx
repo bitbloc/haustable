@@ -49,8 +49,68 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         { label: 'Reorder Point (Warning)', key: 'reorder_point', type: 'number' },
         { label: 'Par Level (Full)', key: 'par_level', type: 'number' },
         { label: 'Barcode', key: 'barcode', type: 'text' },
-        { label: 'Image URL', key: 'image_url', type: 'text' },
+        // Removed image_url, handled separately
     ];
+
+    // Helper: Resize Image
+    const resizeImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    const width = (img.width > MAX_WIDTH) ? MAX_WIDTH : img.width;
+                    const height = (img.width > MAX_WIDTH) ? (img.height * scaleSize) : img.height;
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                    }, 'image/jpeg', 0.8); // 80% quality
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setLoading(true);
+            const resizedFile = await resizeImage(file);
+            
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('stock-images')
+                .upload(filePath, resizedFile);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('stock-images')
+                .getPublicUrl(filePath);
+
+            setFormData(prev => ({ ...prev, image_url: publicUrl }));
+            toast.success('Image uploaded');
+        } catch (error) {
+            console.error('Upload error', error);
+            toast.error('Failed to upload image');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to delete this item?')) return;
@@ -139,12 +199,42 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         </div>
                     ))}
                     
-                    {/* Image Preview Helper (Simple) */}
-                    {formData.image_url && (
-                        <div className="mt-2 h-32 rounded-xl overflow-hidden border">
-                            <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview"/>
+                    {/* Image Upload Section */}
+                    <div className="space-y-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase">Product Image</label>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="relative w-24 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
+                                {formData.image_url ? (
+                                    <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview"/>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                        <Camera className="w-8 h-8" />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="flex-1">
+                                <label className="flex items-center justify-center gap-2 w-full p-3 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors border border-dashed border-gray-300">
+                                    <Upload className="w-5 h-5 text-gray-600" />
+                                    <span className="text-sm font-medium text-gray-600">
+                                        {formData.image_url ? 'Change Photo' : 'Upload Photo'}
+                                    </span>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        onChange={handleImageUpload} 
+                                        className="hidden" 
+                                        capture="environment" /* Prefer rear camera on mobile */
+                                    />
+                                </label>
+                                <p className="text-[10px] text-gray-400 mt-2">
+                                    Auto-resized to 800px width.
+                                </p>
+                            </div>
                         </div>
-                    )}
+                    </div>
+
                 </div>
 
                 <div className="p-4 border-t border-gray-100 flex gap-2">
