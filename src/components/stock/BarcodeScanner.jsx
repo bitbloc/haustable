@@ -42,14 +42,10 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             }
             
             const config = { 
-                fps: 20, // เพิ่ม FPS เพื่อความลื่นไหล
-                qrbox: { width: 280, height: 280 }, // ขยายพื้นที่ scan เล็กน้อย
-                aspectRatio: 1.0,
-                // !สำคัญ: ใช้ Native API ของ Browser (AI ในตัว Chrome) ช่วยอ่านบาร์โค้ดเบี้ยว/โค้ง
+                fps: 10, // Lower FPS slightly to save processing power, 10 is usually sufficient
                 experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true
                 },
-                // เน้นอ่าน Barcode ทั่วไป (EAN/UPC)
                 formatsToSupport: [ 
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
