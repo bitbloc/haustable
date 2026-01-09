@@ -43,14 +43,19 @@ export default function BarcodeScanner({ onScan, onClose }) {
     const stopScanning = async () => {
         if (scannerRef.current) {
             try {
-                // If it's already stopped, Html5Qrcode might throw an error. We can try/catch it.
-                // Or check getState() if available, but docs are sparse. Safest is try/catch.
-                await scannerRef.current.stop();
+                // Check if scanner is actually running (State 2 = Scanning, 3 = Paused)
+                // Html5QrcodeScannerState: UNKNOWN(0), NOT_STARTED(1), SCANNING(2), PAUSED(3)
+                // We access the enum-like values or just check the getter if available.
+                // The library instance exposes getState()
+                // Safest to just try/catch if getState is flaky, but improved logic:
+                
+                const state = scannerRef.current.getState();
+                if (state === 2 || state === 3) {
+                    await scannerRef.current.stop();
+                }
             } catch (err) {
-                // Ignore "scanner is not running" error from library
-                // Console only if it's a real issue
                  if (!err?.toString().includes("is not running")) {
-                    console.warn("Scanner stop issue:", err);
+                    console.warn("Scanner stop warning:", err);
                  }
             } finally {
                  setIsScanning(false);
@@ -61,11 +66,20 @@ export default function BarcodeScanner({ onScan, onClose }) {
     useEffect(() => {
         // Cleanup on unmount
         return () => {
-             if (scannerRef.current && isScanning) {
-                 scannerRef.current.stop().catch(e => console.error("Cleanup error", e));
+             // We can't await in cleanup, but we can fire the stop promise.
+             if (scannerRef.current) {
+                 const state = scannerRef.current.getState();
+                 if (state === 2 || state === 3) {
+                     scannerRef.current.stop().catch(e => {
+                         // Suppress unmount cleanup errors specifically
+                         if (!e?.toString().includes("is not running")) {
+                             console.warn("Cleanup stop warning:", e);
+                         }
+                     });
+                 }
              }
         };
-    }, [isScanning]);
+    }, []);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in">
