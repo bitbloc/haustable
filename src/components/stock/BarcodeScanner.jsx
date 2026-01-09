@@ -41,12 +41,19 @@ export default function BarcodeScanner({ onScan, onClose }) {
     };
 
     const stopScanning = async () => {
-        if (scannerRef.current && isScanning) {
+        if (scannerRef.current) {
             try {
+                // If it's already stopped, Html5Qrcode might throw an error. We can try/catch it.
+                // Or check getState() if available, but docs are sparse. Safest is try/catch.
                 await scannerRef.current.stop();
-                setIsScanning(false);
             } catch (err) {
-                console.error("Failed to stop", err);
+                // Ignore "scanner is not running" error from library
+                // Console only if it's a real issue
+                 if (!err?.toString().includes("is not running")) {
+                    console.warn("Scanner stop issue:", err);
+                 }
+            } finally {
+                 setIsScanning(false);
             }
         }
     };
