@@ -164,7 +164,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const handleSave = async () => {
         setLoading(true);
         try {
-            const payload = { ...formData };
+            const payload = { 
+                ...formData,
+                barcode: formData.barcode ? formData.barcode.trim() : null // Fix: unique constraint on ""
+            };
             let error;
             
             if (isEdit) {
