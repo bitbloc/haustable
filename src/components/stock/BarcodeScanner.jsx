@@ -32,9 +32,11 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [cameraHint, setCameraHint] = useState("วางบาร์โค้ดให้อยู่ในกรอบ");
     const [zoom, setZoom] = useState({ supported: false, min: 1, max: 3, value: 1, step: 0.1 });
+    const [errorMessage, setErrorMessage] = useState("");
 
     const startScanning = async () => {
         if (isScanning) return;
+        setErrorMessage(""); // Clear previous errors
         const scannerId = "reader-manual";
         
         try {
@@ -42,9 +44,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                 scannerRef.current = new Html5Qrcode(scannerId);
             }
             
-            // --- Config กล้อง: บังคับความละเอียดสูง ---
             // --- Config กล้อง: โหมดปลอดภัย (Safe Mode) ---
-            // ตัด config ที่ซับซ้อนออกทั้งหมด เพื่อให้ทำงานได้ชัวร์ที่สุด
             const videoConstraints = {
                 facingMode: "environment"
             };
@@ -98,7 +98,8 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
         } catch (err) {
             console.error("Camera start failed", err);
             setPermissionError(true);
-            toast.error("ไม่สามารถเข้าถึงกล้อง หรือกล้องไม่รองรับความละเอียดที่ต้องการ");
+            setErrorMessage(err.name + ": " + err.message || "Unknown error");
+            toast.error("Camera Error: " + (err.message || "Unknown"));
         }
     };
 
@@ -240,6 +241,43 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
                             <PackageSearch className="w-12 h-12 text-white animate-bounce mb-4" />
                             <p className="text-white font-medium">กำลังค้นหาข้อมูลสินค้า...</p>
+                        </div>
+                    )}
+
+                    {/* Initial State / Error State */}
+                    {!isScanning && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#111] z-10">
+                            {permissionError ? (
+                                <div className="text-center p-6 text-red-400 max-w-xs">
+                                    <p className="font-bold text-lg mb-2">กล้องไม่ทำงาน</p>
+                                    <p className="text-sm mb-4 text-white/70">{errorMessage}</p>
+                                    <p className="text-xs text-white/50 mb-6">ลองเช็คการอนุญาต (Permissions) ใน Browser หรือ Settings</p>
+                                    
+                                    <button
+                                        onClick={() => { setPermissionError(false); startScanning(); }}
+                                        className="bg-red-500/20 text-red-300 border border-red-500/50 px-6 py-2 rounded-full text-sm hover:bg-red-500/30 transition-colors"
+                                    >
+                                        ลองใหม่ (Retry)
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-center space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full"></div>
+                                        <Zap className="w-16 h-16 text-emerald-400 relative z-10 mx-auto" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h2 className="text-2xl font-bold text-white">พร้อมสแกน</h2>
+                                        <p className="text-gray-400 text-sm">รองรับบาร์โค้ดสินค้าและ QR Code</p>
+                                    </div>
+                                    <button
+                                        onClick={startScanning}
+                                        className="bg-white text-black px-10 py-4 rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                                    >
+                                        แตะเพื่อเริ่มสแกน
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
