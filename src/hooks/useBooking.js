@@ -66,27 +66,31 @@ export function useBooking() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, end_time')
+                .select('table_id, booking_time, end_time, booking_type')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
 
             if (error) throw error
 
-            const blockedIds = data.filter(b => {
+            const bookedIds = []
+            const statuses = {}
+
+            data.forEach(b => {
                 const bStart = new Date(b.booking_time)
                 // If end_time exists use it, else default to 2 hours
                 const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + (2 * 60 * 60 * 1000))
 
                 // Overlap Check: (StartA < EndB) && (EndA > StartB)
-                return (requestedStart < bEnd) && (requestedEnd > bStart)
-            }).map(b => b.table_id)
+                if ((requestedStart < bEnd) && (requestedEnd > bStart)) {
+                    bookedIds.push(b.table_id)
+                    // Priority: Walk-in overrides Online (for display purpose if multiple? actually just taking last one is fine or first)
+                    // If multiple bookings overlap (rare but possible), just take one.
+                    statuses[b.table_id] = { type: b.booking_type }
+                }
+            })
 
-            // Also check for bookings that might start yesterday but end today? 
-            // Usually not an issue for restaurant open hours, but for robustness we could rely on current logic. 
-            // (Assuming restaurant closes at night).
-
-            dispatch({ type: 'SET_BOOKED_TABLES', payload: blockedIds })
+            dispatch({ type: 'SET_BOOKED_TABLES', payload: { ids: bookedIds, statuses } })
         } catch (err) {
             console.error("Availability Check Failed", err)
         }

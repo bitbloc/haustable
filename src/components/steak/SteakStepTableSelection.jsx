@@ -11,7 +11,7 @@ export default function SteakStepTableSelection({
 }) {
     const {
         date, time, pax,
-        tables, bookedTableIds,
+        tables, bookedTableIds, bookedTableStatuses,
         selectedTable
     } = state
 
@@ -49,6 +49,12 @@ export default function SteakStepTableSelection({
         const isSelected = selectedTable?.id === table.id
         const rotation = table.rotation || 0
 
+        // Status Logic
+        let statusType = 'online'
+        if (isBooked && bookedTableStatuses && bookedTableStatuses[table.id]) {
+            statusType = bookedTableStatuses[table.id].type // 'walk_in' or 'online'
+        }
+
         const baseStyle = {
             position: 'absolute',
             left: `${table.pos_x}%`,
@@ -58,7 +64,10 @@ export default function SteakStepTableSelection({
             transform: `rotate(${rotation}deg)`
         }
 
-        let bgColor = isBooked ? '#ef4444' : (isSelected ? '#000000' : (table.table_color || '#ffffff'))
+        let bgColor = isBooked 
+            ? (statusType === 'walk_in' ? '#F97316' : '#ef4444') // Orange (Walk-in) vs Red (Online)
+            : (isSelected ? '#000000' : (table.table_color || '#ffffff'))
+
         let textColor = (isBooked || isSelected || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) ? 'white' : 'black'
         let borderColor = isSelected ? 'white' : 'transparent'
 
@@ -68,7 +77,8 @@ export default function SteakStepTableSelection({
                 onClick={(e) => {
                     e.stopPropagation()
                     if (isBooked) {
-                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `โต๊ะไม่ว่าง (Unavailable)`, loading: false })
+                        const statusLabel = statusType === 'walk_in' ? 'Walk-in' : 'Booked'
+                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `โต๊ะไม่ว่าง (${statusLabel})`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
                     } else {
                         selectTable(table)
@@ -77,7 +87,7 @@ export default function SteakStepTableSelection({
                 style={baseStyle}
                 className={`transition-all duration-300 flex flex-col items-center justify-center shadow-md
                 ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
-                ${isBooked ? 'opacity-50 cursor-not-allowed bg-gray-300 contrast-50' : 'hover:scale-105 active:scale-95 cursor-pointer'}
+                ${isBooked ? 'opacity-90 cursor-not-allowed contrast-100' : 'hover:scale-105 active:scale-95 cursor-pointer'}
                 ${isSelected ? 'z-20 ring-4 ring-black/20' : ''}
                 `}
             >
@@ -85,7 +95,9 @@ export default function SteakStepTableSelection({
                 <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${-rotation}deg)` }}>
                     {isBooked ? (
                         <>
-                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>FULL</span>
+                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
+                                {statusType === 'walk_in' ? 'WALK-IN' : 'FULL'}
+                            </span>
                             <span className="text-[8px] opacity-75" style={{ color: textColor }}>{table.table_name}</span>
                         </>
                     ) : (

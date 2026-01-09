@@ -31,6 +31,7 @@ const initialState = {
     isLoading: false,
     error: null,
     bookedTableIds: [], // For preventing double booking on table selection step
+    bookedTableStatuses: {}, // Map of ID -> { type: 'walk_in'|'online' }
     tables: [] // [NEW] Store fetched tables
 }
 
@@ -79,7 +80,12 @@ function steakBookingReducer(state, action) {
             
         case 'SET_LOADING': return { ...state, isLoading: action.payload }
         case 'SET_ERROR': return { ...state, error: action.payload }
-        case 'SET_BOOKED_TABLES': return { ...state, bookedTableIds: action.payload }
+        case 'SET_BOOKED_TABLES': 
+            return { 
+                ...state, 
+                bookedTableIds: action.payload.ids,
+                bookedTableStatuses: action.payload.statuses
+            }
         
         default: return state
     }
@@ -156,14 +162,16 @@ export function useSteakBooking() {
 
         const { data: bookings } = await supabase
             .from('bookings')
-            .select('table_id, booking_time')
+            .select('table_id, booking_time, booking_type')
+            .in('status', ['pending', 'confirmed', 'seated', 'ready'])
             .gte('booking_time', dayStart.toISOString())
             .lte('booking_time', dayEnd.toISOString())
-            .neq('status', 'cancelled')
         
         if (bookings) {
-             // Filter for time overlap
-             const bookedIds = bookings.filter(b => {
+             const bookedIds = []
+             const statuses = {}
+
+             bookings.forEach(b => {
                  const bStart = new Date(b.booking_time)
                  const bEnd = new Date(bStart)
                  bEnd.setHours(bEnd.getHours() + 2) // Assume 2hr duration
@@ -172,10 +180,13 @@ export function useSteakBooking() {
                  const reqEnd = new Date(start)
                  reqEnd.setHours(reqEnd.getHours() + 2)
 
-                 return (bStart < reqEnd && bEnd > reqStart)
-             }).map(b => b.table_id)
+                 if (bStart < reqEnd && bEnd > reqStart) {
+                     bookedIds.push(b.table_id)
+                     statuses[b.table_id] = { type: b.booking_type }
+                 }
+             })
 
-             dispatch({ type: 'SET_BOOKED_TABLES', payload: bookedIds })
+             dispatch({ type: 'SET_BOOKED_TABLES', payload: { ids: bookedIds, statuses } })
         }
         dispatch({ type: 'SET_LOADING', payload: false })
     }

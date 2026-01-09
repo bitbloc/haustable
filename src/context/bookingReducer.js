@@ -26,7 +26,8 @@ export const initialState = {
 
     // Data (Loaded via API)
     tables: [],
-    bookedTableIds: [], // New
+    bookedTableIds: [], // Arr of IDs
+    bookedTableStatuses: {}, // Map of ID -> { type: 'walk_in'|'online' }
     blockedDates: [], // New - For store closure
     menuItems: [],
     categories: [],
@@ -67,7 +68,11 @@ export function bookingReducer(state, action) {
             }
 
         case 'SET_BOOKED_TABLES':
-            return { ...state, bookedTableIds: action.payload }
+            return {
+                ...state,
+                bookedTableIds: action.payload.ids,
+                bookedTableStatuses: action.payload.statuses
+            }
 
         // --- Auth (Hybrid) ---
         case 'SET_LINE_PROFILE':
