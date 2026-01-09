@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import TableManager from './components/shared/TableManager' // Added
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone, LayoutGrid } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone, LayoutGrid, Package } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
@@ -792,6 +792,13 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
                         </div>
                     </div>
                      <div className="flex gap-2">
+                        <button
+                             onClick={() => window.location.href = '/staff/stock'}
+                             className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full transition-colors relative"
+                             title="Stock Management"
+                        >
+                            <Package className="w-5 h-5" />
+                        </button>
                         {!isSubscribed && (
                             <button
                                 onClick={subscribeToPush}
@@ -1063,8 +1070,15 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
                                         <div className="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:border-[#1A1A1A] transition-all duration-300">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                     <div className="text-3xl font-black text-[#1A1A1A] mb-1">
-                                                        #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
+                                                     <div className="text-3xl font-black text-[#1A1A1A] mb-1 flex flex-wrap items-center gap-2">
+                                                        <span>#{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}</span>
+                                                        <span className="text-lg font-bold text-gray-400">|</span>
+                                                        <span className="text-lg font-bold text-blue-600">
+                                                            {order.booking_type === 'pickup' 
+                                                                ? 'Pick up ( สั่งไว้มารับ )' 
+                                                                : (order.booking_type === 'preorder_steak' ? 'Pre-order Steak' : 'Table : จองโต๊ะ')
+                                                            }
+                                                        </span>
                                                      </div>
                                                      <div className="text-lg font-bold text-gray-700 mb-2">
                                                          {order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Guest User'}
@@ -1169,9 +1183,20 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
                                                     <button 
                                                         onClick={() => setPrintModal({ isOpen: true, booking: order })}
                                                         className="p-3 bg-gray-50 rounded-xl hover:bg-[#1A1A1A] hover:text-white transition-colors text-gray-600 shadow-sm"
+                                                        title="Print Slip"
                                                     >
                                                         <Printer size={18} />
                                                     </button>
+
+                                                    {order.payment_slip_url && (
+                                                        <button 
+                                                            onClick={() => setViewSlipUrl(order.payment_slip_url)}
+                                                            className="p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors text-blue-600 shadow-sm border border-blue-100"
+                                                            title="View Slip (ตรวจสอบสลิป)"
+                                                        >
+                                                            <ImageIcon size={18} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                             

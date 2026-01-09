@@ -22,6 +22,7 @@ import AdminTableManager from './admin/AdminTableManager' // NEW
 import AdminSteakDashboard from './admin/AdminSteakDashboard' // NEW
 import SteakBookingPage from './SteakBookingPage' // NEW
 import StaffOrderPage from './StaffOrderPage'
+import StockPage from './StockPage' // NEW
 import TrackingPage from './TrackingPage'
 
 function App() {
@@ -113,6 +114,7 @@ function App() {
 
             {/* Staff/Kitchen Route (Standalone) */}
             <Route path="/staff" element={<StaffOrderPage />} />
+            <Route path="/staff/stock" element={<StockPage />} />
           </Routes>
         </Router>
       </BookingProvider>
