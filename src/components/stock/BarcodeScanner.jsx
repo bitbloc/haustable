@@ -40,7 +40,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
     }, [onScan]);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
             <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden relative m-4">
                 <button 
                     onClick={onClose}

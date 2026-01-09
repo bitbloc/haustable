@@ -24,13 +24,13 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     useEffect(() => {
         if (item) {
             setFormData({
-                name: item.name,
-                category: item.category,
-                unit: item.unit,
-                current_quantity: item.current_quantity,
-                min_stock_threshold: item.min_stock_threshold,
-                reorder_point: item.reorder_point,
-                par_level: item.par_level,
+                name: item.name || '',
+                category: item.category || 'veg',
+                unit: item.unit || 'unit',
+                current_quantity: item.current_quantity || 0,
+                min_stock_threshold: item.min_stock_threshold || 0,
+                reorder_point: item.reorder_point || 0,
+                par_level: item.par_level || 0,
                 image_url: item.image_url || '',
                 barcode: item.barcode || ''
             });
@@ -123,7 +123,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 <input 
                                     type={field.type}
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#1A1A1A]"
-                                    value={formData[field.key]}
+                                    value={formData[field.key] || ''}
                                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                                 />
                             )}
