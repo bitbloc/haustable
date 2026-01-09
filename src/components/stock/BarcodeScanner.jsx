@@ -21,24 +21,12 @@ export default function BarcodeScanner({ onScan, onClose }) {
             await scannerRef.current.start(
                 { facingMode: "environment" }, 
                 { 
-                    fps: 15, // Increased FPS
-                    qrbox: { width: 250, height: 250 },
-                    // Restrict formats for better performance
-                    formatsToSupport: [ 
-                        0, // QR_CODE
-                        1, // AZTEC
-                        3, // CODE_39
-                        4, // CODE_93
-                        5, // CODE_128
-                        7, // DATA_MATRIX
-                        8, // EAN_8
-                        9, // EAN_13
-                        10, // ITF
-                        12, // PDF_417
-                        14, // UPC_A
-                        15  // UPC_E
-                        // Excluding rare ones to speed up
-                    ]
+                    fps: 10,
+                    // qrbox omitted to scan full frame (better for 1D barcodes)
+                    aspectRatio: 1.0,
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
                 },
                 (decodedText, decodedResult) => {
                     // Success
