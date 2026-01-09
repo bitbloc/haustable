@@ -43,26 +43,20 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             }
             
             // --- Config กล้อง: บังคับความละเอียดสูง ---
-            // --- Config กล้อง: ปรับให้ยืดหยุ่นขึ้น ---
+            // --- Config กล้อง: โหมดปลอดภัย (Safe Mode) ---
+            // ตัด config ที่ซับซ้อนออกทั้งหมด เพื่อให้ทำงานได้ชัวร์ที่สุด
             const videoConstraints = {
-                facingMode: "environment",
-                // ขอความละเอียดสูงแต่ไม่บังคับ (soft constraints)
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
+                facingMode: "environment"
             };
 
             const config = { 
-                fps: 30, // เพิ่ม FPS ให้ภาพลื่นไหลขึ้น
-                qrbox: { width: 250, height: 250 }, // ขนาดกรอบสแกน
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
                 aspectRatio: 1.0,
-                // Use Native Barcode Detector (AI ในเครื่อง)
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                },
                  formatsToSupport: [ 
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.CODE_128, // เพิ่ม Code 128
+                    Html5QrcodeSupportedFormats.CODE_128,
                     Html5QrcodeSupportedFormats.QR_CODE 
                 ]
             };
