@@ -47,13 +47,22 @@ export default function StockPage() {
              setCategories(data);
          } else {
              // Fallback default
+             // Fallback default
              setCategories([
                 { id: 'restock', label: 'ต้องเติม (Restock)', icon: '⚠️' },
-                { id: 'veg', label: 'ผัก (Veg)', icon: '🥬' },
+                { id: 'bar', label: 'บาร์ (Bar)', icon: '🍸' },
                 { id: 'meat', label: 'เนื้อสัตว์ (Meat)', icon: '🥩' },
+                { id: 'veg', label: 'ผัก (Veg)', icon: '🥬' },
+                { id: 'sauce', label: 'ซอส (Sauce)', icon: '🧂' },
                 { id: 'dry', label: 'ของแห้ง (Dry)', icon: '🥫' },
-                { id: 'sauce', label: 'เครื่องปรุง (Sauce)', icon: '🧂' },
-                { id: 'other', label: 'อื่นๆ (Other)', icon: '📦' }
+                { id: 'curry', label: 'พริกแกง', icon: '🥘' },
+                { id: 'frozen', label: 'แช่แข็ง', icon: '❄️' },
+                { id: 'oil', label: 'น้ำมัน', icon: '🛢️' },
+                { id: 'soup', label: 'ซุป', icon: '🍲' },
+                { id: 'preserved', label: 'ของดอง', icon: '🏺' },
+                { id: 'packaging', label: 'แพ็คเกจ', icon: '📦' },
+                { id: 'supplies', label: 'ของใช้', icon: '🧽' },
+                { id: 'other', label: 'อื่นๆ', icon: '🔖' }
             ]);
          }
     };
