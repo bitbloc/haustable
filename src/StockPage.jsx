@@ -112,6 +112,24 @@ export default function StockPage() {
         fetchItems();
     }, [activeCategory]);
 
+    // Real-time Subscription
+    useEffect(() => {
+        const channel = supabase
+            .channel('public:stock_items')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stock_items' }, (payload) => {
+                setItems(currentItems => 
+                    currentItems.map(item => 
+                        item.id === payload.new.id ? { ...item, ...payload.new } : item
+                    )
+                );
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
     // --- Logic ---
     const handleAdjustment = async (itemId, changeAmount, type, meta = {}) => {
         // Optimistic Update
@@ -218,6 +236,13 @@ export default function StockPage() {
             }
             return a.name.localeCompare(b.name, 'th');
         });
+
+    // Helper for List View Colors
+    const getStatusColor = (qty, reorder, min) => {
+        if (qty <= (min || 0)) return 'bg-red-100 text-red-600'; // Critical
+        if (qty <= (reorder || 0)) return 'bg-orange-100 text-orange-700'; // Warning
+        return 'bg-green-50 text-green-700'; // Safe
+    };
 
     return (
         <div className="min-h-screen bg-[#F4F4F4] text-[#1A1A1A] safe-area-inset-bottom font-sans">
@@ -370,7 +395,6 @@ export default function StockPage() {
                     ) : (
                         <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col divide-y divide-gray-100">
                             {filteredItems.map(item => {
-                                const isLow = (item.current_quantity || 0) <= (item.reorder_point || 0);
                                 return (
                                     <div 
                                         key={item.id}
@@ -391,7 +415,7 @@ export default function StockPage() {
                                             <p className="text-xs text-gray-500">คงเหลือ {item.current_quantity} {item.unit}</p>
                                         </div>
                                         <div className={`text-right px-3 py-1 rounded-full text-xs font-bold ${
-                                            isLow ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                                            getStatusColor(item.current_quantity, item.reorder_point, item.min_stock_threshold)
                                         }`}>
                                             {item.current_quantity?.toLocaleString()}
                                         </div>
