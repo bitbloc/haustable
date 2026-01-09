@@ -178,6 +178,16 @@ export default function StockPage() {
                 toast.success(`Found: ${data.name}`);
             } else {
                 toast.error('Product not found');
+                if (confirm('Product not found. Add new item?')) {
+                     setEditingItem(null); // Ensure new mode
+                     // Pre-fill barcode in new item form
+                     // But we need to pass this state.
+                     // Let's modify setEditingItem or use a separate state?
+                     // Actually, we can just pass a partial object to editingItem for "New" mode.
+                     setEditingItem({ barcode: code }); // Hack: pass partial for pre-fill
+                     setShowItemForm(true);
+                     setShowScanner(false);
+                }
             }
         } catch (err) {
             console.error(err);

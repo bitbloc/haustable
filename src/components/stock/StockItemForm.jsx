@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { X, Save, Trash2, Camera, Upload } from 'lucide-react';
+import { X, Save, Trash2, Camera, Upload, Scan } from 'lucide-react'; // Added Scan
 import { toast } from 'sonner';
+import BarcodeScanner from './BarcodeScanner'; // Import Scanner
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
@@ -17,6 +18,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         image_url: '',
         barcode: ''
     });
+    
+    const [showScanner, setShowScanner] = useState(false); // Added
 
     useEffect(() => {
         if (item) {
@@ -31,6 +34,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 image_url: item.image_url || '',
                 barcode: item.barcode || ''
             });
+        } else if (item && item.barcode && !item.id) {
+             // Special case: Pre-filled from Main Scanner
+             setFormData(prev => ({ ...prev, barcode: item.barcode }));
         }
     }, [item]);
 
@@ -101,7 +107,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     {items.map((field) => (
-                        <div key={field.key}>
+                        <div key={field.key} className="relative">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{field.label}</label>
                             {field.type === 'select' ? (
                                 <select 
@@ -121,6 +127,16 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                                 />
                             )}
+                             {/* Scan Button for Barcode Field */}
+                             {field.key === 'barcode' && (
+                                <button
+                                    onClick={() => setShowScanner(true)}
+                                    className="absolute right-2 top-8 p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                                >
+                                    <Scan className="w-4 h-4 text-gray-700" />
+                                </button>
+                             )}
+                        </div>
                         </div>
                     ))}
                     
@@ -150,6 +166,29 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     </button>
                 </div>
             </div>
+            
+            {showScanner && (
+                <BarcodeScanner
+                    onScan={async (code) => {
+                         setShowScanner(false);
+                         
+                         // Check duplicate
+                         const { data } = await supabase.from('stock_items').select('id, name').eq('barcode', code).single();
+                         if (data) {
+                             if (confirm(`Item '${data.name}' already exists with this barcode. Edit it instead?`)) {
+                                 onClose(); // Close this form
+                                 // Trigger update? No, we need to switch context.
+                                 // This is tricky. simpler to just warn.
+                                 toast.warning(`Barcode already used by '${data.name}'`);
+                             }
+                         } else {
+                             setFormData(prev => ({...prev, barcode: code}));
+                             toast.success('Barcode scanned');
+                         }
+                    }}
+                    onClose={() => setShowScanner(false)}
+                />
+            )}
         </div>
     );
 }
