@@ -137,7 +137,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </button>
                              )}
                         </div>
-                        </div>
                     ))}
                     
                     {/* Image Preview Helper (Simple) */}
