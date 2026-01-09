@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import TableManager from './components/shared/TableManager' // Added
-import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone, LayoutGrid, Package } from 'lucide-react'
+import { Clock, Check, X, Bell, RefreshCw, ChefHat, Volume2, Printer, Calendar, List, History as HistoryIcon, LogOut, Download, Share, Home, Image as ImageIcon, Phone, LayoutGrid, Package, UserCheck } from 'lucide-react'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useAudioAlert } from './hooks/useAudioAlert'
 import { toast } from 'sonner'
@@ -799,6 +799,15 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
                         >
                             <Package className="w-5 h-5" />
                         </button>
+                        <a
+                             href="https://inthehaus-hr.vercel.app/checkin"
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full transition-colors relative flex items-center justify-center"
+                             title="HR Check-in"
+                        >
+                            <UserCheck className="w-5 h-5" />
+                        </a>
                         {!isSubscribed && (
                             <button
                                 onClick={subscribeToPush}

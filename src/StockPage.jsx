@@ -6,7 +6,8 @@ import {
     Search, 
     ArrowLeft, 
     History,
-    RefreshCw
+    RefreshCw,
+    Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
@@ -14,6 +15,8 @@ import AdjustmentModal from './components/stock/AdjustmentModal';
 import BarcodeScanner from './components/stock/BarcodeScanner';
 import TransactionHistory from './components/stock/TransactionHistory'; // Added
 import StockUsageReport from './components/stock/StockUsageReport'; // Added
+import CategoryManager from './components/stock/CategoryManager';
+import StockItemForm from './components/stock/StockItemForm'; // Added
 import { toast } from 'sonner';
 
 export default function StockPage() {
@@ -27,23 +30,38 @@ export default function StockPage() {
     const [showScanner, setShowScanner] = useState(false);
     const [showHistory, setShowHistory] = useState(false); // Added
     const [showReport, setShowReport] = useState(false); // Added
+    const [showCategoryManager, setShowCategoryManager] = useState(false); // Added
+    const [showItemForm, setShowItemForm] = useState(false); // Added
+    const [editingItem, setEditingItem] = useState(null); // Added
     
     // Data State
     const [items, setItems] = useState([]);
+    const [categories, setCategories] = useState([]); // Dynamic
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState(null); // For Adjustment Modal
 
-    // Categories for tabs
-    const categories = [
-        { id: 'restock', label: 'ต้องเติม (Restock)', icon: '⚠️' }, // Added
-        { id: 'veg', label: 'ผัก (Veg)', icon: '🥬' },
-        { id: 'meat', label: 'เนื้อสัตว์ (Meat)', icon: '🥩' },
-        { id: 'dry', label: 'ของแห้ง (Dry)', icon: '🥫' },
-        { id: 'sauce', label: 'เครื่องปรุง (Sauce)', icon: '🧂' },
-        { id: 'other', label: 'อื่นๆ (Other)', icon: '📦' }
-    ];
+    const fetchCategories = async () => {
+         const { data, error } = await supabase.from('stock_categories').select('*').order('sort_order');
+         if (data && data.length > 0) {
+             setCategories(data);
+         } else {
+             // Fallback default
+             setCategories([
+                { id: 'restock', label: 'ต้องเติม (Restock)', icon: '⚠️' },
+                { id: 'veg', label: 'ผัก (Veg)', icon: '🥬' },
+                { id: 'meat', label: 'เนื้อสัตว์ (Meat)', icon: '🥩' },
+                { id: 'dry', label: 'ของแห้ง (Dry)', icon: '🥫' },
+                { id: 'sauce', label: 'เครื่องปรุง (Sauce)', icon: '🧂' },
+                { id: 'other', label: 'อื่นๆ (Other)', icon: '📦' }
+            ]);
+         }
+    };
 
-    // --- Fetching ---
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    // --- Fetching Items ---
     const fetchItems = async () => {
         setLoading(true);
         try {
@@ -202,6 +220,18 @@ export default function StockPage() {
                              >
                                 <History className="w-5 h-5 text-gray-600" />
                             </button>
+                             <button 
+                                onClick={() => setShowCategoryManager(true)}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                             >
+                                <Settings className="w-5 h-5 text-gray-600" />
+                            </button>
+                            <button 
+                                onClick={() => { setEditingItem(null); setShowItemForm(true); }}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1A1A1A] hover:bg-black transition-colors"
+                             >
+                                <Plus className="w-5 h-5 text-white" />
+                            </button>
                              <button onClick={fetchItems} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
                                 <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
                             </button>
@@ -283,6 +313,22 @@ export default function StockPage() {
                     item={selectedItem} 
                     onClose={() => setSelectedItem(null)}
                     onUpdate={handleAdjustment}
+                    onEdit={() => {
+                        setSelectedItem(null); // Close adjustment
+                        setEditingItem(selectedItem);
+                        setShowItemForm(true);
+                    }}
+                />
+            )}
+
+            {showItemForm && (
+                <StockItemForm
+                    item={editingItem}
+                    categories={categories}
+                    onClose={() => setShowItemForm(false)}
+                    onUpdate={() => {
+                        fetchItems(); // Refresh list
+                    }}
                 />
             )}
 
@@ -302,6 +348,15 @@ export default function StockPage() {
             {showReport && (
                 <StockUsageReport 
                     onClose={() => setShowReport(false)}
+                />
+            )}
+            
+            {showCategoryManager && (
+                <CategoryManager 
+                    onClose={() => setShowCategoryManager(false)}
+                    onUpdate={() => {
+                        fetchCategories();
+                    }}
                 />
             )}
         </div>

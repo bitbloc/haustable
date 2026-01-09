@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Minus, Plus, Save, Package } from 'lucide-react';
+import { X, Minus, Plus, Save, Package, Settings } from 'lucide-react'; // Added Settings
 import { toast } from 'sonner';
-import LiquidLevelSlider from './LiquidLevelSlider'; // Added
+import LiquidLevelSlider from './LiquidLevelSlider';
 
-export default function AdjustmentModal({ item, onClose, onUpdate }) {
+export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) { // Added onEdit
     const [amount, setAmount] = useState('');
     const [mode, setMode] = useState('in'); // 'in' or 'out'
     const [selectedUnit, setSelectedUnit] = useState(null); // The unit key from unit_config
@@ -110,12 +110,20 @@ export default function AdjustmentModal({ item, onClose, onUpdate }) {
                         <Package className="w-16 h-16 text-gray-300" />
                     )}
                     
+                    <div className="absolute top-4 right-4 z-10 flex gap-2">
+                     <button 
+                        onClick={onEdit}
+                        className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors"
+                    >
+                        <Settings className="w-5 h-5" />
+                    </button>
                     <button 
                         onClick={onClose}
-                        className="absolute top-4 right-4 w-10 h-10 bg-black/20 text-white backdrop-blur-md rounded-full flex items-center justify-center hover:bg-black/30 transition-colors"
+                        className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-colors"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-6 h-6" />
                     </button>
+                </div>
                     
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 pt-12">
                         <h2 className="text-white text-2xl font-bold leading-tight">{item.name}</h2>
