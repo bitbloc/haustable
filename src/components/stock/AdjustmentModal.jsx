@@ -128,7 +128,7 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) { /
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 pt-12">
                         <h2 className="text-white text-2xl font-bold leading-tight">{item.name}</h2>
                         <div className="text-white/80 text-sm font-medium flex gap-2">
-                             <span>Current: {item.current_quantity?.toLocaleString()} {item.unit}</span>
+                             <span>คงเหลือ: {item.current_quantity?.toLocaleString()} {item.unit}</span>
                         </div>
                     </div>
                 </div>
@@ -154,7 +154,7 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) { /
 
                     {/* Unit Selector */}
                     <div className="mb-4">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Select Unit</label>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">เลือกหน่วยนับ</label>
                         <div className="grid grid-cols-2 gap-2">
                             {unitOptions.map((opt) => (
                                 <button
@@ -185,10 +185,10 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) { /
                                 }} 
                              />
                              <div className="flex-1 text-sm text-blue-800">
-                                 <h4 className="font-bold mb-1">Estimate Remaining</h4>
+                                 <h4 className="font-bold mb-1">กะปริมาณคงเหลือ</h4>
                                  <p className="leading-tight opacity-80">
-                                     Use slider to estimate partial bottle content. <br/>
-                                     (e.g., 50% = 0.5 Bottle)
+                                     เลื่อนเพื่อกะปริมาณน้ำในขวด <br/>
+                                     (เช่น 50% = 0.5 ขวด)
                                  </p>
                              </div>
                          </div>
@@ -249,10 +249,10 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) { /
                             loading ? 'bg-gray-400' : mode === 'in' ? 'bg-[#1A1A1A] hover:bg-gray-900' : 'bg-red-600 hover:bg-red-700'
                         }`}
                     >
-                        {loading ? 'Saving...' : (
+                        {loading ? 'กำลังบันทึก...' : (
                             <>
                                 <Save className="w-5 h-5" />
-                                Confirm {mode === 'in' ? 'Check-in' : 'Withdraw'}
+                                ยืนยัน {mode === 'in' ? 'รับเข้า' : 'เบิกออก'}
                             </>
                         )}
                     </button>

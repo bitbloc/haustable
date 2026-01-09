@@ -74,14 +74,14 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     };
 
     const items = [
-        { label: 'Name', key: 'name', type: 'text' },
-        { label: 'Category', key: 'category', type: 'select', options: categories.filter(c => c.id !== 'restock') },
-        { label: 'Unit', key: 'unit', type: 'text' },
-        { label: 'Current Qty', key: 'current_quantity', type: 'number' },
-        { label: 'Min Level (Critical)', key: 'min_stock_threshold', type: 'number' },
-        { label: 'Reorder Point (Warning)', key: 'reorder_point', type: 'number' },
-        { label: 'Par Level (Full)', key: 'par_level', type: 'number' },
-        { label: 'Barcode', key: 'barcode', type: 'text' },
+        { label: 'ชื่อสินค้า', key: 'name', type: 'text' },
+        { label: 'หมวดหมู่', key: 'category', type: 'select', options: categories.filter(c => c.id !== 'restock') },
+        { label: 'หน่วย (เช่น ขวด, กก.)', key: 'unit', type: 'text' },
+        { label: 'จำนวนคงเหลือ', key: 'current_quantity', type: 'number' },
+        { label: 'จุดวิกฤต (แจ้งเตือนแดง)', key: 'min_stock_threshold', type: 'number' },
+        { label: 'จุดต้องสั่งซื้อ (แจ้งเตือนส้ม)', key: 'reorder_point', type: 'number' },
+        { label: 'ระดับสต็อกเต็ม (Par Level)', key: 'par_level', type: 'number' },
+        { label: 'บาร์โค้ด', key: 'barcode', type: 'text' },
         // Removed image_url, handled separately
     ];
 
@@ -146,7 +146,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     };
 
     const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this item?')) return;
+        if (!confirm('ยืนยันที่จะลบสินค้านี้ใช่ไหม?')) return;
         setLoading(true);
         try {
             const { error } = await supabase.from('stock_items').delete().eq('id', item.id);
@@ -180,7 +180,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
             if (error) throw error;
             
-            toast.success(isEdit ? 'Updated successfully' : 'Created successfully');
+            toast.success(isEdit ? 'บันทึกเรียบร้อย' : 'สร้างรายการเรียบร้อย');
             onUpdate();
             onClose();
         } catch (e) {
@@ -195,7 +195,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in p-4">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
                 <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
-                    <h2 className="font-bold text-lg">{isEdit ? 'Edit Item' : 'New Stock Item'}</h2>
+                    <h2 className="font-bold text-lg">{isEdit ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full">
                         <X className="w-5 h-5" />
                     </button>
@@ -244,7 +244,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     
                     {/* Image Upload Section */}
                     <div className="space-y-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase">Product Image</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase">รูปอ้างอิง</label>
                         
                         <div className="flex items-center gap-4">
                             <div className="relative w-24 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
@@ -261,7 +261,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 <label className="flex items-center justify-center gap-2 w-full p-3 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors border border-dashed border-gray-300">
                                     <Upload className="w-5 h-5 text-gray-600" />
                                     <span className="text-sm font-medium text-gray-600">
-                                        {formData.image_url ? 'Change Photo' : 'Upload Photo'}
+                                        {formData.image_url ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
                                     </span>
                                     <input 
                                         type="file" 
@@ -294,7 +294,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                         disabled={loading}
                         className="flex-1 bg-[#1A1A1A] text-white p-4 rounded-xl font-bold hover:bg-black transition-colors flex items-center justify-center gap-2"
                     >
-                        {loading ? 'Saving...' : <><Save className="w-5 h-5" /> Save Item</>}
+                        {loading ? 'กำลังบันทึก...' : <><Save className="w-5 h-5" /> บันทึก</>}
                     </button>
                 </div>
             </div>

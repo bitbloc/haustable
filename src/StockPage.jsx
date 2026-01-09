@@ -34,6 +34,8 @@ export default function StockPage() {
     const [showCategoryManager, setShowCategoryManager] = useState(false); // Added
     const [showItemForm, setShowItemForm] = useState(false); // Added
     const [editingItem, setEditingItem] = useState(null); // Added
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+    const [sortMode, setSortMode] = useState('name'); // 'name' | 'low_stock'
     
     // Data State
     const [items, setItems] = useState([]);
@@ -204,11 +206,18 @@ export default function StockPage() {
         }
     };
 
-    // Filter Items
-    const filteredItems = items.filter(item => 
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        item.barcode?.includes(searchQuery)
-    );
+    // Filter & Sort Items
+    const filteredItems = items
+        .filter(item => 
+            item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            item.barcode?.includes(searchQuery)
+        )
+        .sort((a, b) => {
+            if (sortMode === 'low_stock') {
+                return (a.current_quantity || 0) - (b.current_quantity || 0);
+            }
+            return a.name.localeCompare(b.name, 'th');
+        });
 
     return (
         <div className="min-h-screen bg-[#F4F4F4] text-[#1A1A1A] safe-area-inset-bottom font-sans">
@@ -224,7 +233,7 @@ export default function StockPage() {
                             <ArrowLeft className="w-5 h-5 text-gray-600" />
                         </button>
                         
-                        <h1 className="text-xl font-bold flex-1 text-center mr-10">Stock</h1>
+                        <h1 className="text-xl font-bold flex-1 text-center mr-10">ระบบสต็อก</h1>
                         
                         <div className="flex gap-2">
                             {/* Report Button */}
@@ -259,7 +268,7 @@ export default function StockPage() {
                     </div>
 
                     {/* Search & Scan Bar */}
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 mb-2">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input 
@@ -276,6 +285,39 @@ export default function StockPage() {
                         >
                             <Scan className="w-6 h-6" />
                         </button>
+                    </div>
+
+                    {/* View & Sort Controls */}
+                    <div className="flex justify-between items-center px-1">
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-gray-200 text-black' : 'text-gray-400'}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('list')}
+                                className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-gray-200 text-black' : 'text-gray-400'}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                            </button>
+                        </div>
+
+                        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                            <button 
+                                onClick={() => setSortMode('name')}
+                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${sortMode === 'name' ? 'bg-white shadow text-black' : 'text-gray-400'}`}
+                            >
+                                A-Z
+                            </button>
+                            <button 
+                                onClick={() => setSortMode('low_stock')}
+                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${sortMode === 'low_stock' ? 'bg-white shadow text-red-600' : 'text-gray-400'}`}
+                            >
+                                Low Stock
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -304,26 +346,60 @@ export default function StockPage() {
                 {loading && items.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-gray-400 animate-pulse">
                         <Package className="w-12 h-12 mb-4 opacity-50" />
-                        <p>Loading...</p>
+                        <p>กำลังโหลด...</p>
                     </div>
                 ) : filteredItems.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                         <Package className="w-12 h-12 mb-4 opacity-50" />
-                        <p>No items found in {activeCategory}</p>
+                        <p>ไม่พบสินค้าในหมวด {activeCategory}</p>
                         <button onClick={() => navigate('/admin/items')} className="mt-4 text-sm text-blue-600 font-bold hidden">
                             + Add New Item
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                         {filteredItems.map(item => (
-                             <StockCard 
-                                key={item.id} 
-                                item={item} 
-                                onClick={(i) => setSelectedItem(i)} 
-                             />
-                         ))}
-                    </div>
+                    viewMode === 'grid' ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                             {filteredItems.map(item => (
+                                 <StockCard 
+                                    key={item.id} 
+                                    item={item} 
+                                    onClick={(i) => setSelectedItem(i)} 
+                                 />
+                             ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col divide-y divide-gray-100">
+                            {filteredItems.map(item => {
+                                const isLow = (item.current_quantity || 0) <= (item.reorder_point || 0);
+                                return (
+                                    <div 
+                                        key={item.id}
+                                        onClick={() => setSelectedItem(item)}
+                                        className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors active:bg-gray-100"
+                                    >
+                                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                            {item.image_url ? (
+                                                <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                    <Package className="w-6 h-6" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-[#1A1A1A] truncate">{item.name}</h3>
+                                            <p className="text-xs text-gray-500">คงเหลือ {item.current_quantity} {item.unit}</p>
+                                        </div>
+                                        <div className={`text-right px-3 py-1 rounded-full text-xs font-bold ${
+                                            isLow ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                            {item.current_quantity?.toLocaleString()}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )
                 )}
             </div>
             
