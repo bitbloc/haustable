@@ -6,7 +6,6 @@ import BarcodeScanner from './BarcodeScanner'; // Import Scanner
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
-    const isEdit = !!item;
     const [loading, setLoading] = useState(false);
     const [searching, setSearching] = useState(false); // New state for API lookup
     const [formData, setFormData] = useState({
@@ -36,8 +35,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 image_url: item.image_url || '',
                 barcode: item.barcode || ''
             });
-        } else if (item && item.barcode && !item.id) {
-            });
+
         } else if (item && item.barcode && !item.id) {
              // Special case: Pre-filled from Main Scanner
              setFormData(prev => ({ ...prev, barcode: item.barcode }));
