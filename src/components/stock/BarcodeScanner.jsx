@@ -19,11 +19,17 @@ export default function BarcodeScanner({ onScan, onClose }) {
             }
             
             await scannerRef.current.start(
-                { facingMode: "environment" }, 
+                // Use explicit video constraints for better resolution
                 { 
-                    fps: 10,
-                    // qrbox omitted to scan full frame (better for 1D barcodes)
-                    aspectRatio: 1.0,
+                    facingMode: "environment",
+                    width: { min: 640, ideal: 1920, max: 2560 },
+                    height: { min: 480, ideal: 1080, max: 1440 },
+                    focusMode: "continuous" // Attempt to force focus
+                }, 
+                { 
+                    fps: 15, // Smooth FPS
+                    // qrbox omitted for full coverage
+                    aspectRatio: 1.0, 
                     experimentalFeatures: {
                         useBarCodeDetectorIfSupported: true
                     }

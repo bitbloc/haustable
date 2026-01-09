@@ -6,7 +6,9 @@ import BarcodeScanner from './BarcodeScanner'; // Import Scanner
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
+    const isEdit = !!item;
     const [loading, setLoading] = useState(false);
+    const [searching, setSearching] = useState(false); // New state for API lookup
     const [formData, setFormData] = useState({
         name: '',
         category: 'veg',
@@ -35,10 +37,43 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 barcode: item.barcode || ''
             });
         } else if (item && item.barcode && !item.id) {
+            });
+        } else if (item && item.barcode && !item.id) {
              // Special case: Pre-filled from Main Scanner
              setFormData(prev => ({ ...prev, barcode: item.barcode }));
+             // Trigger auto-lookup for the passed barcode
+             fetchProductInfo(item.barcode);
         }
     }, [item]);
+
+    // "AI" Smart Lookup (OpenFoodFacts)
+    const fetchProductInfo = async (code) => {
+        if (!code) return;
+        setSearching(true);
+        try {
+            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+            const data = await response.json();
+            
+            if (data.status === 1 && data.product) {
+                const product = data.product;
+                const name = product.product_name || product.product_name_en || product.product_name_th || '';
+                const image = product.image_front_url || product.image_url || '';
+                
+                if (name) {
+                    toast.success('✨ Standard Product Found!');
+                    setFormData(prev => ({
+                        ...prev,
+                        name: prev.name || name, // Don't overwrite if user already typed? Actually auto-fill is better.
+                        image_url: prev.image_url || image
+                    }));
+                }
+            }
+        } catch (err) {
+            console.warn("Product lookup failed", err);
+        } finally {
+            setSearching(false);
+        }
+    };
 
     const items = [
         { label: 'Name', key: 'name', type: 'text' },
@@ -196,6 +231,13 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     <Scan className="w-4 h-4 text-gray-700" />
                                 </button>
                              )}
+                             
+                             {/* Loading Indicator for Lookup */}
+                             {field.key === 'name' && searching && (
+                                 <div className="absolute right-2 top-8 p-2">
+                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                                 </div>
+                             )}
                         </div>
                     ))}
                     
@@ -273,6 +315,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                          } else {
                              setFormData(prev => ({...prev, barcode: code}));
                              toast.success('Barcode scanned');
+                             // Trigger Smart Lookup
+                             fetchProductInfo(code);
                          }
                     }}
                     onClose={() => setShowScanner(false)}
