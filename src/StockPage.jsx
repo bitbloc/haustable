@@ -7,7 +7,8 @@ import {
     ArrowLeft, 
     History,
     RefreshCw,
-    Settings
+    Settings,
+    Plus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
