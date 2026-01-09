@@ -298,23 +298,35 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
             
             {showScanner && (
                 <BarcodeScanner
-                    onScan={async (code) => {
+                    onScan={async (scanResult) => {
                          setShowScanner(false);
                          
+                         const code = scanResult.barcode || scanResult; // Handle object or string
+                         const scannedData = typeof scanResult === 'object' ? scanResult : {};
+
                          // Check duplicate
                          const { data } = await supabase.from('stock_items').select('id, name').eq('barcode', code).single();
                          if (data) {
                              if (confirm(`Item '${data.name}' already exists with this barcode. Edit it instead?`)) {
-                                 onClose(); // Close this form
-                                 // Trigger update? No, we need to switch context.
-                                 // This is tricky. simpler to just warn.
+                                 onClose(); 
                                  toast.warning(`Barcode already used by '${data.name}'`);
                              }
                          } else {
-                             setFormData(prev => ({...prev, barcode: code}));
-                             toast.success('Barcode scanned');
-                             // Trigger Smart Lookup
-                             fetchProductInfo(code);
+                             setFormData(prev => ({
+                                 ...prev, 
+                                 barcode: code,
+                                 // Auto-fill from Scanner AI (if available and field is empty)
+                                 name: (scannedData.name && !prev.name) ? scannedData.name : prev.name,
+                                 image_url: (scannedData.image_url && !prev.image_url) ? scannedData.image_url : prev.image_url
+                             }));
+                             
+                             if (scannedData.found) {
+                                 toast.success(`Found: ${scannedData.name}`);
+                             } else {
+                                 toast.success('Barcode scanned');
+                                 // Trigger legacy lookup if scanner didn't find it (fallback)
+                                 fetchProductInfo(code);
+                             }
                          }
                     }}
                     onClose={() => setShowScanner(false)}
