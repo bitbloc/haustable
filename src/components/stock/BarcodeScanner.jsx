@@ -1,61 +1,128 @@
-import React, { useEffect } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { X, Camera } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function BarcodeScanner({ onScan, onClose }) {
-    useEffect(() => {
-        // ID 'reader' must exist in DOM
-        const scannerId = "reader";
+    const scannerRef = useRef(null);
+    const [isScanning, setIsScanning] = useState(false);
+    const [permissionError, setPermissionError] = useState(false);
+
+    const startScanning = async () => {
+        const scannerId = "reader-manual";
         
-        const onScanSuccess = (decodedText, decodedResult) => {
-            // Handle success
-            // console.log(`Code matched = ${decodedText}`, decodedResult);
-            onScan(decodedText);
+        try {
+            // Check permissions first? simple way is to just start.
+            // Using back camera by default
+            if (!scannerRef.current) {
+                scannerRef.current = new Html5Qrcode(scannerId);
+            }
             
-            // Optional: Stop scanning after first match? 
-            // Often better to let parent decide or keep scanning.
-            // But usually we close modal on success.
-            // For now, we trust the parent 'onScan' to handle data.
-        };
+            await scannerRef.current.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText, decodedResult) => {
+                    // Success
+                    onScan(decodedText);
+                    stopScanning(); // Stop on first match? Usually yes for single scan.
+                },
+                (errorMessage) => {
+                    // ignore
+                }
+            );
+            
+            setIsScanning(true);
+            setPermissionError(false);
+        } catch (err) {
+            console.error("Camera start failed", err);
+            setPermissionError(true);
+            toast.error("Camera access failed. Please allow permissions.");
+        }
+    };
 
-        const onScanFailure = (error) => {
-            // handle scan failure, usually better to ignore and keep scanning.
-            // console.warn(`Code scan error = ${error}`);
-        };
+    const stopScanning = async () => {
+        if (scannerRef.current && isScanning) {
+            try {
+                await scannerRef.current.stop();
+                setIsScanning(false);
+            } catch (err) {
+                console.error("Failed to stop", err);
+            }
+        }
+    };
 
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            scannerId, 
-            { fps: 10, qrbox: 250 },
-            /* verbose= */ false
-        );
-        
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-
-        // CLEANUP
+    useEffect(() => {
+        // Cleanup on unmount
         return () => {
-            html5QrcodeScanner.clear().catch(error => {
-                console.error("Failed to clear html5QrcodeScanner. ", error);
-            });
+             if (scannerRef.current && isScanning) {
+                 scannerRef.current.stop().catch(e => console.error("Cleanup error", e));
+             }
         };
-    }, [onScan]);
+    }, [isScanning]);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
-            <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden relative m-4">
-                <button 
-                    onClick={onClose}
-                    className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 text-white hover:bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center transition-colors"
-                >
-                    <X className="w-6 h-6" />
-                </button>
-
-                <div className="p-4 bg-[#1A1A1A] text-white text-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in">
+            <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden relative m-4 flex flex-col items-center">
+                
+                {/* Header */}
+                <div className="w-full p-4 bg-[#1A1A1A] text-white flex justify-between items-center">
                     <h3 className="font-bold text-lg">Scan Barcode</h3>
-                    <p className="text-sm text-gray-400">Point camera at product barcode</p>
+                    <button 
+                        onClick={() => { stopScanning(); onClose(); }}
+                        className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
-                <div className="bg-white p-4">
-                    <div id="reader" className="w-full"></div>
+                {/* Camera Viewport */}
+                <div className="relative w-full aspect-square bg-black flex items-center justify-center">
+                    {/* The div where video renders */}
+                    <div id="reader-manual" className="w-full h-full"></div>
+
+                    {/* Overlay UI if not scanning */}
+                    {!isScanning && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 z-10">
+                            {permissionError ? (
+                                <div className="text-center p-4 text-red-500">
+                                    <p className="font-bold mb-2">Camera Error</p>
+                                    <p className="text-sm">Check browser permissions.</p>
+                                </div>
+                            ) : (
+                                <div className="text-center">
+                                    <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Camera className="w-10 h-10 text-gray-400" />
+                                    </div>
+                                    <p className="text-gray-500 mb-6">Ready to scan</p>
+                                </div>
+                            )}
+                            
+                            <button
+                                onClick={startScanning}
+                                className="bg-[#1A1A1A] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-transform shadow-lg"
+                            >
+                                <Camera className="w-5 h-5" />
+                                Tap to Open Camera
+                            </button>
+                        </div>
+                    )}
+                    
+                    {/* Scanning Overlay Guide */}
+                    {isScanning && (
+                        <div className="absolute inset-0 pointer-events-none border-2 border-white/30 flex items-center justify-center">
+                            <div className="w-64 h-64 border-2 border-red-500/50 rounded-xl relative">
+                                <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-red-500 -mt-1 -ml-1"></div>
+                                <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-red-500 -mt-1 -mr-1"></div>
+                                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-red-500 -mb-1 -ml-1"></div>
+                                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-red-500 -mb-1 -mr-1"></div>
+                            </div>
+                            <p className="absolute bottom-4 text-white text-xs bg-black/50 px-2 py-1 rounded">Scanning...</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 w-full text-center text-xs text-gray-400">
+                    Align barcode within the frame
                 </div>
             </div>
         </div>
