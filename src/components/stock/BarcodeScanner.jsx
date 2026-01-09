@@ -31,6 +31,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
     const [permissionError, setPermissionError] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [cameraHint, setCameraHint] = useState("วางบาร์โค้ดให้อยู่ในกรอบ");
+    const [zoom, setZoom] = useState({ supported: false, min: 1, max: 3, value: 1, step: 0.1 });
 
     const startScanning = async () => {
         if (isScanning) return;
@@ -42,14 +43,12 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             }
             
             // --- Config กล้อง: บังคับความละเอียดสูง ---
+            // --- Config กล้อง: ปรับให้ยืดหยุ่นขึ้น ---
             const videoConstraints = {
-                facingMode: "environment", // กล้องหลัง
-                // บังคับความละเอียดสูงเพื่อให้กล้องพยายามโฟกัส
-                width: { min: 640, ideal: 1280, max: 1920 },
-                height: { min: 480, ideal: 720, max: 1080 },
-                // พยายามขอโหมดโฟกัส
-                focusMode: "continuous", 
-                advanced: [{ focusMode: "continuous" }]
+                facingMode: "environment",
+                // ขอความละเอียดสูงแต่ไม่บังคับ (soft constraints)
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
             };
 
             const config = { 
@@ -69,7 +68,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             };
 
             await scannerRef.current.start(
-                videoConstraints, // ส่ง constraints ที่ตั้งค่าใหม่เข้าไป
+                videoConstraints, 
                 config,
                 (decodedText, decodedResult) => {
                     handleScanSuccess(decodedText);
@@ -79,10 +78,25 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                 }
             );
             
+            // Check Zoom Capabilities
+            try {
+                const capabilities = scannerRef.current.getRunningTrackCameraCapabilities();
+                if (capabilities.zoom) {
+                    setZoom({
+                        supported: true,
+                        min: capabilities.zoom.min,
+                        max: capabilities.zoom.max,
+                        value: capabilities.zoom.min,
+                        step: capabilities.zoom.step
+                    });
+                }
+            } catch(e) { 
+                console.log("Zoom not supported", e); 
+            }
+
             setIsScanning(true);
             setPermissionError(false);
             
-            // เปลี่ยนข้อความแนะนำหลังจากเปิดกล้องสักพัก
             setTimeout(() => {
                 setCameraHint("หากภาพเบลอ ให้ถอยห่างออกมาเล็กน้อย");
             }, 3000);
@@ -91,6 +105,21 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             console.error("Camera start failed", err);
             setPermissionError(true);
             toast.error("ไม่สามารถเข้าถึงกล้อง หรือกล้องไม่รองรับความละเอียดที่ต้องการ");
+        }
+    };
+
+    const handleZoomChange = async (e) => {
+        const value = Number(e.target.value);
+        setZoom(prev => ({ ...prev, value }));
+        
+        if (scannerRef.current) {
+            try {
+                await scannerRef.current.applyVideoConstraints({
+                    advanced: [{ zoom: value }]
+                });
+            } catch (err) {
+                console.warn("Zoom failed", err);
+            }
         }
     };
 
@@ -182,6 +211,26 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                                 </div>
                             </div>
                             
+                            {/* --- Zoom Control --- */}
+                            {zoom.supported && (
+                                <div className="absolute bottom-40 left-0 right-0 z-30 flex flex-col items-center px-8">
+                                    <div className="flex items-center gap-4 w-full max-w-xs bg-black/40 backdrop-blur-md p-3 rounded-full border border-white/10">
+                                        <span className="text-white text-xs font-bold w-6 text-right">1x</span>
+                                        <input 
+                                            type="range" 
+                                            min={zoom.min} 
+                                            max={zoom.max} 
+                                            step={zoom.step}
+                                            value={zoom.value} 
+                                            onChange={handleZoomChange}
+                                            className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-emerald-500" // Tailwind accent for chrome
+                                        />
+                                        <span className="text-white text-xs font-bold w-6 text-left">{(zoom.max || 3).toFixed(0)}x</span>
+                                    </div>
+                                    <span className="text-white/60 text-[10px] mt-2 font-medium">Zoom</span>
+                                </div>
+                            )}
+
                             {/* --- UX Hint: ข้อความแนะนำผู้ใช้ --- */}
                             <div className="absolute bottom-24 left-0 right-0 text-center z-20 px-4">
                                 <p className="inline-block bg-black/70 text-white text-sm px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg font-medium animate-pulse leading-relaxed">
