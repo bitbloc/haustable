@@ -3,7 +3,8 @@ import { Package, AlertTriangle } from 'lucide-react';
 
 export default function StockCard({ item, onClick }) {
     // Nendo Logic: Visual Color Status
-    const isCritical = item.current_quantity <= item.min_stock_threshold;
+    // User Request: If qty < 1.5 (1 bottle 50%), show Red.
+    const isCritical = (item.current_quantity || 0) < 1.5 || item.current_quantity <= item.min_stock_threshold;
     const isWarning = !isCritical && item.current_quantity <= item.reorder_point;
     
     // Choose styling based on status
