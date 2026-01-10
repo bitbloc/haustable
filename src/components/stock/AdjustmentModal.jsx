@@ -14,14 +14,19 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
     const [showLiquidSlider, setShowLiquidSlider] = useState(false);
     const [partialAmount, setPartialAmount] = useState(0); // 0.0 - 0.99
     const [useMlCalculator, setUseMlCalculator] = useState(false);
-    const [fullCapacityMl, setFullCapacityMl] = useState(700); // Default 700ml?
+    const [fullCapacityMl, setFullCapacityMl] = useState(750); // Default 750ml standard
     const [remainingMl, setRemainingMl] = useState(0);
 
     useEffect(() => {
         if (item) {
             // Is this a liquid/estimate item?
-            const isLiquid = item.category === 'sauce' || item.unit.toLowerCase().includes('bottle') || item.unit.toLowerCase().includes('l') || item.unit.toLowerCase().includes('ขวด');
+            const isLiquid = item.category === 'sauce' || item.category === 'spirits' || item.unit.toLowerCase().includes('bottle') || item.unit.toLowerCase().includes('l') || item.unit.toLowerCase().includes('ขวด');
             setShowLiquidSlider(isLiquid);
+            
+            // Load capacity if exists
+            if (item.capacity_per_unit) {
+                setFullCapacityMl(item.capacity_per_unit);
+            }
             
             let options = [];
             // Add Base Unit
@@ -64,6 +69,14 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
     const handleSave = async () => {
         setLoading(true);
         try {
+            // Save Capacity if changed and using calculator
+            if (mode === 'set' && useMlCalculator && fullCapacityMl !== item.capacity_per_unit) {
+                // Background update capacity
+                await import('../lib/supabaseClient').then(({ supabase }) => 
+                    supabase.from('stock_items').update({ capacity_per_unit: fullCapacityMl }).eq('id', item.id)
+                );
+            }
+
             const mainVal = parseFloat(amount || 0); // Integer part
             
             if (mode === 'set') {

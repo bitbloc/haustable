@@ -52,13 +52,42 @@ export default function StockCard({ item, onClick }) {
                 <h3 className={`font-bold text-sm leading-tight mb-1 line-clamp-2 ${textClass}`}>
                     {item.name}
                 </h3>
+                
+                {/* Quantity Display */}
                 <div className="flex items-baseline justify-between w-full">
                     <span className="text-xs text-gray-500 font-medium">
                         {item.unit}
                     </span>
-                    <span className={`text-lg font-extrabold ${textClass}`}>
-                        {item.current_quantity?.toLocaleString() || 0}
-                    </span>
+                    
+                    <div className="text-right">
+                        <span className={`text-lg font-extrabold ${textClass}`}>
+                             {/* Show Integer Part */}
+                             {Math.floor(item.current_quantity || 0)}
+                        </span>
+                        
+                        {/* Decimal/Partial Part Visualization */}
+                        {(item.current_quantity % 1) > 0.01 && (
+                            <div className="text-xs font-bold text-blue-600 flex flex-col items-end">
+                                {item.capacity_per_unit ? (
+                                    <span>
+                                        + {Math.round((item.current_quantity % 1) * item.capacity_per_unit)} ml
+                                    </span>
+                                ) : (
+                                    <span>
+                                        + {Math.round((item.current_quantity % 1) * 100)}%
+                                    </span>
+                                )}
+                                
+                                {/* Mini Bar for Partial */}
+                                <div className="w-12 h-1.5 bg-gray-100 rounded-full mt-0.5 overflow-hidden border border-gray-200">
+                                    <div 
+                                        className="h-full bg-blue-500 rounded-full" 
+                                        style={{ width: `${(item.current_quantity % 1) * 100}%` }} 
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             
