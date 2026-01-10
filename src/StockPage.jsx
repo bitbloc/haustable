@@ -133,9 +133,13 @@ export default function StockPage() {
     // --- Logic ---
     const handleAdjustment = async (itemId, changeAmount, type, meta = {}) => {
         // Optimistic Update
+        // Optimistic Update
         setItems(prev => prev.map(item => {
             if (item.id === itemId) {
-                return { ...item, current_quantity: (item.current_quantity || 0) + changeAmount };
+                const newQty = type === 'set' 
+                    ? changeAmount 
+                    : (item.current_quantity || 0) + changeAmount;
+                return { ...item, current_quantity: newQty };
             }
             return item;
         }));
