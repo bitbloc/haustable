@@ -31,39 +31,45 @@ export default function StaffDashboard() {
         const fetchUserAndStats = async () => {
             setLoading(true);
             try {
-                // 1. User
-                const { data: { user } } = await supabase.auth.getUser();
+                // Parallel Fetching
+                const [
+                    { data: { user } },
+                    { count: pendingCount },
+                    { count: bookingCount },
+                    { data: items }
+                ] = await Promise.all([
+                    // 1. User
+                    supabase.auth.getUser(),
+                    
+                    // 2. Pending Orders
+                    supabase
+                        .from('bookings')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('status', 'pending'),
+
+                    // 3. Upcoming Bookings
+                    (async () => {
+                         const now = new Date();
+                         const tomorrow = new Date(now);
+                         tomorrow.setHours(now.getHours() + 24);
+                         return supabase
+                            .from('bookings')
+                            .select('*', { count: 'exact', head: true })
+                            .in('status', ['confirmed', 'approved']) 
+                            .gte('booking_time', now.toISOString())
+                            .lte('booking_time', tomorrow.toISOString());
+                    })(),
+
+                    // 4. Stock Items (Lightweight fetch)
+                    supabase
+                        .from('stock_items')
+                        .select('current_quantity, min_stock_threshold')
+                        // Optional: .lt('current_quantity', 10) // Optimization: Only fetch items < 10 to reduce payload if we assume threshold isn't > 10? 
+                        // But min_stock_threshold can be anything. Let's fetch all for safety, but minimal columns.
+                ]);
+
                 setUser(user);
 
-                // 2. Stats
-                // Pending Orders
-                const { count: pendingCount } = await supabase
-                    .from('bookings')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'pending');
-
-                // Upcoming Bookings (Next 24h)
-                const now = new Date();
-                const tomorrow = new Date(now);
-                tomorrow.setHours(now.getHours() + 24);
-                const { count: bookingCount } = await supabase
-                    .from('bookings')
-                    .select('*', { count: 'exact', head: true })
-                    .in('status', ['confirmed', 'approved']) 
-                    .gte('booking_time', now.toISOString())
-                    .lte('booking_time', tomorrow.toISOString());
-
-                // Low Stock
-                // Complex query, might just count critical?
-                // We'll simplify: fetch all items and count client side or use a view?
-                // Let's just count items with is_critical logic if possible in SQL?
-                // SQL for (current_quantity <= min_stock_threshold OR current_quantity < 1.5)
-                // Hard to do "OR < 1.5" if not in same column check easily.
-                // We'll roughly fetch items with quantity < 5 to estimate or just fetch all (lightweight if < 1000 items)
-                const { data: items } = await supabase
-                    .from('stock_items')
-                    .select('current_quantity, min_stock_threshold, reorder_point');
-                
                 let lowStockCount = 0;
                 if (items) {
                     lowStockCount = items.filter(i => 
