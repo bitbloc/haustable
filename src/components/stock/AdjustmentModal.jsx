@@ -66,6 +66,26 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
         }
     }, [remainingMl, fullCapacityMl, useMlCalculator]);
 
+    // Pre-fill when entering Set mode
+    useEffect(() => {
+        if (mode === 'set' && item) {
+            const currentQty = item.current_quantity || 0;
+            const full = Math.floor(currentQty);
+            const part = currentQty - full;
+            
+            setAmount(full.toString());
+            setPartialAmount(Number(part.toFixed(4))); 
+            
+            if (fullCapacityMl) {
+                setRemainingMl(Math.round(part * fullCapacityMl));
+            }
+        } else {
+            // Should we clear for In/Out? Yes, standard behavior.
+            setAmount('');
+            setPartialAmount(0);
+        }
+    }, [mode, item]);
+
     const handleSave = async () => {
         setLoading(true);
         try {
