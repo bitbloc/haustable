@@ -1,5 +1,5 @@
 // Enhanced Service Worker for PWA (Network First for HTML)
-const CACHE_NAME = 'haus-table-v2'; // Bump version
+const CACHE_NAME = 'haus-table-v3'; // Bump version
 const urlsToCache = [
   '/',
   '/index.html',
@@ -32,7 +32,10 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
     // API Requests: Network Only (or Network First) - managed by app mostly
-    if (event.request.url.includes('/rest/v1/') || event.request.url.includes('/functions/v1/')) {
+    if (event.request.url.includes('/rest/v1/') || 
+        event.request.url.includes('/functions/v1/') || 
+        event.request.url.includes('/auth/v1/') || 
+        event.request.url.includes('/storage/v1/')) {
         return; 
     }
 
