@@ -141,16 +141,14 @@ const formatTime = (dateString, timeString) => {
 // Thai Date Helper (Mapped to util)
 const formatDateThai = (date) => formatThaiDateLong(date.toISOString())
 
-export default function StaffOrderPage() {
+export default function StaffLiveOrders() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null, isDangerous: false })
     
-    // Auth State
-    const [isAuthenticated, setIsAuthenticated] = useState(false)
+    // Auth State (Handled by Layout, but we keep Sound Check)
     const [isSoundChecked, setIsSoundChecked] = useState(false) 
-    const [pinInput, setPinInput] = useState('')
     
     // Data State
-const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'schedule' | 'tables'
+    const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'schedule' | 'tables'
     const [orders, setOrders] = useState([]) // Live pending orders
     const [scheduleOrders, setScheduleOrders] = useState([]) // Upcoming confirmed orders
     const [historyOrders, setHistoryOrders] = useState([]) // History orders
@@ -183,9 +181,6 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
     // Init Logic to get Sound URL
     useEffect(() => {
         const init = async () => {
-            const savedAuth = localStorage.getItem('staff_auth')
-            if (savedAuth === 'true') setIsAuthenticated(true)
-
             const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
             if (data?.value) {
                 setSoundUrl(data.value)
@@ -204,11 +199,11 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
                  toggle = !toggle
              }, 1000)
         } else {
-            document.title = "Staff View | In The Haus"
+            document.title = "Live Orders | In The Haus"
         }
         return () => {
             if (interval) clearInterval(interval)
-            document.title = "Staff View | In The Haus"
+            document.title = "Live Orders | In The Haus"
         }
     }, [orders]) // document.hidden is not reactive, but visibilitychange listener below can handle reset if needed, or rely on orders update.
     // Actually, we need to LISTEN to visibility change to start/stop flashing if orders exist.
@@ -216,7 +211,7 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
     useEffect(() => {
         const handleVis = () => {
             if (!document.hidden) {
-                document.title = "Staff View | In The Haus"
+                document.title = "Live Orders | In The Haus"
             }
         }
         document.addEventListener("visibilitychange", handleVis)
@@ -232,10 +227,10 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
         }, 500)
     }
 
-    // Authenticated Setup
+    // Authenticated Setup (Renamed to Active Setup)
     useEffect(() => {
         let pollInterval
-        if (isAuthenticated && isSoundChecked) {
+        if (isSoundChecked) {
             fetchLiveOrders()
             const channel = subscribeRealtime()
             if (isSupported) request()
@@ -252,17 +247,17 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
                 clearInterval(pollInterval)
             }
         }
-    }, [isAuthenticated, isSoundChecked]) 
+    }, [isSoundChecked]) 
 
     // Alarm Logic
     useEffect(() => {
-        if (!isAuthenticated || !isSoundChecked) return
+        if (!isSoundChecked) return
         if (orders.some(o => o.status === 'pending')) {
             play()
         } else {
             stop()
         }
-    }, [orders, isAuthenticated, isSoundChecked, soundUrl, play, stop])
+    }, [orders, isSoundChecked, soundUrl, play, stop])
     
     // Handle Audio Error (Permissions)
     useEffect(() => {
@@ -277,11 +272,10 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
 
     // Load History or Schedule when tab changes
     useEffect(() => {
-        if (isAuthenticated) {
-            if (activeTab === 'history') fetchHistoryOrders()
-            if (activeTab === 'schedule') fetchScheduleOrders()
-        }
-    }, [isAuthenticated, activeTab, historyDate])
+        // Always allowed since protected by layout
+        if (activeTab === 'history') fetchHistoryOrders()
+        if (activeTab === 'schedule') fetchScheduleOrders()
+    }, [activeTab, historyDate])
 
 
 
@@ -522,43 +516,7 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
         }
     }
 
-    // --- Actions ---
-    const handleLogin = async (e) => {
-        e.preventDefault()
-        setLoading(true)
-        try {
-            const { data } = await supabase.from('app_settings').select('value').eq('key', 'staff_pin_code').single()
-            const correctPin = data?.value || '0000'
-            if (pinInput === correctPin) {
-                setIsAuthenticated(true)
-                localStorage.setItem('staff_auth', 'true')
-            } else {
-                toast.error('รหัส PIN ไม่ถูกต้อง')
-                setPinInput('')
-            }
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const handleLogout = () => {
-        setIsAuthenticated(false)
-        setIsSoundChecked(false)
-        localStorage.removeItem('staff_auth')
-        setPinInput('')
-        stop()
-    }
-
     const updateStatus = async (id, newStatus) => {
-        // If clicking Accept from toast, we might not need modal if we want speed.
-        // But let's keep modal logic for manual clicks. 
-        // Logic: if called from toast, it's instant? No, `updateStatus` opens modal.
-        // Let's modify: `updateStatus` opens modal. 
-        // If we want instant accept from Toast, we need a separate function or param.
-        // Let's keep safety for now: even from Toast, open the modal or just do it?
-        // User said: "Press Accept immediately". Usually implies direct action.
-        // I will make a separate `quickConfirm` function for the Toast.
-        
         const isConfirm = newStatus === 'confirmed'
         const isReady = newStatus === 'ready'
         const isSeated = newStatus === 'seated'
@@ -583,11 +541,9 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
             if (error) throw error
             
             setOrders(prev => prev.filter(o => o.id !== id))
-            // Instant update for Schedule view as well
             if (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'void') {
                 setScheduleOrders(prev => prev.filter(o => o.id !== id))
             } else {
-                 // If status updated to something else (e.g. ready), update the item in schedule
                  setScheduleOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o))
             }
             
@@ -598,36 +554,19 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
         }
     }
 
-    // Quick Accept for Toast (Bypasses Modal if desired, currently sticking to modal to be safe, 
-    // OR calling performUpdate directly)
-    // The Toast action `onClick` calls `updateStatus`. 
-    // If we want direct accept:
-    // Change Toast action to `() => performUpdate(newOrder.id, 'confirmed', true)`
-    // Let's do direct accept for speed as requested.
-    
-    // Update subscribeRealtime logic above ^ to use performUpdate? 
-    // Wait, performUpdate needs to be defined before usage or use `useCallback` / be available in scope.
-    // It's inside the component, so it's fine. 
-    // CAREFUL: subscribeRealtime is defined BEFORE performUpdate in current code flow if I copy-paste sequentially.
-    // I need to hoist `performUpdate` or move `subscribeRealtime` down. Or use function declarations.
-    // I'll move `performUpdate` up.
-
-    // --- VIEWS ---
-
     // 1. Sound Check
-    if (isAuthenticated && !isSoundChecked) {
+    if (!isSoundChecked) {
         return (
             <div className="min-h-screen bg-[#F4F4F4] flex flex-col items-center justify-center p-6 font-sans text-[#1A1A1A] safe-area-inset-bottom">
                 <div className="bg-white border border-gray-200 p-8 rounded-2xl w-full max-w-sm text-center shadow-sm relative overflow-hidden">
                      <button 
                          onClick={() => {
-                                sessionStorage.setItem('skip_staff_redirect', 'true')
-                                window.location.href = '/'
+                                window.location.href = '/staff'
                          }}
                          className="absolute top-4 right-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors z-10"
-                         title="Exit to Customer View"
+                         title="Back to Dashboard"
                      >
-                         <Home className="w-5 h-5" />
+                         <ArrowLeft className="w-5 h-5" />
                      </button>
 
                     <Volume2 className="w-16 h-16 text-[#1A1A1A] mx-auto mb-6" />
@@ -679,50 +618,8 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
         )
     }
 
-    // 2. Login
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen bg-[#F4F4F4] flex flex-col items-center justify-center p-6 font-sans text-[#1A1A1A] safe-area-inset-bottom">
-                <div className="bg-white border border-gray-200 p-8 rounded-2xl w-full max-w-sm text-center shadow-sm relative overflow-hidden">
-                     <button 
-                         onClick={() => {
-                                sessionStorage.setItem('skip_staff_redirect', 'true')
-                                window.location.href = '/'
-                         }}
-                         className="absolute top-4 right-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors z-10"
-                         title="Exit to Customer View"
-                     >
-                         <Home className="w-5 h-5" />
-                     </button>
+    // 2. Login (Removed)
 
-                    <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center mx-auto mb-6">
-                         <ChefHat className="w-6 h-6 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold mb-2">Staff Login</h1>
-                    <p className="text-gray-500 mb-8 text-sm">Enter Access PIN</p>
-                    
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <input 
-                            type="number" 
-                            className="w-full bg-gray-50 border border-transparent focus:bg-white focus:border-gray-200 rounded-xl p-4 text-center text-3xl font-bold text-[#1A1A1A] tracking-[1em] outline-none transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-gray-300"
-                            value={pinInput}
-                            onChange={(e) => setPinInput(e.target.value)}
-                            maxLength={6}
-                            placeholder="••••"
-                        />
-                         <button 
-                            type="submit"
-                            className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded-xl hover:bg-black active:scale-95 transition-all shadow-md shadow-black/10"
-                        >
-                            {loading ? 'Verifying...' : 'Access'}
-                        </button>
-                    </form>
-
-                    <InstallPrompt />
-                </div>
-            </div>
-        )
-    }
 
     // 3. Main Dashboard
     return (
@@ -784,11 +681,17 @@ const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'sche
             <div className={`flex flex-col gap-4 mb-6 sticky z-20 pt-2 bg-[#F4F4F4]/95 backdrop-blur-sm -mx-4 px-4 pb-4 border-b border-gray-200 ${!isConnected ? 'top-8' : 'top-0'} transition-all`}>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => window.location.href = '/staff'}
+                            className="w-10 h-10 bg-white border border-gray-200 text-gray-700 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
                         <div className="w-10 h-10 bg-[#1A1A1A] text-white rounded-full flex items-center justify-center shadow-md">
                             <ChefHat className="w-5 h-5" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold tracking-tight">Orders</h1>
+                            <h1 className="text-xl font-bold tracking-tight">Live View</h1>
                         </div>
                     </div>
                      <div className="flex gap-2">

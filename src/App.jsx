@@ -22,7 +22,8 @@ import AdminPromotions from './components/admin/AdminPromotions' // NEW
 import AdminTableManager from './admin/AdminTableManager' // NEW
 import AdminSteakDashboard from './admin/AdminSteakDashboard' // NEW
 import SteakBookingPage from './SteakBookingPage' // NEW
-import StaffOrderPage from './StaffOrderPage'
+import StaffDashboard from './StaffDashboard'
+import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
 import StockPage from './StockPage' // NEW
 import TrackingPage from './TrackingPage'
 
@@ -115,7 +116,8 @@ function App() {
 
             {/* Staff/Kitchen Route (Protected) */}
             <Route element={<StaffAuthLayout />}>
-              <Route path="/staff" element={<StaffOrderPage />} />
+              <Route path="/staff" element={<StaffDashboard />} />
+              <Route path="/staff/orders" element={<StaffLiveOrders />} />
               <Route path="/staff/stock" element={<StockPage />} />
             </Route>
           </Routes>
