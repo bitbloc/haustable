@@ -16,14 +16,35 @@ export default function StaffAuthLayout() {
     }, []);
 
     const checkUser = async () => {
+        // Optimistic Check
+        const cachedRole = localStorage.getItem('staff_role');
+        const cachedId = localStorage.getItem('staff_id');
+        
+        let isOptimistic = false;
+        if (cachedRole === 'admin' && cachedId) {
+            setAuthStatus('authorized');
+            isOptimistic = true;
+        }
+
         try {
+            // Background / Real Check
             const { data: { session }, error } = await supabase.auth.getSession();
             if (error || !session) {
+                if (isOptimistic) {
+                     // Session expired but we showed authorized. Revert.
+                     console.log("Session expired, reverting optimistic auth");
+                }
+                localStorage.removeItem('staff_role');
+                localStorage.removeItem('staff_id');
                 setAuthStatus('unauthenticated');
                 return;
             }
 
-            // Check Role
+            // Verify Role
+            // Optimization: If optimistic was true and session.id matches cachedId, 
+            // we could skip profile fetch if we trust cache ttl? 
+            // consistently verifying is safer, but let's do it.
+            
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('role')
@@ -31,14 +52,22 @@ export default function StaffAuthLayout() {
                 .single();
 
             if (profileError || !profile || profile.role !== 'admin') {
+                localStorage.removeItem('staff_role');
+                localStorage.removeItem('staff_id');
                 setAuthStatus('unauthorized');
                 return;
             }
 
+            // Success (Update Cache)
+            localStorage.setItem('staff_role', 'admin');
+            localStorage.setItem('staff_id', session.user.id);
             setAuthStatus('authorized');
+
         } catch (err) {
             console.error("Staff Auth Error:", err);
-            setAuthStatus('unauthenticated');
+            // If network error, and we were optimistic, we stay authorized (Offline Mode support)
+            // But if we weren't optimistic, we fail.
+            if (!isOptimistic) setAuthStatus('unauthenticated');
         }
     };
 
