@@ -204,11 +204,11 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
                                     <>
                                         <div className="flex gap-4 items-center">
                                             <LiquidLevelSlider 
-                                                value={partialAmount * 100} 
+                                                value={Math.round(partialAmount * 100)} 
                                                 onChange={(val) => setPartialAmount(val / 100)} 
                                             />
                                             <div className="text-xs text-blue-800">
-                                                <div className="font-bold text-lg">{(partialAmount * 100).toFixed(0)}%</div>
+                                                <div className="font-bold text-lg">{Math.round(partialAmount * 100)}%</div>
                                                 <div className="opacity-70 leading-tight">ประมาณด้วยสายตา</div>
                                             </div>
                                         </div>

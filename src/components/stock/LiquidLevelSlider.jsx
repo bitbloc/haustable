@@ -85,19 +85,19 @@ export default function LiquidLevelSlider({ value = 0, onChange, unit = '%' }) {
                 <div 
                     className="absolute bottom-0 left-0 right-0 transition-all duration-200 ease-out flex items-center justify-center font-bold text-white text-xl shadow-lg"
                     style={{ 
-                        height: `${value}%`, 
+                        height: `${Math.round(value)}%`, 
                         backgroundColor: getColor(value),
                         boxShadow: `0 0 20px ${getColor(value)}`
                     }}
                 >
                     {/* Only show text if meaningful height */}
-                    {value > 15 && <span className="drop-shadow-md">{value}{unit}</span>}
+                    {value > 15 && <span className="drop-shadow-md">{Math.round(value)}{unit}</span>}
                 </div>
                 
                 {/* Label if empty-ish */}
                 {value <= 15 && (
                      <div className="absolute bottom-2 left-0 right-0 text-center text-xs font-bold text-gray-500 pointer-events-none">
-                         {value}{unit}
+                         {Math.round(value)}{unit}
                      </div>
                 )}
             </div>
