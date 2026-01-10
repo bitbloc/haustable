@@ -212,8 +212,11 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
                                                 <div className="opacity-70 leading-tight">ประมาณด้วยสายตา</div>
                                             </div>
                                         </div>
-                                        <div className="text-right mt-1">
-                                             <button onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className="text-[10px] font-bold text-blue-600 flex items-center gap-1 justify-end hover:bg-blue-100 px-2 py-1 rounded ml-auto transition-colors">
+                                        <div className="text-right mt-1 flex justify-end gap-2">
+                                             <button onClick={() => setPartialAmount(0)} className="text-[10px] font-bold text-red-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors">
+                                                 รีเซ็ต
+                                             </button>
+                                             <button onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className="text-[10px] font-bold text-blue-600 flex items-center gap-1 justify-end hover:bg-blue-100 px-2 py-1 rounded transition-colors">
                                                  <Calculator className="w-3 h-3" /> คำนวณ ml
                                              </button>
                                         </div>
