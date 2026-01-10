@@ -72,7 +72,7 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
             // Save Capacity if changed and using calculator
             if (mode === 'set' && useMlCalculator && fullCapacityMl !== item.capacity_per_unit) {
                 // Background update capacity
-                await import('../lib/supabaseClient').then(({ supabase }) => 
+                await import('../../lib/supabaseClient').then(({ supabase }) => 
                     supabase.from('stock_items').update({ capacity_per_unit: fullCapacityMl }).eq('id', item.id)
                 );
             }
