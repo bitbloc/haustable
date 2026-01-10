@@ -9,6 +9,7 @@ import AuthModal from '../AuthModal'; // Reuse existing AuthModal for login
 
 export default function StaffAuthLayout() {
     const [authStatus, setAuthStatus] = useState('loading'); // loading, unauthenticated, unauthorized, authorized
+    const [userEmail, setUserEmail] = useState(null); 
     const [showLogin, setShowLogin] = useState(true); // Default to show login if not auth
 
     useEffect(() => {
@@ -39,6 +40,8 @@ export default function StaffAuthLayout() {
                 setAuthStatus('unauthenticated');
                 return;
             }
+
+            setUserEmail(session.user.email); // Store email for display
 
             // Verify Role
             // Optimization: If optimistic was true and session.id matches cachedId, 
@@ -117,7 +120,7 @@ export default function StaffAuthLayout() {
                     </div>
                     <h1 className="text-xl font-bold text-[#1A1A1A] mb-2">Access Denied</h1>
                     <p className="text-gray-500 mb-6">
-                        บัญชีของคุณ ({supabase.auth.user()?.email || 'User'}) ไม่มีสิทธิ์เข้าใช้งานส่วนนี้ <br/>
+                        บัญชีของคุณ ({userEmail || 'User'}) ไม่มีสิทธิ์เข้าใช้งานส่วนนี้ <br/>
                         กรุณาติดต่อเจ้าของร้านเพื่อขอสิทธิ์ <strong>Admin</strong>
                     </p>
                     <button 
