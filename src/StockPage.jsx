@@ -69,7 +69,13 @@ export default function StockPage() {
          }
     };
 
+    const [currentUser, setCurrentUser] = useState(null);
+
     useEffect(() => {
+        // Fetch User for Logging
+        supabase.auth.getUser().then(({ data }) => {
+            setCurrentUser(data?.user);
+        });
         fetchCategories();
     }, []);
 
@@ -150,10 +156,12 @@ export default function StockPage() {
             
             if (type === 'set') {
                  // Absolute Update (Audit/Count)
+                 const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
                  const { error } = await supabase.rpc('set_stock_quantity', {
                      p_item_id: itemId,
                      p_new_quantity: changeAmount, // In this case changeAmount IS the new quantity
-                     p_reason: meta.note || 'Audit'
+                     p_reason: meta.note || 'Audit',
+                     p_performed_by: performedBy
                  });
                  updateError = error;
                  
@@ -197,11 +205,12 @@ export default function StockPage() {
             // But 'update_stock_quantity' does not.
             
             if (type !== 'set') {
+                 const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
                  const { error: logError } = await supabase.from('stock_transactions').insert({
                     stock_item_id: itemId,
                     transaction_type: type,
                     quantity_change: changeAmount,
-                    performed_by: 'Staff', 
+                    performed_by: performedBy, 
                     note: meta.note
                 });
                 if (logError) console.error("Log error", logError);

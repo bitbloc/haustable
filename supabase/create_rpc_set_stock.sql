@@ -2,7 +2,8 @@
 CREATE OR REPLACE FUNCTION public.set_stock_quantity(
     p_item_id UUID,
     p_new_quantity FLOAT,
-    p_reason TEXT DEFAULT 'Audit'
+    p_reason TEXT DEFAULT 'Audit',
+    p_performed_by TEXT DEFAULT 'Staff'
 )
 RETURNS VOID
 LANGUAGE plpgsql
@@ -28,6 +29,6 @@ BEGIN
 
     -- Log transaction
     INSERT INTO public.stock_transactions (stock_item_id, transaction_type, quantity_change, performed_by, note)
-    VALUES (p_item_id, 'set', v_diff, 'Staff', p_reason);
+    VALUES (p_item_id, 'set', v_diff, p_performed_by, p_reason);
 END;
 $$;

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
+import StaffAuthLayout from './components/layout/StaffAuthLayout'
 // import { ToastProvider } from './context/ToastContext' -> Removed
 import { BookingProvider } from './context/BookingContext'
 import { Toaster } from 'sonner' // Added
@@ -112,9 +113,11 @@ function App() {
               <Route path="settings" element={<AdminSettings />} />
             </Route>
 
-            {/* Staff/Kitchen Route (Standalone) */}
-            <Route path="/staff" element={<StaffOrderPage />} />
-            <Route path="/staff/stock" element={<StockPage />} />
+            {/* Staff/Kitchen Route (Protected) */}
+            <Route element={<StaffAuthLayout />}>
+              <Route path="/staff" element={<StaffOrderPage />} />
+              <Route path="/staff/stock" element={<StockPage />} />
+            </Route>
           </Routes>
         </Router>
       </BookingProvider>
