@@ -1,274 +1,328 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { 
     ClipboardList, 
     Package, 
-    QrCode, 
     LogOut, 
-    ChefHat, 
-    Users, 
     Calendar,
     ArrowRight,
-    Search,
     UserCircle,
     Bell,
     CheckCircle2,
-    AlertCircle
+    TrendingUp,
+    AlertTriangle,
+    RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+// --- Sub-Components (Keep clean UI) ---
+
+const StatCard = ({ title, value, subtext, icon: Icon, alert, loading }) => (
+    <div className={`min-w-[150px] p-5 rounded-2xl flex flex-col justify-between h-[130px] border transition-all relative overflow-hidden ${
+        alert 
+        ? 'bg-red-50 border-red-100 text-red-900' 
+        : 'bg-white border-gray-100 text-gray-800 shadow-sm'
+    }`}>
+        <div className="flex justify-between items-start z-10">
+            <span className={`text-sm font-semibold ${alert ? 'text-red-600' : 'text-gray-400'}`}>{title}</span>
+            {Icon && <Icon className={`w-5 h-5 ${alert ? 'text-red-500' : 'text-gray-300'}`} />}
+        </div>
+        <div className="z-10">
+            {loading ? (
+                <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mb-1"></div>
+            ) : (
+                <motion.span 
+                    key={value} // Trigger animation on value change
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-4xl font-bold tracking-tight block"
+                >
+                    {value}
+                </motion.span>
+            )}
+            <p className={`text-xs mt-1 ${alert ? 'text-red-500' : 'text-gray-400'}`}>{subtext}</p>
+        </div>
+        {/* Background Decoration */}
+        {Icon && <Icon className="absolute -right-4 -bottom-4 w-24 h-24 opacity-[0.03] z-0" />}
+    </div>
+);
+
+const ActionButton = ({ onClick, icon: Icon, title, desc, colorClass, delay }) => (
+    <motion.button 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: delay * 0.1, duration: 0.4 }}
+        onClick={onClick}
+        className="relative overflow-hidden bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-start gap-4 hover:shadow-lg transition-all active:scale-[0.98] group"
+    >
+        <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full opacity-10 transition-transform group-hover:scale-150 ${colorClass}`} />
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colorClass} bg-opacity-10 text-opacity-100`}>
+             <Icon className={`w-6 h-6 ${colorClass.replace('bg-', 'text-')}`} />
+        </div>
+        <div className="text-left z-10">
+            <h3 className="font-bold text-lg leading-tight text-gray-900">{title}</h3>
+            <p className="text-xs text-gray-500 mt-1">{desc}</p>
+        </div>
+    </motion.button>
+);
+
+const SkeletonLoader = () => (
+    <div className="p-6 space-y-6 animate-pulse">
+        <div className="flex justify-between items-center mb-8">
+            <div className="flex gap-4">
+                <div className="w-14 h-14 bg-gray-200 rounded-full"></div>
+                <div className="space-y-2">
+                    <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                    <div className="w-32 h-6 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        </div>
+        <div className="flex gap-4 overflow-hidden">
+            {[1, 2, 3].map(i => <div key={i} className="min-w-[150px] h-[130px] bg-gray-200 rounded-2xl"></div>)}
+        </div>
+        <div className="grid grid-cols-2 gap-4 mt-8">
+             {[1, 2, 3, 4].map(i => <div key={i} className="h-[160px] bg-gray-200 rounded-[2rem]"></div>)}
+        </div>
+    </div>
+);
+
+// --- Main Realtime Dashboard ---
 
 export default function StaffDashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
-    const [stats, setStats] = useState({
-        pendingOrders: 0,
-        upcomingBookings: 0,
-        lowStock: 0
-    });
+    const [stats, setStats] = useState({ pendingOrders: 0, upcomingBookings: 0, lowStock: 0 });
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false); // For visual feedback during realtime update
 
-    useEffect(() => {
-        const fetchUserAndStats = async () => {
-            setLoading(true);
-            try {
-                // Parallel Fetching
-                const [
-                    { data: { user } },
-                    { count: pendingCount },
-                    { count: bookingCount },
-                    { data: items }
-                ] = await Promise.all([
-                    // 1. User
-                    supabase.auth.getUser(),
-                    
-                    // 2. Pending Orders
-                    supabase
-                        .from('bookings')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('status', 'pending'),
+    // 1. Fetch Stats Logic (Separated for reuse)
+    const fetchStats = useCallback(async (isBackgroundRefresh = false) => {
+        if (!isBackgroundRefresh) setRefreshing(true);
+        try {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
 
-                    // 3. Upcoming Bookings
-                    (async () => {
-                         const now = new Date();
-                         const tomorrow = new Date(now);
-                         tomorrow.setHours(now.getHours() + 24);
-                         return supabase
-                            .from('bookings')
-                            .select('*', { count: 'exact', head: true })
-                            .in('status', ['confirmed', 'approved']) 
-                            .gte('booking_time', now.toISOString())
-                            .lte('booking_time', tomorrow.toISOString());
-                    })(),
+            const [pendingResult, bookingResult, stockResult] = await Promise.all([
+                // Pending Orders
+                supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                // Upcoming Bookings
+                supabase.from('bookings').select('*', { count: 'exact', head: true })
+                    .in('status', ['confirmed', 'approved']) 
+                    .gte('booking_time', now.toISOString())
+                    .lte('booking_time', tomorrow.toISOString()),
+                // Stock
+                supabase.from('stock_items').select('current_quantity, min_stock_threshold')
+            ]);
 
-                    // 4. Stock Items (Lightweight fetch)
-                    supabase
-                        .from('stock_items')
-                        .select('current_quantity, min_stock_threshold')
-                        // Optional: .lt('current_quantity', 10) // Optimization: Only fetch items < 10 to reduce payload if we assume threshold isn't > 10? 
-                        // But min_stock_threshold can be anything. Let's fetch all for safety, but minimal columns.
-                ]);
-
-                setUser(user);
-
-                let lowStockCount = 0;
-                if (items) {
-                    lowStockCount = items.filter(i => 
-                        (i.current_quantity || 0) < 1.5 || 
-                        (i.current_quantity || 0) <= (i.min_stock_threshold || 0)
-                    ).length;
-                }
-
-                setStats({
-                    pendingOrders: pendingCount || 0,
-                    upcomingBookings: bookingCount || 0,
-                    lowStock: lowStockCount
-                });
-
-            } catch (error) {
-                console.error("Dashboard Load Error:", error);
-            } finally {
-                setLoading(false);
+            let lowStockCount = 0;
+            if (stockResult.data) {
+                lowStockCount = stockResult.data.filter(i => 
+                    (i.current_quantity || 0) <= (i.min_stock_threshold || 5)
+                ).length;
             }
-        };
 
-        fetchUserAndStats();
-        
-        // Polling for stats every 30s
-        const interval = setInterval(fetchUserAndStats, 30000);
-        return () => clearInterval(interval);
+            setStats({
+                pendingOrders: pendingResult.count || 0,
+                upcomingBookings: bookingResult.count || 0,
+                lowStock: lowStockCount
+            });
+        } catch (error) {
+            console.error("Stats Fetch Error:", error);
+        } finally {
+            if (!isBackgroundRefresh) setRefreshing(false);
+            setLoading(false);
+        }
     }, []);
 
+    // 2. Initial User Load & Setup
+    useEffect(() => {
+        const initUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                setUser(user);
+                fetchStats(); // Initial stats fetch
+            } else {
+                navigate('/login');
+            }
+        };
+        initUser();
+    }, [navigate, fetchStats]);
+
+    // 3. REALTIME SUBSCRIPTION (The Pro Plan Power) ⚡️
+    useEffect(() => {
+        // Create a channel for dashboard updates
+        const dashboardChannel = supabase
+            .channel('dashboard-realtime')
+            .on(
+                'postgres_changes', 
+                { event: '*', schema: 'public', table: 'bookings' }, 
+                (payload) => {
+                    console.log('Booking change detected:', payload);
+                    fetchStats(true); // Refetch stats quietly
+                }
+            )
+            .on(
+                'postgres_changes', 
+                { event: '*', schema: 'public', table: 'stock_items' }, 
+                (payload) => {
+                    console.log('Stock change detected:', payload);
+                    fetchStats(true); // Refetch stats quietly
+                }
+            )
+            .subscribe();
+
+        // Cleanup on unmount
+        return () => {
+            supabase.removeChannel(dashboardChannel);
+        };
+    }, [fetchStats]);
+
     const handleLogout = async () => {
-        localStorage.removeItem('staff_role');
-        localStorage.removeItem('staff_id');
+        setLoading(true);
+        localStorage.clear();
         await supabase.auth.signOut();
-        window.location.reload();
+        navigate('/login');
     };
 
+    if (loading && !user) return <SkeletonLoader />;
+
     return (
-        <div className="min-h-screen bg-[#F8F9FB] text-[#1A1A1A] pb-20 font-sans">
+        <div className="min-h-screen bg-[#F8F9FB] text-[#1A1A1A] pb-24 font-sans selection:bg-black selection:text-white">
+            
             {/* Header */}
-            <div className="bg-white px-6 pt-12 pb-6 rounded-b-[2.5rem] shadow-sm relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-                     <ChefHat className="w-64 h-64 -translate-y-12 translate-x-12" />
-                 </div>
-                 
-                 <div className="relative z-10 flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 bg-gradient-to-br from-[#1A1A1A] to-[#333] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-black/10">
+            <header className="px-6 pt-12 pb-6 bg-white rounded-b-[2.5rem] shadow-sm relative z-20">
+                <div className="flex justify-between items-start mb-8">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden border-2 border-white">
                             {user?.user_metadata?.avatar_url ? (
-                                <img src={user.user_metadata.avatar_url} className="w-full h-full object-cover rounded-2xl" />
+                                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
                                 <UserCircle className="w-8 h-8" />
                             )}
                         </div>
-                        <div>
-                            <p className="text-gray-500 text-sm font-medium">Have a great shift,</p>
-                            <h1 className="text-2xl font-bold tracking-tight">
-                                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Staff'}
+                        <div className="flex flex-col">
+                            <span className="text-gray-400 text-xs font-medium uppercase tracking-wider flex items-center gap-1">
+                                {refreshing && <RefreshCw className="w-3 h-3 animate-spin text-green-500" />}
+                                Dashboard Live
+                            </span>
+                            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                                {user?.user_metadata?.full_name?.split(' ')[0] || 'Staff Member'}
                             </h1>
                         </div>
                     </div>
                     
-                    <button 
-                        onClick={handleLogout}
-                        className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-500 hover:text-red-500 transition-all"
-                    >
+                    <button onClick={handleLogout} className="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
                         <LogOut className="w-5 h-5" />
                     </button>
-                 </div>
+                </div>
 
-                 {/* Stats Cards Row */}
-                 <div className="flex gap-4 overflow-x-auto pb-2 -mx-6 px-6 hide-scrollbar">
-                    <div className="min-w-[140px] bg-[#1A1A1A] text-white p-4 rounded-2xl flex flex-col justify-between h-[120px] shadow-lg shadow-black/10 relative overflow-hidden">
-                        <div className="absolute right-[-10px] top-[-10px] opacity-10"><Bell className="w-16 h-16"/></div>
-                        <span className="text-white/70 text-sm font-medium">New Orders</span>
-                        <div className="flex items-end gap-2">
-                             <span className="text-4xl font-bold">{stats.pendingOrders}</span>
-                             <span className="text-xs mb-1.5 text-white/50">pending</span>
-                        </div>
+                {/* Stats Row */}
+                <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 snap-x hide-scrollbar">
+                    <div className="snap-center">
+                        <StatCard 
+                            title="New Orders" 
+                            value={stats.pendingOrders} 
+                            subtext="Pending Kitchen" 
+                            icon={Bell}
+                            loading={refreshing && stats.pendingOrders === 0}
+                        />
                     </div>
-                    
-                    <div className="min-w-[140px] bg-white border border-gray-100 p-4 rounded-2xl flex flex-col justify-between h-[120px] shadow-sm">
-                        <span className="text-gray-500 text-sm font-medium">Upcoming</span>
-                        <div className="flex items-end gap-2">
-                             <span className="text-4xl font-bold text-[#1A1A1A]">{stats.upcomingBookings}</span>
-                             <span className="text-xs mb-1.5 text-gray-400">bookings</span>
-                        </div>
+                    <div className="snap-center">
+                        <StatCard 
+                            title="Reservations" 
+                            value={stats.upcomingBookings} 
+                            subtext="Next 24 Hours" 
+                            icon={Calendar}
+                            loading={refreshing && stats.upcomingBookings === 0}
+                        />
                     </div>
-
-                    <div className="min-w-[140px] bg-white border border-gray-100 p-4 rounded-2xl flex flex-col justify-between h-[120px] shadow-sm">
-                        <span className="text-gray-500 text-sm font-medium">Low Stock</span>
-                        <div className="flex items-end gap-2">
-                             <span className={`text-4xl font-bold ${stats.lowStock > 0 ? 'text-red-500' : 'text-green-500'}`}>{stats.lowStock}</span>
-                             <span className="text-xs mb-1.5 text-gray-400">items</span>
-                        </div>
+                    <div className="snap-center">
+                        <StatCard 
+                            title="Low Stock" 
+                            value={stats.lowStock} 
+                            subtext="Items critical" 
+                            icon={AlertTriangle}
+                            alert={stats.lowStock > 0}
+                            loading={refreshing && stats.lowStock === 0}
+                        />
                     </div>
-                 </div>
-            </div>
+                </div>
+            </header>
 
             {/* Main Navigation */}
-            <div className="p-6">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-[#1A1A1A] rounded-full"></span>
-                    Quick Access
-                </h2>
+            <main className="p-6">
+                <div className="flex items-center gap-2 mb-6">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">System Online</h2>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                    {/* Live View */}
-                    <button 
+                    <ActionButton 
+                        title="Live Orders" 
+                        desc="Kitchen & Bar View" 
+                        icon={ClipboardList} 
+                        colorClass="bg-blue-600" 
                         onClick={() => navigate('/staff/orders')}
-                        className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-start gap-4 hover:shadow-md transition-all active:scale-95 group relative overflow-hidden"
-                    >
-                        <div className="absolute right-0 top-0 p-8 bg-blue-50 rounded-bl-[4rem] group-hover:bg-blue-100 transition-colors">
-                            <ClipboardList className="w-8 h-8 text-blue-600 absolute top-4 right-4" />
-                        </div>
-                        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
-                            <ClipboardList className="w-6 h-6" />
-                        </div>
-                        <div className="text-left mt-2">
-                            <h3 className="font-bold text-lg leading-tight mb-1">Live<br/>Orders</h3>
-                            <p className="text-xs text-gray-400">Kitchen & Bar View</p>
-                        </div>
-                    </button>
-
-                    {/* Stock */}
-                    <button 
+                        delay={1}
+                    />
+                    <ActionButton 
+                        title="Inventory" 
+                        desc="Manage Stock" 
+                        icon={Package} 
+                        colorClass="bg-orange-500" 
                         onClick={() => navigate('/staff/stock')}
-                        className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-start gap-4 hover:shadow-md transition-all active:scale-95 group relative overflow-hidden"
-                    >
-                         <div className="absolute right-0 top-0 p-8 bg-orange-50 rounded-bl-[4rem] group-hover:bg-orange-100 transition-colors">
-                            <Package className="w-8 h-8 text-orange-600 absolute top-4 right-4" />
-                        </div>
-                        <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center">
-                            <Package className="w-6 h-6" />
-                        </div>
-                        <div className="text-left mt-2">
-                            <h3 className="font-bold text-lg leading-tight mb-1">Stock<br/>Manage</h3>
-                            <p className="text-xs text-gray-400">Update inventory</p>
-                        </div>
-                    </button>
-
-                    {/* Check In */}
-                     <button 
-                        onClick={() => {
-                            // Link to Check-in scanner or page? 
-                            // User mentioned "Check-in" button.
-                            // Currently we don't have a dedicated staff check-in page for customers except logic in Live Orders (Seated).
-                            // Or maybe the User means "Staff Login"? No, they are already logged in.
-                            // "checkin customer" -> Maybe /staff/orders/checkin ?
-                            // Or maybe open scanner?
-                            // For now navigate to /staff/orders?tab=live?
-                            // Let's create a placeholder action or just link to Orders page with Checkin intent.
-                            navigate('/staff/orders');
-                        }}
-                        className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-start gap-4 hover:shadow-md transition-all active:scale-95 group relative overflow-hidden"
-                    >
-                        <div className="absolute right-0 top-0 p-8 bg-green-50 rounded-bl-[4rem] group-hover:bg-green-100 transition-colors">
-                            <CheckCircle2 className="w-8 h-8 text-green-600 absolute top-4 right-4" />
-                        </div>
-                         <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center">
-                            <CheckCircle2 className="w-6 h-6" />
-                        </div>
-                        <div className="text-left mt-2">
-                            <h3 className="font-bold text-lg leading-tight mb-1">Check-in</h3>
-                            <p className="text-xs text-gray-400">Customer Arrival</p>
-                        </div>
-                    </button>
-
-                    {/* History / Report */}
-                     <button 
-                         onClick={() => navigate('/staff/orders')} // TODO: Pass tab=history
-                        className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-start gap-4 hover:shadow-md transition-all active:scale-95 group relative overflow-hidden"
-                    >
-                        <div className="absolute right-0 top-0 p-8 bg-purple-50 rounded-bl-[4rem] group-hover:bg-purple-100 transition-colors">
-                            <Calendar className="w-8 h-8 text-purple-600 absolute top-4 right-4" />
-                        </div>
-                         <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center">
-                            <Calendar className="w-6 h-6" />
-                        </div>
-                        <div className="text-left mt-2">
-                            <h3 className="font-bold text-lg leading-tight mb-1">History</h3>
-                            <p className="text-xs text-gray-400">Past orders</p>
-                        </div>
-                    </button>
-
+                        delay={2}
+                    />
+                    <ActionButton 
+                        title="Check-in" 
+                        desc="Scan QR / Seat" 
+                        icon={CheckCircle2} 
+                        colorClass="bg-emerald-500" 
+                        onClick={() => navigate('/staff/checkin')}
+                        delay={3}
+                    />
+                    <ActionButton 
+                        title="History" 
+                        desc="Past Records" 
+                        icon={TrendingUp} 
+                        colorClass="bg-purple-600" 
+                        onClick={() => navigate('/staff/history')}
+                        delay={4}
+                    />
                 </div>
-            </div>
+            </main>
 
-            {/* Quick Actions Footer? */}
-            <div className="px-6 mt-4">
-                 <div className="bg-[#1A1A1A] rounded-2xl p-4 flex items-center justify-between text-white shadow-xl shadow-black/20"
-                      onClick={() => navigate('/staff/orders')} // Quick jump to live
-                 >
-                     <div className="flex items-center gap-3">
-                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                         <span className="font-bold">Live Board</span>
-                     </div>
-                     <ArrowRight className="w-5 h-5 text-gray-400" />
-                 </div>
-            </div>
-
+            {/* Floating Alert for Pending Orders */}
+            <AnimatePresence>
+                {stats.pendingOrders > 0 && (
+                    <motion.div 
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-6 left-6 right-6 z-50"
+                    >
+                        <button 
+                            onClick={() => navigate('/staff/orders')}
+                            className="w-full bg-[#1A1A1A] text-white p-4 rounded-2xl shadow-xl shadow-black/20 flex items-center justify-between group active:scale-95 transition-transform"
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>
+                                <span className="font-semibold">{stats.pendingOrders} Orders Waiting</span>
+                            </div>
+                            <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                                 <ArrowRight className="w-4 h-4" />
+                            </div>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
+
+// Don't forget: import { AnimatePresence } from 'framer-motion';
