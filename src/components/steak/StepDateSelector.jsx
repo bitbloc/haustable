@@ -26,7 +26,7 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
     }
 
     return (
-        <div className="space-y-6 flex-1 overflow-y-auto pb-20">
+        <div className="space-y-6 flex-1 overflow-y-auto pb-32">
             {/* Date */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
@@ -81,7 +81,7 @@ export default function StepDateSelector({ state, dispatch, onNext, isValid }) {
             </div>
 
             {/* Next Button */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200 z-50">
                 <div className="max-w-2xl mx-auto">
                     <button
                         onClick={onNext}

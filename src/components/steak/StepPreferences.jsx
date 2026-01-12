@@ -56,7 +56,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
     ]
 
     return (
-        <div className="flex-1 overflow-y-auto pb-24 space-y-8">
+        <div className="flex-1 overflow-y-auto pb-32 space-y-8">
             
             {/* Occasion */}
             <div>
@@ -223,7 +223,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                 <Phone size={12} />
                 <span>For more details call 061-423-2455</span>
             </div>
-             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200">
+             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200 z-50">
                 <div className="max-w-2xl mx-auto">
                     <button
                         onClick={onNext}

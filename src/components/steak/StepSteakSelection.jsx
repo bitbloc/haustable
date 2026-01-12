@@ -144,7 +144,7 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
     if (loading) return <div className="p-12 text-center text-gray-400">Loading Premium Cuts...</div>
 
     return (
-        <div className="flex-1 flex flex-col min-h-0 pb-24">
+        <div className="flex-1 flex flex-col min-h-0 pb-32">
             <h2 className="text-xl font-light mb-6 px-1 flex items-center gap-2">
                 เลือกเนื้อที่คุณต้องการ <span className="text-sm text-gray-400 font-normal hidden sm:inline">(Choose your cut)</span>
             </h2>
@@ -163,7 +163,7 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
 
             {/* Cart Summary / Next */}
             {totalQty > 0 && (
-                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur border-t border-gray-200 z-30">
+                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur border-t border-gray-200 z-50">
                     <div className="max-w-2xl mx-auto flex items-center justify-between">
                         <div>
                             <div className="text-xs text-gray-500 uppercase font-bold">ยอดรวม (Total)</div>

@@ -183,7 +183,7 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                 </div>
             )}
 
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200 z-30">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200 z-50">
                 <div className="max-w-2xl mx-auto">
                     <button
                         onClick={handleSubmit}
