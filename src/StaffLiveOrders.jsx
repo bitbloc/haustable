@@ -172,8 +172,14 @@ export default function StaffLiveOrders() {
             navigate('/staff/orders')
             setActiveTab('live') 
         }
-        if (tab === 'history') navigate('/staff/history')
-        if (tab === 'tables') navigate('/staff/checkin')
+        if (tab === 'history') {
+            navigate('/staff/history')
+            setActiveTab('history')
+        }
+        if (tab === 'tables') {
+            navigate('/staff/checkin')
+            setActiveTab('tables')
+        }
         if (tab === 'schedule') setActiveTab('schedule') 
     }
     const [orders, setOrders] = useState([]) // Live pending orders
