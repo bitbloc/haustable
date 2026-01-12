@@ -118,6 +118,8 @@ function App() {
             <Route element={<StaffAuthLayout />}>
               <Route path="/staff" element={<StaffDashboard />} />
               <Route path="/staff/orders" element={<StaffLiveOrders />} />
+              <Route path="/staff/history" element={<StaffLiveOrders />} />
+              <Route path="/staff/checkin" element={<StaffLiveOrders />} />
               <Route path="/staff/stock" element={<StockPage />} />
             </Route>
           </Routes>

@@ -48,7 +48,7 @@ const StatCard = ({ title, value, subtext, icon: Icon, alert, loading }) => (
     </div>
 );
 
-const ActionButton = ({ onClick, icon: Icon, title, desc, colorClass, delay }) => (
+const ActionButton = ({ onClick, icon: Icon, title, desc, bgClass, textClass, delay }) => (
     <motion.button 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -56,9 +56,9 @@ const ActionButton = ({ onClick, icon: Icon, title, desc, colorClass, delay }) =
         onClick={onClick}
         className="relative overflow-hidden bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-start gap-4 hover:shadow-lg transition-all active:scale-[0.98] group"
     >
-        <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full opacity-10 transition-transform group-hover:scale-150 ${colorClass}`} />
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${colorClass} bg-opacity-10 text-opacity-100`}>
-             <Icon className={`w-6 h-6 ${colorClass.replace('bg-', 'text-')}`} />
+        <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full opacity-10 transition-transform group-hover:scale-150 ${bgClass}`} />
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${bgClass} bg-opacity-10`}>
+             <Icon className={`w-6 h-6 ${textClass}`} />
         </div>
         <div className="text-left z-10">
             <h3 className="font-bold text-lg leading-tight text-gray-900">{title}</h3>
@@ -263,7 +263,8 @@ export default function StaffDashboard() {
                         title="Live Orders" 
                         desc="Kitchen & Bar View" 
                         icon={ClipboardList} 
-                        colorClass="bg-blue-600" 
+                        bgClass="bg-blue-600"
+                        textClass="text-blue-600"
                         onClick={() => navigate('/staff/orders')}
                         delay={1}
                     />
@@ -271,7 +272,8 @@ export default function StaffDashboard() {
                         title="Inventory" 
                         desc="Manage Stock" 
                         icon={Package} 
-                        colorClass="bg-orange-500" 
+                        bgClass="bg-orange-500"
+                        textClass="text-orange-600"
                         onClick={() => navigate('/staff/stock')}
                         delay={2}
                     />
@@ -279,7 +281,8 @@ export default function StaffDashboard() {
                         title="Check-in" 
                         desc="Scan QR / Seat" 
                         icon={CheckCircle2} 
-                        colorClass="bg-emerald-500" 
+                        bgClass="bg-emerald-500"
+                        textClass="text-emerald-600"
                         onClick={() => navigate('/staff/checkin')}
                         delay={3}
                     />
@@ -287,7 +290,8 @@ export default function StaffDashboard() {
                         title="History" 
                         desc="Past Records" 
                         icon={TrendingUp} 
-                        colorClass="bg-purple-600" 
+                        bgClass="bg-purple-600"
+                        textClass="text-purple-600"
                         onClick={() => navigate('/staff/history')}
                         delay={4}
                     />

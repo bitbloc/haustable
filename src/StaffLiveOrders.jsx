@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom' // Added
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
@@ -148,7 +149,42 @@ export default function StaffLiveOrders() {
     const [isSoundChecked, setIsSoundChecked] = useState(false) 
     
     // Data State
-    const [activeTab, setActiveTab] = useState('live') // 'live' | 'history' | 'schedule' | 'tables'
+import { useNavigate, useLocation } from 'react-router-dom' // Added
+
+// ... inside component ...
+
+export default function StaffLiveOrders() {
+    const navigate = useNavigate()
+    const location = useLocation()
+    
+    // Determine Tab from URL
+    const getTabFromPath = () => {
+        const path = location.pathname
+        if (path.includes('/staff/history')) return 'history'
+        if (path.includes('/staff/checkin')) return 'tables' // Check-in = Tables view
+        return 'live' // Default /staff/orders
+    }
+
+    const [activeTab, setActiveTab] = useState(getTabFromPath()) 
+
+    // Sync state if URL changes (e.g. back button)
+    useEffect(() => {
+        setActiveTab(getTabFromPath())
+    }, [location.pathname])
+
+    // Handler to switch tabs via URL
+    const switchTab = (tab) => {
+        if (tab === 'live') navigate('/staff/orders')
+        if (tab === 'history') navigate('/staff/history')
+        if (tab === 'tables') navigate('/staff/checkin')
+        // if (tab === 'schedule') // keep internal? or map to orders? Let's keep schedule inside Live/Orders for now unless specified.
+        // Actually schedule logic was inside 'live' orders before or separate? 
+        // In previous code: activeTab = 'schedule' was a separate state.
+        // Let's keep 'schedule' as state-only OR map it. 
+        // For simplicity, let's keep 'schedule' as internal state under /staff/orders if user wants, 
+        // BUT the request was specifically for History page.
+        if (tab === 'schedule') setActiveTab('schedule') // Internal Only
+    }
     const [orders, setOrders] = useState([]) // Live pending orders
     const [scheduleOrders, setScheduleOrders] = useState([]) // Upcoming confirmed orders
     const [historyOrders, setHistoryOrders] = useState([]) // History orders
@@ -660,7 +696,8 @@ export default function StaffLiveOrders() {
             )}
             
             {/* AUDITORY & VISUAL ALERT OVERLAY */}
-            {isAuthenticated && orders.some(o => o.status === 'pending') && (
+            {/* AUDITORY & VISUAL ALERT OVERLAY (Simplified) */}
+            {orders.some(o => o.status === 'pending') && (
                 <div className="fixed inset-0 pointer-events-none z-[50] flex items-center justify-center">
                     <div className="absolute inset-0 bg-red-500/10 animate-pulse border-[6px] border-red-500/50"></div>
                 </div>
@@ -744,7 +781,7 @@ export default function StaffLiveOrders() {
                 {/* Tabs */}
                 <div className="flex bg-gray-200 p-1 rounded-xl">
                     <button 
-                        onClick={() => setActiveTab('live')}
+                        onClick={() => switchTab('live')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'live' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <List className="w-4 h-4" />
@@ -759,14 +796,14 @@ export default function StaffLiveOrders() {
                         Schedule
                     </button>
                     <button 
-                        onClick={() => setActiveTab('history')}
+                        onClick={() => switchTab('history')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'history' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <HistoryIcon className="w-4 h-4" />
                         History
                     </button>
                     <button 
-                        onClick={() => setActiveTab('tables')}
+                        onClick={() => switchTab('tables')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'tables' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                     >
                         <LayoutGrid className="w-4 h-4" />
