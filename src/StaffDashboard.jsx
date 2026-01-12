@@ -87,16 +87,61 @@ const SkeletonLoader = () => (
     </div>
 );
 
+const ActivityFeed = ({ activities, loading }) => {
+    if (loading && activities.length === 0) return (
+        <div className="space-y-3">
+             {[1, 2, 3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse"></div>)}
+        </div>
+    );
+
+    if (activities.length === 0) return <div className="text-gray-400 text-sm text-center py-4">No recent activity</div>;
+
+    return (
+        <div className="space-y-3">
+            {activities.map((item, idx) => (
+                <motion.div 
+                    key={`${item.type}-${item.id}`}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            item.type === 'stock' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'
+                        }`}>
+                            {item.type === 'stock' ? <Package className="w-5 h-5" /> : <ClipboardList className="w-5 h-5" />}
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-gray-900">{item.title}</p>
+                            <p className="text-xs text-gray-500">{item.subtitle}</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                             item.statusColor || 'bg-gray-100 text-gray-600'
+                         }`}>
+                             {item.status}
+                         </span>
+                         <p className="text-[10px] text-gray-400 mt-1">{item.time}</p>
+                    </div>
+                </motion.div>
+            ))}
+        </div>
+    );
+};
+
 // --- Main Realtime Dashboard ---
 
 export default function StaffDashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState({ pendingOrders: 0, upcomingBookings: 0, lowStock: 0 });
+    const [recentActivity, setRecentActivity] = useState([]); // Added
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false); // For visual feedback during realtime update
+    const [refreshing, setRefreshing] = useState(false); 
 
-    // 1. Fetch Stats Logic (Separated for reuse)
+    // 1. Fetch Stats & Activity Logic 
     const fetchStats = useCallback(async (isBackgroundRefresh = false) => {
         if (!isBackgroundRefresh) setRefreshing(true);
         try {
@@ -104,30 +149,66 @@ export default function StaffDashboard() {
             const tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
 
-            const [pendingResult, bookingResult, stockResult] = await Promise.all([
-                // Pending Orders
+            // Parallel Fetch: Stats + Activity
+            const [pendingResult, bookingResult, stockResult, recentStock, recentOrders] = await Promise.all([
+                // 1. Stats
                 supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-                // Upcoming Bookings
                 supabase.from('bookings').select('*', { count: 'exact', head: true })
                     .in('status', ['confirmed', 'approved']) 
                     .gte('booking_time', now.toISOString())
                     .lte('booking_time', tomorrow.toISOString()),
-                // Stock
-                supabase.from('stock_items').select('current_quantity, min_stock_threshold')
+                supabase.from('stock_items').select('current_quantity, min_stock_threshold'),
+                
+                // 2. Activity - Stock (Last 5)
+                supabase.from('stock_transactions').select('*, stock_items(name), profiles(display_name)').order('created_at', { ascending: false }).limit(5),
+                
+                // 3. Activity - Orders (Last 5) - Using updated_at for relevance
+                supabase.from('bookings').select('*, tables_layout(table_name), profiles(display_name)').order('updated_at', { ascending: false }).limit(5)
             ]);
 
+            // Process Stats
             let lowStockCount = 0;
             if (stockResult.data) {
                 lowStockCount = stockResult.data.filter(i => 
                     (i.current_quantity || 0) <= (i.min_stock_threshold || 5)
                 ).length;
             }
-
             setStats({
                 pendingOrders: pendingResult.count || 0,
                 upcomingBookings: bookingResult.count || 0,
                 lowStock: lowStockCount
             });
+
+            // Process Activity Feed
+            const stockActivities = (recentStock.data || []).map(s => ({
+                id: s.id,
+                type: 'stock',
+                title: `${s.transaction_type === 'set' ? 'Set' : (s.quantity_change > 0 ? 'Added' : 'Used')} ${s.stock_items?.name || 'Item'}`,
+                subtitle: `by ${s.profiles?.display_name || 'Staff'}`,
+                status: `${s.quantity_change > 0 ? '+' : ''}${s.quantity_change}`,
+                statusColor: s.quantity_change > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
+                time: new Date(s.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: new Date(s.created_at)
+            }));
+
+            const orderActivities = (recentOrders.data || []).map(o => ({
+                id: o.id,
+                type: 'order',
+                title: `Table ${o.tables_layout?.table_name || 'Pickup'}`,
+                subtitle: `Order #${o.id.toString().slice(0,4)}`,
+                status: o.status,
+                statusColor: getStatusColor(o.status),
+                time: new Date(o.updated_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: new Date(o.updated_at)
+            }));
+
+            // Merge & Sort
+            const merged = [...stockActivities, ...orderActivities]
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .slice(0, 10); // Show top 10
+
+            setRecentActivity(merged);
+
         } catch (error) {
             console.error("Stats Fetch Error:", error);
         } finally {
@@ -135,6 +216,16 @@ export default function StaffDashboard() {
             setLoading(false);
         }
     }, []);
+
+    const getStatusColor = (status) => {
+        switch(status) {
+            case 'pending': return 'bg-yellow-100 text-yellow-700';
+            case 'confirmed': return 'bg-blue-100 text-blue-700';
+            case 'completed': return 'bg-green-100 text-green-700';
+            case 'cancelled': return 'bg-red-100 text-red-700';
+            default: return 'bg-gray-100 text-gray-600';
+        }
+    };
 
     // 2. Initial User Load & Setup
     useEffect(() => {
@@ -168,7 +259,15 @@ export default function StaffDashboard() {
                 { event: '*', schema: 'public', table: 'stock_items' }, 
                 (payload) => {
                     console.log('Stock change detected:', payload);
-                    fetchStats(true); // Refetch stats quietly
+                    fetchStats(true); 
+                }
+            )
+            .on(
+                'postgres_changes', 
+                { event: 'INSERT', schema: 'public', table: 'stock_transactions' }, 
+                (payload) => {
+                    console.log('Transaction detected:', payload);
+                    fetchStats(true); 
                 }
             )
             .subscribe();
@@ -295,6 +394,17 @@ export default function StaffDashboard() {
                         onClick={() => navigate('/staff/history')}
                         delay={4}
                     />
+                </div>
+
+                {/* Recent Activity Feed */}
+                <div className="mt-8">
+                     <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Recent Activity</h2>
+                        <button onClick={() => fetchStats(false)} className="text-gray-400 hover:text-gray-600">
+                             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        </button>
+                     </div>
+                     <ActivityFeed activities={recentActivity} loading={loading} />
                 </div>
             </main>
 
