@@ -243,12 +243,18 @@ export default function StaffLiveOrders() {
     }, [])
 
     // --- Debounce Helper ---
-    const debounceRef = useRef(null)
     const debouncedFetchLiveOrders = (silent = false) => {
         if (debounceRef.current) clearTimeout(debounceRef.current)
         debounceRef.current = setTimeout(() => {
             fetchLiveOrders(silent)
         }, 500)
+    }
+
+    const handleLogout = async () => {
+        setLoading(true)
+        localStorage.clear()
+        await supabase.auth.signOut()
+        navigate('/login')
     }
 
     // Authenticated Setup (Renamed to Active Setup)
