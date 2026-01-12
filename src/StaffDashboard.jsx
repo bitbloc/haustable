@@ -14,7 +14,7 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Sub-Components (Keep clean UI) ---
 
