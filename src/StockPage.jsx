@@ -300,7 +300,12 @@ export default function StockPage() {
                             <ArrowLeft className="w-5 h-5 text-gray-600" />
                         </button>
                         
-                        <h1 className="text-xl font-bold flex-1 text-center mr-10">ระบบสต็อก</h1>
+                        <div className="flex-1 flex flex-col items-center justify-center mx-2">
+                            <h1 className="text-lg font-bold leading-tight">ระบบสต็อก</h1>
+                            <p className="text-[10px] text-gray-500 font-medium leading-none">
+                                {currentUser?.user_metadata?.full_name || 'Staff Member'}
+                            </p>
+                        </div>
                         
                         <div className="flex gap-2">
                             {/* Report Button */}
