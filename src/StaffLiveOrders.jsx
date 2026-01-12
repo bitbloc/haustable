@@ -168,7 +168,10 @@ export default function StaffLiveOrders() {
 
     // Handler to switch tabs via URL
     const switchTab = (tab) => {
-        if (tab === 'live') navigate('/staff/orders')
+        if (tab === 'live') {
+            navigate('/staff/orders')
+            setActiveTab('live') 
+        }
         if (tab === 'history') navigate('/staff/history')
         if (tab === 'tables') navigate('/staff/checkin')
         if (tab === 'schedule') setActiveTab('schedule') 
@@ -852,21 +855,22 @@ export default function StaffLiveOrders() {
                                                     #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}
                                                 </span>
                                                 <span className="text-gray-300">|</span>
-                                                {order.booking_type === 'pickup' ? (
-                                                     <span className="text-blue-600 flex items-center gap-2">
-                                                        Pickup ({order.profiles?.display_name || order.profiles?.first_name ? `คุณ ${order.profiles.display_name || order.profiles.first_name}` : order.pickup_contact_name})
-                                                     </span>
-                                                ) : (
-                                                    <span className="text-[#1A1A1A]">
-                                                        Table {order.tables_layout?.table_name || order.table_id || '?'}
-                                                    </span>
-                                                )}
+                                                <span className="text-lg font-bold text-blue-600">
+                                                    {order.booking_type === 'pickup' 
+                                                        ? 'Pick up ( สั่งไว้มารับ )' 
+                                                        : (['steak', 'preorder_steak'].includes(order.booking_type) || (order.booking_type === 'dine_in' && (order.order_items?.some(i => i.menu_items?.name?.toLowerCase().includes('steak')) || customer_note?.includes('Steak'))) ? 'Steak Pre-order' 
+                                                        : `Table ${order.tables_layout?.table_name || order.table_id || '?'}`)
+                                                    }
+                                                </span>
                                                 
                                                 {order.status === 'pending' && <span className="flex h-3 w-3 relative ml-2">
                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                                                 </span>}
                                                 {order.status === 'confirmed' && <span className="bg-black text-white text-xs px-2 py-1 rounded-full font-bold ml-2">Active</span>}
+                                            </div>
+                                            <div className="text-lg font-bold text-gray-700 mb-2">
+                                                 {order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Guest User'}
                                             </div>
                                             <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
                                                 <div className="flex items-center gap-2">
