@@ -235,10 +235,10 @@ export default function StaffLiveOrders() {
             const channel = subscribeRealtime()
             if (isSupported) request()
 
-            // Poll every 10s
+            // Poll every 60s (Safety net)
             pollInterval = setInterval(() => {
                 fetchLiveOrders(true)
-            }, 10000)
+            }, 60000)
 
             return () => {
                 supabase.removeChannel(channel)
@@ -371,11 +371,15 @@ export default function StaffLiveOrders() {
                     }
                 }
             )
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, () => {
-                // If items added, we might need to refresh totals or item lists.
-                // We can't easily know which booking ID from here without fetch.
-                // Fallback to debounced refresh for item changes.
-                debouncedFetchLiveOrders(true)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, async (payload) => {
+                // Determine booking_id from new or old record
+                const bookingId = payload.new?.booking_id || payload.old?.booking_id
+                
+                if (bookingId) {
+                    // Refresh the specific order to reflect item changes
+                    // We pass isNew=false because the order itself exists, just its items changed
+                    await fetchAndAddOrder(bookingId, false)
+                }
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') setIsConnected(true)

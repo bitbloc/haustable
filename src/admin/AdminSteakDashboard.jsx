@@ -224,7 +224,13 @@ export default function AdminSteakDashboard() {
 
         const { data: bookings } = await supabase
             .from('bookings')
-            .select('*, order_items(*, menu_items(*))')
+            .select(`
+                id, pickup_contact_name, booking_time, pax, table_id, customer_note, status,
+                order_items (
+                    quantity, selected_options,
+                    menu_items (name, category)
+                )
+            `)
             .gte('booking_time', start)
             .lte('booking_time', end)
             .neq('status', 'cancelled')
