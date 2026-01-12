@@ -124,6 +124,10 @@ export default function AuthModal({ isOpen, onClose }) {
              setError("Phone Number is required")
              return
         }
+        if (!/^\d{10}$/.test(phone.replace(/[^0-9]/g, ''))) {
+             setError("เบอร์โทรศัพท์ต้องมี 10 หลัก (Phone must be 10 digits)")
+             return
+        }
         
         setLoading(true)
         try {
@@ -204,6 +208,7 @@ export default function AuthModal({ isOpen, onClose }) {
         }
         if (step === 3) {
             if (!phone) return setError("Phone Number is required")
+            if (!/^\d{10}$/.test(phone.replace(/[^0-9]/g, ''))) return setError("เบอร์โทรศัพท์ต้องมี 10 หลัก (Phone must be 10 digits)")
         }
         return true
     }
@@ -434,7 +439,11 @@ export default function AuthModal({ isOpen, onClose }) {
                                     <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                                         <div className="relative">
                                             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                                            <input type="tel" placeholder="Mobile Number (Required)" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" required />
+                                            <input type="tel" placeholder="Mobile Number (08xxxxxxxx)" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-11 text-white focus:border-[#DFFF00] outline-none" required />
+                                        </div>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">LINE</div>
+                                            <input type="text" placeholder="Line ID (Optional)" value={lineUid} onChange={e => setLineUid(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 pl-14 text-white focus:border-[#DFFF00] outline-none" />
                                         </div>
                                     </motion.div>
                                 )}

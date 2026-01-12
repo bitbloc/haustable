@@ -27,13 +27,13 @@ export default function SteakBookingWizard() {
     // Auto-fill Contact Info
     useEffect(() => {
         const fetchUserString = async () => {
-             // 1. Try Supabase Auth
              const { data: { user } } = await supabase.auth.getUser()
              if (user) {
-                 // Try to get metadata
-                 const name = user.user_metadata?.full_name || user.user_metadata?.name || ''
-                 // Phone might be in metadata or phone auth
-                 const phone = user.phone || user.user_metadata?.phone || ''
+                 // Fetch Profile (More accurate than metadata)
+                 const { data: profile } = await supabase.from('profiles').select('display_name, phone_number').eq('id', user.id).single()
+                 
+                 const name = profile?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || ''
+                 const phone = profile?.phone_number || user.phone || user.user_metadata?.phone || ''
                  
                  if (name) dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactName', value: name } })
                  if (phone) dispatch({ type: 'UPDATE_FORM', payload: { field: 'contactPhone', value: phone } })

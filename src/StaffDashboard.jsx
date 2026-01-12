@@ -318,8 +318,9 @@ export default function StaffDashboard() {
                 </div>
 
                 {/* Stats Row */}
-                <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 snap-x hide-scrollbar">
-                    <div className="snap-center">
+                {/* Stats Grid (Bento Style) */}
+                <div className="grid grid-cols-2 gap-3 px-6 pb-4">
+                    <div className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                         <StatCard 
                             title="New Orders" 
                             value={stats.pendingOrders} 
@@ -328,7 +329,7 @@ export default function StaffDashboard() {
                             loading={refreshing && stats.pendingOrders === 0}
                         />
                     </div>
-                    <div className="snap-center">
+                    <div className="rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                         <StatCard 
                             title="Reservations" 
                             value={stats.upcomingBookings} 
@@ -337,15 +338,18 @@ export default function StaffDashboard() {
                             loading={refreshing && stats.upcomingBookings === 0}
                         />
                     </div>
-                    <div className="snap-center">
-                        <StatCard 
-                            title="Low Stock" 
-                            value={stats.lowStock} 
-                            subtext="Items critical" 
-                            icon={AlertTriangle}
-                            alert={stats.lowStock > 0}
-                            loading={refreshing && stats.lowStock === 0}
-                        />
+                    {/* Full Width for Low Stock */}
+                    <div className="col-span-2 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div className="h-full">
+                            <StatCard 
+                                title="Low Stock" 
+                                value={stats.lowStock} 
+                                subtext="Items critical (Need Restock)" 
+                                icon={AlertTriangle}
+                                alert={stats.lowStock > 0}
+                                loading={refreshing && stats.lowStock === 0}
+                            />
+                        </div>
                     </div>
                 </div>
             </header>
