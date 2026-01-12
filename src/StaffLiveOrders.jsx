@@ -148,12 +148,6 @@ export default function StaffLiveOrders() {
     // Auth State (Handled by Layout, but we keep Sound Check)
     const [isSoundChecked, setIsSoundChecked] = useState(false) 
     
-    // Data State
-import { useNavigate, useLocation } from 'react-router-dom' // Added
-
-// ... inside component ...
-
-export default function StaffLiveOrders() {
     const navigate = useNavigate()
     const location = useLocation()
     
@@ -161,13 +155,13 @@ export default function StaffLiveOrders() {
     const getTabFromPath = () => {
         const path = location.pathname
         if (path.includes('/staff/history')) return 'history'
-        if (path.includes('/staff/checkin')) return 'tables' // Check-in = Tables view
-        return 'live' // Default /staff/orders
+        if (path.includes('/staff/checkin')) return 'tables' 
+        return 'live' 
     }
 
-    const [activeTab, setActiveTab] = useState(getTabFromPath()) 
+    const [activeTab, setActiveTab] = useState(getTabFromPath())
 
-    // Sync state if URL changes (e.g. back button)
+    // Sync state if URL changes
     useEffect(() => {
         setActiveTab(getTabFromPath())
     }, [location.pathname])
@@ -177,13 +171,7 @@ export default function StaffLiveOrders() {
         if (tab === 'live') navigate('/staff/orders')
         if (tab === 'history') navigate('/staff/history')
         if (tab === 'tables') navigate('/staff/checkin')
-        // if (tab === 'schedule') // keep internal? or map to orders? Let's keep schedule inside Live/Orders for now unless specified.
-        // Actually schedule logic was inside 'live' orders before or separate? 
-        // In previous code: activeTab = 'schedule' was a separate state.
-        // Let's keep 'schedule' as state-only OR map it. 
-        // For simplicity, let's keep 'schedule' as internal state under /staff/orders if user wants, 
-        // BUT the request was specifically for History page.
-        if (tab === 'schedule') setActiveTab('schedule') // Internal Only
+        if (tab === 'schedule') setActiveTab('schedule') 
     }
     const [orders, setOrders] = useState([]) // Live pending orders
     const [scheduleOrders, setScheduleOrders] = useState([]) // Upcoming confirmed orders
