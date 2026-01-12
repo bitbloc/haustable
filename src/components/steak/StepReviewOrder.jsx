@@ -103,10 +103,10 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                                     <div className="font-mono">+฿{flowerPrice.toLocaleString()}</div>
                                 </div>
                              )}
-                             {winePreference && winePreference.price > 0 && (
+                             {winePreference && (
                                 <div className="flex justify-between items-center text-sm">
                                     <div className="flex items-center gap-2"><Wine size={14} className="text-purple-400" /> {winePreference.name}</div>
-                                    <div className="font-mono">+฿{winePrice.toLocaleString()}</div>
+                                    <div className="font-mono">{winePrice > 0 ? `+฿${winePrice.toLocaleString()}` : 'Free'}</div>
                                 </div>
                              )}
                         </div>

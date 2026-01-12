@@ -16,7 +16,7 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                 'steak_addon_cake_enabled', 'steak_addon_flower_enabled',
                 'steak_addon_cake_name', 'steak_addon_flower_name',
                 'steak_qt_dietary_label', 'steak_qt_dietary_placeholder',
-                'steak_wine_list', 'steak_corkage_fee'
+                'steak_wine_list', 'steak_corkage_fee', 'steak_corkage_price'
             ])
             if (data) {
                 const map = data.reduce((acc, item) => ({...acc, [item.key]: item.value}), {})
@@ -185,13 +185,15 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                     })}
 
                     <button
-                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: { name: 'BYOB', price: 0, type: 'corkage' } } })}
+                        onClick={() => dispatch({ type: 'UPDATE_FORM', payload: { field: 'winePreference', value: { name: 'นำไวน์มาเอง (BYOB)', price: parseInt(config.steak_corkage_price || 0), type: 'corkage' } } })}
                         className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${winePreference?.type === 'corkage' ? 'bg-[#1a1a1a] text-white border-black' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200'}`}
                     >
                         <Wine size={24} />
                         <div className="text-left">
                             <div className="font-bold text-sm">นำไวน์มาเอง (BYOB)</div>
-                            <div className="text-xs opacity-70">{config.steak_corkage_fee || 'Corkage Fee 100 THB/Bottle'}</div>
+                            <div className="text-xs opacity-70">
+                                {config.steak_corkage_fee || 'Corkage Fee'}: {parseInt(config.steak_corkage_price || 0).toLocaleString()} THB
+                            </div>
                         </div>
                     </button>
 

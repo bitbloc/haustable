@@ -60,7 +60,8 @@ export default function AdminSettings() {
         admin_phone_contact: '',
         staff_pin_code: '',
         contact_phone: '',
-        contact_map_url: ''
+        contact_map_url: '',
+        steak_corkage_price: '0'
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -916,16 +917,28 @@ export default function AdminSettings() {
                         + Add New Wine
                     </button>
 
-                    {/* Keep Corkage Config */}
-                    <div className="pt-2">
-                         <label className="block text-xs text-gray-400 mb-1">Corkage Fee (Text)</label>
-                         <input 
-                            value={settings.steak_corkage_fee || ''} 
-                            onChange={(e) => setSettings({...settings, steak_corkage_fee: e.target.value})}
-                            onBlur={() => handleSave('steak_corkage_fee', settings.steak_corkage_fee)}
-                            placeholder="Corkage Fee 100 THB/Bottle"
-                            className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
-                        />
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="pt-2">
+                             <label className="block text-xs text-gray-400 mb-1">Corkage Fee (Label)</label>
+                             <input 
+                                value={settings.steak_corkage_fee || ''} 
+                                onChange={(e) => setSettings({...settings, steak_corkage_fee: e.target.value})}
+                                onBlur={() => handleSave('steak_corkage_fee', settings.steak_corkage_fee)}
+                                placeholder="Corkage Fee"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                            />
+                        </div>
+                        <div className="pt-2">
+                             <label className="block text-xs text-gray-400 mb-1">Corkage Price (THB)</label>
+                             <input 
+                                type="number"
+                                value={settings.steak_corkage_price || '0'} 
+                                onChange={(e) => setSettings({...settings, steak_corkage_price: e.target.value})}
+                                onBlur={() => handleSave('steak_corkage_price', settings.steak_corkage_price)}
+                                placeholder="0"
+                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                            />
+                        </div>
                     </div>
                 </div>
 

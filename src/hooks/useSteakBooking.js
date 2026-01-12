@@ -231,7 +231,7 @@ export function useSteakBooking() {
             const totalAmount = cartTotal + cakeTotal + flowerTotal + wineTotal
 
             // 3. Construct Customer Note
-            const wineText = state.winePreference ? `${state.winePreference.name} (+${state.winePreference.price})` : 'No Wine'
+            const wineText = state.winePreference ? `${state.winePreference.name}${state.winePreference.price > 0 ? ` (+${state.winePreference.price})` : ''}` : 'No Wine'
             
             const details = [
                 `[Steak Pre-order]`,
