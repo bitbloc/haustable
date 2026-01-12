@@ -1021,9 +1021,10 @@ export default function StaffLiveOrders() {
                                                         <span>#{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0, 4)}</span>
                                                         <span className="text-lg font-bold text-gray-400">|</span>
                                                         <span className="text-lg font-bold text-blue-600">
-                                                            {order.booking_type === 'pickup' 
+                                                                    {order.booking_type === 'pickup' 
                                                                 ? 'Pick up ( สั่งไว้มารับ )' 
-                                                                : (order.booking_type === 'preorder_steak' ? 'Pre-order Steak' : 'Table : จองโต๊ะ')
+                                                                : (['steak', 'preorder_steak'].includes(order.booking_type) || (order.booking_type === 'dine_in' && (order.order_items?.some(i => i.menu_items?.name?.toLowerCase().includes('steak')) || order.customer_note?.includes('Steak'))) ? 'Steak Pre-order' 
+                                                                : 'Table : จองโต๊ะ')
                                                             }
                                                         </span>
                                                      </div>

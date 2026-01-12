@@ -67,7 +67,7 @@ export function useBooking() {
             const { data, error } = await supabase
                 .from('bookings')
                 .select('table_id, booking_time, end_time, booking_type')
-                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
 

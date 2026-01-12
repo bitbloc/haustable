@@ -8,7 +8,7 @@ export function useUserHistory(session) {
 
     // Derived state
     const activeOrders = orders.filter(o => 
-        ['pending', 'confirmed', 'preparing', 'seated', 'ready'].includes(o.status?.toLowerCase())
+        ['pending', 'confirmed', 'preparing', 'seated', 'ready', 'approved', 'paid'].includes(o.status?.toLowerCase())
     )
     const pastOrders = orders.filter(o => 
         ['completed', 'cancelled', 'rejected', 'void'].includes(o.status?.toLowerCase())

@@ -54,7 +54,7 @@ export default function TableManager({ isStaffView = false }) {
             const { data: bookingsData } = await supabase
                 .from('bookings')
                 .select('*, profiles(display_name, phone_number)')
-                .in('status', ['confirmed', 'pending', 'seated', 'ready'])
+                .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', start)
                 .lte('booking_time', end)
             
@@ -86,7 +86,7 @@ export default function TableManager({ isStaffView = false }) {
             // Also check if any booking in the list is walk_in? No, currentBooking is the one overlapping.
             return {
                 status: 'occupied',
-                type: currentBooking.booking_type === 'walk_in' ? 'walk_in' : 'online',
+                type: ['steak', 'preorder_steak'].includes(currentBooking.booking_type) ? 'steak' : (currentBooking.booking_type === 'walk_in' ? 'walk_in' : 'online'),
                 booking: currentBooking
             }
         }
@@ -203,6 +203,7 @@ export default function TableManager({ isStaffView = false }) {
         
         if (isOccupied) {
             if (statusData.type === 'walk_in') bgColor = '#F97316' // Orange (Walk-in)
+            else if (statusData.type === 'steak') bgColor = '#DFFF00' // Acid Green (Steak)
             else bgColor = '#EF4444' // Red (Online)
         } else if (isUpcoming) {
             bgColor = '#EAB308' // Yellow (Warning)

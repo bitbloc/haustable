@@ -163,7 +163,7 @@ export function useSteakBooking() {
         const { data: bookings } = await supabase
             .from('bookings')
             .select('table_id, booking_time, booking_type')
-            .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+            .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
             .gte('booking_time', dayStart.toISOString())
             .lte('booking_time', dayEnd.toISOString())
         
@@ -244,8 +244,11 @@ export function useSteakBooking() {
             ].filter(Boolean).join('\n')
 
             // 3. Create Booking
+            // Get Current User
+            const { data: { user } } = await supabase.auth.getUser()
+
             const bookingPayload = {
-                booking_type: 'dine_in', // Or 'steak_preorder' if schema allows, but 'dine_in' is safer for now
+                booking_type: 'steak', // Changed from 'dine_in' to 'steak' for explicit tracking
                 status: 'pending', // Pending payment check
                 booking_time: toThaiISO(state.date, state.time),
                 table_id: state.selectedTable.id,
@@ -255,7 +258,8 @@ export function useSteakBooking() {
                 pickup_contact_phone: state.contactPhone,
                 customer_note: details,
                 pax: state.pax,
-                tracking_token: crypto.randomUUID()
+                tracking_token: crypto.randomUUID(),
+                user_id: user?.id || null // Link to user if logged in
             }
 
             const { data: booking, error: bookingError } = await supabase
