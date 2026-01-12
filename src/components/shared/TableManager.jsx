@@ -265,7 +265,14 @@ export default function TableManager({ isStaffView = false }) {
                 </div>
             </div>
 
-            <TransformWrapper initialScale={0.8} minScale={0.2} maxScale={4} centerOnInit={true}>
+            <TransformWrapper 
+                initialScale={0.8} 
+                minScale={0.2} 
+                maxScale={4} 
+                centerOnInit={true} 
+                limitToBounds={false}
+                panning={{ velocityDisabled: false }}
+            >
                 {({ zoomIn, zoomOut, resetTransform }) => (
                     <>
                          <div className="absolute bottom-4 right-4 z-10 flex gap-2">
