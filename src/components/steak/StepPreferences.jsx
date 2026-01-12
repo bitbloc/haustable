@@ -13,6 +13,8 @@ export default function StepPreferences({ state, dispatch, onNext }) {
         const fetchConfig = async () => {
             const { data } = await supabase.from('app_settings').select('*').in('key', [
                 'steak_addon_cake_price', 'steak_addon_flower_price',
+                'steak_addon_cake_enabled', 'steak_addon_flower_enabled',
+                'steak_addon_cake_name', 'steak_addon_flower_name',
                 'steak_qt_dietary_label', 'steak_qt_dietary_placeholder',
                 'steak_wine_list', 'steak_corkage_fee'
             ])
@@ -35,7 +37,9 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                         field: 'config', 
                         value: {
                             cakePrice: parseInt(map.steak_addon_cake_price || 0),
-                            flowerPrice: parseInt(map.steak_addon_flower_price || 0)
+                            flowerPrice: parseInt(map.steak_addon_flower_price || 0),
+                            cakeName: map.steak_addon_cake_name || 'Cake Service',
+                            flowerName: map.steak_addon_flower_name || 'Flower Service'
                         } 
                     } 
                 })
@@ -79,64 +83,68 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                  <h3 className="text-sm font-bold text-gray-900 mb-4">รายละเอียดเพิ่มเติม <span className="text-xs text-gray-400 font-normal uppercase">(Special Details)</span></h3>
                  
                  {/* Cake Add-on */}
-                 <div className={`p-4 rounded-xl border transition-all ${addCake ? 'bg-white border-black ring-1 ring-black' : 'bg-white border-gray-100'}`}>
-                    <label className="flex items-center gap-3 cursor-pointer mb-2">
-                        <input 
-                            type="checkbox" 
-                            checked={addCake} 
-                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'addCake', value: e.target.checked } })}
-                            className="w-5 h-5 accent-black"
-                        />
-                        <div>
-                            <span className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                                <Cake size={16} /> รับเค้ก (Receive Cake)
-                            </span>
-                            <span className="text-xs text-gray-500 block">
-                                +{parseInt(config.steak_addon_cake_price || 1000).toLocaleString()} THB (Adjustable)
-                            </span>
-                        </div>
-                    </label>
-                    
-                    {addCake && (
-                        <input 
-                            type="text" 
-                            value={cakeDetail} 
-                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'cakeDetail', value: e.target.value } })}
-                            placeholder="รายละเอียดเค้ก (Cake Message / Details)..."
-                            className="w-full mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-gray-300 transition-colors"
-                        />
-                    )}
-                 </div>
+                 {config.steak_addon_cake_enabled !== 'false' && (
+                     <div className={`p-4 rounded-xl border transition-all ${addCake ? 'bg-white border-black ring-1 ring-black' : 'bg-white border-gray-100'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                            <input 
+                                type="checkbox" 
+                                checked={addCake} 
+                                onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'addCake', value: e.target.checked } })}
+                                className="w-5 h-5 accent-black"
+                            />
+                            <div>
+                                <span className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                                    <Cake size={16} /> {config.steak_addon_cake_name || 'รับเค้ก (Receive Cake)'}
+                                </span>
+                                <span className="text-xs text-gray-500 block">
+                                    +{parseInt(config.steak_addon_cake_price || 1000).toLocaleString()} THB (Adjustable)
+                                </span>
+                            </div>
+                        </label>
+                        
+                        {addCake && (
+                            <input 
+                                type="text" 
+                                value={cakeDetail} 
+                                onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'cakeDetail', value: e.target.value } })}
+                                placeholder="รายละเอียดเค้ก (Cake Message / Details)..."
+                                className="w-full mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-gray-300 transition-colors"
+                            />
+                        )}
+                     </div>
+                 )}
 
                  {/* Flower Add-on */}
-                 <div className={`p-4 rounded-xl border transition-all ${addFlower ? 'bg-white border-black ring-1 ring-black' : 'bg-white border-gray-100'}`}>
-                    <label className="flex items-center gap-3 cursor-pointer mb-2">
-                        <input 
-                            type="checkbox" 
-                            checked={addFlower} 
-                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'addFlower', value: e.target.checked } })}
-                            className="w-5 h-5 accent-black"
-                        />
-                        <div>
-                            <span className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                                <Heart size={16} /> รับดอกไม้ (Receive Flower)
-                            </span>
-                             <span className="text-xs text-gray-500 block">
-                                +{parseInt(config.steak_addon_flower_price || 1000).toLocaleString()} THB (Adjustable)
-                            </span>
-                        </div>
-                    </label>
-                    
-                    {addFlower && (
-                        <input 
-                            type="text" 
-                            value={flowerDetail} 
-                            onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'flowerDetail', value: e.target.value } })}
-                            placeholder="ประเภท/สีดอกไม้ หรือข้อความ (Flower Type/Color)..."
-                            className="w-full mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-gray-300 transition-colors"
-                        />
-                    )}
-                 </div>
+                 {config.steak_addon_flower_enabled !== 'false' && (
+                     <div className={`p-4 rounded-xl border transition-all ${addFlower ? 'bg-white border-black ring-1 ring-black' : 'bg-white border-gray-100'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                            <input 
+                                type="checkbox" 
+                                checked={addFlower} 
+                                onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'addFlower', value: e.target.checked } })}
+                                className="w-5 h-5 accent-black"
+                            />
+                            <div>
+                                <span className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                                    <Heart size={16} /> {config.steak_addon_flower_name || 'รับดอกไม้ (Receive Flower)'}
+                                </span>
+                                 <span className="text-xs text-gray-500 block">
+                                    +{parseInt(config.steak_addon_flower_price || 1000).toLocaleString()} THB (Adjustable)
+                                </span>
+                            </div>
+                        </label>
+                        
+                        {addFlower && (
+                            <input 
+                                type="text" 
+                                value={flowerDetail} 
+                                onChange={e => dispatch({ type: 'UPDATE_FORM', payload: { field: 'flowerDetail', value: e.target.value } })}
+                                placeholder="ประเภท/สีดอกไม้ หรือข้อความ (Flower Type/Color)..."
+                                className="w-full mt-2 p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm outline-none focus:border-gray-300 transition-colors"
+                            />
+                        )}
+                     </div>
+                 )}
 
                  {/* Dietary */}
                  <div className="bg-white p-4 rounded-xl border border-gray-100 focus-within:ring-1 focus-within:ring-black">

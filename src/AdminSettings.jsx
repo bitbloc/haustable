@@ -43,6 +43,10 @@ export default function AdminSettings() {
         shop_mode_steak: 'auto',
         steak_addon_cake_price: '1000',
         steak_addon_flower_price: '1000',
+        steak_addon_cake_enabled: 'true',
+        steak_addon_flower_enabled: 'true',
+        steak_addon_cake_name: 'รับเค้ก (Receive Cake)',
+        steak_addon_flower_name: 'รับดอกไม้ (Receive Flower)',
         steak_wine_list: '[]', // JSON string
         opening_time: '10:00',
         closing_time: '20:00',
@@ -737,30 +741,100 @@ export default function AdminSettings() {
                 </div>
 
                 {/* Add-ons Configuration (Cake & Flower) */}
-                <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-6 pt-6 border-t border-white/10">
                     <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Add-ons Configuration</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs text-gray-400 mb-1">Cake Service Price (THB)</label>
-                            <input 
-                                type="number"
-                                value={settings.steak_addon_cake_price || ''} 
-                                onChange={(e) => setSettings({...settings, steak_addon_cake_price: e.target.value})}
-                                onBlur={() => handleSave('steak_addon_cake_price', settings.steak_addon_cake_price)}
-                                placeholder="1000"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
-                            />
+                    
+                    {/* Cake Config */}
+                    <div className="bg-[#1a1a1a] p-4 rounded-2xl border border-white/5">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.steak_addon_cake_enabled === 'true' ? 'bg-[#DFFF00]/20 text-[#DFFF00]' : 'bg-gray-800 text-gray-500'}`}>
+                                    <Cake size={16} />
+                                </div>
+                                <span className={`text-sm font-bold ${settings.steak_addon_cake_enabled === 'true' ? 'text-white' : 'text-gray-500'}`}>
+                                    Add-on #1 (Default: Cake)
+                                </span>
+                            </div>
+                             <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer" 
+                                    checked={settings.steak_addon_cake_enabled === 'true'} 
+                                    onChange={e => handleSave('steak_addon_cake_enabled', e.target.checked ? 'true' : 'false')} 
+                                />
+                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#DFFF00]"></div>
+                            </label>
                         </div>
-                        <div>
-                            <label className="block text-xs text-gray-400 mb-1">Flower Service Price (THB)</label>
-                            <input 
-                                type="number"
-                                value={settings.steak_addon_flower_price || ''} 
-                                onChange={(e) => setSettings({...settings, steak_addon_flower_price: e.target.value})}
-                                onBlur={() => handleSave('steak_addon_flower_price', settings.steak_addon_flower_price)}
-                                placeholder="1000"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
-                            />
+                        
+                        <div className={`grid md:grid-cols-2 gap-4 transition-all ${settings.steak_addon_cake_enabled === 'true' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                            <div>
+                                 <label className="block text-xs text-gray-400 mb-1">Display Name (Label)</label>
+                                 <input 
+                                    value={settings.steak_addon_cake_name || ''} 
+                                    onChange={(e) => setSettings({...settings, steak_addon_cake_name: e.target.value})}
+                                    onBlur={() => handleSave('steak_addon_cake_name', settings.steak_addon_cake_name)}
+                                    placeholder="e.g. รับเค้ก (Receive Cake)"
+                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                 />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Price (THB)</label>
+                                <input 
+                                    type="number"
+                                    value={settings.steak_addon_cake_price || ''} 
+                                    onChange={(e) => setSettings({...settings, steak_addon_cake_price: e.target.value})}
+                                    onBlur={() => handleSave('steak_addon_cake_price', settings.steak_addon_cake_price)}
+                                    placeholder="1000"
+                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Flower Config */}
+                    <div className="bg-[#1a1a1a] p-4 rounded-2xl border border-white/5">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.steak_addon_flower_enabled === 'true' ? 'bg-[#DFFF00]/20 text-[#DFFF00]' : 'bg-gray-800 text-gray-500'}`}>
+                                    <Heart size={16} />
+                                </div>
+                                <span className={`text-sm font-bold ${settings.steak_addon_flower_enabled === 'true' ? 'text-white' : 'text-gray-500'}`}>
+                                    Add-on #2 (Default: Flower)
+                                </span>
+                            </div>
+                             <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer" 
+                                    checked={settings.steak_addon_flower_enabled === 'true'} 
+                                    onChange={e => handleSave('steak_addon_flower_enabled', e.target.checked ? 'true' : 'false')} 
+                                />
+                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#DFFF00]"></div>
+                            </label>
+                        </div>
+                        
+                        <div className={`grid md:grid-cols-2 gap-4 transition-all ${settings.steak_addon_flower_enabled === 'true' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                            <div>
+                                 <label className="block text-xs text-gray-400 mb-1">Display Name (Label)</label>
+                                 <input 
+                                    value={settings.steak_addon_flower_name || ''} 
+                                    onChange={(e) => setSettings({...settings, steak_addon_flower_name: e.target.value})}
+                                    onBlur={() => handleSave('steak_addon_flower_name', settings.steak_addon_flower_name)}
+                                    placeholder="e.g. รับดอกไม้ (Receive Flower)"
+                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                 />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Price (THB)</label>
+                                <input 
+                                    type="number"
+                                    value={settings.steak_addon_flower_price || ''} 
+                                    onChange={(e) => setSettings({...settings, steak_addon_flower_price: e.target.value})}
+                                    onBlur={() => handleSave('steak_addon_flower_price', settings.steak_addon_flower_price)}
+                                    placeholder="1000"
+                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

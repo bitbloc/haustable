@@ -93,13 +93,13 @@ export default function StepReviewOrder({ state, dispatch, onSubmit }) {
                         <div className="border-t border-dashed my-4 pt-4 space-y-2">
                              {addCake && (
                                 <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2"><Cake size={14} className="text-pink-400" /> Cake Service</div>
+                                    <div className="flex items-center gap-2"><Cake size={14} className="text-pink-400" /> {config?.cakeName || 'Cake Service'}</div>
                                     <div className="font-mono">+฿{cakePrice.toLocaleString()}</div>
                                 </div>
                              )}
                              {addFlower && (
                                 <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2"><Heart size={14} className="text-red-400" /> Flower Service</div>
+                                    <div className="flex items-center gap-2"><Heart size={14} className="text-red-400" /> {config?.flowerName || 'Flower Service'}</div>
                                     <div className="font-mono">+฿{flowerPrice.toLocaleString()}</div>
                                 </div>
                              )}
