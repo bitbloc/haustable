@@ -3,7 +3,8 @@ import { supabase } from './lib/supabaseClient';
 import { 
     ClipboardList, 
     Package, 
-    LogOut, 
+    ExternalLink,
+    LogOut,
     Calendar,
     ArrowRight,
     UserCircle,
@@ -312,9 +313,18 @@ export default function StaffDashboard() {
                         </div>
                     </div>
                     
-                    <button onClick={handleLogout} className="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
-                        <LogOut className="w-5 h-5" />
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => window.location.href = '/booking'}
+                            className="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full hover:bg-blue-50 hover:text-blue-500 transition-colors"
+                            title="Go to Live Booking"
+                        >
+                            <ExternalLink className="w-5 h-5" />
+                        </button>
+                        <button onClick={handleLogout} className="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
+                            <LogOut className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Row */}

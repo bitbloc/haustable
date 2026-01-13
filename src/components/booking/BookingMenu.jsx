@@ -88,7 +88,17 @@ export default function BookingMenu() {
             <div className="flex-1 overflow-y-auto pr-1 pb-32">
                 <div className={`grid gap-3 ${viewMode === 'grid' ? 'grid-cols-2' : 'grid-cols-1'} `}>
                     {filteredMenu.map(item => (
-                        <MenuCard key={item.id} item={item} mode={viewMode} onAdd={addToCart} onRemove={removeFromCart} qty={cart.find(c => c.id === item.id)?.qty || 0} t={t} />
+                        <MenuCard 
+                            key={item.id} 
+                            item={item} 
+                            mode={viewMode} 
+                            onAdd={addToCart} 
+                            onRemove={removeFromCart} 
+                            qty={cart.find(c => c.id === item.id)?.qty || 0} 
+                            t={t}
+                            sideDishes={item.category === 'Steak Pre-order' || item.category === 'Steak' ? settings.sideDishes : []}
+                            sideDishEnabled={settings.sideDishEnabled}
+                        />
                     ))}
                     {filteredMenu.length === 0 && (
                         <div className="col-span-full py-12 text-center text-gray-400 text-sm flex flex-col items-center">

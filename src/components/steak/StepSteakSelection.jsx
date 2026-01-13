@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Info, Plus, Minus, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useBookingContext } from '../../context/BookingContext'
 
 // --- Internal Component: MeatSelectionCard ---
-const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
+const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions, sideDishes, sideDishEnabled }) => {
     const isSoldOut = item.is_sold_out
     const [showDoneness, setShowDoneness] = useState(false)
     const [selectedDoneness, setSelectedDoneness] = useState(null)
@@ -35,6 +36,29 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions }) => {
                     <div className="absolute top-3 right-3 bg-[#DFFF00] text-black font-bold w-8 h-8 rounded-full flex items-center justify-center shadow-lg text-sm z-10">
                         {qty}
                     </div>
+                )}
+                
+                {/* Visual Balance: Side Dish Fix Thumbnails (Overlay at bottom) */}
+                {sideDishEnabled && sideDishes && sideDishes.length > 0 && (
+                     <div className="absolute bottom-3 left-3 right-3 flex gap-2 z-20">
+                        {sideDishes.map((sd) => (
+                            <div key={sd.id} className="relative group/sd cursor-help">
+                                {/* Thumbnail with thin border/opacity */}
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-white/30 overflow-hidden bg-black/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-110">
+                                    <img src={sd.url} alt={sd.name} className="w-full h-full object-cover opacity-90 hover:opacity-100" />
+                                </div>
+                                
+                                {/* The 'Surprise' Tooltip (Pure CSS/Motion) */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[120px] pointer-events-none opacity-0 group-hover/sd:opacity-100 transition-all duration-300 transform translate-y-2 group-hover/sd:translate-y-0 text-center z-30">
+                                    <div className="bg-black/80 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-xl whitespace-nowrap">
+                                        {sd.name}
+                                        {/* Little triangular arrow */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                     </div>
                 )}
             </div>
 
@@ -99,6 +123,7 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
     const [steaks, setSteaks] = useState([])
     const [donenessOpts, setDonenessOpts] = useState([])
     const [loading, setLoading] = useState(true)
+    const { state: { settings } } = useBookingContext() // Get Settings
 
     // Load Data
     useEffect(() => {
@@ -157,6 +182,8 @@ export default function StepSteakSelection({ state, dispatch, onNext }) {
                         donenessOptions={donenessOpts}
                         qty={getItemQty(item.id)}
                         onAdd={(payload) => dispatch({ type: 'ADD_TO_CART', payload })}
+                        sideDishes={settings.sideDishes}
+                        sideDishEnabled={settings.sideDishEnabled}
                     />
                 ))}
             </div>

@@ -53,6 +53,17 @@ export function BookingProvider({ children }) {
                     if (map.booking_min_advance_hours) settings.minAdvanceHours = Number(map.booking_min_advance_hours)
                     if (map.booking_time_slots) settings.bookingTimeSlots = map.booking_time_slots.split(',').map(s => s.trim())
                     if (map.alert_sound_url) settings.soundAlertUrl = `${map.alert_sound_url}?t=${Date.now()}`
+                    
+                    // Side Dishes Config (JSON)
+                    if (map.side_dish_config) {
+                        try {
+                           settings.sideDishes = JSON.parse(map.side_dish_config)
+                        } catch (e) {
+                            console.error("Failed to parse side_dish_config", e)
+                            settings.sideDishes = []
+                        }
+                    }
+                    if (map.side_dish_enabled) settings.sideDishEnabled = map.side_dish_enabled === 'true'
                 }
 
                 // User Profile

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Package, ChefHat, Calendar, AlertTriangle, Edit2, X, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
+import { Package, ChefHat, Calendar, AlertTriangle, Edit2, X, Save, Plus, Trash2, Upload, Image as ImageIcon, GripVertical, Eye, EyeOff } from 'lucide-react'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Utility: Resize Image
 const resizeImage = (file, maxWidth = 800) => {
@@ -38,6 +41,43 @@ const resizeImage = (file, maxWidth = 800) => {
         }
     })
 }
+
+
+// Draggable Side Dish Item
+const SortableSideDishItem = ({ id, item, onRemove }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({ id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="relative group w-32 h-32 bg-gray-800 rounded-xl overflow-hidden border border-white/10">
+            <img src={item.url} alt="Side Dish" className="w-full h-full object-cover" />
+            
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 bg-white/10 rounded-full hover:bg-white/20">
+                    <GripVertical size={16} />
+                </div>
+                <button onClick={() => onRemove(id)} className="p-1 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-colors">
+                    <Trash2 size={16} />
+                </button>
+            </div>
+            {/* Label */}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-[10px] text-center py-1 truncate px-1">
+                {item.name}
+            </div>
+        </div>
+    );
+};
 
 // Modal Component for Editing Steak
 const EditSteakModal = ({ isOpen, onClose, steak, onSave, onDelete }) => {
@@ -207,6 +247,19 @@ export default function AdminSteakDashboard() {
     const [isEditOpen, setIsEditOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
 
+    // Side Dish State
+    const [sideDishes, setSideDishes] = useState([])
+    const [sideDishEnabled, setSideDishEnabled] = useState(false)
+    const [isSavingSides, setIsSavingSides] = useState(false)
+    
+    // DnD Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     const fetchSteaks = async () => {
         const { data } = await supabase.from('menu_items')
             .select('*')
@@ -245,8 +298,25 @@ export default function AdminSteakDashboard() {
         setPrepList(list)
     }
 
+    const fetchSideDishes = async () => {
+        const { data } = await supabase.from('app_settings').select('*').in('key', ['side_dish_config', 'side_dish_enabled'])
+        if (data) {
+            const config = data.find(s => s.key === 'side_dish_config')
+            const enabled = data.find(s => s.key === 'side_dish_enabled')
+            
+            if (config) {
+                try {
+                    setSideDishes(JSON.parse(config.value))
+                } catch (e) { console.error("Parse error", e) }
+            }
+            if (enabled) {
+                setSideDishEnabled(enabled.value === 'true')
+            }
+        }
+    }
+
     useEffect(() => {
-        Promise.all([fetchSteaks(), fetchPrepList()]).then(() => setLoading(false))
+        Promise.all([fetchSteaks(), fetchPrepList(), fetchSideDishes()]).then(() => setLoading(false))
     }, [])
 
     const toggleStock = async (id, currentStatus) => {
@@ -331,6 +401,98 @@ export default function AdminSteakDashboard() {
         }
     }
 
+    // Side Dish Handlers
+    const handleSideDishUpload = async (e) => {
+        const files = Array.from(e.target.files)
+        if (files.length === 0) return
+        
+        setIsSavingSides(true)
+        try {
+            const newItems = []
+            for (const file of files) {
+                const resized = await resizeImage(file, 400) // Small thumbnail needed
+                const fileName = `sidedish_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
+                
+                const { error } = await supabase.storage.from('public-assets').upload(fileName, resized)
+                if (error) throw error
+                
+                const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
+                
+                // Prompt for name (simple for now, default to filename or ingredient)
+                // In a real app we might want a modal. For now, empty or basic.
+                // We'll add a way to rename later if needed or just use tooltip same as name.
+                // Actually the user wants "Hidden Joy" tooltip.
+                
+                newItems.push({
+                    id: crypto.randomUUID(),
+                    url: publicUrl,
+                    name: file.name.split('.')[0], // Default name
+                    active: true
+                })
+            }
+            
+            const updatedList = [...sideDishes, ...newItems]
+            setSideDishes(updatedList) // Optimistic
+            await saveSideDishConfig(updatedList)
+            
+        } catch (err) {
+            alert("Upload failed: " + err.message)
+        } finally {
+            setIsSavingSides(false)
+        }
+    }
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (active.id !== over.id) {
+            const oldIndex = sideDishes.findIndex((item) => item.id === active.id);
+            const newIndex = sideDishes.findIndex((item) => item.id === over.id);
+            const newOrder = arrayMove(sideDishes, oldIndex, newIndex)
+            setSideDishes(newOrder);
+            saveSideDishConfig(newOrder);
+        }
+    };
+    
+    const handleRemoveSideDish = (id) => {
+        if(!confirm("Remove this side dish?")) return
+        const newList = sideDishes.filter(i => i.id !== id)
+        setSideDishes(newList)
+        saveSideDishConfig(newList)
+    }
+    
+    const toggleGlobalSideDishes = async () => {
+        const newValue = !sideDishEnabled
+        setSideDishEnabled(newValue) 
+        
+        // Save to DB
+        // Check if exists
+        const { data } = await supabase.from('app_settings').select('id').eq('key', 'side_dish_enabled').single()
+        
+        if (data) {
+             await supabase.from('app_settings').update({ value: String(newValue) }).eq('key', 'side_dish_enabled')
+        } else {
+             await supabase.from('app_settings').insert({ key: 'side_dish_enabled', value: String(newValue) })
+        }
+    }
+
+    const saveSideDishConfig = async (list) => {
+        const json = JSON.stringify(list)
+        const { data } = await supabase.from('app_settings').select('id').eq('key', 'side_dish_config').single()
+        if (data) {
+             await supabase.from('app_settings').update({ value: json }).eq('key', 'side_dish_config')
+        } else {
+             await supabase.from('app_settings').insert({ key: 'side_dish_config', value: json })
+        }
+    }
+    
+    const updateSideDishName = (id, newName) => {
+        const newList = sideDishes.map(i => i.id === id ? { ...i, name: newName } : i)
+        setSideDishes(newList)
+        // Debounce save? or just save on blur. For simplicity save on demand or manual btn?
+        // Let's just save immediately for now.
+        saveSideDishConfig(newList)
+    }
+
     return (
         <div className="min-h-screen bg-black pb-20 text-white font-sans">
              <header className="bg-[#111] border-b border-white/10 sticky top-0 z-10 px-4 h-16 flex items-center justify-between">
@@ -355,6 +517,12 @@ export default function AdminSteakDashboard() {
                             className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${activeTab === 'prep' ? 'bg-[#DFFF00] text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
                         >
                             <ChefHat size={20} /> Prep List (Tomorrow)
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('sidedish')}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all ${activeTab === 'sidedish' ? 'bg-[#DFFF00] text-black shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            <ImageIcon size={20} /> Side Dishes
                         </button>
                     </div>
 
@@ -465,6 +633,98 @@ export default function AdminSteakDashboard() {
                                         </div>
                                     ))
                                 )}
+                            </div>
+                        )}
+                        
+                        {activeTab === 'sidedish' && (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between bg-[#1a1a1a] p-6 rounded-2xl border border-white/10">
+                                    <div>
+                                        <h2 className="text-xl font-bold mb-1">Side Dish Configuration</h2>
+                                        <p className="text-gray-400 text-sm">Manage the side dishes shown on Steak cards globally.</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <span className={`text-sm font-bold ${sideDishEnabled ? 'text-[#DFFF00]' : 'text-gray-500'}`}>
+                                                {sideDishEnabled ? 'VISIBLE TO CUSTOMERS' : 'HIDDEN'}
+                                            </span>
+                                            <button 
+                                                onClick={toggleGlobalSideDishes}
+                                                className={`w-14 h-8 rounded-full p-1 transition-colors ${sideDishEnabled ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                                            >
+                                                <div className={`w-6 h-6 bg-black rounded-full shadow-md transition-transform ${sideDishEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                                            </button>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-[#1a1a1a] p-8 rounded-2xl border border-white/10 min-h-[400px]">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="font-bold flex items-center gap-2"><GripVertical size={16} /> Drag to Reorder</h3>
+                                        <label className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-bold text-sm cursor-pointer flex items-center gap-2 transition-colors">
+                                            <Plus size={16} /> Add Image
+                                            <input type="file" multiple accept="image/*" className="hidden" onChange={handleSideDishUpload} />
+                                        </label>
+                                    </div>
+                                    
+                                    <DndContext 
+                                        sensors={sensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <SortableContext 
+                                            items={sideDishes.map(i => i.id)}
+                                            strategy={horizontalListSortingStrategy}
+                                        >
+                                            <div className="flex flex-wrap gap-4">
+                                                {sideDishes.map(item => (
+                                                    <div key={item.id} className="relative group">
+                                                        <SortableSideDishItem id={item.id} item={item} onRemove={handleRemoveSideDish} />
+                                                        <input 
+                                                            type="text" 
+                                                            value={item.name}
+                                                            onChange={(e) => updateSideDishName(item.id, e.target.value)}
+                                                            className="w-32 mt-2 bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-center focus:border-[#DFFF00] outline-none"
+                                                            placeholder="Tooltip Name"
+                                                        />
+                                                    </div>
+                                                ))}
+                                                {sideDishes.length === 0 && (
+                                                    <div className="w-full py-20 text-center text-gray-500 border-2 border-dashed border-white/10 rounded-xl">
+                                                        No side dishes. Upload images to get started.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </SortableContext>
+                                    </DndContext>
+                                    
+                                    {/* Preview Section */}
+                                    <div className="mt-12 pt-12 border-t border-white/10">
+                                        <h3 className="font-bold mb-4 text-gray-400 uppercase text-xs">Live Preview (Mockup)</h3>
+                                        <div className="w-full max-w-sm bg-white rounded-2xl overflow-hidden text-black p-4 border border-gray-200 opacity-90 mx-auto sm:mx-0">
+                                            <div className="aspect-[4/3] bg-gray-200 rounded-lg mb-3 relative overflow-hidden">
+                                                <div className="absolute inset-0 flex items-center justify-center text-gray-400">Steak Image</div>
+                                                
+                                                {/* SIDE DISH PREVIEW */}
+                                                {sideDishEnabled && sideDishes.length > 0 && (
+                                                   <div className="absolute bottom-2 left-2 right-2 flex gap-1 justify-center z-20">
+                                                        {sideDishes.map(sd => (
+                                                            <div key={sd.id} className="w-10 h-10 rounded-md overflow-hidden border border-white shadow-sm relative group/sd bg-white">
+                                                                <img src={sd.url} className="w-full h-full object-cover" />
+                                                                {/* Tooltip Preview */}
+                                                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover/sd:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                                                                    {sd.name}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                   </div> 
+                                                )}
+                                            </div>
+                                            <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+                                            <div className="h-3 bg-gray-100 rounded w-full mb-4"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </>
