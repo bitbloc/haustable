@@ -56,6 +56,7 @@ export default function TransactionHistory({ onClose }) {
                                     <th className="p-3 pl-4">Time</th>
                                     <th className="p-3">Item</th>
                                     <th className="p-3">Action</th>
+                                    <th className="p-3">User</th>
                                     <th className="p-3 text-right pr-4">Amount</th>
                                 </tr>
                             </thead>
@@ -85,6 +86,9 @@ export default function TransactionHistory({ onClose }) {
                                                     {isIn ? <ArrowLeft className="w-3 h-3 rotate-[-45deg]" /> : <ArrowRight className="w-3 h-3 rotate-[-45deg]" />}
                                                     {tx.transaction_type}
                                                 </span>
+                                            </td>
+                                            <td className="p-3 text-sm text-gray-600">
+                                                {tx.performed_by || '-'}
                                             </td>
                                             <td className={`p-3 text-right pr-4 font-bold font-mono ${isIn ? 'text-green-600' : 'text-red-600'}`}>
                                                 {isIn ? '+' : ''}{tx.quantity_change}
