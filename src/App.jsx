@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core' // Added Capacitor import
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
@@ -34,6 +35,17 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
     })
+
+    // Prepare for Native App: Redirect to /staff if running in Capacitor
+    if (Capacitor.isNativePlatform()) {
+        const path = window.location.pathname
+        if (path === '/' || path === '') {
+            // Check if we can use history, but outside router we just set hash or pathname depending on router type.
+            // Since we use BrowserRouter, direct manipulation works if server/file supports it. 
+            // Capacitor serves from localhost, so pathname works.
+            window.location.replace('/staff') 
+        }
+    }
 
     const handleAuthChange = async (event, session) => {
         setSession(session)

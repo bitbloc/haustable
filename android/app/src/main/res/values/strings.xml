@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">In The Haus Staff</string>
+    <string name="title_activity_main">In The Haus Staff</string>
+    <string name="package_name">com.inthehaus.staff</string>
+    <string name="custom_url_scheme">com.inthehaus.staff</string>
+</resources>
