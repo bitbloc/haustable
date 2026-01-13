@@ -69,7 +69,7 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions, sideDi
             <div className="p-5">
                 <div className="flex justify-between items-start gap-4">
                     <div>
-                        <h3 className="font-serif text-xl font-bold leading-tight mb-1">{item.name}</h3>
+                        <h3 className="font-serif text-xl font-bold leading-tight mb-1" style={{ textWrap: 'balance' }}>{item.name}</h3>
                         <p className="text-xs text-gray-500 line-clamp-2 mb-3">{item.description}</p>
                         <p className="font-mono text-lg font-bold">฿{item.price.toLocaleString()}</p>
                     </div>

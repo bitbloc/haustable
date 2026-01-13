@@ -180,6 +180,7 @@ const EditSteakModal = ({ isOpen, onClose, steak, onSave, onDelete }) => {
                             placeholder="e.g. Ribeye A5"
                             required
                         />
+                        <p className="text-[10px] text-gray-500 mt-1">Recommended max 20 characters to prevent bad wrapping.</p>
                     </div>
 
                     <div>
@@ -202,6 +203,7 @@ const EditSteakModal = ({ isOpen, onClose, steak, onSave, onDelete }) => {
                             onChange={(e) => setFormData({...formData, description: e.target.value})}
                             placeholder="e.g. 300g, Intense marbling..."
                         />
+                        <p className="text-[10px] text-gray-500 mt-1">Recommended max 80 characters (2 lines).</p>
                     </div>
 
                     <div className="pt-4 flex gap-3">
