@@ -17,7 +17,54 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const { action } = body
 
-    // 0. Special Logic for Email Registration (No LINE Token needed)
+    // 0. Register Account (Email/Password) - Auto Confirm
+    if (action === 'register_account') {
+        const { email, password, profileData } = body
+        if (!email || !password || !profileData) throw new Error("Missing Parameters")
+
+        const adminClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        )
+
+        // 1. Create User (Auto Confirm)
+        const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true, // Bypass Email Verification
+            user_metadata: { full_name: profileData.display_name }
+        })
+
+        if (createError) throw createError
+        if (!userData.user) throw new Error("Failed to create user object")
+
+        const userId = userData.user.id
+
+        // 2. Upsert Profile
+        const { error: upsertError } = await adminClient.from('profiles').upsert({
+            id: userId,
+            display_name: profileData.display_name,
+            nickname: profileData.nickname,
+            phone_number: profileData.phone_number,
+            birth_day: profileData.birth_day,
+            birth_month: profileData.birth_month,
+            gender: profileData.gender,
+            line_user_id: profileData.line_user_id || null, 
+            role: 'customer'
+        })
+
+        if (upsertError) {
+            // Rollback? Hard to delete user, but let's try or just throw
+             await adminClient.auth.admin.deleteUser(userId)
+             throw upsertError
+        }
+
+        return new Response(JSON.stringify({ success: true, userId }), { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        })
+    }
+
+    // 0.1 Special Logic for Email Registration... (Legacy/Manual)
     if (action === 'register_email_profile') {
         const adminClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',

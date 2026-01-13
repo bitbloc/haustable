@@ -237,59 +237,51 @@ export default function AuthModal({ isOpen, onClose }) {
         setLoading(true)
 
         try {
-            // 1. SignUp
-            const { data, error: signUpError } = await supabase.auth.signUp({
-                email, password,
-                options: { data: { full_name: name } }
-            })
-            if (signUpError) throw signUpError
-
-            // if session is null, it means email confirmation is required (and user isn't logged in yet)
-            if (data.user && !data.session) {
-                setView('check-email')
-                return
-            }
-
-            // 2. Profile (Via Edge Function to bypass RLS)
-            if (data.user) {
-                const { error: profileError } = await supabase.functions.invoke('manage-booking', {
-                    body: {
-                        action: 'register_email_profile',
-                        userId: data.user.id,
-                        profileData: {
-                            display_name: name,
-                            nickname: nickname,
-                            phone_number: phone,
-                            birth_day: birthDay ? parseInt(birthDay) : null,
-                            birth_month: birthMonth ? parseInt(birthMonth) : null,
-                            gender: gender,
-                            line_user_id: lineUid || null
-                        }
+            // NEW: Use Edge Function to Register (Bypasses Email Verification for dev/fix)
+            const { data, error: functionError } = await supabase.functions.invoke('manage-booking', {
+                body: {
+                    action: 'register_account',
+                    email,
+                    password,
+                    profileData: {
+                        display_name: name,
+                        nickname: nickname,
+                        phone_number: phone,
+                        birth_day: birthDay ? parseInt(birthDay) : null,
+                        birth_month: birthMonth ? parseInt(birthMonth) : null,
+                        gender: gender,
+                        line_user_id: lineUid || null
                     }
-                })
-
-                if (profileError) {
-                    console.error("Profile Creation Failed:", profileError)
-                    // Try to extract the error message from the response body if possible
-                    let detailedMessage = profileError.message
-                    if (profileError instanceof Error && 'context' in profileError) {
-                         // Some versions of supabase-js attach the response to context
-                         // But often it's hard to get. 
-                    }
-                    
-                    // Supabase FunctionsHttpError unfortunately hides the body content in standard usage sometimes.
-                    // But we can try to improve the message if we assume the server sends { error: "message" }
-                    // Actually, let's just surface the generic error for now but log the object.
-                    // A better way is to rely on the server returning 200 OK with success:false if we want to read the body easily, 
-                    // OR we trust that we can't easily read the body of a 400 in the client without digging into the specific error object structure (which varies).
-                    
-                    // However, we can try to rely on the side-effect of "context" if available, or just throw the error.
-                    throw new Error("Failed to create profile: " + (detailedMessage || "Unknown Error"))
                 }
+            })
+
+            if (functionError) {
+                 // Try to parse the error message if possible (Function returns 200 with error info now?)
+                 // Actually, if I didn't update the catch block for register_account specific logic, it might still throw?
+                 // Wait, the shared catch block in manage-booking returns 200 OK with success:false.
+                 // So functionError should be null usually, unless network fail.
+                 // But wait, my manual throw in new block "if (upsertError) throw upsertError" will go to catch block.
+                 // So data will have { success: false, error: ... }
+                 throw functionError
             }
+
+            if (data?.error) {
+                throw new Error(data.error)
+            }
+
+            // If success, log them in immediately
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+            if (signInError) throw signInError
 
             setView('success')
+            
+            // Auto close after success
+            setTimeout(() => {
+                 window.location.reload()
+            }, 1000)
+
         } catch (err) {
+            console.error("Register Error:", err)
             setError(err.message)
         } finally {
             setLoading(false)
