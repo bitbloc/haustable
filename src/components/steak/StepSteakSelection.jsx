@@ -23,37 +23,40 @@ const MeatSelectionCard = ({ item, onAdd, onRemove, qty, donenessOptions, sideDi
 
     return (
         <div className={`group relative bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 transition-all duration-300 ${isSoldOut ? 'opacity-60 grayscale' : 'hover:shadow-md'}`}>
-            {/* Image */}
-            <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
-                <img src={item.image_url || 'https://placehold.co/600x400'} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                {isSoldOut && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="text-white font-bold tracking-widest border-2 border-white px-4 py-1 text-sm uppercase">หมด (Sold Out)</span>
-                    </div>
-                )}
-                {/* Qty Badge */}
-                {qty > 0 && (
-                    <div className="absolute top-3 right-3 bg-[#DFFF00] text-black font-bold w-8 h-8 rounded-full flex items-center justify-center shadow-lg text-sm z-10">
-                        {qty}
-                    </div>
-                )}
-                
-                {/* Visual Balance: Side Dish Fix Thumbnails (Overlay at bottom) */}
+            {/* Image & Sides Container (Bento) */}
+            <div className="flex flex-col gap-2 p-1">
+                {/* Main Image */}
+                <div className="aspect-[4/3] relative rounded-xl overflow-hidden bg-gray-100">
+                    <img src={item.image_url || 'https://placehold.co/600x400'} alt={item.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    {isSoldOut && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-white font-bold tracking-widest border-2 border-white px-4 py-1 text-sm uppercase">หมด (Sold Out)</span>
+                        </div>
+                    )}
+                    {/* Qty Badge */}
+                    {qty > 0 && (
+                        <div className="absolute top-3 right-3 bg-[#DFFF00] text-black font-bold w-8 h-8 rounded-full flex items-center justify-center shadow-lg text-sm z-10">
+                            {qty}
+                        </div>
+                    )}
+                </div>
+
+                {/* Side Dishes Bento Row */}
                 {sideDishEnabled && sideDishes && sideDishes.length > 0 && (
-                     <div className="absolute bottom-3 left-3 right-3 flex gap-2 z-20">
+                     <div className="grid grid-cols-4 gap-2 px-1">
                         {sideDishes.map((sd) => (
-                            <div key={sd.id} className="relative group/sd cursor-help">
-                                {/* Thumbnail with thin border/opacity */}
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-white/30 overflow-hidden bg-black/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-110">
-                                    <img src={sd.url} alt={sd.name} className="w-full h-full object-cover opacity-90 hover:opacity-100" />
+                            <div key={sd.id} className="aspect-square relative group/sd cursor-help">
+                                {/* Thumbnail */}
+                                <div className="w-full h-full rounded-lg bg-gray-100 overflow-hidden border border-gray-100 shadow-sm transition-transform hover:scale-105 relative z-10">
+                                    <img src={sd.url} alt={sd.name} className="w-full h-full object-cover" />
                                 </div>
                                 
-                                {/* The 'Surprise' Tooltip (Pure CSS/Motion) */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[120px] pointer-events-none opacity-0 group-hover/sd:opacity-100 transition-all duration-300 transform translate-y-2 group-hover/sd:translate-y-0 text-center z-30">
-                                    <div className="bg-black/80 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-xl whitespace-nowrap">
+                                {/* Tooltip (Popping UP) */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[120px] pointer-events-none opacity-0 group-hover/sd:opacity-100 transition-all duration-300 transform translate-y-2 group-hover/sd:translate-y-0 text-center z-50">
+                                    <div className="bg-black/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1.5 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.2)] whitespace-nowrap border border-white/10">
                                         {sd.name}
-                                        {/* Little triangular arrow */}
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
+                                        {/* Arrow */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-black/90"></div>
                                     </div>
                                 </div>
                             </div>

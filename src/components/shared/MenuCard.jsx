@@ -50,55 +50,55 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
     return (
         <div className={`group bg-white rounded-2xl p-3 border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden ${mode === 'list' ? 'flex gap-4' : ''}`}>
 
-            {/* Image */}
-            <div className={`bg-gray-100 rounded-xl overflow-hidden shrink-0 ${mode === 'list' ? 'w-24 h-24' : 'aspect-square mb-3'} relative`}>
-                {item.image_url ? (
-                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <span className="text-xs">No Image</span>
-                    </div>
-                )}
+            {/* Image & Side Dish "Bento" Block */}
+            <div className={`flex flex-col gap-1.5 ${mode === 'list' ? 'w-24 shrink-0' : 'mb-3'}`}>
+                {/* Main Steak Image */}
+                <div className={`bg-gray-100 rounded-xl overflow-hidden relative ${mode === 'list' ? 'aspect-square' : 'aspect-[4/3]'}`}>
+                    {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                            <span className="text-xs">No Image</span>
+                        </div>
+                    )}
 
-                {mode !== 'list' && qty > 0 && (
-                    <div className="absolute top-2 right-2 bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
-                        {qty}
-                    </div>
-                )}
-                {/* Clickable Overlay */}
-                <div className="absolute inset-0 cursor-pointer" onClick={(e) => {
-                    // Start ripple if clicking image too?
-                    // User said: Mouse over (image and button) > Click > Ripple.
-                    // The button has its own click handler. This is for adding via image.
-                    onAdd(item)
-                }}></div>
+                    {mode !== 'list' && qty > 0 && (
+                        <div className="absolute top-2 right-2 bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
+                            {qty}
+                        </div>
+                    )}
+                    
+                     {/* Clickable Overlay for Main Image */}
+                    <div className="absolute inset-0 cursor-pointer" onClick={(e) => onAdd(item)}></div>
 
-                {item.is_recommended && (
-                    <div className="absolute top-2 left-2 bg-[#DFFF00] text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm z-10">
-                        <Star size={10} fill="currentColor" /> Recommended
-                    </div>
-                )}
-                
-                {/* Visual Balance: Side Dish Fix Thumbnails (Overlay at bottom) */}
+                    {item.is_recommended && (
+                        <div className="absolute top-2 left-2 bg-[#DFFF00] text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm z-10">
+                            <Star size={10} fill="currentColor" /> Recommended
+                        </div>
+                    )}
+                </div>
+
+                {/* Side Dishes Row (Bento Style) */}
                 {sideDishEnabled && sideDishes && sideDishes.length > 0 && (
-                     <div className="absolute bottom-2 left-2 right-2 flex gap-1.5 z-20 pointer-events-none">
+                    <div className="grid grid-cols-4 gap-1.5 px-0.5">
                         {sideDishes.map((sd) => (
-                            <div key={sd.id} className="relative group/sd pointer-events-auto cursor-help">
+                            <div key={sd.id} className="aspect-square rounded-lg overflow-visible relative group/sd cursor-help">
                                 {/* Thumbnail */}
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded border border-white/30 overflow-hidden bg-black/20 backdrop-blur-sm shadow-sm transition-transform hover:scale-110">
-                                    <img src={sd.url} alt={sd.name} className="w-full h-full object-cover opacity-90 hover:opacity-100" />
+                                <div className="w-full h-full rounded-lg bg-gray-100 overflow-hidden border border-gray-100 shadow-sm transition-transform hover:scale-105 relative z-10">
+                                     <img src={sd.url} alt={sd.name} className="w-full h-full object-cover" />
                                 </div>
                                 
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-max max-w-[100px] pointer-events-none opacity-0 group-hover/sd:opacity-100 transition-all duration-300 transform translate-y-2 group-hover/sd:translate-y-0 text-center z-30">
-                                    <div className="bg-black/80 backdrop-blur text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xl whitespace-nowrap">
+                                {/* Tooltip (Popping UP) */}
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[120px] pointer-events-none opacity-0 group-hover/sd:opacity-100 transition-all duration-300 transform translate-y-2 group-hover/sd:translate-y-0 text-center z-50">
+                                    <div className="bg-black/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1.5 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.2)] whitespace-nowrap border border-white/10">
                                         {sd.name}
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-0.5 border-3 border-transparent border-t-black/80"></div>
+                                        {/* Arrow */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-black/90"></div>
                                     </div>
                                 </div>
                             </div>
                         ))}
-                     </div>
+                    </div>
                 )}
             </div>
 
