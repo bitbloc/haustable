@@ -14,6 +14,14 @@ export default function StaffAuthLayout() {
 
     useEffect(() => {
         checkUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                checkUser();
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const checkUser = async () => {
