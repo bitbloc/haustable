@@ -199,7 +199,12 @@ export default function AuthModal({ isOpen, onClose }) {
             if (error) throw error
             onClose()
         } catch (err) {
-            setError(err.message)
+            console.error("Login Error:", err)
+            if (err.message.includes("Invalid login credentials") || err.message.includes("Email not confirmed")) {
+                setError("Invalid email/password, or email not confirmed. Please check your inbox.")
+            } else {
+                setError(err.message)
+            }
         } finally {
             setLoading(false)
         }
@@ -238,6 +243,12 @@ export default function AuthModal({ isOpen, onClose }) {
                 options: { data: { full_name: name } }
             })
             if (signUpError) throw signUpError
+
+            // if session is null, it means email confirmation is required (and user isn't logged in yet)
+            if (data.user && !data.session) {
+                setView('check-email')
+                return
+            }
 
             // 2. Profile (Via Edge Function to bypass RLS)
             if (data.user) {
@@ -299,6 +310,23 @@ export default function AuthModal({ isOpen, onClose }) {
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white z-20">
                     <X size={24} />
                 </button>
+
+                {/* View: Check Email */}
+                {view === 'check-email' && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-in-up">
+                        <div className="w-20 h-20 bg-[#DFFF00]/20 text-[#DFFF00] rounded-full flex items-center justify-center mb-6">
+                            <Mail size={40} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
+                        <p className="text-gray-400 text-sm px-4">
+                            We've sent a confirmation link to <span className="text-white">{email}</span>.<br/>
+                            Please verify your account to login.
+                        </p>
+                        <button onClick={() => setView('login')} className="mt-6 text-[#DFFF00] text-sm hover:underline">
+                            Back to Login
+                        </button>
+                    </div>
+                )}
 
                 {/* View: Success */}
                 {view === 'success' && (
