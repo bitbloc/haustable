@@ -488,9 +488,13 @@ export default function AdminSteakDashboard() {
     const updateSideDishName = (id, newName) => {
         const newList = sideDishes.map(i => i.id === id ? { ...i, name: newName } : i)
         setSideDishes(newList)
-        // Debounce save? or just save on blur. For simplicity save on demand or manual btn?
-        // Let's just save immediately for now.
-        saveSideDishConfig(newList)
+        // No auto-save on typing, user must click Save
+    }
+
+    const handleManualSave = async () => {
+        setIsSavingSides(true)
+        await saveSideDishConfig(sideDishes)
+        setTimeout(() => setIsSavingSides(false), 500)
     }
 
     return (
@@ -504,6 +508,7 @@ export default function AdminSteakDashboard() {
 
             <div className="max-w-5xl mx-auto p-6">
                 {/* Tabs */}
+                {/* ... (Tabs Content Omitted for brevity, unchanged) ... */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-between items-start sm:items-center">
                     <div className="flex bg-[#1a1a1a] rounded-full p-1 border border-white/10">
                         <button 
@@ -539,6 +544,7 @@ export default function AdminSteakDashboard() {
                 {loading ? <div className="text-gray-500">Loading...</div> : (
                     <>
                         {activeTab === 'stock' && (
+           /* ... existing stock content ... */
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {steaks.map(steak => (
                                     <div key={steak.id} className={`bg-[#1a1a1a] rounded-xl p-4 border transition-all relative group ${steak.is_sold_out ? 'border-red-900 opacity-60' : 'border-white/10'}`}>
@@ -589,6 +595,7 @@ export default function AdminSteakDashboard() {
                         )}
 
                         {activeTab === 'prep' && (
+                            /* ... existing prep content ... */
                             <div className="space-y-4">
                                 <h2 className="text-gray-400 text-sm uppercase font-bold mb-4 flex items-center gap-2">
                                     <Calendar size={16} /> Pre-orders for Tomorrow
@@ -644,6 +651,16 @@ export default function AdminSteakDashboard() {
                                         <p className="text-gray-400 text-sm">Manage the side dishes shown on Steak cards globally.</p>
                                     </div>
                                     <div className="flex items-center gap-4">
+                                        <button 
+                                            onClick={handleManualSave}
+                                            disabled={isSavingSides}
+                                            className="bg-[#DFFF00] text-black px-6 py-2 rounded-full font-bold hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:scale-100"
+                                        >
+                                            {isSavingSides ? 'Saving...' : 'Save Changes'}
+                                        </button>
+
+                                        <div className="h-8 w-px bg-white/10 mx-2"></div>
+
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <span className={`text-sm font-bold ${sideDishEnabled ? 'text-[#DFFF00]' : 'text-gray-500'}`}>
                                                 {sideDishEnabled ? 'VISIBLE TO CUSTOMERS' : 'HIDDEN'}
