@@ -35,6 +35,10 @@ export default function StaffAuthLayout() {
                      // Session expired but we showed authorized. Revert.
                      console.log("Session expired, reverting optimistic auth");
                 }
+                
+                // Explicitly clear Supabase auth state to prevent stale tokens/WebSocket issues
+                await supabase.auth.signOut();
+
                 localStorage.removeItem('staff_role');
                 localStorage.removeItem('staff_id');
                 setAuthStatus('unauthenticated');
