@@ -253,9 +253,11 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error("Manage Booking Error:", err.message)
-    return new Response(JSON.stringify({ error: err.message }), { 
+    // Return 200 OK but with success: false and error message
+    // This allows the client to read the error body without parsing 400 exceptions
+    return new Response(JSON.stringify({ success: false, error: err.message }), { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
+        status: 200 
     })
   }
 })

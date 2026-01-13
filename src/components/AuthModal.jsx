@@ -148,11 +148,21 @@ export default function AuthModal({ isOpen, onClose }) {
 
             if (error) throw error
 
+            // Check for logical error returned by function (200 OK but success: false)
+            if (data?.error) {
+                throw new Error(data.error)
+            }
+
             if (data?.sessionLink) {
                 console.log("Registration Success! Redirecting...", data.sessionLink)
                 // Force redirect
                 window.location.href = data.sessionLink
                 return
+            } else if (data?.success) {
+                 // Should have a link if success, but just in case
+                 setView('success')
+                 setTimeout(() => window.location.reload(), 2000)
+                 return
             } else {
                 throw new Error("Login failed (No Link). Please try again.")
             }
