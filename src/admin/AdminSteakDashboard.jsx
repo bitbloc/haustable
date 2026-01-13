@@ -464,24 +464,27 @@ export default function AdminSteakDashboard() {
         const newValue = !sideDishEnabled
         setSideDishEnabled(newValue) 
         
-        // Save to DB
-        // Check if exists
-        const { data } = await supabase.from('app_settings').select('id').eq('key', 'side_dish_enabled').single()
-        
-        if (data) {
-             await supabase.from('app_settings').update({ value: String(newValue) }).eq('key', 'side_dish_enabled')
-        } else {
-             await supabase.from('app_settings').insert({ key: 'side_dish_enabled', value: String(newValue) })
+        // Save to DB using upsert to handle both insert and update atomically
+        const { error } = await supabase
+            .from('app_settings')
+            .upsert({ key: 'side_dish_enabled', value: String(newValue) }, { onConflict: 'key' })
+
+        if (error) {
+            console.error("Error saving side_dish_enabled:", error)
+            // Revert state if error? Or just alert.
         }
     }
 
     const saveSideDishConfig = async (list) => {
         const json = JSON.stringify(list)
-        const { data } = await supabase.from('app_settings').select('id').eq('key', 'side_dish_config').single()
-        if (data) {
-             await supabase.from('app_settings').update({ value: json }).eq('key', 'side_dish_config')
-        } else {
-             await supabase.from('app_settings').insert({ key: 'side_dish_config', value: json })
+        
+        // Use upsert for atomic update
+        const { error } = await supabase
+            .from('app_settings')
+            .upsert({ key: 'side_dish_config', value: json }, { onConflict: 'key' })
+            
+        if (error) {
+            console.error("Error saving side_dish_config:", error)
         }
     }
     
