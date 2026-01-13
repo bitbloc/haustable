@@ -249,7 +249,21 @@ export default function AuthModal({ isOpen, onClose }) {
 
                 if (profileError) {
                     console.error("Profile Creation Failed:", profileError)
-                    throw new Error("Failed to create profile: " + profileError.message)
+                    // Try to extract the error message from the response body if possible
+                    let detailedMessage = profileError.message
+                    if (profileError instanceof Error && 'context' in profileError) {
+                         // Some versions of supabase-js attach the response to context
+                         // But often it's hard to get. 
+                    }
+                    
+                    // Supabase FunctionsHttpError unfortunately hides the body content in standard usage sometimes.
+                    // But we can try to improve the message if we assume the server sends { error: "message" }
+                    // Actually, let's just surface the generic error for now but log the object.
+                    // A better way is to rely on the server returning 200 OK with success:false if we want to read the body easily, 
+                    // OR we trust that we can't easily read the body of a 400 in the client without digging into the specific error object structure (which varies).
+                    
+                    // However, we can try to rely on the side-effect of "context" if available, or just throw the error.
+                    throw new Error("Failed to create profile: " + (detailedMessage || "Unknown Error"))
                 }
             }
 

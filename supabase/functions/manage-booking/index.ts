@@ -27,6 +27,20 @@ Deno.serve(async (req) => {
         const { userId, profileData } = body
         if (!userId || !profileData) throw new Error("Missing Parameters")
 
+        // Check for duplicate phone number
+        if (profileData.phone_number) {
+            const { data: conflict } = await adminClient
+                .from('profiles')
+                .select('id')
+                .eq('phone_number', profileData.phone_number)
+                .neq('id', userId) 
+                .maybeSingle()
+            
+            if (conflict) {
+                throw new Error(`Phone number ${profileData.phone_number} is already registered.`)
+            }
+        }
+
         // Use Admin Client to Bypass RLS
         const { error: upsertError } = await adminClient.from('profiles').upsert({
             id: userId,
