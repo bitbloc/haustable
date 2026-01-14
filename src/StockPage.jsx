@@ -218,6 +218,24 @@ export default function StockPage() {
             }
 
             toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
+
+            // 3. Send LINE Notification (Fire and Forget)
+            const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
+            const item = items.find(i => i.id === itemId);
+            const itemName = item ? item.name : 'Unknown Item';
+            
+            let notifyMessage = '';
+            if (type === 'set') {
+                 notifyMessage = `${performedBy} อัพเดทสต็อก ${itemName}\n${meta.note || ''}`;
+            } else {
+                 notifyMessage = `${performedBy} ${changeAmount > 0 ? 'รับเข้า' : 'เบิกออก'} ${itemName}\n${meta.note || ''}`;
+            }
+
+            supabase.functions.invoke('send-line-notify', {
+                body: { message: notifyMessage }
+            }).then(({ error }) => {
+                if (error) console.error('Failed to send LINE notify:', error);
+            });
             
         } catch (err) {
             toast.error('Sync failed');
