@@ -153,7 +153,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 }
 
                 await onUpdate(item.id, finalTotal, 'set', {
-                    note: `Stock Count: ${mainVal} ${selectedUnit.label} + ${(partialAmount * 100).toFixed(0)}%`
+                    note: `นับสต็อกได้: ${mainVal} ${selectedUnit.label} (เต็ม) ${partialAmount > 0 ? `+ เปิดแล้ว ${(partialAmount * 100).toFixed(0)}%` : ''}`
                 });
 
             } else {
@@ -166,7 +166,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 const finalChange = mode === 'in' ? actualChange : -actualChange;
                 
                 await onUpdate(item.id, finalChange, mode, {
-                    note: `Manual ${mode.toUpperCase()} (${mainVal} ${selectedUnit.label})`
+                    note: `ปรับปรุงรายการ: ${mode === 'in' ? 'รับเข้า' : 'เบิกออก'} ${mainVal} ${selectedUnit.label}`
                 });
             }
             

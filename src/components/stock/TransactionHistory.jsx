@@ -76,7 +76,7 @@ export default function TransactionHistory({ onClose }) {
                                             </td>
                                             <td className="p-3">
                                                 <div className="font-medium text-[#1A1A1A]">{tx.stock_items?.name || 'Unknown Item'}</div>
-                                                {tx.note && <div className="text-xs text-gray-400 truncate max-w-[120px]">{tx.note}</div>}
+                                                {tx.note && <div className="text-xs text-gray-400 whitespace-normal">{tx.note}</div>}
                                             </td>
                                             <td className="p-3">
                                                 <span className={`
