@@ -30,7 +30,7 @@ export const formatStockDisplay = (quantity, unit = '') => {
   if (fullUnits > 0) {
       displayString = `ยังไม่เปิด ${fullUnits} ${unit}`;
   } else if (hasOpen) {
-      displayString = `ยังไม่เปิด 0 ${unit}`;
+      displayString = `ยังไม่มีสินค้าที่ยังไม่เปิด`;
   } else {
       displayString = 'หมด';
   }
