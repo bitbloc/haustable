@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
 import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
 
-export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
+export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, onEdit }) {
     const [amount, setAmount] = useState(''); // Main input (usually integer)
     const [mode, setMode] = useState('in'); // 'in', 'out', 'set' (Check/Count)
     const [selectedUnit, setSelectedUnit] = useState(null);

@@ -4,8 +4,8 @@ import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ item, onClick }) {
     // Nendo Logic: Visual Color Status
-    const isCritical = (item.current_quantity || 0) < 1.5 || item.current_quantity <= item.min_stock_threshold;
-    const isWarning = !isCritical && item.current_quantity <= item.reorder_point;
+    const isCritical = item.current_quantity <= (item.min_stock_threshold || 0);
+    const isWarning = !isCritical && item.current_quantity <= (item.reorder_point || 0);
     
     // Choose styling based on status
     const bgClass = isCritical 
