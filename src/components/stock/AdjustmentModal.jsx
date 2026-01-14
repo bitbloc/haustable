@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Minus, Plus, Save, Package, Settings, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
+import { formatStockDisplay, calculateTotalFromComponents } from '../../utils/stockUtils';
 
 export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
     const [amount, setAmount] = useState(''); // Main input (usually integer)
@@ -69,15 +70,14 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
     // Pre-fill when entering Set mode
     useEffect(() => {
         if (mode === 'set' && item) {
-            const currentQty = item.current_quantity || 0;
-            const full = Math.floor(currentQty);
-            const part = currentQty - full;
+             // Use utility to safely split Integer / Part (percentage)
+            const { fullUnits, remainder, percent } = formatStockDisplay(item.current_quantity);
             
-            setAmount(full.toString());
-            setPartialAmount(Number(part.toFixed(4))); 
+            setAmount(fullUnits.toString());
+            setPartialAmount(remainder); // 0.something
             
             if (fullCapacityMl) {
-                setRemainingMl(Math.round(part * fullCapacityMl));
+                setRemainingMl(Math.round(remainder * fullCapacityMl));
             }
         } else {
             // Should we clear for In/Out? Yes, standard behavior.
@@ -101,14 +101,53 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
             
             if (mode === 'set') {
                 // Set Absolute Quantity
-                // Total = (MainVal * Factor) + PartialAmount (Base Unit)
-                // Partial Amount is usually "remainder of base unit" i.e. 0.5 Bottle
-                // So if user entered 5 (Boxes) + 0.5 (Bottle), and 1 Box = 12 Bottles.
-                // Total Bottles = (5 * 12) + 0.5 = 60.5 Bottles.
                 
-                const totalBaseQty = (mainVal * selectedUnit.factor) + partialAmount;
+                // Use safe calculation utility
+                // Note: Component uses partialAmount as (0.9), but calculateTotalFromComponents expects (90) if used as second arg?
+                // Wait, calculateTotalFromComponents takes (full, percent0-100).
+                // My state partialAmount is 0.9.
+                // So I should pass partialAmount * 100.
                 
-                await onUpdate(item.id, totalBaseQty, 'set', {
+                const percent = Math.round(partialAmount * 100);
+                const totalBaseQty = calculateTotalFromComponents(mainVal, percent);
+                
+                // Factor logic? If user selected a Factor Unit (e.g. Box = 12), then mainVal represents Boxes.
+                // But partial is usually Base Unit. 
+                // But wait, my UI shows partial as "Opened Bottle" (Base Unit).
+                // If I have 1 Box and 0.5 Bottle.
+                // 1 Box = 12 Bottles.
+                // Total = 1 * 12 + 0.5 = 12.5.
+                
+                // Let's check logic:
+                // If unit factor > 1 (e.g. Check by Box), 
+                // then mainVal is Boxes.
+                // partialAmount is usually "remainder of base unit" if the UI context means "Opened Bottle".
+                // Yes "เศษที่เหลือ (เปิดใช้แล้ว)" implies base unit.
+                
+                // So: Total = (MainVal * Factor) + Remainder(Base)
+                
+                // However, calculateTotalFromComponents is designed for: X.Y where X is integer of Base.
+                // If I am counting Boxes, I should convert Boxes to Base first.
+                
+                let finalTotal = 0;
+                if (selectedUnit.factor > 1) {
+                     // MainVal is Multi-unit (e.g. 5 Boxes)
+                     // Partial is Base Unit (e.g. 0.5 Bottle)
+                     const qtyFromFull = mainVal * selectedUnit.factor;
+                     
+                     // We just add them. But we need to be careful of floats.
+                     // 12 + 0.5 = 12.5
+                     finalTotal = qtyFromFull + partialAmount;
+                     
+                     // Use fix to 4 digits
+                     finalTotal = Number(finalTotal.toFixed(4));
+                } else {
+                     // Base Unit
+                     // Use utility for safe float math
+                     finalTotal = calculateTotalFromComponents(mainVal, percent);
+                }
+
+                await onUpdate(item.id, finalTotal, 'set', {
                     note: `Stock Count: ${mainVal} ${selectedUnit.label} + ${(partialAmount * 100).toFixed(0)}%`
                 });
 

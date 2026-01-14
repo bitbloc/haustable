@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "128109822333",
+    "project_id": "in-the-haus",
+    "storage_bucket": "in-the-haus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:128109822333:android:f8028010b810530dac4c14",
+        "android_client_info": {
+          "package_name": "inth.haus.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBPUSSebxj1fvtM8Gy35XNnZY-5URzFxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

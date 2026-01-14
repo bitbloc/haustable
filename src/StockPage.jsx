@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
+import { formatStockDisplay } from './utils/stockUtils';
 import { 
     Package, 
     Scan, 
@@ -459,12 +460,14 @@ export default function StockPage() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-bold text-[#1A1A1A] truncate">{item.name}</h3>
-                                            <p className="text-xs text-gray-500">คงเหลือ {item.current_quantity} {item.unit}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {formatStockDisplay(item.current_quantity, item.unit).displayString}
+                                            </p>
                                         </div>
                                         <div className={`text-right px-3 py-1 rounded-full text-xs font-bold ${
                                             getStatusColor(item.current_quantity, item.reorder_point, item.min_stock_threshold)
                                         }`}>
-                                            {item.current_quantity?.toLocaleString()}
+                                            {formatStockDisplay(item.current_quantity).fullUnits}
                                         </div>
                                     </div>
                                 );

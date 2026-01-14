@@ -1,9 +1,9 @@
 import React from 'react';
 import { Package, AlertTriangle } from 'lucide-react';
+import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ item, onClick }) {
     // Nendo Logic: Visual Color Status
-    // User Request: If qty < 1.5 (1 bottle 50%), show Red.
     const isCritical = (item.current_quantity || 0) < 1.5 || item.current_quantity <= item.min_stock_threshold;
     const isWarning = !isCritical && item.current_quantity <= item.reorder_point;
     
@@ -19,6 +19,9 @@ export default function StockCard({ item, onClick }) {
         : isWarning
             ? 'text-orange-700'
             : 'text-gray-900';
+
+    // Format Data
+    const { fullUnits, percent, hasOpen } = formatStockDisplay(item.current_quantity, item.unit);
 
     return (
         <button 
@@ -55,40 +58,31 @@ export default function StockCard({ item, onClick }) {
                 </h3>
                 
                 {/* Quantity Display */}
-                <div className="flex items-baseline justify-between w-full">
-                    <span className="text-xs text-gray-500 font-medium">
-                        {item.unit}
-                    </span>
-                    
-                    <div className="text-right">
-                        <span className={`text-lg font-extrabold ${textClass}`}>
-                             {/* Show Integer Part */}
-                             {Math.floor(item.current_quantity || 0)}
-                        </span>
-                        
-                        {/* Decimal/Partial Part Visualization */}
-                        {(item.current_quantity % 1) > 0.01 && (
-                            <div className="text-xs font-bold text-blue-600 flex flex-col items-end">
-                                {item.capacity_per_unit ? (
-                                    <span>
-                                        + {Math.round((item.current_quantity % 1) * item.capacity_per_unit)} ml
-                                    </span>
-                                ) : (
-                                    <span>
-                                        + {Math.round((item.current_quantity % 1) * 100)}%
-                                    </span>
-                                )}
-                                
-                                {/* Mini Bar for Partial */}
-                                <div className="w-12 h-1.5 bg-gray-100 rounded-full mt-0.5 overflow-hidden border border-gray-200">
-                                    <div 
-                                        className="h-full bg-blue-500 rounded-full" 
-                                        style={{ width: `${(item.current_quantity % 1) * 100}%` }} 
-                                    />
-                                </div>
-                            </div>
-                        )}
+                <div className="flex flex-col w-full">
+                    {/* Main Integer Count */}
+                    <div className="flex items-baseline justify-between">
+                         <span className="text-xs text-gray-500 font-medium">{item.unit}</span>
+                         <span className={`text-xl font-extrabold ${textClass}`}>
+                            {fullUnits}
+                         </span>
                     </div>
+
+                    {/* Opened / Partial Detail */}
+                    {hasOpen ? (
+                        <div className="mt-1 p-1.5 bg-white/50 rounded-lg border border-black/5 flex items-center justify-between text-xs">
+                             <span className="text-gray-500 font-bold text-[10px]">เปิดแล้ว</span>
+                             <div className="flex items-center gap-1.5 font-bold text-blue-600">
+                                 <span>{percent}%</span>
+                                 <div className="w-8 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
+                                 </div>
+                             </div>
+                        </div>
+                    ) : (
+                         <div className="mt-1 h-[26px] flex items-center justify-end">
+                            <span className="text-[10px] text-gray-400 font-medium bg-gray-100/50 px-2 py-0.5 rounded-full">ยังไม่เปิด</span>
+                         </div>
+                    )}
                 </div>
             </div>
             
