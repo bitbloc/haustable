@@ -233,8 +233,13 @@ export default function StockPage() {
 
             supabase.functions.invoke('send-line-notify', {
                 body: { message: notifyMessage }
-            }).then(({ error }) => {
-                if (error) console.error('Failed to send LINE notify:', error);
+            }).then(({ data, error }) => {
+                if (error) {
+                    console.error('Failed to send LINE notify:', error);
+                    toast.error('LINE Notify Error: Function not active or deployed');
+                } else {
+                    console.log('LINE Sent:', data);
+                }
             });
             
         } catch (err) {
