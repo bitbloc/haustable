@@ -13,36 +13,39 @@ export const formatStockDisplay = (quantity, unit = '') => {
   // Integer part (Unopened/Full)
   const fullUnits = Math.floor(qty);
   
-  // Decimal part (Opened) - Fix floating point issues (e.g., 1.9 - 1 = 0.89999...)
+  // Decimal part (Opened) - Fix floating point issues
   const remainder = Number((qty - fullUnits).toFixed(4));
   
   // Convert remainder to percentage (0-100)
   const percent = Math.round(remainder * 100);
 
   const hasOpen = percent > 0;
+  const openedUnits = hasOpen ? 1 : 0;
+  const totalPhysical = fullUnits + openedUnits;
 
   // Construct Thai display string
-  // ex: "1 ขวด (ยังไม่เปิด)" or "1 ขวด + 90%"
+  // User formatting: "ยังไม่เปิด 1 ถุง เปิดแล้ว 1 ถุง (เหลือ 10%)"
   let displayString = '';
   
   if (fullUnits > 0) {
-      displayString = `${fullUnits} ${unit}`;
+      displayString = `ยังไม่เปิด ${fullUnits} ${unit}`;
+  } else if (hasOpen) {
+      displayString = `ยังไม่เปิด 0 ${unit}`;
+  } else {
+      displayString = 'หมด';
   }
   
   if (hasOpen) {
-      if (displayString) displayString += ' + ';
-      displayString += `เปิดแล้ว ${percent}%`;
-  } else if (fullUnits === 0) {
-      displayString = `หมด`;
+      displayString += ` เปิดแล้ว ${openedUnits} ${(unit || 'หน่วย').replace('(', '').replace(')', '')} (เหลือ ${percent}%)`;
   }
 
-  // If fully unopened (e.g. 2.0)
-  if (fullUnits > 0 && !hasOpen) {
-      displayString += ' (ยังไม่เปิด)';
-  }
+  // Fallback for simple display if needed
+  // const shortDisplay = `${qty} ${unit}`;
 
   return {
     fullUnits,
+    openedUnits,
+    totalPhysical,
     percent,
     remainder,
     hasOpen,

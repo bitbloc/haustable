@@ -20,8 +20,13 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
 
     useEffect(() => {
         if (item) {
-            // Is this a liquid/estimate item?
-            const isLiquid = item.category === 'sauce' || item.category === 'spirits' || item.unit.toLowerCase().includes('bottle') || item.unit.toLowerCase().includes('l') || item.unit.toLowerCase().includes('ขวด');
+            // Is this a liquid/estimate item or ANY item we want to allow partial counting for?
+            // Now including bags, kg, g for split counting (1 full + 1 open)
+            const unitLower = item.unit.toLowerCase();
+            const isLiquid = item.category === 'sauce' || item.category === 'spirits' || 
+                           unitLower.includes('bottle') || unitLower.includes('l') || unitLower.includes('ขวด') ||
+                           unitLower.includes('bag') || unitLower.includes('ถุง') || unitLower.includes('kg') || unitLower.includes('g');
+            
             setShowLiquidSlider(isLiquid);
             
             // Load capacity if exists
@@ -201,7 +206,7 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-10">
                         <h2 className="text-white text-xl font-bold leading-tight truncate">{item.name}</h2>
                         <div className="text-white/80 text-sm font-medium">
-                             คงเหลือ: {item.current_quantity?.toLocaleString()} {item.unit}
+                            {formatStockDisplay(item.current_quantity, item.unit).displayString}
                         </div>
                     </div>
                 </div>

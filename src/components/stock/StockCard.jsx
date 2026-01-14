@@ -58,31 +58,44 @@ export default function StockCard({ item, onClick }) {
                 </h3>
                 
                 {/* Quantity Display */}
-                <div className="flex flex-col w-full">
-                    {/* Main Integer Count */}
-                    <div className="flex items-baseline justify-between">
-                         <span className="text-xs text-gray-500 font-medium">{item.unit}</span>
+                {/* Quantity Display */}
+                <div className="flex flex-col w-full gap-1">
+                    {/* Main Summary */}
+                    <div className="flex items-baseline justify-between mb-1">
+                         <span className="text-xs text-gray-500 font-medium">คงเหลือรวม</span>
                          <span className={`text-xl font-extrabold ${textClass}`}>
-                            {fullUnits}
+                            {fullUnits + (hasOpen ? 1 : 0)}
                          </span>
                     </div>
 
-                    {/* Opened / Partial Detail */}
-                    {hasOpen ? (
-                        <div className="mt-1 p-1.5 bg-white/50 rounded-lg border border-black/5 flex items-center justify-between text-xs">
-                             <span className="text-gray-500 font-bold text-[10px]">เปิดแล้ว</span>
-                             <div className="flex items-center gap-1.5 font-bold text-blue-600">
-                                 <span>{percent}%</span>
-                                 <div className="w-8 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                     <div className="h-full bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
+                    {/* Detailed Breakdown */}
+                    <div className="flex flex-col gap-1.5">
+                        {/* Unopened */}
+                        {fullUnits > 0 && (
+                            <div className="flex justify-between items-center text-xs bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+                                <span className="text-gray-500 font-medium">ยังไม่เปิด</span>
+                                <span className="font-bold text-gray-900">{fullUnits} {item.unit}</span>
+                            </div>
+                        )}
+
+                        {/* Opened */}
+                        {hasOpen && (
+                             <div className="p-1.5 bg-blue-50/50 rounded-lg border border-blue-100 flex items-center justify-between text-xs">
+                                 <span className="text-blue-800 font-bold text-[10px]">เปิดแล้ว</span>
+                                 <div className="flex items-center gap-2">
+                                     <span className="text-blue-600 font-bold">1 {item.unit}</span>
+                                     <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden relative">
+                                         <div className="h-full bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
+                                     </div>
+                                     <span className="text-blue-600 font-bold min-w-[24px] text-right">{percent}%</span>
                                  </div>
                              </div>
-                        </div>
-                    ) : (
-                         <div className="mt-1 h-[26px] flex items-center justify-end">
-                            <span className="text-[10px] text-gray-400 font-medium bg-gray-100/50 px-2 py-0.5 rounded-full">ยังไม่เปิด</span>
-                         </div>
-                    )}
+                        )}
+                        
+                        {fullUnits === 0 && !hasOpen && (
+                             <div className="text-center text-xs text-red-400 font-medium py-1">สินค้าหมด</div>
+                        )}
+                    </div>
                 </div>
             </div>
             
