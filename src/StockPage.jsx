@@ -481,6 +481,7 @@ export default function StockPage() {
             {selectedItem && (
                 <AdjustmentModal 
                     item={selectedItem} 
+                    currentUser={currentUser}
                     onClose={() => setSelectedItem(null)}
                     onUpdate={handleAdjustment}
                     onEdit={() => {

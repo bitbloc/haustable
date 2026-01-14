@@ -218,7 +218,7 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
                     <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
                         <button onClick={() => setMode('in')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'in' ? 'bg-white shadow text-green-600' : 'text-gray-400'}`}>+ รับเข้า</button>
                         <button onClick={() => setMode('out')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'out' ? 'bg-white shadow text-red-600' : 'text-gray-400'}`}>- เบิกออก</button>
-                        <button onClick={() => setMode('set')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'set' ? 'bg-[#1A1A1A] shadow text-white' : 'text-gray-400'}`}>📝 นับสต็อก</button>
+                        <button onClick={() => setMode('set')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${mode === 'set' ? 'bg-[#1A1A1A] shadow text-white' : 'text-gray-400'}`}>📝 ปริมาณคงเหลือ</button>
                     </div>
 
                     {/* Unit Selector */}
@@ -238,75 +238,142 @@ export default function AdjustmentModal({ item, onClose, onUpdate, onEdit }) {
                         </div>
                     </div>
 
-                    {/* --- COUNT MODE EXTRAS --- */}
+                    {/* --- COUNT MODE (Quantity Remaining) --- */}
                     {mode === 'set' && (
-                        <div className="mb-6 space-y-4 animate-in fade-in slide-in-from-top-2">
-                            <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                                <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                    {selectedUnit?.factor === 1 ? 'เศษที่เหลือ (เปิดใช้แล้ว)' : `เศษ ${item.unit} (ย่อย)`}
-                                </h4>
-                                
-                                {useMlCalculator ? (
-                                    <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 mb-1 block">ปริมาตรเต็ม (ml)</label>
-                                                <input type="number" value={fullCapacityMl} onChange={e => setFullCapacityMl(parseFloat(e.target.value))} className="w-full p-2 rounded-lg border border-gray-200 text-sm font-bold" />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 mb-1 block">คงเหลือ (ml)</label>
-                                                <input type="number" value={remainingMl} onChange={e => setRemainingMl(parseFloat(e.target.value))} className="w-full p-2 rounded-lg border border-blue-200 bg-white text-sm font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs font-bold text-blue-800 pt-1">
-                                            <span>= {(partialAmount * 100).toFixed(0)}%</span>
-                                            <button onClick={() => setUseMlCalculator(false)} className="text-gray-400 underline decoration-dotted">ใช้แบบเลื่อน</button>
+                        <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
+                            
+                            {/* 1. Unopened Section */}
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                    จำนวนที่ยังไม่เปิด
+                                </label>
+                                <div className="flex gap-3">
+                                    <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Minus className="w-5 h-5 text-gray-400" /></button>
+                                    <input 
+                                        type="number" 
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0"
+                                        className="flex-1 h-12 bg-gray-50 rounded-xl text-center text-2xl font-bold text-[#1A1A1A] outline-none focus:ring-2 focus:ring-[#1A1A1A]"
+                                    />
+                                    <button onClick={() => quickAdd(1)} className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Plus className="w-5 h-5 text-[#1A1A1A]" /></button>
+                                </div>
+                            </div>
+
+                            {/* 2. Opened Section */}
+                            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                        จำนวนที่เปิดแล้ว (เศษ)
+                                    </label>
+                                    
+                                    {/* Toggle Opened Item Checkbox/Counter */}
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => {
+                                                if (partialAmount > 0) {
+                                                    setPartialAmount(0);
+                                                } else {
+                                                    setPartialAmount(0.5); // Default to 50% if turned on
+                                                }
+                                            }}
+                                            className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${partialAmount > 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-400 border-gray-200'}`}
+                                        >
+                                            {partialAmount > 0 ? 'มีของเปิดอยู่' : 'ไม่มีของเปิดอยู่'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {partialAmount > 0 && (
+                                    <div className="animate-in fade-in slide-in-from-top-2">
+                                        <div className="p-3 bg-white rounded-xl border border-blue-100 mb-2">
+                                            <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                เหลืออยู่กี่ %
+                                            </h4>
+                                            
+                                            {useMlCalculator ? (
+                                                <div className="space-y-3">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[10px] text-gray-500 mb-1 block">ปริมาตรเต็ม (ml)</label>
+                                                            <input type="number" value={fullCapacityMl} onChange={e => setFullCapacityMl(parseFloat(e.target.value))} className="w-full p-2 rounded-lg border border-gray-200 text-sm font-bold" />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] text-gray-500 mb-1 block">คงเหลือ (ml)</label>
+                                                            <input type="number" value={remainingMl} onChange={e => setRemainingMl(parseFloat(e.target.value))} className="w-full p-2 rounded-lg border border-blue-200 bg-white text-sm font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs font-bold text-blue-800 pt-1">
+                                                        <span>= {(partialAmount * 100).toFixed(0)}%</span>
+                                                        <button onClick={() => setUseMlCalculator(false)} className="text-gray-400 underline decoration-dotted">ใช้แบบเลื่อน</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="flex gap-4 items-center">
+                                                        <LiquidLevelSlider 
+                                                            value={Math.round(partialAmount * 100)} 
+                                                            onChange={(val) => setPartialAmount(val / 100)} 
+                                                        />
+                                                        <div className="text-xs text-blue-800">
+                                                            <div className="font-bold text-lg">{Math.round(partialAmount * 100)}%</div>
+                                                            <div className="opacity-70 leading-tight">ประมาณด้วยสายตา</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right mt-1 flex justify-end gap-2">
+                                                         <button onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className="text-[10px] font-bold text-blue-600 flex items-center gap-1 justify-end hover:bg-blue-100 px-2 py-1 rounded transition-colors">
+                                                             <Calculator className="w-3 h-3" /> คำนวณ ml
+                                                         </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
-                                ) : (
-                                    <>
-                                        <div className="flex gap-4 items-center">
-                                            <LiquidLevelSlider 
-                                                value={Math.round(partialAmount * 100)} 
-                                                onChange={(val) => setPartialAmount(val / 100)} 
-                                            />
-                                            <div className="text-xs text-blue-800">
-                                                <div className="font-bold text-lg">{Math.round(partialAmount * 100)}%</div>
-                                                <div className="opacity-70 leading-tight">ประมาณด้วยสายตา</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-right mt-1 flex justify-end gap-2">
-                                             <button onClick={() => setPartialAmount(0)} className="text-[10px] font-bold text-red-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded transition-colors">
-                                                 รีเซ็ต
-                                             </button>
-                                             <button onClick={() => { setUseMlCalculator(true); setRemainingMl(0); }} className="text-[10px] font-bold text-blue-600 flex items-center gap-1 justify-end hover:bg-blue-100 px-2 py-1 rounded transition-colors">
-                                                 <Calculator className="w-3 h-3" /> คำนวณ ml
-                                             </button>
-                                        </div>
-                                    </>
                                 )}
+                            </div>
+
+                            {/* Summary Section */}
+                            <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <span className="w-1 h-1 rounded-full bg-black"></span>
+                                    สรุปรายการ
+                                </h4>
+                                <div className="space-y-1">
+                                    <div className="text-sm font-bold text-[#1A1A1A]">
+                                        {amount || 0} {item.unit} (ยังไม่เปิด) 
+                                        {partialAmount > 0 && ` + 1 ${item.unit} (เปิดแล้ว ${Math.round(partialAmount * 100)}%)`}
+                                    </div>
+                                    <div className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                                        ผู้บันทึก: <span className="text-[#1A1A1A]">{currentUser?.user_metadata?.full_name || 'Staff'}</span>
+                                        <span className="opacity-50">
+                                            ({new Date().toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Main Integer Input */}
-                    <div className="mb-2">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                            {mode === 'set' ? 'จำนวนเต็ม (ยังไม่เปิด)' : 'จำนวน'}
-                        </label>
-                        <div className="flex gap-3">
-                            <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Minus className="w-5 h-5 text-gray-400" /></button>
-                            <input 
-                                type="number" 
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0"
-                                className="flex-1 h-12 bg-gray-50 rounded-xl text-center text-2xl font-bold text-[#1A1A1A] outline-none focus:ring-2 focus:ring-[#1A1A1A]"
-                            />
-                            <button onClick={() => quickAdd(1)} className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Plus className="w-5 h-5 text-[#1A1A1A]" /></button>
+                    {/* Main Input for In/Out (Hidden in Set mode) */}
+                    {mode !== 'set' && (
+                        <div className="mb-2">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                จำนวน
+                            </label>
+                            <div className="flex gap-3">
+                                <button onClick={() => { const val = parseFloat(amount || 0); if (val > 0) setAmount((val - 1).toString()); }} className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Minus className="w-5 h-5 text-gray-400" /></button>
+                                <input 
+                                    type="number" 
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    placeholder="0"
+                                    className="flex-1 h-12 bg-gray-50 rounded-xl text-center text-2xl font-bold text-[#1A1A1A] outline-none focus:ring-2 focus:ring-[#1A1A1A]"
+                                />
+                                <button onClick={() => quickAdd(1)} className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50"><Plus className="w-5 h-5 text-[#1A1A1A]" /></button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Footer */}
