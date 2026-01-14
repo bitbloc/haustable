@@ -352,6 +352,14 @@ export default function StockPage() {
                         </div>
                         
                         <div className="flex gap-2">
+                             {/* Notification Toggle */}
+                             <button 
+                                onClick={toggleNotifications}
+                                className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${notificationsEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}
+                             >
+                                {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+                             </button>
+
                             {/* Report Button */}
                              <button 
                                 onClick={() => setShowReport(true)}
