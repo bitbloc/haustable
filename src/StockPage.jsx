@@ -220,27 +220,47 @@ export default function StockPage() {
             toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
 
             // 3. Send LINE Notification (Fire and Forget)
-            const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
-            const item = items.find(i => i.id === itemId);
-            const itemName = item ? item.name : 'Unknown Item';
-            
-            let notifyMessage = '';
-            if (type === 'set') {
-                 notifyMessage = `${performedBy} อัพเดทสต็อก ${itemName}\n${meta.note || ''}`;
-            } else {
-                 notifyMessage = `${performedBy} ${changeAmount > 0 ? 'รับเข้า' : 'เบิกออก'} ${itemName}\n${meta.note || ''}`;
-            }
-
-            supabase.functions.invoke('send-line-notify', {
-                body: { message: notifyMessage }
-            }).then(({ data, error }) => {
-                if (error) {
-                    console.error('Failed to send LINE notify:', error);
-                    toast.error('LINE Notify Error: Function not active or deployed');
+            if (notificationsEnabled) {
+                const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
+                const item = items.find(i => i.id === itemId);
+                const itemName = item ? item.name : 'Unknown Item';
+                
+                // Calculate New Quantity for Status Check
+                let newStockQty = 0;
+                if (type === 'set') {
+                    newStockQty = changeAmount;
                 } else {
-                    console.log('LINE Sent:', data);
+                    newStockQty = (item.current_quantity || 0) + changeAmount;
                 }
-            });
+
+                // Determine Status
+                let statusText = '';
+                if (newStockQty <= 0) {
+                    statusText = '⚫ สินค้าหมด';
+                } else if (newStockQty <= (item.min_stock_threshold || 0)) {
+                    statusText = '🔴 ใกล้หมด (Critical)';
+                } else if (newStockQty <= (item.reorder_point || 0)) {
+                    statusText = '🟠 ต้องเติม (Low Stock)';
+                } else {
+                    statusText = '🟢 ปกติ';
+                }
+                
+                let notifyMessage = '';
+                if (type === 'set') {
+                     notifyMessage = `${statusText}\n${performedBy} อัพเดทสต็อก ${itemName}\n${meta.note || ''}`;
+                } else {
+                     notifyMessage = `${statusText}\n${performedBy} ${changeAmount > 0 ? 'รับเข้า' : 'เบิกออก'} ${itemName}\n${meta.note || ''}`;
+                }
+
+                supabase.functions.invoke('send-line-notify', {
+                    body: { message: notifyMessage }
+                }).then(({ data, error }) => {
+                    if (error) {
+                        console.error('Failed to send LINE notify:', error);
+                        // Only show toast if enabled (which it is here)
+                    }
+                });
+            }
             
         } catch (err) {
             toast.error('Sync failed');
