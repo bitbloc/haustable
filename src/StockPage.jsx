@@ -9,7 +9,9 @@ import {
     History,
     RefreshCw,
     Settings,
-    Plus
+    Plus,
+    Bell,
+    BellOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
@@ -38,6 +40,18 @@ export default function StockPage() {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [sortMode, setSortMode] = useState('name'); // 'name' | 'low_stock'
     
+    // Notification Toggle (Default true)
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+        return localStorage.getItem('stock_notify') !== 'false';
+    });
+    
+    const toggleNotifications = () => {
+        const newState = !notificationsEnabled;
+        setNotificationsEnabled(newState);
+        localStorage.setItem('stock_notify', newState);
+        toast.info(`LINE Notifications: ${newState ? 'ON' : 'OFF'}`);
+    };
+
     // Data State
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]); // Dynamic
