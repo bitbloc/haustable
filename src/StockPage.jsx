@@ -45,6 +45,12 @@ export default function StockPage() {
         return localStorage.getItem('stock_notify') !== 'false';
     });
     
+    // Ref to avoid stale closures in async functions
+    const notificationRef = React.useRef(notificationsEnabled);
+    useEffect(() => {
+        notificationRef.current = notificationsEnabled;
+    }, [notificationsEnabled]);
+    
     const toggleNotifications = () => {
         const newState = !notificationsEnabled;
         setNotificationsEnabled(newState);
@@ -234,7 +240,8 @@ export default function StockPage() {
             toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
 
             // 3. Send LINE Notification (Fire and Forget)
-            if (notificationsEnabled) {
+            // 3. Send LINE Notification (Fire and Forget)
+            if (notificationRef.current) {
                 const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
                 const item = items.find(i => i.id === itemId);
                 const itemName = item ? item.name : 'Unknown Item';
@@ -271,9 +278,10 @@ export default function StockPage() {
                 }).then(({ data, error }) => {
                     if (error) {
                         console.error('Failed to send LINE notify:', error);
-                        // Only show toast if enabled (which it is here)
                     }
                 });
+            } else {
+                console.log('LINE Notification Skipped (Disabled by user)');
             }
             
         } catch (err) {
