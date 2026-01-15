@@ -11,7 +11,8 @@ import {
     Settings,
     Plus,
     Bell,
-    BellOff
+    BellOff,
+    Send // Added
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
@@ -40,23 +41,8 @@ export default function StockPage() {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [sortMode, setSortMode] = useState('name'); // 'name' | 'low_stock'
     
-    // Notification Toggle (Default true)
-    const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-        return localStorage.getItem('stock_notify') !== 'false';
-    });
-    
-    // Ref to avoid stale closures in async functions
-    const notificationRef = React.useRef(notificationsEnabled);
-    useEffect(() => {
-        notificationRef.current = notificationsEnabled;
-    }, [notificationsEnabled]);
-    
-    const toggleNotifications = () => {
-        const newState = !notificationsEnabled;
-        setNotificationsEnabled(newState);
-        localStorage.setItem('stock_notify', newState);
-        toast.info(`LINE Notifications: ${newState ? 'ON' : 'OFF'}`);
-    };
+    // Notification Toggle Removed
+
 
     // Data State
     const [items, setItems] = useState([]);
@@ -239,55 +225,103 @@ export default function StockPage() {
 
             toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
 
-            // 3. Send LINE Notification (Fire and Forget)
-            // 3. Send LINE Notification (Fire and Forget)
-            if (notificationRef.current) {
-                const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
-                const item = items.find(i => i.id === itemId);
-                const itemName = item ? item.name : 'Unknown Item';
-                
-                // Calculate New Quantity for Status Check
-                let newStockQty = 0;
-                if (type === 'set') {
-                    newStockQty = changeAmount;
-                } else {
-                    newStockQty = (item.current_quantity || 0) + changeAmount;
-                }
+            // 3. Send LINE Notification (Fire and Forget) - REMOVED Auto-Push
+            // Now using Manual Update Button
 
-                // Determine Status
-                let statusText = '';
-                if (newStockQty <= 0) {
-                    statusText = '⚫ สินค้าหมด';
-                } else if (newStockQty <= (item.min_stock_threshold || 0)) {
-                    statusText = '🔴 ใกล้หมด (Critical)';
-                } else if (newStockQty <= (item.reorder_point || 0)) {
-                    statusText = '🟠 ต้องเติม (Low Stock)';
-                } else {
-                    statusText = '🟢 ปกติ';
-                }
-                
-                let notifyMessage = '';
-                if (type === 'set') {
-                     notifyMessage = `${statusText}\n${performedBy} อัพเดทสต็อก ${itemName}\n${meta.note || ''}`;
-                } else {
-                     notifyMessage = `${statusText}\n${performedBy} ${changeAmount > 0 ? 'รับเข้า' : 'เบิกออก'} ${itemName}\n${meta.note || ''}`;
-                }
-
-                supabase.functions.invoke('send-line-notify', {
-                    body: { message: notifyMessage }
-                }).then(({ data, error }) => {
-                    if (error) {
-                        console.error('Failed to send LINE notify:', error);
-                    }
-                });
-            } else {
-                console.log('LINE Notification Skipped (Disabled by user)');
-            }
             
         } catch (err) {
             toast.error('Sync failed');
             console.error(err);
             fetchItems(); // Revert
+        }
+    };
+
+    const handleManualUpdate = async () => {
+        if (!confirm('ยืนยันส่งสรุปการอัพเดทสต็อก (1 ชม. ล่าสุด) ลงกลุ่ม LINE?')) return;
+        
+        const toastId = toast.loading('กำลังสรุปและส่งข้อมูล...');
+        try {
+            // 1. Get transactions from last 1 hour
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+            
+            const { data: txData, error: txError } = await supabase
+                .from('stock_transactions')
+                .select(`
+                    id, 
+                    created_at, 
+                    quantity_change, 
+                    transaction_type,
+                    performed_by,
+                    stock_items ( name, unit, current_quantity, min_stock_threshold, reorder_point )
+                `)
+                .gt('created_at', oneHourAgo)
+                .order('created_at', { ascending: true });
+
+            if (txError) throw txError;
+
+            if (!txData || txData.length === 0) {
+                toast.dismiss(toastId);
+                toast.info('ไม่พบการอัพเดทใน 1 ชม. ล่าสุด');
+                return;
+            }
+
+            // 2. Group by Item to prevent duplicate lines if updated multiple times
+            // However, seeing the log of actions might be good. 
+            // User requirement: "สรุปการอัพเดท stock... push message ลงกลุ่มแค่รายการที่อัพเดทใน 1 ชม. นั้น"
+            // Let's list the unique items that were updated, and show their CURRENT status.
+            
+            const uniqueItems = {};
+            const performers = new Set();
+
+            txData.forEach(tx => {
+                const itemName = tx.stock_items?.name || 'Unknown';
+                const itemId = tx.stock_items?.id || 'unknown'; // Note: query didn't select ID for item, let's trust name or index. 
+                // Wait, I didn't select stock_item_id in the query select string above implicitly? 
+                // Actually `stock_items ( ... )` is a join. 
+                // Let's use `stock_items` object.
+                
+                if (tx.stock_items) {
+                    uniqueItems[itemName] = tx.stock_items;
+                }
+                if (tx.performed_by) performers.add(tx.performed_by);
+            });
+
+            // 3. Format Message
+            let message = `📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)\n\n`;
+            
+            let index = 1;
+            Object.values(uniqueItems).forEach(item => {
+                // Determine Status
+                const qty = item.current_quantity;
+                let statusEmoji = '🟢';
+                if (qty <= 0) statusEmoji = '⚫ หมด';
+                else if (qty <= item.min_stock_threshold) statusEmoji = '🔴 วิกฤต';
+                else if (qty <= item.reorder_point) statusEmoji = '🟠 ต้องเติม';
+                
+                // Friendly Format (Unopened + Opened)
+                const display = formatStockDisplay(qty, item.unit).displayString;
+                
+                message += `${index}. ${item.name}\n   สถานะ: ${display} (${statusEmoji})\n\n`;
+                index++;
+            });
+
+            const staffNames = Array.from(performers).join(', ');
+            message += `โดย: ${staffNames}`;
+
+            // 4. Send
+            const { error: sendError } = await supabase.functions.invoke('send-line-notify', {
+                body: { message }
+            });
+
+            if (sendError) throw sendError;
+
+            toast.dismiss(toastId);
+            toast.success('ส่งสรุปเรียบร้อย');
+
+        } catch (err) {
+            console.error(err);
+            toast.dismiss(toastId);
+            toast.error('ส่งข้อมูลล้มเหลว');
         }
     };
 
@@ -374,12 +408,13 @@ export default function StockPage() {
                         </div>
                         
                         <div className="flex gap-2">
-                             {/* Notification Toggle */}
+                            {/* Update Stock Button (Manual Push) */}
                              <button 
-                                onClick={toggleNotifications}
-                                className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${notificationsEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}
+                                onClick={handleManualUpdate}
+                                disabled={loading}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
                              >
-                                {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+                                <Send className="w-5 h-5" />
                              </button>
 
                             {/* Report Button */}
