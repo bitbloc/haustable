@@ -207,12 +207,13 @@ export default function StaffLiveOrders() {
     })
     
     // Audio Hook
-    const [soundUrl, setSoundUrl] = useState(null)
+     const [soundUrl, setSoundUrl] = useState(null)
     const { play, stop, isPlaying, error: audioError } = useAudioAlert(soundUrl)
-    const { isSubscribed, requestPermission, triggerNotification } = usePushNotifications()
+    const { isSubscribed, requestPermission, triggerNotification, fcmToken, error: pushError } = usePushNotifications()
 
     // Init Logic to get Sound URL
     useEffect(() => {
+
         const init = async () => {
             const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
             if (data?.value) {
