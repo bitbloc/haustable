@@ -32,7 +32,7 @@ export default function usePushNotifications() {
         const msg = getMessaging(app);
 
         const currentToken = await getToken(msg, {
-          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Ensure this exists in .env
+          vapidKey: import.meta.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Ensure this exists in .env
           serviceWorkerRegistration: registration
         });
 

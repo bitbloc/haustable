@@ -22,6 +22,7 @@ export default defineConfig({
   define: {
     'process.env.HOST_IP': JSON.stringify(localIp)
   },
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   build: {
     // วิธีแก้แบบ Pro: สั่งแยกไฟล์ Library ออกไปเป็นไฟล์ชื่อ vendor
     rollupOptions: {
