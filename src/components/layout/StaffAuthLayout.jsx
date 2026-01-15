@@ -8,6 +8,7 @@ import AuthModal from '../AuthModal'; // Reuse existing AuthModal for login
 // So path is ../../components/AuthModal
 
 export default function StaffAuthLayout() {
+    const location = useLocation();
     const [authStatus, setAuthStatus] = useState('loading'); // loading, unauthenticated, unauthorized, authorized
     const [userEmail, setUserEmail] = useState(null); 
     const [showLogin, setShowLogin] = useState(true); // Default to show login if not auth
@@ -98,29 +99,8 @@ export default function StaffAuthLayout() {
     }
 
     if (authStatus === 'unauthenticated') {
-        // Show Login UI directly instead of redirecting?
-        // User requested "Add login page". 
-        // We can just show the AuthModal (which is full screen) or a nice Login Page.
-        // Let's render a simple page wrapper around AuthModal logic or just trigger it.
-        // Since AuthModal is a modal, we need a background.
-        return (
-            <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center p-4">
-                 <div className="text-center">
-                     <h1 className="text-2xl font-bold text-white mb-4">Staff Access Required</h1>
-                     <p className="text-gray-400 mb-8">Please log in with an Admin account.</p>
-                     
-                     {/* We can mount AuthModal here but force it open */}
-                     <AuthModal 
-                        isOpen={true} 
-                        onClose={() => {}} // Disallow close?
-                     />
-                     {/* The AuthModal has a "Close" X button. If user clicks it, it closes and they stare at black screen.
-                         Ideally AuthModal should be non-closable or handle close -> redirect home.
-                         Let's modify AuthModal usage or just trust user won't close, or if they close we show a "Login Recquired" button.
-                     */}
-                 </div>
-            </div>
-        );
+        // Redirect to Login Page, preserving the current location state
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
     if (authStatus === 'unauthorized') {

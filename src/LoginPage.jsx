@@ -7,17 +7,25 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Check if ALREADY logged in, then redirect back
+    // Listen for Auth Changes (Login Success)
     useEffect(() => {
-        const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+        // check current session first
+        supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                // Determine where to go. Default to /staff since this is likely staff login
                 const from = location.state?.from?.pathname || '/staff';
                 navigate(from, { replace: true });
             }
-        };
-        checkSession();
+        });
+
+        // Listen for future changes (e.g. login completes)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+             if (event === 'SIGNED_IN' && session) {
+                 const from = location.state?.from?.pathname || '/staff';
+                 navigate(from, { replace: true });
+             }
+        });
+
+        return () => subscription.unsubscribe();
     }, [navigate, location]);
 
     return (
