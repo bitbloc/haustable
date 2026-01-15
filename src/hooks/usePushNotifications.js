@@ -5,14 +5,24 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 
 export default function usePushNotifications() {
-  const [permission, setPermission] = useState(Notification.permission);
+  // Safe initialization
+  const [permission, setPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
   const [fcmToken, setFcmToken] = useState(null);
 
   useEffect(() => {
-    setPermission(Notification.permission);
+    if (typeof Notification !== 'undefined') {
+      setPermission(Notification.permission);
+    }
   }, []);
 
   const requestPermission = async () => {
+    if (typeof Notification === 'undefined') {
+        toast.error("Notifications not supported in this browser.");
+        return;
+    }
+
     try {
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
