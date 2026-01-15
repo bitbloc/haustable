@@ -837,7 +837,7 @@ export default function StaffLiveOrders() {
                                                 <span className="text-lg font-bold text-blue-600">
                                                     {order.booking_type === 'pickup' 
                                                         ? 'Pick up ( สั่งไว้มารับ )' 
-                                                        : (['steak', 'preorder_steak'].includes(order.booking_type) || (order.booking_type === 'dine_in' && (order.order_items?.some(i => i.menu_items?.name?.toLowerCase().includes('steak')) || customer_note?.includes('Steak'))) ? 'Steak Pre-order' 
+                                                        : (['steak', 'preorder_steak'].includes(order.booking_type) || (order.booking_type === 'dine_in' && (order.order_items?.some(i => i.menu_items?.name?.toLowerCase().includes('steak')) || order.customer_note?.includes('Steak'))) ? 'Steak Pre-order' 
                                                         : `Table ${order.tables_layout?.table_name || order.table_id || '?'}`)
                                                     }
                                                 </span>
