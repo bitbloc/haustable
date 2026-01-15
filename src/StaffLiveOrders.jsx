@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { OrderNotificationToast } from './components/shared/OrderNotificationToast'
 import { formatThaiTimeOnly, formatThaiDateLong, formatThaiTime } from './utils/timeUtils'
-import { usePushNotifications } from './hooks/usePushNotifications'
+import usePushNotifications from './hooks/usePushNotifications'
 
 // --- PWA Components ---
 const IOSInstallModal = ({ onClose }) => (
