@@ -1,26 +1,25 @@
 import { useState, useEffect } from 'react';
-import { messaging } from '../utils/firebase';
-import { getToken, onMessage } from 'firebase/messaging';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 
 export default function usePushNotifications() {
-  // Safe initialization
   const [permission, setPermission] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
   const [fcmToken, setFcmToken] = useState(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') {
       setPermission(Notification.permission);
+      setIsSubscribed(Notification.permission === 'granted');
     }
   }, []);
 
   const requestPermission = async () => {
     if (typeof Notification === 'undefined') {
-        toast.error("Notifications not supported in this browser.");
-        return;
+      toast.error("Notifications not supported in this browser.");
+      return;
     }
 
     try {
@@ -28,21 +27,19 @@ export default function usePushNotifications() {
       setPermission(permissionResult);
 
       if (permissionResult === 'granted') {
+        setIsSubscribed(true);
         toast.success("Notifications enabled!");
         
         // Get the service worker registration
         const registration = await navigator.serviceWorker.ready;
 
-        // Get FCM Token
-        // NOTE: We rely on the async import of messaging in firebase.js, so we might need to wait or re-import
-        // But since this is called on a user action, likely it's loaded. 
-        // A safer way is ensuring we have the messaging instance.
-        const { getMessaging } = await import("firebase/messaging");
-        const { default: app } = await import("../utils/firebase"); // default export is app
+        // Lazy load Firebase Messaging
+        const { getMessaging, getToken } = await import("firebase/messaging");
+        const { default: app } = await import("../utils/firebase"); 
         const msg = getMessaging(app);
 
         const currentToken = await getToken(msg, {
-          vapidKey: import.meta.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Ensure this exists in .env
+          vapidKey: import.meta.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
           serviceWorkerRegistration: registration
         });
 
@@ -51,11 +48,12 @@ export default function usePushNotifications() {
           setFcmToken(currentToken);
           await saveTokenToDatabase(currentToken);
         } else {
-          console.log('No registration token available. Request permission to generate one.');
+          console.log('No registration token available.');
           toast.error("Failed to get token.");
         }
       } else {
-         toast.error("Permission denied for notifications.");
+        setIsSubscribed(false);
+        toast.error("Permission denied for notifications.");
       }
     } catch (error) {
       console.error('An error occurred while retrieving token. ', error);
@@ -67,27 +65,44 @@ export default function usePushNotifications() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Save functionality -> We need a table for this, or just put in profiles?
-    // For now, let's update 'profiles' if there's a column, or create a 'user_tokens' table.
-    // Assuming 'profiles' for simplicity as per common patterns, or just log it for now.
-    
-    // For the immediate task, I will try to save to a 'push_tokens' table if it exists, or 'profiles'.
-    // Let's assume 'profiles' has a field or we use a separate table.
-    // I will use a separate table 'fcm_tokens' to allow multiple devices per user.
-    
+    // Save to 'profiles' table. Ensure 'fcm_token' column exists.
     const { error } = await supabase
       .from('profiles')
-      .upsert({ 
-        user_id: user.id,
+      .update({ 
         fcm_token: token,
         updated_at: new Date()
-      }, { onConflict: 'user_id' }); // Assuming 1 token per user for MVP, or we can use device_id logic.
+      })
+      .eq('id', user.id);
 
     if (error) {
-        // Fallback: maybe table doesn't exist?
-        console.error("Error saving token:", error);
+        console.error("Error saving token to profiles:", error);
+        // Fallback: If simple update fails, try upsert if row might not exist (though profiles should exist for users)
+        // or just log it for now.
     } else {
         console.log("Token saved to DB");
+    }
+  };
+
+  /**
+   * Triggers a system notification (Desktop style)
+   * Uses Service Worker if available -> "Desktop" feel in PWA
+   */
+  const triggerNotification = (title, options = {}) => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+    const defaultOptions = {
+        icon: '/pwa-icon.png',
+        badge: '/pwa-icon.png',
+        vibrate: [200, 100, 200],
+        ...options
+    };
+
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, defaultOptions);
+        });
+    } else {
+        new Notification(title, defaultOptions);
     }
   };
 
@@ -99,9 +114,14 @@ export default function usePushNotifications() {
              const msg = getMessaging(app);
              const unsubscribe = onMessage(msg, (payload) => {
                 console.log('Message received. ', payload);
-                toast(payload.notification.title, {
-                    description: payload.notification.body,
-                });
+                // In foreground, we might want to show a toast OR a system notification
+                // For "Desktop Version" feel, let's do BOTH or just System if supported
+                if(payload.notification) {
+                     triggerNotification(payload.notification.title, {
+                         body: payload.notification.body,
+                         data: payload.data, // pass data for click handling
+                     });
+                }
              });
              return () => unsubscribe();
           });
@@ -109,5 +129,11 @@ export default function usePushNotifications() {
     }
   }, []);
 
-  return { permission, requestPermission, fcmToken };
+  return { 
+      permission, 
+      requestPermission, 
+      fcmToken, 
+      isSubscribed, 
+      triggerNotification 
+  };
 }

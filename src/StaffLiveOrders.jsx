@@ -209,7 +209,7 @@ export default function StaffLiveOrders() {
     // Audio Hook
     const [soundUrl, setSoundUrl] = useState(null)
     const { play, stop, isPlaying, error: audioError } = useAudioAlert(soundUrl)
-    const { isSubscribed, subscribeToPush, permission } = usePushNotifications()
+    const { isSubscribed, requestPermission, triggerNotification } = usePushNotifications()
 
     // Init Logic to get Sound URL
     useEffect(() => {
@@ -293,6 +293,8 @@ export default function StaffLiveOrders() {
         if (!isSoundChecked) return
         if (orders.some(o => o.status === 'pending')) {
             play()
+            // Optional: Also trigger a system notification if desired for ongoing alarm, 
+            // but usually we strictly trigger on NEW orders, handled by triggerNewOrderAlert.
         } else {
             stop()
         }
@@ -320,44 +322,8 @@ export default function StaffLiveOrders() {
 
 
     // --- Notification ---
-    const requestNotificationPermission = async () => {
-        if (!('Notification' in window)) return
-        if (Notification.permission === 'default') await Notification.requestPermission()
-    }
-
-    const showSystemNotification = (title, body) => {
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            try {
-                // Aggressive Notification Options for background visibility
-                const options = {
-                    body: body,
-                    icon: '/icons/icon-192x192.png',
-                    tag: 'new-order', // Replaces previous notification with same tag
-                    renotify: true,   // Play sound/vibrate again even if replacing
-                    requireInteraction: true, // Keep on screen until clicked (Chrome)
-                    silent: false
-                }
-
-                // If Service Worker Registration is available, use it (More robust on Android)
-                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-                     navigator.serviceWorker.ready.then(registration => {
-                         registration.showNotification(title, options)
-                     })
-                } else {
-                    // Fallback to standard API
-                    const n = new Notification(title, options)
-                    n.onclick = function(e) {
-                        e.preventDefault()
-                        window.focus()
-                        n.close()
-                    }
-                }
-
-            } catch (e) {
-                console.error("Notification Error:", e)
-            }
-        }
-    }
+    // (Manual permission request removed, using hook)
+    // (showSystemNotification removed, using hook)
 
     // iOS Background Warning
     useEffect(() => {
@@ -477,8 +443,14 @@ export default function StaffLiveOrders() {
         const tableName = order.tables_layout?.table_name || 'Pickup'
         const price = order.total_amount
         
-        // 1. System Notification (Background)
-        showSystemNotification('มีรายการใหม่', `โต๊ะ: ${tableName} - ${price}.-`)
+        // 1. System Notification (Background/Desktop)
+        triggerNotification('มีรายการใหม่', {
+             body: `โต๊ะ: ${tableName} - ${price}.-`,
+             tag: 'new-order',
+             renotify: true,
+             requireInteraction: true,
+             url: '/staff/orders' // Pass URL for click handling in SW
+        })
         
         // 2. Custom In-App Toast (Foreground - Smooth Animation)
         setNotification({
@@ -621,7 +593,7 @@ export default function StaffLiveOrders() {
 
                     <div className="space-y-3">
                          <button 
-                            onClick={() => { play(); requestNotificationPermission(); }}
+                            onClick={() => { play(); requestPermission(); }}
                             className="w-full bg-white border border-gray-200 text-[#1A1A1A] font-bold py-3 rounded-xl hover:bg-gray-50 transition"
                         >
                             Test Sound & Permission
@@ -757,7 +729,7 @@ export default function StaffLiveOrders() {
                         </a>
                         {!isSubscribed && (
                             <button
-                                onClick={subscribeToPush}
+                                onClick={requestPermission}
                                 className="p-2.5 bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-100 hover:text-blue-600 text-gray-600 rounded-full transition-colors relative"
                                 title="Enable Notifications"
                             >

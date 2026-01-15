@@ -84,7 +84,7 @@ self.addEventListener('push', function(event) {
       timestamp: Date.now()
     },
     actions: [
-      { action: 'open', title: 'Open Staff View' },
+      { action: 'open', title: 'Open App' },
     ],
     // Android specific (High Priority)
     priority: 2, 
@@ -103,15 +103,22 @@ self.addEventListener('notificationclick', function(event) {
 
   event.waitUntil(
     clients.matchAll({
-      type: 'window'
+      type: 'window',
+      includeUncontrolled: true
     }).then(function(clientList) {
-      const urlToOpen = event.notification.data.url || '/staff';
+      const urlToOpen = new URL(event.notification.data.url || '/staff', self.location.origin).href;
       
       // If a window is already open, focus it
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url === urlToOpen && 'focus' in client)
-          return client.focus();
+        // Check if the current client URL is part of the app generally
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            // If we want to navigate:
+            if(client.url !== urlToOpen) {
+                return client.navigate(urlToOpen).then(c => c.focus());
+            }
+            return client.focus();
+        }
       }
       // Otherwise open a new window
       if (clients.openWindow)
