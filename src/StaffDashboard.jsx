@@ -12,7 +12,6 @@ import {
     CheckCircle2,
     TrendingUp,
     AlertTriangle,
-    AlertTriangle,
     RefreshCw
 } from 'lucide-react';
 import usePushNotifications from './hooks/usePushNotifications';
