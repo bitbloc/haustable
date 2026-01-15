@@ -237,12 +237,11 @@ export default function StaffDashboard() {
             if (user) {
                 setUser(user);
                 fetchStats(); // Initial stats fetch
-            } else {
-                navigate('/login');
-            }
+            } 
+            // Layout handles redirect if not logged in
         };
         initUser();
-    }, [navigate, fetchStats]);
+    }, [fetchStats]);
 
     // 3. REALTIME SUBSCRIPTION (The Pro Plan Power) ⚡️
     useEffect(() => {

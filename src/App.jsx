@@ -23,6 +23,7 @@ import AdminPromotions from './components/admin/AdminPromotions' // NEW
 import AdminTableManager from './admin/AdminTableManager' // NEW
 import AdminSteakDashboard from './admin/AdminSteakDashboard' // NEW
 import SteakBookingPage from './SteakBookingPage' // NEW
+import LoginPage from './LoginPage' // NEW
 import StaffDashboard from './StaffDashboard'
 import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
 import StockPage from './StockPage' // NEW
@@ -125,6 +126,10 @@ function App() {
               <Route path="editor" element={<AdminTableEditor />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
+
+            {/* Login Route */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/staff/login" element={<LoginPage />} />
 
             {/* Staff/Kitchen Route (Protected) */}
             <Route element={<StaffAuthLayout />}>
