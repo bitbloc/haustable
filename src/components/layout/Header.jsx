@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/LanguageContext'
 import { supabase } from '../../lib/supabaseClient'
 import { useUserHistory } from '../../hooks/useUserHistory'
 import LanguageToggle from './LanguageToggle'
+import ViewToggle from './ViewToggle' // NEW
 import HistoryModal from '../history/HistoryModal'
 
 export default function Header({ session }) {
@@ -29,6 +30,7 @@ export default function Header({ session }) {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <ViewToggle /> {/* NEW */}
                     <LanguageToggle />
 
                     {session ? (
