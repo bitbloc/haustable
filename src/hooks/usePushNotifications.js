@@ -1,109 +1,103 @@
-
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient'; // Corrected path
+import { messaging } from '../utils/firebase';
+import { getToken, onMessage } from 'firebase/messaging';
+import { supabase } from '../lib/supabaseClient';
+import { toast } from 'sonner';
 
-const PUBLIC_VAPID_KEY = "BIdzmSkckPWxlQPKaJDo7og5NvuzLgbAgFft3hW9J_80a0YAIY_9Aqg1e4ozrm44Zg0_gog_RzkYhLtJPVpLwYE";
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
-export function usePushNotifications() {
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscription, setSubscription] = useState(null);
-  const [permission, setPermission] = useState(() => {
-    if (typeof Notification !== 'undefined') {
-      return Notification.permission;
-    }
-    return 'default';
-  });
+export default function usePushNotifications() {
+  const [permission, setPermission] = useState(Notification.permission);
+  const [fcmToken, setFcmToken] = useState(null);
 
   useEffect(() => {
-    // Check if subscription exists
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.ready.then(function(registration) {
-        registration.pushManager.getSubscription().then(function(sub) {
-          if (sub) {
-            setIsSubscribed(true);
-            setSubscription(sub);
-          }
+    setPermission(Notification.permission);
+  }, []);
+
+  const requestPermission = async () => {
+    try {
+      const permissionResult = await Notification.requestPermission();
+      setPermission(permissionResult);
+
+      if (permissionResult === 'granted') {
+        toast.success("Notifications enabled!");
+        
+        // Get the service worker registration
+        const registration = await navigator.serviceWorker.ready;
+
+        // Get FCM Token
+        // NOTE: We rely on the async import of messaging in firebase.js, so we might need to wait or re-import
+        // But since this is called on a user action, likely it's loaded. 
+        // A safer way is ensuring we have the messaging instance.
+        const { getMessaging } = await import("firebase/messaging");
+        const { default: app } = await import("../utils/firebase"); // default export is app
+        const msg = getMessaging(app);
+
+        const currentToken = await getToken(msg, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, // Ensure this exists in .env
+          serviceWorkerRegistration: registration
         });
+
+        if (currentToken) {
+          console.log('FCM Token:', currentToken);
+          setFcmToken(currentToken);
+          await saveTokenToDatabase(currentToken);
+        } else {
+          console.log('No registration token available. Request permission to generate one.');
+          toast.error("Failed to get token.");
+        }
+      } else {
+         toast.error("Permission denied for notifications.");
+      }
+    } catch (error) {
+      console.error('An error occurred while retrieving token. ', error);
+      toast.error("Error enabling notifications.");
+    }
+  };
+
+  const saveTokenToDatabase = async (token) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Save functionality -> We need a table for this, or just put in profiles?
+    // For now, let's update 'profiles' if there's a column, or create a 'user_tokens' table.
+    // Assuming 'profiles' for simplicity as per common patterns, or just log it for now.
+    
+    // For the immediate task, I will try to save to a 'push_tokens' table if it exists, or 'profiles'.
+    // Let's assume 'profiles' has a field or we use a separate table.
+    // I will use a separate table 'fcm_tokens' to allow multiple devices per user.
+    
+    const { error } = await supabase
+      .from('user_profiles') // checking if this table is the one
+      .upsert({ 
+        user_id: user.id,
+        fcm_token: token,
+        updated_at: new Date()
+      }, { onConflict: 'user_id' }); // Assuming 1 token per user for MVP, or we can use device_id logic.
+
+    if (error) {
+        // Fallback: maybe table doesn't exist?
+        console.error("Error saving token:", error);
+    } else {
+        console.log("Token saved to DB");
+    }
+  };
+
+  // Listen for foreground messages
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      import("firebase/messaging").then(({ getMessaging, onMessage }) => {
+          import("../utils/firebase").then(({ default: app }) => {
+             const msg = getMessaging(app);
+             const unsubscribe = onMessage(msg, (payload) => {
+                console.log('Message received. ', payload);
+                toast(payload.notification.title, {
+                    description: payload.notification.body,
+                });
+             });
+             return () => unsubscribe();
+          });
       });
     }
   }, []);
 
-  const subscribeToPush = async () => {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      const sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
-      });
-
-      // Save subscription to Supabase
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Format keys for storage
-        const keys = {
-            p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(sub.getKey('p256dh')))),
-            auth: btoa(String.fromCharCode.apply(null, new Uint8Array(sub.getKey('auth'))))
-        };
-
-        const { error } = await supabase.from('push_subscriptions').upsert({
-            user_id: user.id,
-            endpoint: sub.endpoint,
-            keys: keys, // Storing as JSON
-            user_agent: navigator.userAgent
-        }, { onConflict: 'endpoint' });
-
-        if (error) {
-            console.error('Failed to save subscription to DB:', error);
-            throw error;
-        }
-      }
-
-      setSubscription(sub);
-      setIsSubscribed(true);
-      if (typeof Notification !== 'undefined') {
-          setPermission(Notification.permission);
-      }
-      alert("Notifications Enabled!");
-      
-      // Test Notification
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-web-push`, {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-              title: 'Welcome!',
-              body: 'Push notifications are now active.',
-              url: window.location.href
-          })
-      });
-
-    } catch (error) {
-      console.error('Failed to subscribe to push', error);
-      alert('Failed to subscribe: ' + error.message);
-    }
-  };
-
-  return {
-    isSubscribed,
-    subscribeToPush,
-    permission
-  };
+  return { permission, requestPermission, fcmToken };
 }

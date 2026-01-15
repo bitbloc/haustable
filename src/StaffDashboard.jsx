@@ -12,8 +12,10 @@ import {
     CheckCircle2,
     TrendingUp,
     AlertTriangle,
+    AlertTriangle,
     RefreshCw
 } from 'lucide-react';
+import usePushNotifications from './hooks/usePushNotifications';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -141,6 +143,7 @@ export default function StaffDashboard() {
     const [recentActivity, setRecentActivity] = useState([]); // Added
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false); 
+    const { permission, requestPermission } = usePushNotifications(); 
 
     // 1. Fetch Stats & Activity Logic 
     const fetchStats = useCallback(async (isBackgroundRefresh = false) => {
@@ -407,6 +410,15 @@ export default function StaffDashboard() {
                         textClass="text-purple-600"
                         onClick={() => navigate('/staff/history')}
                         delay={4}
+                    />
+                    <ActionButton 
+                        title="Notifications" 
+                        desc={permission === 'granted' ? 'Active' : 'Enable Push'} 
+                        icon={Bell} 
+                        bgClass={permission === 'granted' ? "bg-green-600" : "bg-gray-500"}
+                        textClass={permission === 'granted' ? "text-green-600" : "text-gray-600"}
+                        onClick={requestPermission}
+                        delay={5}
                     />
                 </div>
 

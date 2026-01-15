@@ -14,5 +14,16 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 // export ตัวแปร db ไปใช้งานในหน้าอื่นๆ เพื่อดึงข้อมูลออเดอร์
+// export ตัวแปร db ไปใช้งานในหน้าอื่นๆ เพื่อดึงข้อมูลออเดอร์
 export const db = getFirestore(app);
+
+// Check if supported (e.g., in browser and not server-side)
+let messaging = null;
+if (typeof window !== "undefined") {
+  import("firebase/messaging").then(({ getMessaging }) => {
+    messaging = getMessaging(app);
+  });
+}
+
+export { messaging };
 export default app;
