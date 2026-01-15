@@ -66,7 +66,7 @@ export default function usePushNotifications() {
     // I will use a separate table 'fcm_tokens' to allow multiple devices per user.
     
     const { error } = await supabase
-      .from('user_profiles') // checking if this table is the one
+      .from('profiles')
       .upsert({ 
         user_id: user.id,
         fcm_token: token,
