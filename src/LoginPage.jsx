@@ -39,12 +39,17 @@ export default function LoginPage() {
             <div className="z-10 w-full max-w-md">
                  {/* 
                    We force AuthModal to be open. 
-                   We pass a dummy onClose that redirects to home or does nothing, 
-                   because staying on this page without modal means blank screen.
+                   We pass a smart onClose that redirects to home ONLY if not logged in.
+                   If logged in, the useEffect above will handle the correct redirect.
                  */}
                  <AuthModal 
                     isOpen={true} 
-                    onClose={() => navigate('/')} 
+                    onClose={async () => {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) {
+                            navigate('/');
+                        }
+                    }} 
                  />
             </div>
         </div>
