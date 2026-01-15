@@ -252,13 +252,7 @@ export default function StaffLiveOrders() {
         return () => document.removeEventListener("visibilitychange", handleVis)
     }, [])
 
-    // --- Debounce Helper ---
-    const debouncedFetchLiveOrders = (silent = false) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-        debounceRef.current = setTimeout(() => {
-            fetchLiveOrders(silent)
-        }, 500)
-    }
+
 
     const handleLogout = async () => {
         setLoading(true)
@@ -352,6 +346,9 @@ export default function StaffLiveOrders() {
         fetchOptions()
     }, [])
 
+    // --- Debouncing for Order Updates ---
+    const fetchDebounceRef = useRef({}) 
+
     const subscribeRealtime = () => {
          const channel = supabase
             .channel('staff-orders')
@@ -360,17 +357,15 @@ export default function StaffLiveOrders() {
                     const { eventType, new: newRecord, old: oldRecord } = payload
                     
                     if (eventType === 'INSERT') {
-                        // New Order: Fetch & Add
-                        await fetchAndAddOrder(newRecord.id, true)
+                        // New Order: Queue Check
+                        queueFetchOrder(newRecord.id, true)
                     } else if (eventType === 'UPDATE') {
-                        // Status or Info Update: Fetch Single & Merge
                         // Optimisation: Only fetch if we are tracking this order or it should be in the list
-                        // If status changed to something we don't show (e.g. cancelled/completed) -> Remove
                         if (['completed', 'cancelled', 'void'].includes(newRecord.status)) {
                             setOrders(prev => prev.filter(o => o.id !== newRecord.id))
                         } else {
                             // Status is pending/confirmed, update it
-                            await fetchAndAddOrder(newRecord.id, false)
+                            queueFetchOrder(newRecord.id, false)
                         }
                     } else if (eventType === 'DELETE') {
                         setOrders(prev => prev.filter(o => o.id !== oldRecord.id))
@@ -378,13 +373,9 @@ export default function StaffLiveOrders() {
                 }
             )
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, async (payload) => {
-                // Determine booking_id from new or old record
                 const bookingId = payload.new?.booking_id || payload.old?.booking_id
-                
                 if (bookingId) {
-                    // Refresh the specific order to reflect item changes
-                    // We pass isNew=false because the order itself exists, just its items changed
-                    await fetchAndAddOrder(bookingId, false)
+                    queueFetchOrder(bookingId, false)
                 }
             })
             .subscribe((status) => {
@@ -392,6 +383,32 @@ export default function StaffLiveOrders() {
                 if (status === 'CLOSED' || status === 'CHANNEL_ERROR') setIsConnected(false)
             })
          return channel
+    }
+
+    // Debounced Fetch Logic
+    // If multiple inserts happen (booking + 5 order items), we wait until they stop for 500ms
+    // If ANY of the events was "isNew=true", we treat the final fetch as a new order alert
+    const queueFetchOrder = (orderId, isNew = false) => {
+        // Clear existing timeout
+        if (fetchDebounceRef.current[orderId]) {
+            clearTimeout(fetchDebounceRef.current[orderId].timeout)
+        }
+
+        // Check if we already have a pending "New Order" status for this ID
+        const wasNew = fetchDebounceRef.current[orderId]?.isNew || false
+        
+        // Set new timeout
+        fetchDebounceRef.current[orderId] = {
+            isNew: wasNew || isNew, // Keep "true" if any event was new
+            timeout: setTimeout(() => {
+                // Execute Fetch
+                const finalIsNew = fetchDebounceRef.current[orderId]?.isNew || false
+                fetchAndAddOrder(orderId, finalIsNew)
+                
+                // Cleanup
+                delete fetchDebounceRef.current[orderId]
+            }, 800) // 800ms wait window to catch all item inserts
+        }
     }
 
     const fetchAndAddOrder = async (orderId, isNew = false) => {
