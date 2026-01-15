@@ -270,18 +270,22 @@ export default function StockPage() {
             // User requirement: "สรุปการอัพเดท stock... push message ลงกลุ่มแค่รายการที่อัพเดทใน 1 ชม. นั้น"
             // Let's list the unique items that were updated, and show their CURRENT status.
             
-            const uniqueItems = {};
+            const itemMap = {}; 
             const performers = new Set();
 
             txData.forEach(tx => {
                 const itemName = tx.stock_items?.name || 'Unknown';
-                const itemId = tx.stock_items?.id || 'unknown'; // Note: query didn't select ID for item, let's trust name or index. 
-                // Wait, I didn't select stock_item_id in the query select string above implicitly? 
-                // Actually `stock_items ( ... )` is a join. 
-                // Let's use `stock_items` object.
                 
                 if (tx.stock_items) {
-                    uniqueItems[itemName] = tx.stock_items;
+                    if (!itemMap[itemName]) {
+                        itemMap[itemName] = {
+                            item: tx.stock_items,
+                            types: new Set()
+                        };
+                    }
+                    if (tx.transaction_type) {
+                        itemMap[itemName].types.add(tx.transaction_type);
+                    }
                 }
                 if (tx.performed_by) performers.add(tx.performed_by);
             });
@@ -290,7 +294,7 @@ export default function StockPage() {
             let message = `📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)\n\n`;
             
             let index = 1;
-            Object.values(uniqueItems).forEach(item => {
+            Object.values(itemMap).forEach(({ item, types }) => {
                 // Determine Status
                 const qty = item.current_quantity;
                 let statusEmoji = '🟢';
@@ -301,7 +305,15 @@ export default function StockPage() {
                 // Friendly Format (Unopened + Opened)
                 const display = formatStockDisplay(qty, item.unit).displayString;
                 
-                message += `${index}. ${item.name}\n   สถานะ: ${display} (${statusEmoji})\n\n`;
+                // Map Action Types
+                const actionLabels = Array.from(types).map(t => {
+                    if (t === 'in') return 'รับเข้า';
+                    if (t === 'out') return 'เบิกออก';
+                    if (t === 'set') return 'ปรับยอด';
+                    return t;
+                }).join(', ');
+
+                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${display} ${statusEmoji}\n\n`;
                 index++;
             });
 
