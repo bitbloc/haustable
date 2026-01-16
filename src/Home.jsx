@@ -64,16 +64,7 @@ export default function Home({ session }) {
             {/* 2. Header Section */}
             <HomeHeader t={t} status={status} />
 
-            {/* Time Info */}
-            {settings && (
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="font-mono text-xs text-white/40 mb-8 tracking-widest text-center uppercase"
-                >
-                    {status.isOpen ? `${t('openUntil')} ${settings.closing_time}` : `${t('opensAt')} ${settings.opening_time}`}
-                </motion.p>
-            )}
+            {/* Time Info Removed per request */}
 
             {/* 4. Action Buttons (Grid Layout) */}
             <div className="grid grid-cols-1 w-full max-w-sm gap-4 pb-24"> {/* Added padding bottom for Nav */}

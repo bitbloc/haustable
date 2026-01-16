@@ -12,10 +12,14 @@ export default function HomeHeader({ t, status }) {
                 />
             </div>
             
-            {/* Status Badge */}
-            <div className={`mt-6 px-6 py-2 rounded-full border border-white/20 backdrop-blur-md flex items-center gap-3 ${status.isOpen ? 'bg-[#DFFF00]/10 text-[#DFFF00]' : 'bg-red-500/10 text-red-500'}`}>
-                <div className={`w-2 h-2 rounded-full ${status.isOpen ? 'bg-[#DFFF00] animate-pulse' : 'bg-red-500'}`} />
-                <span className="font-mono text-lg tracking-widest font-bold">{status.text}</span>
+            {/* Status Indicator */}
+            <div className="flex items-center gap-3">
+                <div className={`relative flex items-center justify-center w-3 h-3 rounded-full ${status.isOpen ? 'bg-[#DFFF00] shadow-[0_0_10px_#DFFF00]' : 'bg-red-500'}`}>
+                    {status.isOpen && <div className="absolute inset-0 bg-[#DFFF00] rounded-full animate-ping opacity-75" />}
+                </div>
+                <span className={`text-sm font-bold tracking-[0.2em] ${status.isOpen ? 'text-[#DFFF00]' : 'text-red-500'}`}>
+                    {status.isOpen ? "OPEN NOW" : "CLOSED"}
+                </span>
             </div>
         </div>
     )

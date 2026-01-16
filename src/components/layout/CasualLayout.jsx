@@ -11,9 +11,9 @@ export default function CasualLayout({ children, backgroundImage }) {
             src={backgroundImage || "/assets/background-mood.png"}
             alt="Ambience"
             className="w-full h-full object-cover opacity-60"
-            initial={{ scale: 1 }}
-            animate={{ scale: 1.1 }}
-            transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.5 }}
         />
         
         {/* Gradient Overlay */}
