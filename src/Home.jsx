@@ -28,21 +28,30 @@ export default function Home({ session }) {
 
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
-            {/* 1. Announcement Bar (Fixed Top) */}
-            <div className="fixed top-0 left-0 w-full z-40 bg-black/30 backdrop-blur-md border-b border-white/5 h-10 flex items-center justify-center overflow-hidden">
-                <div className="relative w-full max-w-3xl h-full flex items-center">
+            {/* 1. Announcement Bar (Fixed Top - Redesigned) */}
+            <div className="fixed top-0 left-0 w-full z-[60] bg-[#000] border-b border-[#DFFF00]/30 h-10 flex items-center overflow-hidden">
+                 <div className="relative w-full flex items-center">
                      <motion.div
-                        className="whitespace-nowrap text-white/80 text-xs font-bold tracking-widest flex gap-12 absolute"
-                        animate={{ x: ["100%", "-100%"] }}
+                        className="whitespace-nowrap flex gap-12 font-mono text-sm uppercase tracking-widest"
+                        animate={{ x: ["0%", "-50%"] }}
                         transition={{
                             repeat: Infinity,
                             duration: 20,
                             ease: "linear"
                         }}
                     >
-                        <span>{settings?.announcement_headline} : {settings?.announcement_detail}</span>
-                        <span>{settings?.announcement_headline} : {settings?.announcement_detail}</span>
-                        <span>{settings?.announcement_headline} : {settings?.announcement_detail}</span>
+                        {/* Repeat content for smooth loop */}
+                        {Array(4).fill(
+                            <div className="flex items-center gap-4">
+                                <span className="text-[#DFFF00] font-bold">
+                                    {settings?.announcement_headline || "WELCOME"}
+                                </span>
+                                <span className="text-white/80">
+                                    {settings?.announcement_detail || "Welcome to HAUS TABLE"}
+                                </span>
+                                <span className="w-1.5 h-1.5 bg-[#DFFF00] rounded-full mx-4" />
+                            </div>
+                        )}
                     </motion.div>
                 </div>
             </div>
