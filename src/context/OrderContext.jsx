@@ -49,7 +49,7 @@ export function OrderProvider({ children }) {
         try {
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .eq('status', 'pending')
                 .order('booking_time', { ascending: true })
             
@@ -67,7 +67,7 @@ export function OrderProvider({ children }) {
         try {
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
                 .in('status', ['confirmed', 'ready', 'seated'])
                 .order('booking_time', { ascending: true })
             

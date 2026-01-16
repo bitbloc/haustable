@@ -166,7 +166,7 @@ export default function StaffDashboard() {
                 supabase.from('stock_transactions').select('*, stock_items(name)').order('created_at', { ascending: false }).limit(5),
                 
                 // 3. Activity - Orders (Last 5) - Using updated_at for relevance
-                supabase.from('bookings').select('*, tables_layout(table_name)').order('updated_at', { ascending: false }).limit(5)
+                supabase.from('bookings').select('*').order('updated_at', { ascending: false }).limit(5)
             ]);
 
             // Process Stats
