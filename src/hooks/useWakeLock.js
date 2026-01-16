@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export const useWakeLock = ({ onRequest, onRelease, onError }) => {
+export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
   const [isLocked, setIsLocked] = useState(false);
   const [wakeLock, setWakeLock] = useState(null);
 
