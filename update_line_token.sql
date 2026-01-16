@@ -7,7 +7,7 @@
 -- 7. กด Run เพื่อบันทึกค่าลงฐานข้อมูล
 
 INSERT INTO app_settings (key, value)
-VALUES ('line_channel_access_token', '0M/LIihATr+zDCh7arTkpVrK1IB9rNBTVF9e/XPKEbwpZsxCaEuCs8hW0DZE9x4FfNu5iyvuWYuLD889Jp1c4kfwCccXrZX+cbgf9WZx7NjgzqVJUwCZOeZQSRo2QhZs66P0p2iqaN1/nkbV9tvZ/QdB04t89/1O/w1cDnyilFU=')
+VALUES ('line_channel_access_token', 'LKoEdJlI0uQUbjxot6TQEhxKGfZNDyPifZAYcuXK4OIxbHF56bqZvCT5NPuUSEsdZY2LOuDkDdMRwf62buy8il5ytzTqFxmjJToe3Hn3KFuAy4Jz2PQ7joM9xABSuyL4vkrU31DllxrMMqBFz1Up3gdB04t89/1O/w1cDnyilFU=')
 ON CONFLICT (key) 
 DO UPDATE SET value = EXCLUDED.value;
 

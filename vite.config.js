@@ -37,4 +37,9 @@ export default defineConfig({
     // ใส่ chunkSizeWarningLimit เผื่อไว้ด้วยก็ได้
     chunkSizeWarningLimit: 1000,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+  },
 })
