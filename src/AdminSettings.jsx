@@ -68,6 +68,7 @@ export default function AdminSettings() {
     const [uploadingQr, setUploadingQr] = useState(false)
     const [uploadingFloor, setUploadingFloor] = useState(false)
     const [uploadingSound, setUploadingSound] = useState(false)
+    const [uploadingHomeBg, setUploadingHomeBg] = useState(false)
 
     // Blocked Dates
     const [blockedList, setBlockedList] = useState([])
@@ -680,6 +681,35 @@ export default function AdminSettings() {
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'floorplan_url', setUploadingFloor)} />
                 </label>
                 <p className="text-[10px] text-gray-500 mt-2 text-center">Recommended: Landscape (16:9), High resolution, Max 2MB</p>
+            </div>
+
+            {/* Home Background Section */}
+            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 mt-8">
+                <h2 className="text-xl font-bold text-white mb-2">Home Background</h2>
+                <div className="mb-6">
+                    {settings.home_background_url ? (
+                        <img src={`${settings.home_background_url}?t=${timestamp}`} className="w-full h-40 object-cover rounded-2xl border border-gray-700 opacity-80" />
+                    ) : (
+                        <div className="w-full h-40 bg-gray-800 rounded-2xl flex items-center justify-center text-gray-500">Default (Ken Burns)</div>
+                    )}
+                </div>
+                <label className="block w-full cursor-pointer group">
+                    <div className="bg-black border border-dashed border-gray-700 rounded-xl p-4 text-center group-hover:border-[#DFFF00] transition-colors">
+                        <span className="text-gray-400 text-sm group-hover:text-white">{uploadingHomeBg ? 'Uploading...' : 'Click to replace Home Background'}</span>
+                    </div>
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'home_background_url', setUploadingHomeBg)} />
+                </label>
+                <div className="flex justify-between items-center mt-2">
+                     <p className="text-[10px] text-gray-500 text-center">Recommended: 1920x1080 (HD), Dark Tone, Max 2MB</p>
+                     {settings.home_background_url && (
+                        <button 
+                            onClick={() => handleSave('home_background_url', '')}
+                            className="text-[10px] text-red-500 hover:text-red-400 underline"
+                        >
+                            Reset to Default
+                        </button>
+                     )}
+                </div>
             </div>
 
             {/* Steak Wizard Settings */}
