@@ -22,7 +22,7 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
              <Link to={tableStatus.isOpen ? "/booking" : "#"} 
                    className={`relative w-full h-20 mb-6 group overflow-hidden rounded-2xl flex items-center justify-between px-8 border transition-all duration-300
                    ${tableStatus.isOpen 
-                     ? 'border-white/20 bg-white/5 hover:bg-white/10 hover:border-[#DFFF00]/50 shadow-lg' 
+                     ? 'border-white/15 bg-[#050505] backdrop-blur-xl hover:bg-[#111] hover:border-[#DFFF00]/50 shadow-lg' 
                      : 'border-white/5 bg-white/5 opacity-50 grayscale cursor-not-allowed'}`}>
                     
                     {/* Animated Gradient Background (Subtle) */}
