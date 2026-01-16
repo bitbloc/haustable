@@ -104,9 +104,11 @@ function App() {
       <BookingProvider>
         <Router>
           <Routes>
-            {/* Public Routes */}
+            {/* Landing Page (Standalone Custom Theme) */}
+            <Route path="/" element={<Home session={session} />} />
+
+            {/* Public Routes (Standard Layout) */}
             <Route element={<PublicLayout session={session} />}>
-              <Route path="/" element={<Home session={session} />} />
               <Route path="/booking" element={<BookingPage />} />
               <Route path="/pickup" element={<PickupPage />} />
               <Route path="/tracking/:token" element={<TrackingPage />} />
