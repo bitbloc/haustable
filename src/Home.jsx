@@ -28,47 +28,28 @@ export default function Home({ session }) {
 
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
+            {/* 1. Announcement Bar (Fixed Top) */}
+            <div className="fixed top-0 left-0 w-full z-40 bg-black/30 backdrop-blur-md border-b border-white/5 h-10 flex items-center justify-center overflow-hidden">
+                <div className="relative w-full max-w-3xl h-full flex items-center">
+                     <motion.div
+                        className="whitespace-nowrap text-white/80 text-xs font-bold tracking-widest flex gap-12 absolute"
+                        animate={{ x: ["100%", "-100%"] }}
+                        transition={{
+                            repeat: Infinity,
+                            duration: 20,
+                            ease: "linear"
+                        }}
+                    >
+                        <span>{settings?.announcement_headline} : {settings?.announcement_detail}</span>
+                        <span>{settings?.announcement_headline} : {settings?.announcement_detail}</span>
+                        <span>{settings?.announcement_headline} : {settings?.announcement_detail}</span>
+                    </motion.div>
+                </div>
+            </div>
+
             {/* 2. Header Section */}
             <HomeHeader t={t} status={status} />
 
-            {/* 3. Announcement (Design: Glass Card) */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: 0.2, type: "spring" }}
-                className="w-full max-w-md bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-4 mb-8 overflow-hidden flex items-center gap-4 hover:bg-white/10 transition-colors"
-            >
-                 {/* Flat Line Icon */}
-                 <div className="shrink-0 text-white/80">
-                      <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain opacity-80" />
-                 </div>
-
-                 {/* Content */}
-                 <div className="flex-1 flex items-center overflow-hidden min-w-0 gap-3 border-l border-white/20 pl-4 h-6">
-                        {/* Headline */}
-                        <span className="font-bold text-white/90 text-sm whitespace-nowrap shrink-0">
-                            {settings?.announcement_headline || "BY ร้านในบ้าน"}
-                        </span>
-                        
-                        {/* Marquee */}
-                        <div className="relative overflow-hidden w-full h-full flex items-center mask-gradient-right">
-                             <motion.div
-                                className="whitespace-nowrap text-gray-300 text-sm flex gap-8 absolute"
-                                animate={{ x: ["0%", "-50%"] }}
-                                transition={{
-                                    repeat: Infinity,
-                                    duration: 15,
-                                    ease: "linear",
-                                    repeatType: "loop"
-                                }}
-                            >
-                                <span>{settings?.announcement_detail || "ระบบจองโต๊ะและมารับอาหารที่ร้าน IN THE HAUS"}</span>
-                                <span>{settings?.announcement_detail || "ระบบจองโต๊ะและมารับอาหารที่ร้าน IN THE HAUS"}</span>
-                            </motion.div>
-                        </div>
-                 </div>
-            </motion.div>
-            
             {/* Time Info */}
             {settings && (
                 <motion.p
