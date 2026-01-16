@@ -163,10 +163,10 @@ export default function StaffDashboard() {
                 supabase.from('stock_items').select('current_quantity, min_stock_threshold'),
                 
                 // 2. Activity - Stock (Last 5)
-                supabase.from('stock_transactions').select('*, stock_items(name), profiles(display_name)').order('created_at', { ascending: false }).limit(5),
+                supabase.from('stock_transactions').select('*, stock_items(name)').order('created_at', { ascending: false }).limit(5),
                 
                 // 3. Activity - Orders (Last 5) - Using updated_at for relevance
-                supabase.from('bookings').select('*, tables_layout(table_name), profiles(display_name)').order('updated_at', { ascending: false }).limit(5)
+                supabase.from('bookings').select('*, tables_layout(table_name)').order('updated_at', { ascending: false }).limit(5)
             ]);
 
             // Process Stats
@@ -187,7 +187,7 @@ export default function StaffDashboard() {
                 id: s.id,
                 type: 'stock',
                 title: `${s.transaction_type === 'set' ? 'Set' : (s.quantity_change > 0 ? 'Added' : 'Used')} ${s.stock_items?.name || 'Item'}`,
-                subtitle: `by ${s.profiles?.display_name || 'Staff'}`,
+                subtitle: `by ${s.performed_by || 'Staff'}`,
                 status: `${s.quantity_change > 0 ? '+' : ''}${s.quantity_change}`,
                 statusColor: s.quantity_change > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
                 time: new Date(s.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
