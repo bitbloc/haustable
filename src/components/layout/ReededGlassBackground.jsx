@@ -29,55 +29,72 @@ export default function ReededGlassBackground({ imageUrl }) {
         in vec2 v_texCoord;
         out vec4 outColor;
         
-        // Pseudo-random function
-        float random(float x) {
-            return fract(sin(x) * 43758.5453123);
+        // Pseudo-random
+        float random(vec2 st) {
+            return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
         }
 
         void main() {
             vec2 uv = v_texCoord;
             
-            // 1. Organic Slow Movement (Background panning behind the glass)
-            float move = sin(u_time * 0.1) * 0.02 + cos(u_time * 0.07) * 0.02;
+            // 1. Slow Pan
+            float move = sin(u_time * 0.1) * 0.02;
             vec2 movingUV = uv + vec2(move, 0.0);
             
-            // 2. Real Reeded Glass Physics
-            // High frequency for realistic narrow strips
-            float frequency = 150.0; 
-            // Strong amplitude for "Displacement Map" look
-            float amplitude = 0.008; 
+            // 2. Graphic Sharp Strips
+            float strips = 40.0; // Use 40-60 for tangible strips
+            float stripId = floor(movingUV.x * strips);
+            float isOdd = mod(stripId, 2.0);
+            float stripUV = fract(movingUV.x * strips); // 0 to 1 inside strip
             
-            // Calculate cylindrical surface normal (approx)
-            float flute = sin(movingUV.x * frequency);
+            vec2 distUV = movingUV;
+            float roughness = 0.0;
             
-            // Refraction: The glass bends light based on the surface slope
-            // We distort the X coordinate significantly
-            float displacement = flute * amplitude;
-            
-            vec2 distortedUV = movingUV + vec2(displacement, 0.0);
-            
-            // 3. Chromatic Aberration (Prism Effect at edges)
-            // Stronger aberration where the glass curves most
-            float aberStrength = 0.004 + 0.002 * abs(flute);
-            
-            float r = texture(u_image, distortedUV + vec2(aberStrength, 0.0)).r;
-            float g = texture(u_image, distortedUV).g;
-            float b = texture(u_image, distortedUV - vec2(aberStrength, 0.0)).b;
-            
-            // 4. Lighting / Fresnel
-            // Highlights on the ridges (where sine wave peaks)
-            float highlight = smoothstep(0.9, 1.0, flute) * 0.3;
-            // Shadows in the grooves
-            float shadow = smoothstep(-1.0, -0.9, flute) * 0.1;
-            
-            vec3 finalColor = vec3(r,g,b);
-            finalColor += highlight;
-            finalColor -= shadow;
+            if (isOdd > 0.5) {
+                // === FROSTED STRIP (Graphic) ===
+                // Shifted + Noisy
+                vec2 offset = vec2(0.015, 0.0); // Distinct constant shift
+                
+                // "Frost" Noise Effect
+                float grain = random(uv * 100.0 + u_time * 5.0) * 0.05;
+                
+                distUV = movingUV + offset;
+                roughness = 1.0;
+                
+                // Sample with stronger aberration/scatter
+                float r = texture(u_image, distUV + vec2(0.005, 0.0)).r;
+                float g = texture(u_image, distUV).g;
+                float b = texture(u_image, distUV - vec2(0.005, 0.0)).b;
+                
+                vec3 col = vec3(r,g,b);
+                // Darken slightly and add grain
+                outColor = vec4(col * 0.85 + vec3(grain), 1.0);
+                
+            } else {
+                // === CLEAR LENS STRIP ===
+                // Cylindrical Magnification
+                // Curve -0.5 to 0.5
+                float curve = (stripUV - 0.5); 
+                
+                // Lens Distortion: Pull edges inward
+                float lens = sign(curve) * pow(abs(curve), 2.0) * 0.04;
+                
+                distUV = movingUV + vec2(lens, 0.0);
+                
+                float r = texture(u_image, distUV + vec2(0.002, 0.0)).r;
+                float g = texture(u_image, distUV).g;
+                float b = texture(u_image, distUV - vec2(0.002, 0.0)).b;
+                
+                // Sharp Specular Highlight on the ridge
+                float shine = smoothstep(0.4, 0.45, abs(curve)) * 0.0; // edge
+                // Center shine?
+                float specular = smoothstep(0.95, 1.0, 1.0 - abs(curve * 2.0));
+                
+                outColor = vec4(vec3(r,g,b) + specular * 0.3, 1.0);
+            }
             
             // Vignette
-            float vignette = 1.0 - length(uv - 0.5) * 0.4;
-            
-            outColor = vec4(finalColor * vignette, 1.0);
+            outColor.rgb *= (1.0 - length(uv - 0.5) * 0.5);
         }`;
 
         // --- Compile Helpers ---
