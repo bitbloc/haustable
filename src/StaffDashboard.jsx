@@ -165,8 +165,8 @@ export default function StaffDashboard() {
                 // 2. Activity - Stock (Last 5)
                 supabase.from('stock_transactions').select('*, stock_items(name)').order('created_at', { ascending: false }).limit(5),
                 
-                // 3. Activity - Orders (Last 5) - Using updated_at for relevance
-                supabase.from('bookings').select('*').order('updated_at', { ascending: false }).limit(5)
+                // 3. Activity - Orders (Last 5) - Using created_at for relevance (updated_at might be missing)
+                supabase.from('bookings').select('*').order('created_at', { ascending: false }).limit(5)
             ]);
 
             // Process Stats
@@ -201,8 +201,8 @@ export default function StaffDashboard() {
                 subtitle: `Order #${o.id.toString().slice(0,4)}`,
                 status: o.status,
                 statusColor: getStatusColor(o.status),
-                time: new Date(o.updated_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                timestamp: new Date(o.updated_at)
+                time: new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: new Date(o.created_at)
             }));
 
             // Merge & Sort
