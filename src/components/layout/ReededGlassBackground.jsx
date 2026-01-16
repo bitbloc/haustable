@@ -35,12 +35,15 @@ export default function ReededGlassBackground({ imageUrl }) {
             vec2 uv = v_texCoord;
             
             // 1. กำหนดจำนวนริ้ว (Strips) 
-            // ลดลงเหลือประมาณ 30.0 เพื่อให้ริ้วใหญ่เห็นชัดเหมือนในรูป
             float strips = 30.0; 
             
+            // เพิ่มการเคลื่อนไหวให้กับริ้ว (Dynamic Strips)
+            float speed = u_time * 0.05; // ความเร็วในการเลื่อนของลอนแก้ว
+            float shift = uv.x + speed;
+            
             // คำนวณตำแหน่งภายในแต่ละริ้ว (0.0 ถึง 1.0)
-            float stripId = floor(uv.x * strips);
-            float stripUV = fract(uv.x * strips); 
+            float stripId = floor(shift * strips);
+            float stripUV = fract(shift * strips); 
 
             // 2. สร้างความโค้งแบบทรงกระบอก (Cylindrical Curve)
             // ค่านี้จะทำให้ตรงกลางริ้วป่องออก และขอบริ้วหุบเข้า
@@ -66,13 +69,17 @@ export default function ReededGlassBackground({ imageUrl }) {
             
             // 4. สร้างเงาที่ขอบริ้ว (Strip Edges)
             // เพื่อให้แต่ละริ้วดูแยกขาดจากกันชัดเจน (เหมือนรูปตัวอย่างที่เส้นดำคมๆ)
+            // ขยับเงาตามริ้วด้วย
             float edgeDarkness = smoothstep(0.85, 1.0, abs(stripUV - 0.5) * 2.0);
             // ทำให้ขอบมืดลง
             vec3 col = vec3(r, g, b) * (1.0 - edgeDarkness * 0.4);
             
             // เพิ่ม Specular Highlight (แสงสะท้อนเส้นขาวๆ ตรงกลางริ้ว) เล็กน้อย
-            float highlight = smoothstep(0.9, 0.2, abs(stripUV - 0.3)); // แสงเข้าด้านซ้ายบน
-            // col += highlight * 0.1; // (เปิดบรรทัดนี้ถ้าอยากได้แสงเงาวาวๆ)
+            // ให้แสงวิ่งวูบวาบหน่อย (Dynamic Shine)
+            float shineSpeed = u_time * 0.5;
+            float lightPos = 0.3 + sin(shineSpeed + stripId * 0.5) * 0.2; // แสงขยับไปมาในแต่ละริ้วไม่พร้อมกัน
+            float highlight = smoothstep(0.05, 0.0, abs(stripUV - lightPos)); 
+            col += highlight * 0.15; 
 
             outColor = vec4(col, 1.0);
         }`;
@@ -138,7 +145,13 @@ export default function ReededGlassBackground({ imageUrl }) {
 
         const image = new Image();
         if (imageUrl) {
-            image.src = imageUrl;
+            // Add cache-busting timestamp to force reload of the texture
+            // This fixes the issue where uploading a new background with the same name doesn't update
+            const timestamp = new Date().getTime();
+            const hasParams = imageUrl.includes('?');
+            const cacheBustedUrl = `${imageUrl}${hasParams ? '&' : '?'}t=${timestamp}`;
+            
+            image.src = cacheBustedUrl;
             image.crossOrigin = "anonymous";
             image.onload = () => {
                 gl.bindTexture(gl.TEXTURE_2D, texture);
