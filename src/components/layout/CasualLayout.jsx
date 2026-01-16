@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CasualLayout({ children, backgroundImage }) {
   return (
@@ -6,18 +6,24 @@ export default function CasualLayout({ children, backgroundImage }) {
       
       {/* 1. Background Layer */}
       <div className="absolute inset-0 z-0">
-        <motion.img 
-            key={backgroundImage} // Force re-render on change
-            src={backgroundImage || "/assets/background-mood.png"}
-            alt="Ambience"
-            className="w-full h-full object-cover opacity-60"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.5 }}
-        />
+        <AnimatePresence mode="popLayout">
+            <motion.img 
+                key={backgroundImage || "default-bg"} 
+                src={backgroundImage || "/assets/background-mood.png"}
+                alt="Ambience"
+                className="absolute inset-0 w-full h-full object-cover opacity-60"
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ 
+                    opacity: { duration: 1.2 }, 
+                    scale: { duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" } 
+                }}
+            />
+        </AnimatePresence>
         
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/30 pointer-events-none" />
       </div>
 
       {/* 2. Content Container (Center & Glass) */}
