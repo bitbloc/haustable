@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useHausHome } from './hooks/useHausHome'
+import { useUserHistory } from './hooks/useUserHistory' // NEW
 import CasualLayout from './components/layout/CasualLayout'
 import HomeHeader from './components/home/HomeHeader'
 import HomeActions from './components/home/HomeActions'
-import UserProfileBadge from './components/home/UserProfileBadge'
+import HomeNavigation from './components/home/HomeNavigation' // NEW
 import AuthModal from './components/AuthModal'
+import HistoryModal from './components/history/HistoryModal' // NEW
 
 export default function Home({ session }) {
     // 1. Logic
@@ -14,19 +17,21 @@ export default function Home({ session }) {
         checkServiceStatus 
     } = useHausHome(session)
 
+    // 2. History Logic (Moved from Header)
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+    const history = useUserHistory(session)
+
     return (
         <CasualLayout backgroundImage={settings?.home_background_url}>
-            {/* 1. Top Bar (Profile) */}
-            <div className="absolute top-6 right-6 z-50">
-               <UserProfileBadge 
-                    session={session} 
-                    userRole={userRole} 
-                    handleLogout={handleLogout} 
-                    setShowAuthModal={setShowAuthModal} 
-               />
-            </div>
-
+            
             <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+            {/* History Modal */}
+            <HistoryModal 
+                isOpen={isHistoryOpen} 
+                onClose={() => setIsHistoryOpen(false)} 
+                history={history}
+            />
 
             {/* 1. Announcement Bar (Fixed Top - Redesigned) */}
             <div className="fixed top-0 left-0 w-full z-[60] bg-[#000] border-b border-[#DFFF00]/30 h-10 flex items-center overflow-hidden">
@@ -71,7 +76,7 @@ export default function Home({ session }) {
             )}
 
             {/* 4. Action Buttons (Grid Layout) */}
-            <div className="grid grid-cols-1 w-full max-w-sm gap-4">
+            <div className="grid grid-cols-1 w-full max-w-sm gap-4 pb-24"> {/* Added padding bottom for Nav */}
                <HomeActions 
                     settings={settings}
                     checkStatus={checkServiceStatus}
@@ -80,6 +85,16 @@ export default function Home({ session }) {
                     setShowAuthModal={setShowAuthModal}
                />
             </div>
+
+            {/* 5. Bottom Navigation (Floating) */}
+            <HomeNavigation 
+                session={session}
+                userRole={userRole}
+                history={history}
+                setShowAuthModal={setShowAuthModal}
+                setIsHistoryOpen={setIsHistoryOpen}
+                handleLogout={handleLogout}
+            />
 
         </CasualLayout>
     )
