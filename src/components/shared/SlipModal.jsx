@@ -3,10 +3,6 @@ import { X, Printer, Download, Check } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 
-import { useRef, useState, useEffect } from 'react'
-import { X, Printer, Download, Check } from 'lucide-react'
-import { toPng } from 'html-to-image'
-import { supabase } from '../../lib/supabaseClient'
 
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
