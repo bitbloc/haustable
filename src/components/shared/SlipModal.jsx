@@ -151,7 +151,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 <body>
                     <div class="brand">INTHEHAUS</div>
                     <div class="center-flex">
-                        <div class="order-id">#${booking.tracking_token || booking.id.slice(0, 4)}</div>
+                        <div class="order-id">#${(booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)}</div>
                     </div>
                     
                     <div class="meta">
@@ -276,7 +276,9 @@ export default function SlipModal({ booking, type, onClose }) {
                             {/* Prominent Short Order ID */}
                             <div className="inline-block border-2 border-black rounded-md px-6 py-2">
                                 <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px] mb-1">Queue No.</span>
-                                <span className="text-4xl font-black leading-none block">{booking.tracking_token || booking.id.slice(0,4)}</span>
+                                <span className="text-4xl font-black leading-none block">
+                                    {(booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)}
+                                </span>
                             </div>
                         </div>
 
