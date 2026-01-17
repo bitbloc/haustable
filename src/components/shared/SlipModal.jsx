@@ -202,7 +202,7 @@ export default function SlipModal({ booking, type, onClose }) {
         try {
             const dataUrl = await toPng(slipRef.current, { 
                 cacheBust: true, 
-                backgroundColor: 'transparent', // Transparent to let shadow/rotation show if needed involved in parent? No, element itself has styles.
+                backgroundColor: '#ffffff', // Solid White Background as requested
                 pixelRatio: 3 
             })
             const link = document.createElement('a')
@@ -222,7 +222,7 @@ export default function SlipModal({ booking, type, onClose }) {
         .ticket-visual {
             position: relative;
             background: #fff;
-            filter: drop-shadow(0px 5px 15px rgba(0,0,0,0.15));
+            filter: drop-shadow(0px 2px 10px rgba(0,0,0,0.1));
         }
         .ticket-visual::before, .ticket-visual::after {
             content: "";
@@ -261,22 +261,22 @@ export default function SlipModal({ booking, type, onClose }) {
                 <div className="flex-1 overflow-y-auto p-12 bg-[#2d5cdb] flex justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
                     <div 
                         ref={slipRef} 
-                        className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] rotate-[-1deg] hover:rotate-0 transition-transform duration-300 ease-out origin-top"
+                        className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top"
                         style={{ fontFamily: "'Courier Prime', 'Courier New', monospace" }}
                     >
                         {/* BRAND HEADER */}
-                        <div className="text-center mb-6">
-                            <h1 className="text-[36px] font-black leading-none tracking-tighter uppercase transform scale-y-110 mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
-                                INTHEHAUS
-                            </h1>
-                            <p className="text-[9px] font-bold tracking-widest uppercase mb-4 border-b-2 border-dashed border-black pb-4">
-                                Delicious Design • Fresh Code
+                        <div className="text-center mb-6 flex flex-col items-center">
+                            {/* Logo */}
+                            <img src="/receipt-logo.png" alt="Logo" className="w-24 h-auto mb-4 object-contain contrast-125" />
+                            
+                            <p className="text-[9px] font-bold tracking-widest uppercase mb-4 border-b-2 border-dashed border-black pb-4 w-full text-center">
+                                TASTE YOUR SCENT.
                             </p>
                             
-                            {/* Prominent Order ID */}
-                            <div className="inline-block border-2 border-black rounded-md px-4 py-1">
-                                <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px]">Order No.</span>
-                                <span className="text-3xl font-black leading-none block">#{booking.tracking_token || booking.id.slice(0,4)}</span>
+                            {/* Prominent Short Order ID */}
+                            <div className="inline-block border-2 border-black rounded-md px-6 py-2">
+                                <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px] mb-1">Queue No.</span>
+                                <span className="text-4xl font-black leading-none block">{booking.tracking_token || booking.id.slice(0,4)}</span>
                             </div>
                         </div>
 
@@ -344,7 +344,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         
                         {/* Footer */}
                         <div className="text-center mt-8 space-y-1">
-                            <div className="text-[9px] font-black tracking-[0.2em] uppercase">The Best or Nothing</div>
+                            <div className="text-[10px] font-black tracking-[0.2em] uppercase">INTHEHAUS</div>
                             <div className="text-[8px] font-mono text-gray-400">THANK YOU FOR YOUR VISIT</div>
                         </div>
 
