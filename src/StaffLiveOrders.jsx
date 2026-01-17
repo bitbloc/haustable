@@ -38,7 +38,7 @@ function StaffLiveOrdersContent() {
     // Global State
     const { 
         orders, scheduleOrders, historyOrders, loading, isConnected, soundUrl,
-        fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, updateStatus
+        fetchLiveOrders, fetchScheduleOrders, fetchHistoryOrders, subscribeRealtime, updateStatus
     } = useOrderContext()
 
     // Local State
@@ -68,12 +68,25 @@ function StaffLiveOrdersContent() {
     const switchTab = (tab) => {
         if (tab === 'live') {
             navigate('/staff/orders')
-            setActiveTab('live') // Force update if already on this path (e.g. from 'schedule')
+            setActiveTab('live') 
         }
-        else if (tab === 'history') navigate('/staff/history')
-        else if (tab === 'tables') navigate('/staff/checkin')
+        else if (tab === 'history') {
+            navigate('/staff/history')
+            setActiveTab('history') // Force update
+        }
+        else if (tab === 'tables') {
+            navigate('/staff/checkin')
+            setActiveTab('tables') // Force update
+        }
         else setActiveTab(tab)
     }
+
+    // --- History Fetch Logic ---
+    useEffect(() => {
+        if (activeTab === 'history') {
+            fetchHistoryOrders(historyDate)
+        }
+    }, [activeTab, historyDate, fetchHistoryOrders])
 
     // --- System Init ---
     // Combined "Sound Check" and "Start"

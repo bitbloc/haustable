@@ -77,6 +77,31 @@ export function OrderProvider({ children }) {
             dispatch({ type: 'SET_LOADING', payload: false })
         }
     }, [])
+
+    const fetchHistoryOrders = useCallback(async (dateStr) => {
+        // dateStr format: YYYY-MM-DD
+        if (!dateStr) return
+        dispatch({ type: 'SET_LOADING', payload: true })
+        try {
+            // Start of day
+            const start = `${dateStr}T00:00:00`
+            // End of day
+            const end = `${dateStr}T23:59:59`
+
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`*, promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .in('status', ['completed', 'cancelled', 'void']) // Include COMPLETED as requested
+                .gte('booking_time', start)
+                .lte('booking_time', end)
+                .order('booking_time', { ascending: false })
+            
+            if (error) throw error
+            dispatch({ type: 'SET_HISTORY', payload: data || [] })
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: false })
+        }
+    }, [])
     
     const stateRef = useRef(state)
     useEffect(() => { stateRef.current = state }, [state])
@@ -179,6 +204,7 @@ export function OrderProvider({ children }) {
             ...state,
             fetchLiveOrders,
             fetchScheduleOrders,
+            fetchHistoryOrders,
             subscribeRealtime,
             updateStatus: performUpdateStatus
         }}>
