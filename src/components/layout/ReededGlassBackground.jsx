@@ -34,11 +34,15 @@ export default function ReededGlassBackground({ imageUrl }) {
         void main() {
             vec2 uv = v_texCoord;
             
-            // 1. กำหนดจำนวนริ้ว (Strips) 
-            float strips = 30.0; 
+            // 1. Responsive Strips
+            // คำนวณจำนวนริ้วตามความกว้างหน้าจอ เพื่อให้ขนาดริ้วคงที่ (ไม่บีบในมือถือ)
+            // เช่น Desktop 1920px -> 38 ริ้ว, Mobile 375px -> 7 ริ้ว
+            float targetStripWidth = 50.0; 
+            float strips = max(5.0, floor(u_resolution.x / targetStripWidth));
             
             // เพิ่มการเคลื่อนไหวให้กับริ้ว (Dynamic Strips)
-            float speed = u_time * 0.05; // ความเร็วในการเลื่อนของลอนแก้ว
+            // ปรับความเร็วให้สัมพันธ์กับจำนวนริ้ว เพื่อให้ดูเร็วเท่ากันทุกจอ
+            float speed = u_time * 0.05 * (30.0 / strips); 
             float shift = uv.x + speed;
             
             // คำนวณตำแหน่งภายในแต่ละริ้ว (0.0 ถึง 1.0)
