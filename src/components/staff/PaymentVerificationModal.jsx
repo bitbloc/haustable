@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { supabase } from '../../lib/supabaseClient'
 import { X, Check, Search, ZoomIn, ZoomOut, DollarSign, Receipt, MessageCircle, Phone, User, Clock, Calendar } from 'lucide-react'
 import { formatThaiDateLong, formatThaiTimeOnly } from '../../utils/timeUtils'
 
@@ -53,12 +54,20 @@ export default function PaymentVerificationModal({ order, onClose, onVerify }) {
                 <div className="flex-1 bg-[#0a0a0a] relative overflow-hidden flex items-center justify-center group">
                     {order.payment_slip_url ? (
                         <div className="relative w-full h-full flex items-center justify-center overflow-auto p-4 cursor-move active:cursor-grabbing">
-                             <img 
-                                src={order.payment_slip_url.startsWith('http') ? order.payment_slip_url : `https://your-project-ref.supabase.co/storage/v1/object/public/slips/${order.payment_slip_url}`}
-                                alt="Payment Slip" 
-                                style={{ transform: `scale(${scale})` }}
-                                className="max-w-full max-h-full object-contain transition-transform duration-200"
-                            />
+                        <img 
+                            src={
+                                order.payment_slip_url.startsWith('http') 
+                                ? order.payment_slip_url 
+                                : supabase.storage.from('slips').getPublicUrl(order.payment_slip_url).data.publicUrl
+                            }
+                            alt="Payment Slip" 
+                            style={{ transform: `scale(${scale})` }}
+                            className="max-w-full max-h-full object-contain transition-transform duration-200"
+                            onError={(e) => {
+                                e.target.style.display = 'none'; // Hide if completely broken
+                                console.error("Failed to load slip:", e.target.src);
+                            }}
+                        />
                              {/* Floating Controls */}
                             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-white/10 backdrop-blur rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => setScale(Math.max(0.5, scale - 0.5))} className="p-2 text-white hover:bg-white/20 rounded-full"><ZoomOut size={20} /></button>

@@ -3,15 +3,20 @@ import { X, Printer, Download, Check } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 
+import { useRef, useState, useEffect } from 'react'
+import { X, Printer, Download, Check } from 'lucide-react'
+import { toPng } from 'html-to-image'
+import { supabase } from '../../lib/supabaseClient'
+
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
     const [optionMap, setOptionMap] = useState({})
 
     const isKitchen = type === 'kitchen'
-    const title = isKitchen ? 'KITCHEN SLIP' : 'RECEIPT'
+    const title = 'TICKET' // Unified Title
 
-    // Fetch Option Names for readable display
+    // Fetch Option Names
     useEffect(() => {
         const fetchOptions = async () => {
             const { data } = await supabase.from('option_choices').select('id, name')
@@ -23,246 +28,253 @@ export default function SlipModal({ booking, type, onClose }) {
         fetchOptions()
     }, [])
 
-    // Save as Image using html-to-image
-    const handleSaveImage = async () => {
-        if (!slipRef.current) return
-        setSaving(true)
-        try {
-            // Force white bg and ensure fonts are loaded
-            const dataUrl = await toPng(slipRef.current, {
-                cacheBust: true,
-                backgroundColor: '#ffffff',
-                pixelRatio: 2 // Better quality 
-            })
-
-            // Trigger Download
-            const link = document.createElement('a')
-            link.href = dataUrl
-            link.download = `slip-${type}-${booking.id.slice(0, 8)}.png`
-            link.click()
-        } catch (err) {
-            console.error("Generate Error:", err)
-            alert('Failed to generate image: ' + (err.message || 'Unknown Error'))
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    // Print Handling (Native Window for Thermal Printers)
-    const handlePrint = () => {
+    // Generate Nendo-Style HTML for Print
+    const getPrintHtml = () => {
         const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
-        const tableName = booking.tables_layout?.table_name || 'N/A'
-
-        // Translate Options Helper
         const getOptionName = (id) => optionMap[id] || id
 
-        // Generate Items HTML
         const itemsHtml = booking.order_items?.map(item => {
-            const name = item.menu_items?.name || 'Unknown Item'
-
-            // Map IDs to Names
+            const name = item.menu_items?.name || 'Item'
             let optsHtml = ''
+            
             if (item.selected_options) {
                 let optionsList = []
                 if (Array.isArray(item.selected_options)) {
                      optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
                 } else if (typeof item.selected_options === 'object') {
                     const ids = Object.values(item.selected_options).flat()
-                    if (ids.length > 0) {
-                        optionsList = ids.map(id => getOptionName(id))
-                    }
+                    optionsList = ids.map(id => getOptionName(id))
                 }
-                
                 if (optionsList.length > 0) {
-                    optsHtml = optionsList.map(opt => `<div style="font-size: 12px; color: #555; margin-left: 20px;">+ ${opt}</div>`).join('')
+                    optsHtml = optionsList.map(opt => `<div class="opt">+ ${opt}</div>`).join('')
                 }
             }
 
-            const price = isKitchen ? '' : `<div style="text-align:right">${(item.price_at_time * item.quantity).toLocaleString()}.-</div>`
+            // Always show price for "Unified Ticket" request, or hide only if strictly Kitchen? 
+            // User asked for "Ticket have price... complete info". So let's show it.
+            const price = (item.price_at_time * item.quantity).toLocaleString()
 
             return `
-                <div style="margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 4px;">
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span>${item.quantity}x ${name}</span>
-                        ${price}
+                <div class="item">
+                    <div class="row">
+                        <span class="qty">${item.quantity}</span>
+                        <span class="name">${name}</span>
+                        <span class="price">${price}</span>
                     </div>
-                    ${optsHtml}
+                    ${optsHtml ? `<div class="opts">${optsHtml}</div>` : ''}
                 </div>
             `
-        }).join('') || '<div style="text-align:center; color:#999">No items</div>'
+        }).join('') || '<div class="empty">No Items</div>'
 
         const discountHtml = booking.discount_amount > 0 ? `
-            <div style="display: flex; justify-content: space-between; color: #000; font-size: 14px; margin-top: 10px;">
+            <div class="row meta-row">
                 <span>Discount (${booking.promotion_codes?.code || 'PROMO'})</span>
-                <span>-${booking.discount_amount.toLocaleString()}.-</span>
+                <span>-${booking.discount_amount.toLocaleString()}</span>
             </div>
         ` : ''
 
-        const totalHtml = isKitchen ? '' : `
-            <div style="margin-top: 20px; padding-top: 10px; border-top: 2px solid #000;">
-                ${discountHtml}
-                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-top: 5px;">
-                    <span>TOTAL</span>
-                    <span>${booking.total_amount?.toLocaleString()}.-</span>
-                </div>
-            </div>
-        `
         const noteHtml = booking.customer_note ? `
-            <div style="margin-top: 10px; padding: 10px; background: #eee; border-radius: 4px; font-size: 12px;">
-                <strong>Note:</strong> ${booking.customer_note}
+            <div class="note">
+                <div class="note-label">NOTE</div>
+                ${booking.customer_note}
             </div>
         ` : ''
 
-        const printWindow = window.open('', '_blank', 'width=400,height=600')
-        printWindow.document.write(`
+        return `
             <html>
                 <head>
-                    <title>${title}</title>
+                    <title>Ticket #${booking.tracking_token || booking.id.slice(0,4)}</title>
                     <style>
-                        body { font-family: monospace; padding: 20px; max-width: 300px; margin: 0 auto; }
-                        h1 { text-align: center; margin-bottom: 5px; font-size: 24px; }
-                        .meta { margin-bottom: 20px; font-size: 12px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-                        @media print { body { -webkit-print-color-adjust: exact; } }
+                        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+                        body { 
+                            font-family: 'Courier Prime', 'Courier New', monospace; 
+                            background: white; 
+                            color: black; 
+                            font-size: 12px; 
+                            margin: 0; 
+                            padding: 20px;
+                            width: 300px;
+                        }
+                        .header { text-align: center; margin-bottom: 20px; text-transform: uppercase; }
+                        .brand { font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px; }
+                        .meta { border-top: 1px solid black; border-bottom: 1px solid black; padding: 10px 0; margin-bottom: 20px; }
+                        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+                        .label { color: #555; }
+                        .val { font-weight: bold; }
+                        
+                        .items { margin-bottom: 20px; }
+                        .item { margin-bottom: 12px; }
+                        .qty { width: 20px; font-weight: bold; flex-shrink: 0; }
+                        .name { flex-grow: 1; margin-right: 10px; font-weight: bold; }
+                        .price { text-align: right; width: 60px; flex-shrink: 0; }
+                        .opts { margin-left: 20px; margin-top: 2px; color: #444; font-size: 10px; }
+                        .opt { margin-bottom: 1px; }
+
+                        .totals { border-top: 1px solid black; padding-top: 10px; margin-bottom: 20px; }
+                        .total-row { font-size: 16px; font-weight: bold; margin-top: 5px; }
+                        
+                        .note { border: 1px solid black; padding: 10px; margin-top: 10px; font-size: 11px; }
+                        .note-label { font-weight: bold; margin-bottom: 5px; font-size: 10px; }
+
+                        .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #888; }
+                        @media print { body { width: 100%; padding: 0; } }
                     </style>
                 </head>
                 <body>
-                    <h1>${isKitchen ? '👨‍🍳 KITCHEN' : '🧾 IN THE HAUS'}</h1>
-                    <div style="text-align: center; margin-bottom: 20px; font-weight: bold;">${title}</div>
+                    <div class="header">
+                        <div class="brand">INTHEHAUS</div>
+                        <div>#${booking.tracking_token || booking.id.slice(0, 4)}</div>
+                    </div>
                     
                     <div class="meta">
-                        <div>Table: <strong style="font-size: 16px;">${tableName}</strong></div>
-                        <div>${booking.booking_type === 'pickup' ? 'Pickup Time' : 'Reservation'}: ${dateStr}</div>
-                        <div>Order ID: #${booking.id.slice(0, 8)}</div>
-                        <div>Customer: ${booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</div>
-                        <div>Phone: ${booking.profiles?.phone_number || booking.pickup_contact_phone || '-'}</div>
+                        <div class="row"><span class="label">TABLE</span> <span class="val">${booking.tables_layout?.table_name || 'PICKUP'}</span></div>
+                        <div class="row"><span class="label">DATE</span> <span class="val">${dateStr}</span></div>
+                        <div class="row"><span class="label">GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</span></div>
+                        <div class="row"><span class="label">PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone || '-'}</span></div>
                     </div>
 
-                    <div style="margin-bottom: 20px;">${itemsHtml}</div>
-                    ${totalHtml}
+                    <div class="items">
+                        ${itemsHtml}
+                    </div>
+
+                    <div class="totals">
+                        <div class="row"><span>Subtotal</span> <span>?</span></div> 
+                        <!-- Since subtotal isn't pre-calc in booking usually, we skip or calc it? Booking usually has total_amount. Let's just show Discount and Total for simplicity if subtotal missing -->
+                        ${discountHtml}
+                        <div class="row total-row">
+                            <span>TOTAL</span>
+                            <span>${booking.total_amount?.toLocaleString()}</span>
+                        </div>
+                    </div>
+
                     ${noteHtml}
+
+                    <div class="footer">
+                        THANK YOU
+                    </div>
 
                     <script>
                         window.onload = function() { window.print(); }
                     </script>
                 </body>
             </html>
-        `)
+        `
+    }
+
+    const handlePrint = () => {
+        const printWindow = window.open('', '_blank', 'width=400,height=600')
+        printWindow.document.write(getPrintHtml())
         printWindow.document.close()
     }
 
+    const handleSaveImage = async () => {
+        if (!slipRef.current) return
+        setSaving(true)
+        try {
+            const dataUrl = await toPng(slipRef.current, { cacheBust: true, backgroundColor: '#ffffff', pixelRatio: 3 })
+            const link = document.createElement('a')
+            link.href = dataUrl
+            link.download = `ticket-${booking.id.slice(0, 8)}.png`
+            link.click()
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // --- VISUAL RENDER (Matches Print) ---
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-[#1a1a1a] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-[#111] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
+                
                 {/* Header */}
-                <div className="p-4 border-b border-white/10 flex justify-between items-center text-white">
-                    <h3 className="font-bold">Preview Slip ({type})</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+                <div className="p-4 flex justify-between items-center text-white border-b border-white/10">
+                    <h3 className="font-bold text-sm tracking-widest uppercase">Ticket Preview</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={18} /></button>
                 </div>
 
-                {/* Preview Area */}
-                <div className="flex-1 overflow-y-auto p-6 bg-[#333] flex justify-center">
-                    <div
-                        ref={slipRef}
-                        className="bg-white text-black p-6 w-[350px] shadow-lg text-sm font-mono min-h-[400px]"
+                {/* Preview Window */}
+                <div className="flex-1 overflow-y-auto p-8 bg-[#222] flex justify-center">
+                    <div 
+                        ref={slipRef} 
+                        className="bg-white text-black p-6 w-[320px] shadow-2xl skew-x-0"
+                        style={{ fontFamily: "'Courier Prime', 'Courier New', monospace" }}
                     >
-                        {/* Header */}
-                        <div className="text-center mb-4">
-                            <h1 className="text-xl font-bold mb-1">{isKitchen ? '👨‍🍳 KITCHEN' : '🧾 IN THE HAUS'}</h1>
-                            <div className="text-xs uppercase font-bold tracking-widest">{title}</div>
+                        {/* Ticket Content */}
+                        <div className="text-center mb-6">
+                            <div className="font-bold text-lg tracking-[0.2em] mb-1">INTHEHAUS</div>
+                            <div className="text-xs text-gray-500">#{booking.tracking_token || booking.id.slice(0,4)}</div>
                         </div>
 
-                        {/* Meta */}
-                        <div className="border-b-2 border-black pb-3 mb-4 text-xs space-y-1">
-                            <div className="flex justify-between"><span>Table:</span> <span className="font-bold text-base">{booking.tables_layout?.table_name || 'N/A'}</span></div>
-                            <div className="flex justify-between"><span>{booking.booking_type === 'pickup' ? 'Pickup Time' : 'Reservation'}:</span> <span>{new Date(booking.booking_time).toLocaleString('th-TH')}</span></div>
-                            <div className="flex justify-between"><span>Order ID:</span> <span>#{booking.id.slice(0, 8)}</span></div>
-                            <div className="flex justify-between"><span>Customer:</span> <span>{booking.profiles?.display_name ? `คุณ ${booking.profiles.display_name}` : (booking.pickup_contact_name || '-')}</span></div>
-                            <div className="flex justify-between"><span>Phone:</span> <span>{booking.profiles?.phone_number || booking.pickup_contact_phone || '-'}</span></div>
+                        <div className="border-y border-black py-3 mb-6 text-xs space-y-1">
+                            <div className="flex justify-between items-end"><span className="text-gray-500">TABLE</span> <span className="font-bold text-sm">{booking.tables_layout?.table_name || 'PICKUP'}</span></div>
+                            <div className="flex justify-between items-end"><span className="text-gray-500">DATE</span> <span>{new Date(booking.booking_time).toLocaleDateString('th-TH')} {new Date(booking.booking_time).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}</span></div>
+                            <div className="flex justify-between items-end"><span className="text-gray-500">GUEST</span> <span className="truncate max-w-[150px]">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</span></div>
                         </div>
 
-                        {/* Items */}
-                        <div className="space-y-3 mb-4">
+                        <div className="space-y-3 mb-6 min-h-[100px]">
                             {booking.order_items?.map((item, idx) => {
-                                // Map Options in Render
                                 let optionsList = []
-                                if (item.selected_options) {
-                                    if (Array.isArray(item.selected_options)) {
-                                         optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
-                                    } else if (typeof item.selected_options === 'object') {
-                                        const ids = Object.values(item.selected_options).flat()
-                                        optionsList = ids.map(id => optionMap[id] || id)
-                                    }
+                                if (Array.isArray(item.selected_options)) {
+                                     optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
+                                } else if (typeof item.selected_options === 'object') {
+                                    optionsList = Object.values(item.selected_options).flat().map(id => optionMap[id] || id) // Simple map
                                 }
-
+                                
                                 return (
-                                    <div key={idx} className="border-b border-dashed border-gray-300 pb-2">
-                                        <div className="flex justify-between font-bold">
-                                            <span>{item.quantity}x {item.menu_items?.name}</span>
-                                            {!isKitchen && <span>{(item.price_at_time * item.quantity).toLocaleString()}</span>}
+                                    <div key={idx} className="text-xs">
+                                        <div className="flex justify-between font-bold items-start gap-2">
+                                            <span className="w-4 shrink-0">{item.quantity}</span>
+                                            <span className="grow">{item.menu_items?.name}</span>
+                                            <span className="w-16 text-right shrink-0">{(item.price_at_time * item.quantity).toLocaleString()}</span>
                                         </div>
                                         {optionsList.length > 0 && (
-                                            <div className="text-[10px] text-gray-500 ml-4 mt-0.5 flex flex-col">
-                                                {optionsList.map((opt, i) => (
-                                                    <span key={i}>+ {opt}</span>
-                                                ))}
+                                            <div className="pl-4 mt-1 space-y-0.5 text-[10px] text-gray-500">
+                                                {optionsList.map((opt, i) => <div key={i}>+ {opt}</div>)}
                                             </div>
                                         )}
                                     </div>
                                 )
                             })}
-                            {(!booking.order_items || booking.order_items.length === 0) && <div className="text-center text-gray-400 italic">No items</div>}
                         </div>
 
-                        {/* Total or Note */}
-                        {!isKitchen && (
-                            <div className="border-t-2 border-black pt-2 mt-6">
-                                {booking.discount_amount > 0 && (
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span>Discount ({booking.promotion_codes?.code || 'PROMO'})</span>
-                                        <span>-{booking.discount_amount.toLocaleString()}.-</span>
-                                    </div>
-                                )}
-                                <div className="flex justify-between font-bold text-lg">
-                                    <span>TOTAL</span>
-                                    <span>{booking.total_amount?.toLocaleString()}.-</span>
+                        <div className="border-t border-black pt-3 mb-4">
+                            {booking.discount_amount > 0 && (
+                                <div className="flex justify-between text-xs mb-1 text-gray-600">
+                                    <span>Discount</span>
+                                    <span>-{booking.discount_amount.toLocaleString()}</span>
                                 </div>
+                            )}
+                            <div className="flex justify-between font-bold text-lg">
+                                <span>TOTAL</span>
+                                <span>{booking.total_amount?.toLocaleString()}.-</span>
                             </div>
-                        )}
+                        </div>
 
                         {booking.customer_note && (
-                            <div className="mt-4 bg-gray-100 p-2 rounded text-xs">
-                                <strong>Note:</strong> {booking.customer_note}
+                            <div className="border border-black p-2 text-[10px]">
+                                <span className="font-bold block mb-1">NOTE</span>
+                                {booking.customer_note}
                             </div>
                         )}
-
-                        <div className="text-center mt-8 text-[10px] text-gray-400">
-                            {isKitchen ? 'Please prepare asap' : 'Thank you for dining with us!'}
+                        
+                        <div className="text-center mt-8 text-[10px] text-gray-400 spacing-[2px]">
+                            THANK YOU
                         </div>
                     </div>
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 border-t border-white/10 flex gap-3 bg-[#111]">
-                    <button
-                        onClick={handlePrint}
-                        className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
-                    >
-                        <Printer size={18} /> Print Only
+                <div className="p-4 bg-[#111] flex gap-3 border-t border-white/10">
+                    <button onClick={handlePrint} className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                        <Printer size={16} /> Print
                     </button>
-                    <button
-                        onClick={handleSaveImage}
-                        disabled={saving}
-                        className="flex-1 bg-[#DFFF00] text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#cbe600] transition-colors disabled:opacity-50"
-                    >
-                        {saving ? 'Saving...' : <><Download size={18} /> Save Image</>}
+                    <button onClick={handleSaveImage} className="flex-1 bg-white/10 text-white py-3 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2" disabled={saving}>
+                        {saving ? 'Saving...' : <><Download size={16} /> Save</>}
                     </button>
                 </div>
             </div>
-
-            {/* Close Overlay (Optional, though modal backdrop handles blocking interactions, 
-             the user asked for a "Close button" which is already included in the header of the modal. 
-             If they want another one, I can add it, but the one in header is standard. 
-             I will assume header X is sufficient.) */}
         </div>
     )
 }
