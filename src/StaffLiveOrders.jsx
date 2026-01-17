@@ -66,10 +66,13 @@ function StaffLiveOrdersContent() {
     }, [location.pathname])
 
     const switchTab = (tab) => {
-        if (tab === 'live') navigate('/staff/orders')
+        if (tab === 'live') {
+            navigate('/staff/orders')
+            setActiveTab('live') // Force update if already on this path (e.g. from 'schedule')
+        }
         else if (tab === 'history') navigate('/staff/history')
         else if (tab === 'tables') navigate('/staff/checkin')
-        else setActiveTab(tab) // schedule is internal often
+        else setActiveTab(tab)
     }
 
     // --- System Init ---
