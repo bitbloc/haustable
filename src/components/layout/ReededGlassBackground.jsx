@@ -27,6 +27,7 @@ export default function ReededGlassBackground({ imageUrl }) {
         uniform sampler2D u_image;
         uniform float u_time;
         uniform vec2 u_resolution;
+        uniform vec2 u_imageResolution; // Added image resolution
         
         in vec2 v_texCoord;
         out vec4 outColor;
@@ -35,53 +36,63 @@ export default function ReededGlassBackground({ imageUrl }) {
             vec2 uv = v_texCoord;
             
             // 1. Responsive Strips
-            // คำนวณจำนวนริ้วตามความกว้างหน้าจอ เพื่อให้ขนาดริ้วคงที่ (ไม่บีบในมือถือ)
-            // เช่น Desktop 1920px -> 38 ริ้ว, Mobile 375px -> 7 ริ้ว
             float targetStripWidth = 50.0; 
             float strips = max(5.0, floor(u_resolution.x / targetStripWidth));
             
-            // เพิ่มการเคลื่อนไหวให้กับริ้ว (Dynamic Strips)
-            // ปรับความเร็วให้สัมพันธ์กับจำนวนริ้ว เพื่อให้ดูเร็วเท่ากันทุกจอ
-            float speed = u_time * 0.05 * (30.0 / strips); 
+            // 2. Dynamic Motion (Slower Speed as requested) - Reduced from 0.05 to 0.015
+            float speed = u_time * 0.015 * (30.0 / strips); 
             float shift = uv.x + speed;
             
-            // คำนวณตำแหน่งภายในแต่ละริ้ว (0.0 ถึง 1.0)
+            // Calculate Strip ID
             float stripId = floor(shift * strips);
             float stripUV = fract(shift * strips); 
 
-            // 2. สร้างความโค้งแบบทรงกระบอก (Cylindrical Curve)
-            // ค่านี้จะทำให้ตรงกลางริ้วป่องออก และขอบริ้วหุบเข้า
-            // ใช้ abs() และ pow() เพื่อสร้างความโค้งที่ดูแข็งและชัด (Hard curve)
-            float curve = (stripUV - 0.5) * 2.0; // range -1 to 1
+            // Cylindrical Curve
+            float curve = (stripUV - 0.5) * 2.0; 
             
-            // ความแรงของการบิดเบือน (Distortion Strength)
-            // ยิ่งค่ามาก ภาพยิ่งแตกออกจากกัน
+            // Distortion Strength
             float refraction = 0.05; 
             
-            // คำนวณ UV ใหม่ตามความโค้ง
-            // ใช้ pow(..., 2.0) เพื่อให้ตรงกลางนิ่งๆ แต่ขอบบิดเยอะๆ เหมือนเลนส์
+            // Calculate Distortion
             float distOffset = sign(curve) * pow(abs(curve), 2.5) * refraction;
             
-            vec2 distUV = uv;
+            // --- Aspect Ratio Fix (Cover Mode) ---
+            float sA = u_resolution.x / u_resolution.y;
+            float iA = u_imageResolution.x / u_imageResolution.y;
+            
+            // Avoid division by zero if iA is missing
+            if (iA == 0.0) iA = 1.0; 
+
+            vec2 scale = vec2(1.0);
+            if (sA > iA) {
+                // Screen is wider than image: Crop height (Fit Width)
+                scale.y = iA / sA;
+            } else {
+                // Screen is taller than image: Crop width (Fit Height)
+                scale.x = sA / iA;
+            }
+            
+            // Calculate "Cover" UVs
+            vec2 imgUV = (uv - 0.5) * scale + 0.5;
+            
+            // Apply Distortion to the Image UV
+            vec2 distUV = imgUV;
+            distUV.x -= distOffset * scale.x; // Scale distortion too to match image scale? Or keep physical?
+            // Keep it simple: distUV.x -= distOffset;
             distUV.x -= distOffset;
 
-            // 3. Chromatic Aberration (แยกสี RGB)
-            // หัวใจสำคัญที่ทำให้ดูเป็น "แก้ว" คือการที่แสงสีแดงกับน้ำเงินหักเหไม่เท่ากัน
+            // 3. Chromatic Aberration
             float r = texture(u_image, distUV + vec2(0.003, 0.0)).r;
             float g = texture(u_image, distUV).g;
             float b = texture(u_image, distUV - vec2(0.003, 0.0)).b;
             
-            // 4. สร้างเงาที่ขอบริ้ว (Strip Edges)
-            // เพื่อให้แต่ละริ้วดูแยกขาดจากกันชัดเจน (เหมือนรูปตัวอย่างที่เส้นดำคมๆ)
-            // ขยับเงาตามริ้วด้วย
+            // 4. Edges & Highlights
             float edgeDarkness = smoothstep(0.85, 1.0, abs(stripUV - 0.5) * 2.0);
-            // ทำให้ขอบมืดลง
             vec3 col = vec3(r, g, b) * (1.0 - edgeDarkness * 0.4);
             
-            // เพิ่ม Specular Highlight (แสงสะท้อนเส้นขาวๆ ตรงกลางริ้ว) เล็กน้อย
-            // ให้แสงวิ่งวูบวาบหน่อย (Dynamic Shine)
+            // Dynamic Shine
             float shineSpeed = u_time * 0.5;
-            float lightPos = 0.3 + sin(shineSpeed + stripId * 0.5) * 0.2; // แสงขยับไปมาในแต่ละริ้วไม่พร้อมกัน
+            float lightPos = 0.3 + sin(shineSpeed + stripId * 0.5) * 0.2; 
             float highlight = smoothstep(0.05, 0.0, abs(stripUV - lightPos)); 
             col += highlight * 0.15; 
 
@@ -141,16 +152,18 @@ export default function ReededGlassBackground({ imageUrl }) {
         gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
         gl.vertexAttribPointer(texCoordLoc, 2, gl.FLOAT, false, 0, 0);
 
-        // --- Texture (เหมือนเดิม) ---
+        // --- Texture ---
         const texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
 
+        let imgWidth = 1920; 
+        let imgHeight = 1080;
+
         const image = new Image();
         if (imageUrl) {
-            // Add cache-busting timestamp to force reload of the texture
-            // This fixes the issue where uploading a new background with the same name doesn't update
+            // Add cache-busting timestamp
             const timestamp = new Date().getTime();
             const hasParams = imageUrl.includes('?');
             const cacheBustedUrl = `${imageUrl}${hasParams ? '&' : '?'}t=${timestamp}`;
@@ -160,7 +173,9 @@ export default function ReededGlassBackground({ imageUrl }) {
             image.onload = () => {
                 gl.bindTexture(gl.TEXTURE_2D, texture);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-                // ตั้งค่า Wrap ให้เป็น Clamp เพื่อไม่ให้ขอบภาพซ้ำซ้อนเวลาบิด
+                imgWidth = image.naturalWidth || image.width;
+                imgHeight = image.naturalHeight || image.height;
+                
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -171,6 +186,7 @@ export default function ReededGlassBackground({ imageUrl }) {
         const uImageLoc = gl.getUniformLocation(program, 'u_image');
         const uTimeLoc = gl.getUniformLocation(program, 'u_time');
         const uResolutionLoc = gl.getUniformLocation(program, 'u_resolution');
+        const uImageResLoc = gl.getUniformLocation(program, 'u_imageResolution');
 
         let requestID;
         let startTime = performance.now();
@@ -190,6 +206,7 @@ export default function ReededGlassBackground({ imageUrl }) {
             gl.uniform1i(uImageLoc, 0);
             gl.uniform1f(uTimeLoc, (performance.now() - startTime) / 1000);
             gl.uniform2f(uResolutionLoc, gl.canvas.width, gl.canvas.height);
+            gl.uniform2f(uImageResLoc, imgWidth, imgHeight);
 
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             requestID = requestAnimationFrame(render);
