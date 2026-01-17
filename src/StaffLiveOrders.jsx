@@ -17,6 +17,7 @@ import StaffHeader from './components/staff/StaffHeader'
 import OrderList from './components/staff/OrderList'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
+import PaymentVerificationModal from './components/staff/PaymentVerificationModal'
 import TableManager from './components/shared/TableManager'
 import ConfirmationModal from './components/ConfirmationModal'
 import { OrderNotificationToast } from './components/shared/OrderNotificationToast'
@@ -48,7 +49,7 @@ function StaffLiveOrdersContent() {
     // Modals
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
     const [printModal, setPrintModal] = useState({ isOpen: false, booking: null })
-    const [viewSlipUrl, setViewSlipUrl] = useState(null)
+    const [verifyingOrder, setVerifyingOrder] = useState(null) // Replaces viewSlipUrl
     const [notification, setNotification] = useState({ visible: false, title: '', message: '', price: null })
 
     // Hooks
@@ -125,6 +126,13 @@ function StaffLiveOrdersContent() {
         })
     }
     
+    const handleVerifyPayment = async (orderId, status) => {
+        // Direct verify from Modal
+        const res = await updateStatus(orderId, status)
+        if (res.success) toast.success("Verified & Accepted")
+        else toast.error(res.error)
+    }
+
     const handleLogout = async () => {
         await supabase.auth.signOut()
         navigate('/login')
@@ -164,13 +172,12 @@ function StaffLiveOrdersContent() {
                 }}
             />
             
-            {/* View Slip Modal */}
-            {viewSlipUrl && (
-                <ViewSlipModal 
-                    url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
-                    onClose={() => setViewSlipUrl(null)} 
-                />
-            )}
+            {/* Payment Verification Modal */}
+            <PaymentVerificationModal 
+                order={verifyingOrder}
+                onClose={() => setVerifyingOrder(null)}
+                onVerify={handleVerifyPayment}
+            />
             
             {/* Print Modal */}
             {printModal.isOpen && (
@@ -226,7 +233,7 @@ function StaffLiveOrdersContent() {
                         loading={loading} 
                         emptyMessage="No Pending Orders"
                         onUpdateStatus={handleUpdateStatus}
-                        onViewSlip={setViewSlipUrl}
+                        onVerifyPayment={setVerifyingOrder}
                         onPrint={(b) => setPrintModal({ isOpen: true, booking: b })}
                     />
                 )}
@@ -237,7 +244,7 @@ function StaffLiveOrdersContent() {
                         loading={loading}
                         emptyMessage="No Active Schedule"
                         onUpdateStatus={handleUpdateStatus}
-                        onViewSlip={setViewSlipUrl}
+                        onVerifyPayment={setVerifyingOrder}
                         onPrint={(b) => setPrintModal({ isOpen: true, booking: b })}
                     />
                 )}
@@ -265,7 +272,7 @@ function StaffLiveOrdersContent() {
                             loading={false}
                             emptyMessage="No History Found"
                             onUpdateStatus={handleUpdateStatus}
-                            onViewSlip={setViewSlipUrl}
+                            onVerifyPayment={setVerifyingOrder}
                             onPrint={(b) => setPrintModal({ isOpen: true, booking: b })}
                         />
                     </>

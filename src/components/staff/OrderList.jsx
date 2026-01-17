@@ -1,7 +1,7 @@
 import OrderCard from './OrderCard'
 import { Bell } from 'lucide-react'
 
-export default function OrderList({ orders, loading, emptyMessage = "No Active Orders", onUpdateStatus, onViewSlip, onPrint }) {
+export default function OrderList({ orders, loading, emptyMessage = "No Active Orders", onUpdateStatus, onVerifyPayment, onPrint }) {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 opacity-50 space-y-4">
@@ -30,7 +30,7 @@ export default function OrderList({ orders, loading, emptyMessage = "No Active O
                     key={order.id} 
                     order={order} 
                     onUpdateStatus={onUpdateStatus}
-                    onViewSlip={onViewSlip}
+                    onVerifyPayment={onVerifyPayment}
                     onPrint={onPrint}
                 />
             ))}
