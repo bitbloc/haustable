@@ -345,8 +345,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     const handleSave = async () => {
          // ... (Keep existing)
-         setLoading(true);
+        setLoading(true);
         try {
+            // DEBUG: Check Session/Role
+            const { data: { session } } = await supabase.auth.getSession();
+            // console.log("Current Role:", session?.user?.role || "anon");
+            if (!session) {
+                console.warn("No active session! RLS might block.");
+            }
+
             // 1. Delete old links (Simplest strategy for MVP)
             const queryField = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
             await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
@@ -365,8 +372,12 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             // toast.info("DEBUG: Saving " + payloads.length + " items...");
 
             if (payloads.length > 0) {
-                const { error } = await supabase.from('recipe_ingredients').insert(payloads);
+                const { error, count } = await supabase.from('recipe_ingredients').insert(payloads).select();
                 if (error) throw error;
+                
+                // Verification: Did RLS block it?
+                // .select() returns the inserted rows.
+                // console.log("Inserted:", count); 
             }
 
             // 3. Update Parent Cost (Auto-Propagation Hook)
@@ -377,6 +388,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     .update({ cost_price: totalCost })
                     .eq('id', parentId);
                  if (updateError) console.error("Failed to update parent cost", updateError);
+            }
+
+            // Double Check Verification using simple SELECT
+            // Because insert().select() might return mock data in some client versions if RLS blocks silently? 
+            // Better to trust the query.
+            const queryFieldCheck = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
+            const { count: finalCount } = await supabase
+                .from('recipe_ingredients')
+                .select('*', { count: 'exact', head: true })
+                .eq(queryFieldCheck, parentId);
+            
+            if (ingredients.length > 0 && finalCount === 0) {
+                throw new Error("Persist Failed - Row Level Security (RLS) Likely Blocking Write. Please run the Fix SQL.");
             }
 
             toast.success('บันทึกสูตรเรียบร้อย');
