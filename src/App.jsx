@@ -27,6 +27,7 @@ import LoginPage from './LoginPage' // NEW
 import StaffDashboard from './StaffDashboard'
 import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
 import StockPage from './StockPage' // NEW
+import MenuCostPage from './components/admin/MenuCostPage' // NEW
 import TrackingPage from './TrackingPage'
 
 function App() {
@@ -117,9 +118,6 @@ function App() {
             </Route>
 
             {/* Admin Routes */}
-import MenuCostPage from './components/admin/MenuCostPage' // NEW
-
-// ... inside Routes ...
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="bookings" element={<AdminBookings />} />
