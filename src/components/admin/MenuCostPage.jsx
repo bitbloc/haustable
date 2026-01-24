@@ -358,7 +358,7 @@ export default function MenuCostPage() {
                 <pre>{JSON.stringify(debugLog, null, 2)}</pre>
             </div>
 
-            {/* Recipe Modal */}
+                {/* Recipe Modal */}
             {isRecipeOpen && recipeTarget && (
                 <RecipeBuilder 
                     parentId={recipeTarget.id}
@@ -371,6 +371,12 @@ export default function MenuCostPage() {
                     }}
                 />
             )}
+
+            {/* DEBUG PANEL */}
+            <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-60 mt-10">
+                <h3 className="text-white font-bold border-b border-gray-700 mb-2">DEBUG INFO (Refining Cost Logic)</h3>
+                <pre>{JSON.stringify(debugLog, null, 2)}</pre>
+            </div>
         </div>
     );
 }
