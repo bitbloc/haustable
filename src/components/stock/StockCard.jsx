@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, AlertTriangle, ScrollText } from 'lucide-react';
+import { Package, AlertTriangle, FileText } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ item, onClick, onRecipe }) {
@@ -31,18 +31,25 @@ export default function StockCard({ item, onClick, onRecipe }) {
                 ${bgClass}
             `}
         >
-            {/* Recipe Button (for Base Recipes) */}
-            {item.is_base_recipe && (
-                <div 
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (onRecipe) onRecipe(item);
-                    }}
-                    className="absolute top-2 left-2 p-1.5 bg-orange-100/80 hover:bg-orange-200 text-orange-700 rounded-lg backdrop-blur-sm z-10 transition-colors"
-                >
-                    <ScrollText className="w-4 h-4" />
+            {/* Recipe Button (Always visible for easy access) */}
+            <div 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (onRecipe) onRecipe(item);
+                }}
+                className="absolute top-2 left-2 z-10"
+            >
+                <div className={`
+                    flex items-center gap-1 px-2 py-1.5 rounded-lg backdrop-blur-md transition-all shadow-sm border
+                    ${item.is_base_recipe 
+                        ? 'bg-orange-100/90 border-orange-200 text-orange-800' // Active Base Recipe
+                        : 'bg-white/60 border-gray-200 text-gray-500 hover:bg-white hover:text-black' // Inactive (Click to create)
+                    }
+                `}>
+                    <FileText className="w-3 h-3" />
+                    <span className="text-[10px] font-bold">สูตร</span>
                 </div>
-            )}
+            </div>
 
             {/* Status Indicator Icon (only for issues) */}
             {(isCritical || isWarning) && (
