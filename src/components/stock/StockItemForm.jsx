@@ -419,6 +419,31 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 </div>
 
                 <div className="p-4 border-t border-gray-100 flex gap-2">
+                    {isEdit && (
+                        <button 
+                            onClick={async () => {
+                                if (confirm('คุณแน่ใจหรือไม่ที่จะลบสินค้านี้? การลบจะไม่สามารถกู้คืนได้')) {
+                                    setLoading(true);
+                                    try {
+                                        const { error } = await supabase.from('stock_items').delete().eq('id', item.id);
+                                        if (error) throw error;
+                                        toast.success('ลบสินค้าเรียบร้อย');
+                                        onUpdate();
+                                        onClose();
+                                    } catch (err) {
+                                        console.error(err);
+                                        toast.error('ลบไม่สำเร็จ');
+                                    } finally {
+                                        setLoading(false);
+                                    }
+                                }
+                            }}
+                            disabled={loading}
+                            className="bg-red-50 text-red-600 p-4 rounded-xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
                     <button 
                         onClick={handleSave}
                         disabled={loading}
