@@ -26,23 +26,46 @@ const UNIT_FACTORS = {
     // Count
     'unit': 1,
     'pcs': 1,
-    'box': 1, // varied
-    'pack': 1, // varied
+    'box': 1, 
+    'pack': 1,
+    'can': 1,
+    'bottle': 1,
+    'bag': 1,
+    'crate': 1,
+    'carton': 1,
+    'glass': 1,
 };
 
 // Thai Unit Labels
 export const THAI_UNITS = [
-    { value: 'g', label: 'กรัม (g)' },
-    { value: 'kg', label: 'กิโลกรัม (kg)' },
-    { value: 'ml', label: 'มิลลิลิตร (ml)' },
-    { value: 'l', label: 'ลิตร (L)' },
-    { value: 'oz', label: 'ออนซ์ (oz)' },
-    { value: 'oz_fl', label: 'ออนซ์ของเหลว (fl oz)' },
-    { value: 'shot', label: 'ช็อต (Shot)' },
-    { value: 'tsp', label: 'ช้อนชา (tsp)' },
-    { value: 'tbsp', label: 'ช้อนโต๊ะ (tbsp)' },
-    { value: 'unit', label: 'หน่วย/ชิ้น' },
-    { value: 'gallon', label: 'แกลลอน (Gallon)' },
+    // Mass
+    { value: 'g', label: 'กรัม (g)', type: 'mass' },
+    { value: 'kg', label: 'กิโลกรัม (kg)', type: 'mass' },
+    { value: 'oz', label: 'ออนซ์ (oz)', type: 'mass' },
+    { value: 'lb', label: 'ปอนด์ (lb)', type: 'mass' },
+    { value: 'ขีด', label: 'ขีด', type: 'mass' },
+
+    // Volume
+    { value: 'ml', label: 'มิลลิลิตร (ml)', type: 'volume' },
+    { value: 'l', label: 'ลิตร (L)', type: 'volume' },
+    { value: 'oz_fl', label: 'ออนซ์ของเหลว (fl oz)', type: 'volume' },
+    { value: 'shot', label: 'ช็อต (Shot)', type: 'volume' },
+    { value: 'tsp', label: 'ช้อนชา (tsp)', type: 'volume' },
+    { value: 'tbsp', label: 'ช้อนโต๊ะ (tbsp)', type: 'volume' },
+    { value: 'cup', label: 'ถ้วยตวง (Cup)', type: 'volume' },
+    { value: 'gallon', label: 'แกลลอน (Gallon)', type: 'volume' },
+
+    // Count / Container
+    { value: 'unit', label: 'หน่วย/ชิ้น (Unit)', type: 'count' },
+    { value: 'pcs', label: 'ชิ้น (Pcs)', type: 'count' },
+    { value: 'pack', label: 'แพ็ค (Pack)', type: 'count' },
+    { value: 'box', label: 'กล่อง (Box)', type: 'count' },
+    { value: 'can', label: 'กระป๋อง (Can)', type: 'count' },
+    { value: 'bottle', label: 'ขวด (Bottle)', type: 'count' },
+    { value: 'glass', label: 'แก้ว (Glass)', type: 'count' },
+    { value: 'bag', label: 'ถุง (Bag)', type: 'count' },
+    { value: 'crate', label: 'ลัง (Crate)', type: 'count' },
+    { value: 'carton', label: 'คาร์ตัน (Carton)', type: 'count' },
 ];
 
 /**

@@ -5,6 +5,7 @@ import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } 
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor } from '../../utils/costUtils';
+import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 
@@ -23,12 +24,7 @@ function EditStockModal({ item, onClose, onSave }) {
     const realCostPerUsage = (formData.cost_price / (formData.pack_size * formData.conversion_factor)) * (100 / formData.yield_percent);
 
     const checkConversion = (oldUnit, newUsageUnit) => {
-         // Simple heuristic helpers
-         if (oldUnit === 'kg' && newUsageUnit === 'g') return 1000;
-         if (oldUnit === 'l' && newUsageUnit === 'ml') return 1000;
-         if (oldUnit === 'g' && newUsageUnit === 'kg') return 0.001;
-         if (oldUnit === 'ml' && newUsageUnit === 'l') return 0.001;
-         return 1;
+         return suggestConversionFactor(oldUnit, newUsageUnit);
     };
 
     return (
@@ -51,9 +47,15 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <span className="text-[10px] text-gray-500">ขนาดบรรจุ</span>
                                 <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm" />
                             </div>
-                            <div className="w-20">
+                            <div className="w-24">
                                 <span className="text-[10px] text-gray-500">หน่วยซื้อ</span>
-                                <input type="text" value={formData.pack_unit} onChange={e => setFormData({...formData, pack_unit: e.target.value})} className="w-full p-2 rounded border border-blue-200 text-sm" />
+                                <select 
+                                    value={formData.pack_unit} 
+                                    onChange={e => setFormData({...formData, pack_unit: e.target.value})} 
+                                    className="w-full p-2 rounded border border-blue-200 text-sm bg-white"
+                                >
+                                    {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -64,8 +66,7 @@ function EditStockModal({ item, onClose, onSave }) {
                         <div className="flex gap-2 items-end">
                             <div className="flex-1">
                                 <span className="text-[10px] text-gray-500">หน่วยที่ใช้จริง</span>
-                                <input 
-                                    type="text" 
+                                <select
                                     value={formData.usage_unit} 
                                     onChange={e => {
                                         const newUnit = e.target.value;
@@ -73,8 +74,10 @@ function EditStockModal({ item, onClose, onSave }) {
                                         const suggested = checkConversion(formData.pack_unit, newUnit);
                                         setFormData({...formData, usage_unit: newUnit, conversion_factor: suggested !== 1 ? suggested : formData.conversion_factor});
                                     }} 
-                                    className="w-full p-2 rounded border border-orange-200 text-sm font-bold" 
-                                />
+                                    className="w-full p-2 rounded border border-orange-200 text-sm font-bold bg-white" 
+                                >
+                                    {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                                </select>
                             </div>
                             <div className="dark:text-gray-400 pb-2">=</div>
                             <div className="flex-1">

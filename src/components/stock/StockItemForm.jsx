@@ -320,8 +320,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             onChange={e => handleUnitChange('pack_unit', e.target.value)}
                                         >
                                             {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
-                                            <option value="pack">pack</option>
-                                            <option value="box">box</option>
                                         </select>
                                     </div>
                                 </div>
