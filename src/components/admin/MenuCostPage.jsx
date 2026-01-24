@@ -37,7 +37,7 @@ export default function MenuCostPage() {
                     ingredient_id,
                     quantity,
                     unit,
-                    ingredient:stock_items (
+                    ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
                 `);
