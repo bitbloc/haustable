@@ -8,7 +8,7 @@ export default {
     extend: {
       colors: {
         // The Haus Workspace Palette
-        canvas: '#F5F5F7',       // Warm Stone / Off-white
+        canvas: '#FFFFFF',       // Pure White (Requested: Fix "muddy green")
         paper: '#FFFFFF',        // Pure White
         ink: '#1A1A1A',          // Deep Charcoal
         subInk: '#888888',       // Muted Gray

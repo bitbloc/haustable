@@ -188,88 +188,69 @@ export default function AdminSettings() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto pb-20 animate-fade-in">
-            <h1 className="text-3xl font-bold text-white mb-8">System Settings</h1>
+        <div className="max-w-4xl mx-auto pb-20 animate-fade-in pl-6 md:pl-0">
+            <h1 className="text-3xl font-bold text-ink mb-8 tracking-tight">System Settings</h1>
 
-            {/* Network Connection Helper */}
-            {/* Network Connection Helper */}
-            <div className="bg-gradient-to-r from-blue-900/40 to-black p-6 rounded-3xl border border-blue-500/30 mb-8 flex flex-col md:flex-row items-center gap-6">
-                <div className="bg-white p-2 rounded-xl">
-                    <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                            // Smart URL Generation:
-                            // 1. If Manual IP is set, trust it (Local Dev overriding) -> http://IP:5173/staff
-                            // 2. If on Localhost/127.0.0.1 (and no manual IP), try detected IP -> http://IP:5173/staff
-                            // 3. If on Production (Vercel/Domain), use the current origin -> https://domain.com/staff
-                            
-                            settings.manual_ip 
-                                ? `http://${settings.manual_ip}:5173/staff`
-                                : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                                    ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
-                                    : `${window.location.origin}/staff`
-                        )}`} 
-                        alt="Staff Access QR" 
-                        className="w-32 h-32"
-                    />
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                    <h2 className="text-xl font-bold text-white flex items-center justify-center md:justify-start gap-2">
-                        <QrCode className="text-blue-400" /> Staff Mobile Access
-                    </h2>
-                    <p className="text-gray-400 text-sm mt-1 mb-4">
-                        Scan to open Staff View on mobile.
-                        <br/>
-                        <span className="text-xs opacity-50">
-                            Current Mode: {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'Local Dev (LAN)' : 'Production (Cloud)'}
-                        </span>
-                    </p>
-                    
-                    {/* IP Override Section (Only show if likely needed) */}
-                    <div className="flex flex-col gap-2 mb-4">
-                        <div className="flex items-center gap-2">
-                             <input 
-                                type="text" 
-                                placeholder="Override IP (Optional)" 
-                                value={settings.manual_ip || ''}
-                                onChange={(e) => setSettings(prev => ({...prev, manual_ip: e.target.value}))}
-                                className="bg-black/50 border border-white/10 rounded-lg px-3 py-1 text-sm text-[#DFFF00] font-mono w-full md:w-48 outline-none focus:border-blue-500"
-                            />
-                            {settings.manual_ip && (
-                                <button onClick={() => setSettings(prev => ({ ...prev, manual_ip: '' }))} className="text-xs text-red-500 hover:text-red-400">
-                                    Clear
-                                </button>
-                            )}
-                        </div>
-                        <div className="bg-black/50 px-4 py-2 rounded-lg text-[#DFFF00] font-mono text-xs border border-white/10 select-all block w-fit max-w-full overflow-x-auto whitespace-nowrap">
-                             {
+            {/* Network Connection Helper & Staff Access */}
+            <div className="bg-paper p-6 rounded-3xl border border-gray-200 mb-8 shadow-sm">
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                    {/* QR Code Column */}
+                    <div className="flex-shrink-0 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+                        <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
                                 settings.manual_ip 
-                                ? `http://${settings.manual_ip}:5173/staff`
-                                : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                                    ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
-                                    : `${window.location.origin}/staff`
-                             }
-                        </div>
+                                    ? `http://${settings.manual_ip}:5173/staff`
+                                    : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                                        ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
+                                        : `${window.location.origin}/staff`
+                            )}`} 
+                            alt="Staff Access QR" 
+                            className="w-32 h-32 md:w-40 md:h-40"
+                        />
                     </div>
 
-                    {/* Install PWA Button */}
-                    <InstallPWA />
+                    {/* Text Column */}
+                    <div className="flex-1 text-center md:text-left space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-ink flex items-center justify-center md:justify-start gap-2">
+                                <QrCode className="text-brandDark" /> Staff Mobile Access
+                            </h2>
+                            <p className="text-subInk text-sm mt-1">
+                                Scan to open Staff View for kitchen and service.
+                            </p>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row gap-3 justify-center md:justify-start">
+                             <div className="px-4 py-2 bg-gray-50 rounded-lg text-ink font-mono text-sm border border-gray-200 select-all">
+                                 {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+                                    ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
+                                    : `${window.location.origin}/staff`
+                                 }
+                             </div>
+                             <InstallPWA />
+                        </div>
+
+                         <div className="text-[10px] text-gray-400">
+                             Mode: {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'Local Dev (LAN)' : 'Production (Cloud)'}
+                         </div>
+                    </div>
                 </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
                 <div className="space-y-6">
                     {/* Enable Booking System - Redesigned as a Card */}
-                    <label className={`block bg-[#111] p-6 rounded-3xl border transition-all cursor-pointer ${settings.is_menu_system_enabled === 'true' ? 'border-[#DFFF00]/50 shadow-[0_0_20px_rgba(223,255,0,0.1)]' : 'border-white/5 hover:bg-white/5'}`}>
+                    <label className={`block bg-paper p-6 rounded-3xl border transition-all cursor-pointer shadow-sm ${settings.is_menu_system_enabled === 'true' ? 'border-brand ring-1 ring-brand' : 'border-gray-200 hover:border-gray-300'}`}>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}>
+                                <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-brand' : 'bg-gray-200'}`}>
                                     <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-6' : 'translate-x-0'}`} />
                                 </div>
                                 <div>
-                                    <span className={`block font-bold text-lg ${settings.is_menu_system_enabled === 'true' ? 'text-[#DFFF00]' : 'text-white'}`}>
+                                    <span className={`block font-bold text-lg ${settings.is_menu_system_enabled === 'true' ? 'text-ink' : 'text-subInk'}`}>
                                         Booking System {settings.is_menu_system_enabled === 'true' ? 'Active' : 'Disabled'}
                                     </span>
-                                    <span className="text-xs text-gray-400">Master switch for all customer ordering</span>
+                                    <span className="text-xs text-subInk">Master switch for all customer ordering</span>
                                 </div>
                             </div>
                             <input
@@ -282,27 +263,27 @@ export default function AdminSettings() {
                     </label>
 
                     {/* Shop Status Control - Split into 3 */}
-                    <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-8">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                             <Power size={20} className="text-[#DFFF00]" /> Shop Status Controls
+                    <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-8 shadow-sm">
+                        <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                             <Power size={20} className="text-brandDark" /> Shop Status Controls
                         </h2>
 
                         {/* 1. Table Booking Status */}
                         <div className="space-y-3">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase">🍽 Table Booking Status</h3>
+                            <h3 className="text-sm font-bold text-subInk uppercase">🍽 Table Booking Status</h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_table === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_table === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
                                         <input
                                             type="radio"
                                             name="shop_mode_table"
                                             checked={settings.shop_mode_table === mode}
                                             onChange={() => handleSave('shop_mode_table', mode)}
-                                            className="accent-[#DFFF00] w-4 h-4"
+                                            className="accent-brandDark w-4 h-4"
                                         />
                                         <div>
-                                            <span className="block text-white font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
+                                            <span className="text-[10px] text-subInk">
                                                 {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
                                             </span>
                                         </div>
@@ -312,21 +293,21 @@ export default function AdminSettings() {
                         </div>
 
                         {/* 2. Pickup Status */}
-                        <div className="space-y-3 border-t border-white/10 pt-4">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase">🛍 Pickup Status</h3>
+                        <div className="space-y-3 border-t border-gray-100 pt-4">
+                            <h3 className="text-sm font-bold text-subInk uppercase">🛍 Pickup Status</h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_pickup === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_pickup === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
                                         <input
                                             type="radio"
                                             name="shop_mode_pickup"
                                             checked={settings.shop_mode_pickup === mode}
                                             onChange={() => handleSave('shop_mode_pickup', mode)}
-                                            className="accent-[#DFFF00] w-4 h-4"
+                                            className="accent-brandDark w-4 h-4"
                                         />
                                         <div>
-                                            <span className="block text-white font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
+                                            <span className="text-[10px] text-subInk">
                                                 {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
                                             </span>
                                         </div>
@@ -336,21 +317,21 @@ export default function AdminSettings() {
                         </div>
 
                         {/* 3. Steak Pre-order Status */}
-                        <div className="space-y-3 border-t border-white/10 pt-4">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase">🥩 Steak Pre-order Status</h3>
+                        <div className="space-y-3 border-t border-gray-100 pt-4">
+                            <h3 className="text-sm font-bold text-subInk uppercase">🥩 Steak Pre-order Status</h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_steak === mode ? 'bg-white/10 border-[#DFFF00]' : 'border-white/10 hover:bg-white/5'}`}>
+                                    <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_steak === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
                                         <input
                                             type="radio"
                                             name="shop_mode_steak"
                                             checked={settings.shop_mode_steak === mode}
                                             onChange={() => handleSave('shop_mode_steak', mode)}
-                                            className="accent-[#DFFF00] w-4 h-4"
+                                            className="accent-brandDark w-4 h-4"
                                         />
                                         <div>
-                                            <span className="block text-white font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
-                                            <span className="text-[10px] text-gray-500">
+                                            <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
+                                            <span className="text-[10px] text-subInk">
                                                 {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
                                             </span>
                                         </div>
@@ -359,17 +340,17 @@ export default function AdminSettings() {
                             </div>
                         </div>
 
-                        {/* Time Settings - Shared? Or imply it affects all Auto modes */}
-                        <div className="pt-4 border-t border-white/10">
-                            <p className="text-[10px] text-gray-400 mb-3">* Time settings below apply to all "Auto" modes</p>
+                        {/* Time Settings */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <p className="text-[10px] text-subInk mb-3">* Time settings below apply to all "Auto" modes</p>
                             <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300`}>
                                 <div>
-                                    <label className="block text-xs text-gray-500 mb-1">Opens at</label>
-                                    <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                                    <label className="block text-xs text-subInk mb-1">Opens at</label>
+                                    <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand shadow-inner" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-gray-500 mb-1">Closes at</label>
-                                    <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00]" />
+                                    <label className="block text-xs text-subInk mb-1">Closes at</label>
+                                    <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand shadow-inner" />
                                 </div>
                             </div>
                         </div>
@@ -377,20 +358,20 @@ export default function AdminSettings() {
 
 
                 {/* Staff Access Settings */}
-                <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-4">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-4 shadow-sm">
+                    <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                             👨‍🍳 Staff Access
                     </h2>
                     <div>
-                        <label className="block text-xs text-gray-500 mb-1">Staff PIN Code</label>
+                        <label className="block text-xs text-subInk mb-1">Staff PIN Code</label>
                         <input 
                             type="text" 
                             value={settings.staff_pin_code || ''} 
                             onChange={(e) => handleSave('staff_pin_code', e.target.value)} 
                             placeholder="e.g. 1234"
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-[#DFFF00] font-mono tracking-widest text-center text-lg" 
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono tracking-widest text-center text-lg shadow-inner" 
                         />
-                        <p className="text-[10px] text-gray-600 mt-2">Simple code for staff to access Staff View without email login.</p>
+                        <p className="text-[10px] text-subInk mt-2">Simple code for staff to access Staff View without email login.</p>
                     </div> w
                 </div>
             </div>
