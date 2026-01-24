@@ -217,14 +217,18 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                 <input 
                     type="number" 
                     className="w-16 md:w-20 bg-gray-50 border rounded-lg p-2 text-right font-bold text-sm"
-                    value={quantity}
-                    onChange={(e) => onUpdate(id, parseFloat(e.target.value))}
+                    value={quantity || ''}
+                    placeholder="0"
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        onUpdate(id, val === '' ? '' : parseFloat(val));
+                    }}
                 />
                 <span className="text-xs text-gray-500 w-8 truncate">{unit}</span>
             </div>
 
             <div className="text-right w-20 md:w-24">
-                <div className="font-bold text-[#1A1A1A]">฿{cost.toFixed(2)}</div>
+                <div className="font-bold text-[#1A1A1A]">฿{isNaN(cost) ? '0.00' : cost.toFixed(2)}</div>
             </div>
 
             <button onClick={() => onDelete(id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg">

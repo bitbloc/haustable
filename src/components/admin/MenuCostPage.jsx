@@ -50,10 +50,11 @@ export default function MenuCostPage() {
                 recipeLinks.forEach(link => {
                     const mid = link.parent_menu_item_id;
                     if (mid) {
-                        if (!recipesByMenu[mid]) {
-                            recipesByMenu[mid] = [];
+                        const midStr = String(mid); // Ensure string key
+                        if (!recipesByMenu[midStr]) {
+                            recipesByMenu[midStr] = [];
                         }
-                        recipesByMenu[mid].push({
+                        recipesByMenu[midStr].push({
                             ingredient_id: link.ingredient_id, // Use Raw ID
                             ingredient: link.ingredient,       // Joined Data (might be null)
                             quantity: link.quantity,
@@ -69,7 +70,7 @@ export default function MenuCostPage() {
             let count = 0;
 
             const enrichedItems = data.map(item => {
-                const ingredients = recipesByMenu[item.id] || [];
+                const ingredients = recipesByMenu[String(item.id)] || []; // Lookup by string ID
                 // Helper to mimic 'getIngredientById' for costUtils, but we already have full object in 'ingredient'
                 const breakdown = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient, { qFactorPercent: item.q_factor_percent || 0 });
                 
