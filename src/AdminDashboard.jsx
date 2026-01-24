@@ -208,22 +208,30 @@ export default function AdminDashboard() {
                         <h1 className="text-3xl font-bold text-ink tracking-tight">Dashboard</h1>
                         <p className="text-sm text-subInk mt-1">Manage orders and reservations</p>
                     </div>
-                    <button onClick={fetchData} className="px-5 py-2.5 bg-paper text-ink font-bold rounded-xl border border-gray-200 shadow-sm hover:border-brand hover:bg-brand/10 transition-colors flex items-center gap-2">
+                    <button onClick={fetchData} className="px-5 py-2.5 bg-[#DFFF00] text-black font-bold rounded-lg shadow-sm hover:bg-[#cbe600] transition-colors flex items-center gap-2">
                         <RotateCcw className="w-4 h-4" /> Refresh
                     </button>
                 </div>
 
                 {/* --- TABS --- */}
-                <div className="flex p-1.5 bg-paper rounded-2xl mb-8 w-fit border border-gray-200 shadow-sm">
-                    {['overview', 'dine_in', 'pickup', 'steak'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${activeTab === tab ? 'bg-brand text-ink shadow-sm' : 'text-subInk hover:text-ink hover:bg-gray-50'}`}
-                        >
-                            {tab === 'dine_in' ? 'Dine-in Only' : tab === 'pickup' ? 'Pickup Only' : tab === 'steak' ? 'Steak Pre-order' : 'Overview'}
-                        </button>
-                    ))}
+                <div className="flex gap-8 border-b border-gray-200 mb-8 px-2">
+                    {['overview', 'dine_in', 'pickup', 'steak'].map((tab) => {
+                        const isActive = activeTab === tab
+                        const label = tab === 'dine_in' ? 'Dine-In Only' : tab === 'pickup' ? 'Pickup Only' : tab === 'steak' ? 'Steak Pre-order' : 'Overview'
+                        
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`pb-3 font-bold text-sm transition-all relative ${isActive ? 'text-black' : 'text-gray-400 hover:text-gray-600'}`}
+                            >
+                                {label}
+                                {isActive && (
+                                    <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#DFFF00] rounded-t-full" />
+                                )}
+                            </button>
+                        )
+                    })}
                 </div>
 
                 {/* CONTENT */}

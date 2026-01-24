@@ -14,8 +14,9 @@ export default function ScheduleSection({ bookings, loading }) {
                     </h2>
                     <p className="text-xs text-subInk mt-0.5">Confirmed orders for today</p>
                 </div>
-                <div className="text-xs font-mono font-bold text-ink bg-brand px-3 py-1 rounded-full border border-brandDark/20">
-                    {bookings.length} Orders
+                <div className="text-[10px] font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wide">
+                    {bookings.length > 0 && <span className="w-2 h-2 bg-green-500 rounded-full inline-block mr-1"></span>}
+                    {bookings.length === 0 ? '0 Orders' : `${bookings.length} Orders`}
                 </div>
             </div>
 
@@ -35,11 +36,9 @@ export default function ScheduleSection({ bookings, loading }) {
                         {bookings.length === 0 ? (
                             <tr>
                                 <td colSpan="6" className="p-16 text-center">
-                                    <div className="flex flex-col items-center gap-3 text-subInk opacity-60">
-                                        <div className="w-12 h-12 rounded-full bg-canvas flex items-center justify-center border border-gray-100">
-                                            <CheckCircle size={24} className="text-gray-400" />
-                                        </div>
-                                        <p className="font-medium">All caught up! No confirmed orders for today.</p>
+                                    <div className="flex flex-col items-center gap-4 text-subInk">
+                                        <CheckCircle size={48} className="text-[#DFFF00]" strokeWidth={3} />
+                                        <p className="font-bold text-ink">All caught up! No confirmed orders for today.</p>
                                     </div>
                                 </td>
                             </tr>
