@@ -51,21 +51,31 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             }
             
             // --- Config กล้อง: SD (Safe) vs HD (Sharp) ---
-            const videoConstraints = useHD 
-                ? { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-                : { facingMode: "environment" };
+            const videoConstraints = {
+                facingMode: "environment",
+                width: useHD ? { min: 1280, ideal: 1920 } : { min: 640, ideal: 1280 },
+                height: useHD ? { min: 720, ideal: 1080 } : { min: 480, ideal: 720 },
+                aspectRatio: { ideal: 1.0 },
+                // Try to force continuous focus on Android/Chrome
+                advanced: [{ focusMode: "continuous" }] 
+            };
 
             console.log("Starting camera with HD:", useHD);
 
             const config = { 
-                fps: 15, // Smooth enough
+                fps: 25, // Increased from 15 for faster scanning
                 qrbox: { width: 250, height: 250 },
                 aspectRatio: 1.0,
-                 formatsToSupport: [ 
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+                formatsToSupport: [ 
                     Html5QrcodeSupportedFormats.EAN_13,
                     Html5QrcodeSupportedFormats.EAN_8,
                     Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.QR_CODE 
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E
                 ]
             };
 

@@ -20,6 +20,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortableMenuItem } from './components/SortableMenuItem';
+import RecipeBuilder from './components/recipes/RecipeBuilder';
 
 const dropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
@@ -35,8 +36,14 @@ export default function AdminMenu() {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]); // Dynamic Categories
     const [loading, setLoading] = useState(true);
+    
+    // Modal States
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRecipeOpen, setIsRecipeOpen] = useState(false); // Recipe Builder Modal
+    
     const [editingItem, setEditingItem] = useState(null);
+    const [recipeTarget, setRecipeTarget] = useState(null); // Item being edited in Recipe Builder
+    
     const [formData, setFormData] = useState({ name: '', price: '', category: '', is_available: true, is_pickup_available: true, is_recommended: false });
     const [imageFile, setImageFile] = useState(null);
     const [activeId, setActiveId] = useState(null);
@@ -80,7 +87,6 @@ export default function AdminMenu() {
         })
     );
 
-    // Group items: Recommend vs Regular (Mutually Exclusive)
     // Group items: Recommend vs Regular (Mutually Exclusive)
     const sections = {
         recommend: menuItems.filter(i => i.is_recommended),
@@ -135,18 +141,7 @@ export default function AdminMenu() {
         }
     
         // Security Check: No cross-category dragging (except Recommend)
-        // Allow moving TO recommend OR staying in same category
         const sourceCategory = activeItemLocal.category;
-        
-        // Strict Mode: Can only move between Recommend <-> Original Category
-        // Or if we implementing "Move Category by Drag", then we allow it.
-        // Assuming user wants to Reorder ONLY, not change category via drag (except Recommend toggle)
-        
-        // However, if we want to allow fixing "Uncategorized" by dragging to a Category, we should allow it.
-        // Let's allow dragging ANYWHERE, and update the item's category if it changes zones!
-        // That is more intuitive for "Admin".
-
-        // Update 2024: Enable full cross-category drag
         
         // 2. Optimistic Update
         const isActiveRecommend = activeItemLocal.is_recommended;
@@ -193,10 +188,6 @@ export default function AdminMenu() {
         // String conversion for safety
         const activeIdStr = String(active.id);
         const overIdStr = String(over.id);
-
-        // NOTE: We do NOT return early here if IDs are equal, because we might have changed properties 
-        // (is_recommended, category) in handleDragOver, which constitutes a change that needs saving.
-        // if (activeIdStr === overIdStr) return;
 
         // Finalize Reorder
         const oldIndex = menuItems.findIndex((i) => String(i.id) === activeIdStr);
@@ -283,6 +274,12 @@ export default function AdminMenu() {
         await supabase.from('menu_items').delete().eq('id', id);
         fetchMenu();
     };
+    
+    // OPEN RECIPE BUILDER
+    const handleOpenRecipe = (item) => {
+        setRecipeTarget(item);
+        setIsRecipeOpen(true);
+    };
 
     const resetForm = () => {
         setFormData({ 
@@ -345,6 +342,7 @@ export default function AdminMenu() {
                                     item={item} 
                                     isMobile={isMobile} 
                                     onEdit={(i) => { setEditingItem(i); setFormData(i); setIsModalOpen(true); }}
+                                    onRecipe={handleOpenRecipe} /* Added Handler */
                                     onDelete={handleDelete}
                                 />
                             ))}
@@ -383,6 +381,7 @@ export default function AdminMenu() {
                                                 item={item} 
                                                 isMobile={isMobile} 
                                                 onEdit={(i) => { setEditingItem(i); setFormData(i); setIsModalOpen(true); }}
+                                                onRecipe={handleOpenRecipe} /* Added Handler */
                                                 onDelete={handleDelete}
                                             />
                                         ))}
@@ -413,6 +412,7 @@ export default function AdminMenu() {
                                             item={item} 
                                             isMobile={isMobile} 
                                             onEdit={(i) => { setEditingItem(i); setFormData(i); setIsModalOpen(true); }}
+                                            onRecipe={handleOpenRecipe} /* Added Handler */
                                             onDelete={handleDelete}
                                         />
                                     ))}
@@ -432,7 +432,8 @@ export default function AdminMenu() {
                                     item={item} 
                                     isMobile={isMobile} 
                                     onEdit={()=>{}} 
-                                    onDelete={()=>{}} 
+                                    onDelete={()=>{}}
+                                    onRecipe={()=>{}}
                                     isOverlay 
                                 />
                             ) : null;
@@ -497,6 +498,15 @@ export default function AdminMenu() {
                             </form>
                         </div>
                     </div>
+                )}
+                
+                {/* Recipe Builder Modal */}
+                {isRecipeOpen && recipeTarget && (
+                    <RecipeBuilder 
+                        parentId={recipeTarget.id}
+                        initialPrice={recipeTarget.price}
+                        onClose={() => setIsRecipeOpen(false)}
+                    />
                 )}
             </div>
         </DndContext>

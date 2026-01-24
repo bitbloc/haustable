@@ -1,91 +1,110 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { X, Save, Trash2, Camera, Upload, Scan } from 'lucide-react'; // Added Scan
+import { X, Save, Trash2, Camera, Upload, Scan, calculator, DollarSign, Scale, Percent } from 'lucide-react';
 import { toast } from 'sonner';
-import BarcodeScanner from './BarcodeScanner'; // Import Scanner
+import BarcodeScanner from './BarcodeScanner';
+import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
+import { calculateRealUnitCost } from '../../utils/costUtils';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const isEdit = !!item;
     const [loading, setLoading] = useState(false);
-    const [searching, setSearching] = useState(false); // New state for API lookup
+    const [searching, setSearching] = useState(false);
+    
+    // Tab State: 'basic' | 'costing'
+    const [activeTab, setActiveTab] = useState('basic');
+
     const [formData, setFormData] = useState({
         name: '',
         category: 'veg',
-        unit: 'unit',
         current_quantity: 0,
         min_stock_threshold: 0,
         reorder_point: 0,
         par_level: 0,
         image_url: '',
-        barcode: ''
+        barcode: '',
+        
+        // Costing Fields
+        cost_price: 0,      // Price per Pack
+        pack_size: 1,       // Qty per Pack
+        pack_unit: 'kg',    // Unit bought
+        usage_unit: 'g',    // Unit used in recipe
+        conversion_factor: 1000, // 1 pack_unit = X usage_unit
+        yield_percent: 100, // Usable %
+        is_base_recipe: false
     });
     
-    const [showScanner, setShowScanner] = useState(false); // Added
+    const [showScanner, setShowScanner] = useState(false);
 
     useEffect(() => {
         if (item) {
             setFormData({
                 name: item.name || '',
                 category: item.category || 'veg',
-                unit: item.unit || 'unit',
                 current_quantity: item.current_quantity || 0,
                 min_stock_threshold: item.min_stock_threshold || 0,
                 reorder_point: item.reorder_point || 0,
                 par_level: item.par_level || 0,
                 image_url: item.image_url || '',
-                barcode: item.barcode || ''
+                barcode: item.barcode || '',
+                
+                cost_price: item.cost_price || 0,
+                pack_size: item.pack_size || 1,
+                pack_unit: item.pack_unit || 'unit',
+                usage_unit: item.usage_unit || item.unit || 'unit', // migration fallback
+                conversion_factor: item.conversion_factor || 1,
+                yield_percent: item.yield_percent || 100,
+                is_base_recipe: item.is_base_recipe || false
             });
-
-        } else if (item && item.barcode && !item.id) {
-             // Special case: Pre-filled from Main Scanner
-             setFormData(prev => ({ ...prev, barcode: item.barcode }));
-             // Trigger auto-lookup for the passed barcode
-             fetchProductInfo(item.barcode);
         }
     }, [item]);
 
-    // "AI" Smart Lookup (OpenFoodFacts)
-    const fetchProductInfo = async (code) => {
-        if (!code) return;
-        setSearching(true);
-        try {
-            const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-            const data = await response.json();
-            
-            if (data.status === 1 && data.product) {
-                const product = data.product;
-                const name = product.product_name || product.product_name_en || product.product_name_th || '';
-                const image = product.image_front_url || product.image_url || '';
-                
-                if (name) {
-                    toast.success('✨ Standard Product Found!');
-                    setFormData(prev => ({
-                        ...prev,
-                        name: prev.name || name, // Don't overwrite if user already typed? Actually auto-fill is better.
-                        image_url: prev.image_url || image
-                    }));
-                }
-            }
-        } catch (err) {
-            console.warn("Product lookup failed", err);
-        } finally {
-            setSearching(false);
+    // Auto-Calculate Conversion Factor when Units Change
+    const handleUnitChange = (type, value) => {
+        const newData = { ...formData, [type]: value };
+        
+        // Suggest Factor if either unit changed
+        if (type === 'pack_unit' || type === 'usage_unit') {
+            const factor = suggestConversionFactor(newData.pack_unit, newData.usage_unit);
+            newData.conversion_factor = factor;
         }
+        
+        setFormData(newData);
     };
 
-    const items = [
-        { label: 'ชื่อสินค้า', key: 'name', type: 'text' },
-        { label: 'หมวดหมู่', key: 'category', type: 'select', options: categories.filter(c => c.id !== 'restock') },
-        { label: 'หน่วย (เช่น ขวด, กก.)', key: 'unit', type: 'text' },
-        { label: 'จำนวนคงเหลือ', key: 'current_quantity', type: 'number' },
-        { label: 'จุดวิกฤต (แจ้งเตือนแดง)', key: 'min_stock_threshold', type: 'number' },
-        { label: 'จุดต้องสั่งซื้อ (แจ้งเตือนส้ม)', key: 'reorder_point', type: 'number' },
-        { label: 'ระดับสต็อกเต็ม (Par Level)', key: 'par_level', type: 'number' },
-        { label: 'บาร์โค้ด', key: 'barcode', type: 'text' },
-        // Removed image_url, handled separately
-    ];
+    const realCost = calculateRealUnitCost(formData);
 
-    // Helper: Resize Image
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            const payload = { 
+                ...formData,
+                unit: formData.usage_unit, // Sync for backward compatibility
+                barcode: formData.barcode ? formData.barcode.trim() : null
+            };
+            
+            let error;
+            if (isEdit) {
+                 const { error: err } = await supabase.from('stock_items').update(payload).eq('id', item.id);
+                 error = err;
+            } else {
+                 const { error: err } = await supabase.from('stock_items').insert(payload);
+                 error = err;
+            }
+
+            if (error) throw error;
+            toast.success(isEdit ? 'บันทึกเรียบร้อย' : 'สร้างรายการเรียบร้อย');
+            onUpdate();
+            onClose();
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to save: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // ... (Image handling same as before)
     const resizeImage = (file) => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -97,15 +116,13 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     const scaleSize = MAX_WIDTH / img.width;
                     const width = (img.width > MAX_WIDTH) ? MAX_WIDTH : img.width;
                     const height = (img.width > MAX_WIDTH) ? (img.height * scaleSize) : img.height;
-                    
                     canvas.width = width;
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    
                     canvas.toBlob((blob) => {
                         resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-                    }, 'image/jpeg', 0.8); // 80% quality
+                    }, 'image/jpeg', 0.8);
                 };
                 img.src = e.target.result;
             };
@@ -116,76 +133,18 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         try {
             setLoading(true);
             const resizedFile = await resizeImage(file);
-            
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-            const filePath = `${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('stock-images')
-                .upload(filePath, resizedFile);
-
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
+            const { error: uploadError } = await supabase.storage.from('stock-images').upload(fileName, resizedFile);
             if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('stock-images')
-                .getPublicUrl(filePath);
-
+            const { data: { publicUrl } } = supabase.storage.from('stock-images').getPublicUrl(fileName);
             setFormData(prev => ({ ...prev, image_url: publicUrl }));
-            toast.success('Image uploaded');
+            toast.success('อัพโหลดรูปสำเร็จ');
         } catch (error) {
             console.error('Upload error', error);
-            toast.error('Failed to upload image');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!confirm('ยืนยันที่จะลบสินค้านี้ใช่ไหม?')) return;
-        setLoading(true);
-        try {
-            const { error } = await supabase.from('stock_items').delete().eq('id', item.id);
-            if (error) throw error;
-            toast.success('Item deleted');
-            onUpdate();
-            onClose();
-        } catch (e) {
-            toast.error(e.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSave = async () => {
-        setLoading(true);
-        try {
-            const payload = { 
-                ...formData,
-                barcode: formData.barcode ? formData.barcode.trim() : null // Fix: unique constraint on ""
-            };
-            let error;
-            
-            if (isEdit) {
-                 const { error: err } = await supabase.from('stock_items').update(payload).eq('id', item.id);
-                 error = err;
-            } else {
-                 const { error: err } = await supabase.from('stock_items').insert(payload);
-                 error = err;
-            }
-
-            if (error) throw error;
-            
-            toast.success(isEdit ? 'บันทึกเรียบร้อย' : 'สร้างรายการเรียบร้อย');
-            onUpdate();
-            onClose();
-        } catch (e) {
-            console.error(e);
-            toast.error('Failed to save');
+            toast.error('อัพโหลดรูปไม่สำเร็จ');
         } finally {
             setLoading(false);
         }
@@ -194,6 +153,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in p-4">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+                
+                {/* Header */}
                 <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
                     <h2 className="font-bold text-lg">{isEdit ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full">
@@ -201,139 +162,256 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     </button>
                 </div>
 
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200">
+                    <button 
+                        onClick={() => setActiveTab('basic')}
+                        className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'basic' ? 'border-[#1A1A1A] text-[#1A1A1A]' : 'border-transparent text-gray-400'}`}
+                    >
+                        📦 ข้อมูลทั่วไป
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('costing')}
+                        className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'costing' ? 'border-[#DFFF00] text-black bg-[#DFFF00]/10' : 'border-transparent text-gray-400'}`}
+                    >
+                        💰 ต้นทุน & หน่วย
+                    </button>
+                </div>
+
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {items.map((field) => (
-                        <div key={field.key} className="relative">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{field.label}</label>
-                            {field.type === 'select' ? (
-                                <select 
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#1A1A1A]"
-                                    value={formData[field.key]}
-                                    onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                >
-                                    {field.options.map(opt => (
-                                        <option key={opt.id} value={opt.id}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <input 
-                                    type={field.type}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#1A1A1A]"
-                                    value={formData[field.key] || ''}
-                                    onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                                />
-                            )}
-                             {/* Scan Button for Barcode Field */}
-                             {field.key === 'barcode' && (
-                                <button
-                                    onClick={() => setShowScanner(true)}
-                                    className="absolute right-2 top-8 p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                                >
-                                    <Scan className="w-4 h-4 text-gray-700" />
-                                </button>
-                             )}
-                             
-                             {/* Loading Indicator for Lookup */}
-                             {field.key === 'name' && searching && (
-                                 <div className="absolute right-2 top-8 p-2">
-                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                                 </div>
-                             )}
-                        </div>
-                    ))}
                     
-                    {/* Image Upload Section */}
-                    <div className="space-y-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase">รูปอ้างอิง</label>
-                        
-                        <div className="flex items-center gap-4">
-                            <div className="relative w-24 h-24 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
-                                {formData.image_url ? (
-                                    <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview"/>
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        <Camera className="w-8 h-8" />
-                                    </div>
-                                )}
+                    {/* Basic Info Tab */}
+                    {activeTab === 'basic' && (
+                        <>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase">ชื่อสินค้า</label>
+                                <input 
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#1A1A1A]" 
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="เช่น มะนาวแป้น, น้ำเชื่อมมิตรผล"
+                                />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1 space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">หมวดหมู่</label>
+                                    <select 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none"
+                                        value={formData.category}
+                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                    >
+                                        {categories.filter(c => c.id !== 'restock').map(c => (
+                                            <option key={c.id} value={c.id}>{c.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex-1 space-y-1 relative">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">บาร์โค้ด</label>
+                                    <input 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" 
+                                        value={formData.barcode}
+                                        onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                    />
+                                    <button onClick={() => setShowScanner(true)} className="absolute right-2 top-8 p-1.5 bg-gray-200 rounded-lg">
+                                        <Scan className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                             
-                            <div className="flex-1">
-                                <label className="flex items-center justify-center gap-2 w-full p-3 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors border border-dashed border-gray-300">
-                                    <Upload className="w-5 h-5 text-gray-600" />
-                                    <span className="text-sm font-medium text-gray-600">
-                                        {formData.image_url ? 'เปลี่ยนรูป' : 'อัปโหลดรูป'}
-                                    </span>
+                            {/* Inventory Levels */}
+                            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">จำนวนคงเหลือ</label>
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none text-lg font-bold" 
+                                            value={formData.current_quantity}
+                                            onChange={e => setFormData({ ...formData, current_quantity: parseFloat(e.target.value) })}
+                                        />
+                                        <span className="text-sm text-gray-400">{formData.usage_unit}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">จุดสั่งซื้อ (Reorder)</label>
                                     <input 
-                                        type="file" 
-                                        accept="image/*" 
-                                        onChange={handleImageUpload} 
-                                        className="hidden" 
-                                        capture="environment" /* Prefer rear camera on mobile */
+                                        type="number"
+                                        className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none" 
+                                        value={formData.reorder_point}
+                                        onChange={e => setFormData({ ...formData, reorder_point: parseFloat(e.target.value) })}
                                     />
-                                </label>
-                                <p className="text-[10px] text-gray-400 mt-2">
-                                    Auto-resized to 800px width.
+                                </div>
+                            </div>
+
+                            {/* Image */}
+                            <div className="pt-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">รูปสินค้า</label>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
+                                        {formData.image_url ? (
+                                            <img src={formData.image_url} className="w-full h-full object-cover" alt="Preview"/>
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400"><Camera className="w-6 h-6" /></div>
+                                        )}
+                                    </div>
+                                    <label className="flex-1 cursor-pointer">
+                                        <div className="flex items-center justify-center gap-2 p-3 bg-white border border-dashed border-gray-300 rounded-xl hover:bg-gray-50">
+                                            <Upload className="w-4 h-4 text-gray-600" />
+                                            <span className="text-sm">อัพโหลดรูปใหม่</span>
+                                        </div>
+                                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                    </label>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Costing Tab */}
+                    {activeTab === 'costing' && (
+                        <div className="space-y-6">
+                            
+                            {/* 1. Buying Info */}
+                            <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
+                                <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                                    <DollarSign className="w-4 h-4" /> 1. ข้อมูลการซื้อ (Buying)
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="text-xs text-gray-500">ราคาซื้อต่อแพ็ค (บาท)</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full bg-white border border-blue-200 rounded-lg p-2 text-lg font-bold text-blue-700"
+                                            value={formData.cost_price}
+                                            onChange={e => setFormData({ ...formData, cost_price: parseFloat(e.target.value) })}
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500">ปริมาณ (Size)</label>
+                                        <input 
+                                            type="number" 
+                                            className="w-full bg-white border border-blue-200 rounded-lg p-2"
+                                            value={formData.pack_size}
+                                            onChange={e => setFormData({ ...formData, pack_size: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500">หน่วยซื้อ (Unit)</label>
+                                        <select 
+                                            className="w-full bg-white border border-blue-200 rounded-lg p-2"
+                                            value={formData.pack_unit}
+                                            onChange={e => handleUnitChange('pack_unit', e.target.value)}
+                                        >
+                                            {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                                            <option value="pack">pack</option>
+                                            <option value="box">box</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 2. Usage Info */}
+                            <div className="bg-green-50 p-4 rounded-xl space-y-3 border border-green-100">
+                                <h3 className="text-sm font-bold text-green-800 flex items-center gap-2">
+                                    <Scale className="w-4 h-4" /> 2. หน่วยที่ใช้ในสูตร (Usage)
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="text-xs text-gray-500 block mb-1">หน่วยที่ใช้จริง (เช่น กรัม, มิลลิลิตร)</label>
+                                        <select 
+                                            className="w-full bg-white border border-green-200 rounded-lg p-2 font-bold"
+                                            value={formData.usage_unit}
+                                            onChange={e => handleUnitChange('usage_unit', e.target.value)}
+                                        >
+                                            {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                                        </select>
+                                    </div>
+                                    
+                                    <div className="col-span-2 bg-white p-3 rounded-lg border border-green-200">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="text-xs text-gray-500">ตัวแปลงหน่วย (Conversion)</label>
+                                            <span className="text-[10px] text-gray-400">1 {formData.pack_unit} = ? {formData.usage_unit}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-gray-400">×</span>
+                                            <input 
+                                                type="number" 
+                                                className="flex-1 border-b border-green-300 text-center py-1 font-bold text-green-700 outline-none"
+                                                value={formData.conversion_factor}
+                                                onChange={e => setFormData({ ...formData, conversion_factor: parseFloat(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 3. Yield Info */}
+                            <div className="bg-orange-50 p-4 rounded-xl space-y-3 border border-orange-100">
+                                <h3 className="text-sm font-bold text-orange-800 flex items-center gap-2">
+                                    <Percent className="w-4 h-4" /> 3. ประสิทธิภาพ (Yield %)
+                                </h3>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <input 
+                                            type="range" 
+                                            min="1" max="100" 
+                                            value={formData.yield_percent}
+                                            onChange={e => setFormData({ ...formData, yield_percent: parseFloat(e.target.value) })}
+                                            className="w-full accent-orange-500"
+                                        />
+                                    </div>
+                                    <div className="w-16">
+                                        <input 
+                                            type="number" 
+                                            className="w-full bg-white border border-orange-200 rounded-lg p-2 text-center font-bold"
+                                            value={formData.yield_percent}
+                                            onChange={e => setFormData({ ...formData, yield_percent: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-orange-600">
+                                    *Yield ต่ำกว่า 100% หมายถึงมีการสูญเสีย (เช่น เปลือก, กาก) ทำให้ต้นทุนจริงสูงขึ้น
                                 </p>
                             </div>
+
+                            {/* Result: Real Cost */}
+                            <div className="bg-[#1A1A1A] text-white p-4 rounded-xl flex justify-between items-center shadow-lg">
+                                <div>
+                                    <div className="text-xs text-gray-400 mb-1">ต้นทุนจริง (Real Cost)</div>
+                                    <div className="text-2xl font-bold font-mono tracking-tight text-[#DFFF00]">
+                                        ฿{realCost.toFixed(4)}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400">ต่อ 1 {formData.usage_unit}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-[10px] text-gray-500">Price / (Pack × Factor × Yield)</div>
+                                </div>
+                            </div>
+
                         </div>
-                    </div>
+                    )}
 
                 </div>
 
                 <div className="p-4 border-t border-gray-100 flex gap-2">
-                    {isEdit && (
-                        <button 
-                            onClick={handleDelete}
-                            className="bg-red-50 text-red-600 p-4 rounded-xl font-bold hover:bg-red-100 transition-colors"
-                        >
-                            <Trash2 className="w-5 h-5" />
-                        </button>
-                    )}
                     <button 
                         onClick={handleSave}
                         disabled={loading}
                         className="flex-1 bg-[#1A1A1A] text-white p-4 rounded-xl font-bold hover:bg-black transition-colors flex items-center justify-center gap-2"
                     >
-                        {loading ? 'กำลังบันทึก...' : <><Save className="w-5 h-5" /> บันทึก</>}
+                        {loading ? 'กำลังบันทึก...' : <><Save className="w-5 h-5" /> บันทึกข้อมูล</>}
                     </button>
                 </div>
             </div>
             
             {showScanner && (
-                <BarcodeScanner
-                    onScan={async (scanResult) => {
-                         setShowScanner(false);
-                         
-                         const code = scanResult.barcode || scanResult; // Handle object or string
-                         const scannedData = typeof scanResult === 'object' ? scanResult : {};
-
-                         // Check duplicate
-                         const { data } = await supabase.from('stock_items').select('id, name').eq('barcode', code).single();
-                         if (data) {
-                             if (confirm(`Item '${data.name}' already exists with this barcode. Edit it instead?`)) {
-                                 onClose(); 
-                                 toast.warning(`Barcode already used by '${data.name}'`);
-                             }
-                         } else {
-                             setFormData(prev => ({
-                                 ...prev, 
-                                 barcode: code,
-                                 // Auto-fill from Scanner AI (if available and field is empty)
-                                 name: (scannedData.name && !prev.name) ? scannedData.name : prev.name,
-                                 image_url: (scannedData.image_url && !prev.image_url) ? scannedData.image_url : prev.image_url
-                             }));
-                             
-                             if (scannedData.found) {
-                                 toast.success(`Found: ${scannedData.name}`);
-                             } else {
-                                 toast.success('Barcode scanned');
-                                 // Trigger legacy lookup if scanner didn't find it (fallback)
-                                 fetchProductInfo(code);
-                             }
-                         }
-                    }}
-                    onClose={() => setShowScanner(false)}
-                />
+                <BarcodeScanner onScan={(res) => {
+                    const code = res.barcode || res;
+                    setFormData({...formData, barcode: code});
+                    setShowScanner(false);
+                    toast.success('Scanned: ' + code);
+                }} onClose={() => setShowScanner(false)} />
             )}
         </div>
     );
