@@ -469,17 +469,21 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     ) : (
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                             <SortableContext items={ingredients.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                                {ingredients.map((item, idx) => (
-                                    <SortableLayer 
-                                        key={item.id} 
-                                        index={idx}
-                                        {...item}
-                                        cost={(item.ingredient?.cost_price / (item.ingredient?.pack_size * item.ingredient?.conversion_factor || 1)) * item.quantity} // Rough calc
-                                        onDelete={(id) => setIngredients(prev => prev.filter(x => x.id !== id))}
-                                        onUpdate={(id, qty) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, quantity: qty } : x))}
-                                        onEditStock={setEditingStockItem}
-                                    />
-                                ))}
+                                {ingredients.map((item, idx) => {
+                                    const unitCost = calculateRealUnitCost(item.ingredient);
+                                    return (
+                                        <SortableLayer 
+                                            key={item.id} 
+                                            index={idx}
+                                            {...item}
+                                            unitCost={unitCost}
+                                            cost={unitCost * item.quantity}
+                                            onDelete={(id) => setIngredients(prev => prev.filter(x => x.id !== id))}
+                                            onUpdate={(id, qty) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, quantity: qty } : x))}
+                                            onEditStock={setEditingStockItem}
+                                        />
+                                    );
+                                })}
                             </SortableContext>
                         </DndContext>
                     )}
