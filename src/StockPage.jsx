@@ -22,6 +22,7 @@ import TransactionHistory from './components/stock/TransactionHistory'; // Added
 import StockUsageReport from './components/stock/StockUsageReport'; // Added
 import CategoryManager from './components/stock/CategoryManager';
 import StockItemForm from './components/stock/StockItemForm'; // Added
+import RecipeBuilder from './components/recipes/RecipeBuilder'; // Added
 import { toast } from 'sonner';
 
 export default function StockPage() {
@@ -38,6 +39,11 @@ export default function StockPage() {
     const [showCategoryManager, setShowCategoryManager] = useState(false); // Added
     const [showItemForm, setShowItemForm] = useState(false); // Added
     const [editingItem, setEditingItem] = useState(null); // Added
+    
+    // Recipe Builder State
+    const [isRecipeOpen, setIsRecipeOpen] = useState(false);
+    const [recipeTarget, setRecipeTarget] = useState(null);
+
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [sortMode, setSortMode] = useState('name'); // 'name' | 'low_stock'
     
@@ -337,6 +343,11 @@ export default function StockPage() {
         }
     };
 
+    const handleOpenRecipe = (item) => {
+        setRecipeTarget(item);
+        setIsRecipeOpen(true);
+    };
+
     const handleCodeScan = async (code) => {
         // Find item by barcode ACROSS ALL CATEGORIES
         // So we need to query DB, or better, if we only loaded one category, we might miss it.
@@ -557,6 +568,7 @@ export default function StockPage() {
                                     key={item.id} 
                                     item={item} 
                                     onClick={(i) => setSelectedItem(i)} 
+                                    onRecipe={handleOpenRecipe}
                                  />
                              ))}
                         </div>
@@ -579,7 +591,20 @@ export default function StockPage() {
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-[#1A1A1A] truncate">{item.name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-[#1A1A1A] truncate">{item.name}</h3>
+                                                {item.is_base_recipe && (
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleOpenRecipe(item);
+                                                        }}
+                                                        className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scroll"><path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/></svg>
+                                                    </button>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-gray-500">
                                                 {formatStockDisplay(item.current_quantity, item.unit).displayString}
                                             </p>
@@ -639,6 +664,16 @@ export default function StockPage() {
             {showReport && (
                 <StockUsageReport 
                     onClose={() => setShowReport(false)}
+                />
+            )}
+
+            {isRecipeOpen && recipeTarget && (
+                <RecipeBuilder 
+                    parentId={recipeTarget.id}
+                    parentType="stock"
+                    initialPrice={0} // Costing for Base Recipe doesn't have a Selling Price usually, or maybe we don't need simulator? 
+                    // But simulator is inside RecipeBuilder. We can ignore it or let user see cost.
+                    onClose={() => setIsRecipeOpen(false)}
                 />
             )}
             

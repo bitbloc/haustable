@@ -57,6 +57,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     // parentType: 'menu' | 'stock' (Base Recipe)
     const [ingredients, setIngredients] = useState([]); // List of { id, ingredient, quantity, unit }
     const [availableItems, setAvailableItems] = useState([]);
+    const [parentItem, setParentItem] = useState(null); // Added
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -85,6 +86,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 }));
                 setIngredients(mapped);
             }
+
+            // 1.5 Fetch Parent Info (to know Batch Size / Name)
+            const { data: parentData } = await supabase
+                .from(parentType === 'menu' ? 'menu_items' : 'stock_items')
+                .select('*')
+                .eq('id', parentId)
+                .single();
+            setParentItem(parentData);
 
             // 2. Fetch All Stock Items for Picker
             const { data: stocks } = await supabase
@@ -165,6 +174,19 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 if (error) throw error;
             }
 
+            // 3. Update Parent Cost (Auto-Propagation Hook)
+            // If it's a Stock Item (Base Recipe), we update its 'cost_price'.
+            // Assumption: The Recipe produces '1 Pack' of the Stock Item.
+            if (parentType === 'stock') {
+                 const { error: updateError } = await supabase
+                    .from('stock_items')
+                    .update({ cost_price: totalCost })
+                    .eq('id', parentId);
+                 if (updateError) console.error("Failed to update parent cost", updateError);
+            }
+            // If it's Menu Item, we could update a 'cost' column if it existed, but we rely on live calc for now
+            // or we can add it later.
+
             toast.success('บันทึกสูตรเรียบร้อย');
             onClose();
 
@@ -201,9 +223,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     <div>
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             <Layers className="text-[#1A1A1A]" /> 
-                            ตัวเนรมิตสูตร (Recipe Builder)
+                            {parentItem?.name ? `สูตรของ ${parentItem.name}` : 'ตัวเนรมิตสูตร'}
                         </h2>
-                        <p className="text-xs text-gray-500">ลากวางเพื่อเปลี่ยน Layer • คำนวณต้นทุน Real-time</p>
+                        <p className="text-xs text-gray-500">
+                             {parentType === 'stock' && parentItem 
+                                ? `สำหรับ 1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
+                                : 'ลากวางเพื่อเปลี่ยน Layer • คำนวณต้นทุน Real-time'
+                             }
+                        </p>
                     </div>
                     <div className="text-right">
                         <div className="text-sm text-gray-500">ต้นทุนรวม (Sub Total)</div>

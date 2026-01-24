@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { X, Save, Trash2, Camera, Upload, Scan, calculator, DollarSign, Scale, Percent } from 'lucide-react';
+import { X, Save, Trash2, Camera, Upload, Scan, Calculator, DollarSign, Scale, Percent, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
@@ -274,8 +274,21 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             {/* 1. Buying Info */}
                             <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
                                 <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
-                                    <DollarSign className="w-4 h-4" /> 1. ข้อมูลการซื้อ (Buying)
+                                    <DollarSign className="w-4 h-4" /> 1. ข้อมูลการซื้อ (Buying) & ประเภท
                                 </h3>
+                                <div className="mb-3 p-3 bg-white rounded-lg border border-blue-200 flex items-center gap-3">
+                                    <input 
+                                        type="checkbox" 
+                                        id="isBase"
+                                        className="w-5 h-5 accent-blue-600"
+                                        checked={formData.is_base_recipe}
+                                        onChange={e => setFormData({ ...formData, is_base_recipe: e.target.checked })}
+                                    />
+                                    <label htmlFor="isBase" className="text-sm font-bold text-gray-700">
+                                        เป็นสินค้าสูตร (Base Recipe) 
+                                        <span className="block text-xs text-gray-400 font-normal">ผลิตเองจากวัตถุดิบอื่น (เช่น ซอส, พริกแกง)</span>
+                                    </label>
+                                </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="col-span-2">
                                         <label className="text-xs text-gray-500">ราคาซื้อต่อแพ็ค (บาท)</label>
@@ -374,6 +387,17 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     *Yield ต่ำกว่า 100% หมายถึงมีการสูญเสีย (เช่น เปลือก, กาก) ทำให้ต้นทุนจริงสูงขึ้น
                                 </p>
                             </div>
+                            
+                            {/* Yield Alert */}
+                            {formData.yield_percent < 80 && (
+                                <div className="bg-red-50 p-3 rounded-xl border border-red-200 flex gap-3 items-start animate-pulse">
+                                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                                    <div>
+                                        <div className="font-bold text-red-700 text-sm">Yield ต่ำกว่าเกณฑ์ (Loss สูง)</div>
+                                        <div className="text-xs text-red-600">ต้นทุนจริงจะสูงขึ้นมาก โปรดตรวจสอบว่ามีการสูญเสียมากขนาดนี้จริงหรือไม่</div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Result: Real Cost */}
                             <div className="bg-[#1A1A1A] text-white p-4 rounded-xl flex justify-between items-center shadow-lg">

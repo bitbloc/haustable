@@ -1,8 +1,8 @@
 import React from 'react';
-import { Package, AlertTriangle } from 'lucide-react';
+import { Package, AlertTriangle, Scroll } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
-export default function StockCard({ item, onClick }) {
+export default function StockCard({ item, onClick, onRecipe }) {
     // Nendo Logic: Visual Color Status
     const isCritical = item.current_quantity <= (item.min_stock_threshold || 0);
     const isWarning = !isCritical && item.current_quantity <= (item.reorder_point || 0);
@@ -31,6 +31,19 @@ export default function StockCard({ item, onClick }) {
                 ${bgClass}
             `}
         >
+            {/* Recipe Button (for Base Recipes) */}
+            {item.is_base_recipe && (
+                <div 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onRecipe) onRecipe(item);
+                    }}
+                    className="absolute top-2 left-2 p-1.5 bg-orange-100/80 hover:bg-orange-200 text-orange-700 rounded-lg backdrop-blur-sm z-10 transition-colors"
+                >
+                    <Scroll className="w-4 h-4" />
+                </div>
+            )}
+
             {/* Status Indicator Icon (only for issues) */}
             {(isCritical || isWarning) && (
                 <div className={`absolute top-2 right-2 ${textClass}`}>
@@ -57,7 +70,6 @@ export default function StockCard({ item, onClick }) {
                     {item.name}
                 </h3>
                 
-                {/* Quantity Display */}
                 {/* Quantity Display */}
                 <div className="flex flex-col w-full gap-1">
                     {/* Main Summary */}
