@@ -21,6 +21,7 @@ export default function MenuCostPage() {
     const [sortConfig, setSortConfig] = useState({ key: 'category', direction: 'asc' }); // Default: Category A-Z
     const [filterMode, setFilterMode] = useState('all'); // 'all', 'missing_recipe', 'low_margin'
     const [searchTerm, setSearchTerm] = useState('');
+    const [debugLog, setDebugLog] = useState({});
 
     const loadData = async () => {
         setLoading(true);
@@ -243,12 +244,12 @@ export default function MenuCostPage() {
 
                     <div className="bg-white px-4 py-2 rounded-xl border shadow-sm flex items-center gap-4">
                         <div className="text-right">
-                             <div className="text-[10px] text-gray-400 uppercase font-bold">ต้นทุนรวม (Total Cost)</div>
+                             <div className="text-[10px] text-gray-400 uppercase font-bold">ต้นทุนรวม</div>
                              <div className="font-bold text-gray-700">฿{summary.totalCost.toLocaleString()}</div>
                         </div>
                         <div className="w-px h-8 bg-gray-100"></div>
                         <div className="text-right">
-                             <div className="text-[10px] text-gray-400 uppercase font-bold">กำไรเฉลี่ย (Avg Margin)</div>
+                             <div className="text-[10px] text-gray-400 uppercase font-bold">กำไรเฉลี่ย</div>
                              <div className={`text-xl font-bold ${summary.avgMargin >= 65 ? 'text-green-600' : 'text-orange-500'}`}>
                                  {summary.avgMargin.toFixed(1)}%
                              </div>
@@ -263,21 +264,21 @@ export default function MenuCostPage() {
                             <thead className="bg-gray-50 border-b text-xs uppercase text-gray-500 font-bold">
                                 <tr>
                                     <th className="p-4 cursor-pointer hover:text-black" onClick={() => handleSort('name')}>
-                                        เมนู (Menu) {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                        เมนู {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
                                     <th className="p-4 text-right cursor-pointer hover:text-black" onClick={() => handleSort('price')}>
-                                        ราคาขาย (Price) {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                        ราคาขาย {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
                                     <th className="p-4 text-right cursor-pointer hover:text-black" onClick={() => handleSort('cost')}>
-                                        ต้นทุน (Cost) {sortConfig.key === 'cost' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                        ต้นทุน {sortConfig.key === 'cost' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
                                     <th className="p-4 text-right cursor-pointer hover:text-black" onClick={() => handleSort('profit')}>
-                                        กำไร (Profit) {sortConfig.key === 'profit' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                        กำไร {sortConfig.key === 'profit' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
                                     <th className="p-4 text-right cursor-pointer hover:text-black" onClick={() => handleSort('costPercent')}>
-                                        Cost % {sortConfig.key === 'costPercent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                        ต้นทุน % {sortConfig.key === 'costPercent' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="p-4 text-center">สูตร (Recipe)</th>
+                                    <th className="p-4 text-center">จัดการสูตร</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -301,7 +302,7 @@ export default function MenuCostPage() {
                                             {item.hasRecipe ? (
                                                 <span className="font-mono font-bold text-gray-700">฿{item.cost.toFixed(2)}</span>
                                             ) : (
-                                                <span className="text-xs text-gray-400 italic">No Recipe</span>
+                                                <span className="text-xs text-gray-400 italic">ยังไม่ผูกสูตร</span>
                                             )}
                                         </td>
                                         <td className="p-4 text-right">
@@ -330,7 +331,7 @@ export default function MenuCostPage() {
                                                 }`}
                                             >
                                                 <ChefHat size={16} />
-                                                {!item.hasRecipe && "Create"}
+                                                {!item.hasRecipe && "สร้างสูตร"}
                                             </button>
                                         </td>
                                     </tr>
@@ -341,24 +342,7 @@ export default function MenuCostPage() {
                 </div>
             </div>
 
-    // Debug State
-    const [debugLog, setDebugLog] = useState({});
-
-    // Update loadData to populate debugLog
-    // ... inside loadData ...
-    // See separate replace block for loadData injection
-
-    return (
-        <div className="min-h-screen bg-gray-50 text-[#1A1A1A] font-sans">
-            {/* ... Existing UI ... */}
-            
-            {/* DEBUG PANEL */}
-            <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-60 mb-20">
-                <h3 className="text-white font-bold border-b border-gray-700 mb-2">DEBUG INFO (Refining Cost Logic)</h3>
-                <pre>{JSON.stringify(debugLog, null, 2)}</pre>
-            </div>
-
-                {/* Recipe Modal */}
+            {/* Recipe Modal */}
             {isRecipeOpen && recipeTarget && (
                 <RecipeBuilder 
                     parentId={recipeTarget.id}
@@ -373,9 +357,11 @@ export default function MenuCostPage() {
             )}
 
             {/* DEBUG PANEL */}
-            <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-60 mt-10">
-                <h3 className="text-white font-bold border-b border-gray-700 mb-2">DEBUG INFO (Refining Cost Logic)</h3>
-                <pre>{JSON.stringify(debugLog, null, 2)}</pre>
+            <div className="max-w-7xl mx-auto p-4">
+                <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-60 rounded-xl shadow-lg">
+                    <h3 className="text-white font-bold border-b border-gray-700 mb-2">DEBUG INFO (Refining Cost Logic)</h3>
+                    <pre>{JSON.stringify(debugLog, null, 2)}</pre>
+                </div>
             </div>
         </div>
     );
