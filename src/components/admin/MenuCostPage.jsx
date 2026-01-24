@@ -64,6 +64,18 @@ export default function MenuCostPage() {
                 });
             }
 
+            // DEBUG CAZY
+            setDebugLog({
+                ts: new Date().toISOString(),
+                totalMenu: data?.length,
+                totalLinks: recipeLinks?.length,
+                sampleMenuId: data?.[0] ? `${data[0].id} (${typeof data[0].id})` : 'N/A',
+                sampleMenuName: data?.[0]?.name,
+                sampleLinkParentId: recipeLinks?.[0] ? `${recipeLinks[0].parent_menu_item_id} (${typeof recipeLinks[0].parent_menu_item_id})` : 'N/A',
+                keysInMap: Object.keys(recipesByMenu).slice(0, 5),
+                isMatchFoundForFirst: data?.[0] ? !!recipesByMenu[String(data[0].id)] : false
+            });
+
             // 4. Calculate Costs
             let revObserved = 0;
             let costObserved = 0;
@@ -327,6 +339,23 @@ export default function MenuCostPage() {
                         </table>
                     </div>
                 </div>
+            </div>
+
+    // Debug State
+    const [debugLog, setDebugLog] = useState({});
+
+    // Update loadData to populate debugLog
+    // ... inside loadData ...
+    // See separate replace block for loadData injection
+
+    return (
+        <div className="min-h-screen bg-gray-50 text-[#1A1A1A] font-sans">
+            {/* ... Existing UI ... */}
+            
+            {/* DEBUG PANEL */}
+            <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-60 mb-20">
+                <h3 className="text-white font-bold border-b border-gray-700 mb-2">DEBUG INFO (Refining Cost Logic)</h3>
+                <pre>{JSON.stringify(debugLog, null, 2)}</pre>
             </div>
 
             {/* Recipe Modal */}

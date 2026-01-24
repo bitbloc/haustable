@@ -29,7 +29,7 @@ BEGIN
                 layer_order
             ) VALUES (
                 p_menu_id,
-                (item->>'ingredient_id')::BIGINT,
+                (item->>'ingredient_id')::UUID, -- CHANGED FROM BIGINT TO UUID
                 (item->>'quantity')::NUMERIC,
                 (item->>'unit')::TEXT,
                 (item->>'layer_order')::INT
