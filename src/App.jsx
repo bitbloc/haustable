@@ -117,11 +117,15 @@ function App() {
             </Route>
 
             {/* Admin Routes */}
+import MenuCostPage from './components/admin/MenuCostPage' // NEW
+
+// ... inside Routes ...
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="members" element={<AdminMembers />} />
               <Route path="menu" element={<AdminMenu />} />
+              <Route path="costing" element={<MenuCostPage />} />
               <Route path="steaks" element={<AdminSteakDashboard />} />
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="tables" element={<AdminTableManager />} />

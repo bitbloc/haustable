@@ -31,7 +31,8 @@ export default function StockCard({ item, onClick, onRecipe }) {
                 ${bgClass}
             `}
         >
-            {/* Recipe Button (Always visible for easy access) */}
+            {/* Recipe Button HIDDEN per user request (Stock = Raw Material) */}
+            {/* 
             <div 
                 onClick={(e) => {
                     e.stopPropagation();
@@ -50,6 +51,7 @@ export default function StockCard({ item, onClick, onRecipe }) {
                     <span className="text-[10px] font-bold">สูตร</span>
                 </div>
             </div>
+            */}
 
             {/* Status Indicator Icon (only for issues) */}
             {(isCritical || isWarning) && (
