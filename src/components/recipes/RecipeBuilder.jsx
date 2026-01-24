@@ -3,13 +3,108 @@ import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical, AlertTriangle, Layers } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor } from '../../utils/costUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 
+// Mini Form for Quick Stock Edit
+function EditStockModal({ item, onClose, onSave }) {
+    const [formData, setFormData] = useState({
+        cost_price: item.cost_price || 0,
+        pack_size: item.pack_size || 1,
+        pack_unit: item.pack_unit || 'unit',
+        usage_unit: item.usage_unit || 'unit',
+        conversion_factor: item.conversion_factor || 1,
+        yield_percent: item.yield_percent || 100
+    });
+
+    // Auto-calculate Real Cost for preview
+    const realCostPerUsage = (formData.cost_price / (formData.pack_size * formData.conversion_factor)) * (100 / formData.yield_percent);
+
+    const checkConversion = (oldUnit, newUsageUnit) => {
+         // Simple heuristic helpers
+         if (oldUnit === 'kg' && newUsageUnit === 'g') return 1000;
+         if (oldUnit === 'l' && newUsageUnit === 'ml') return 1000;
+         if (oldUnit === 'g' && newUsageUnit === 'kg') return 0.001;
+         if (oldUnit === 'ml' && newUsageUnit === 'l') return 0.001;
+         return 1;
+    };
+
+    return (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Pencil size={18} /> แก้ไขต้นทุน: {item.name}
+                </h3>
+                
+                <div className="space-y-4">
+                    {/* Buying Info */}
+                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-2">
+                        <label className="text-xs font-bold text-blue-800 block">ข้อมูลการซื้อ (Buying)</label>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <span className="text-[10px] text-gray-500">ราคาซื้อ (บาท)</span>
+                                <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm font-bold" />
+                            </div>
+                            <div className="flex-1">
+                                <span className="text-[10px] text-gray-500">ขนาดบรรจุ</span>
+                                <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm" />
+                            </div>
+                            <div className="w-20">
+                                <span className="text-[10px] text-gray-500">หน่วยซื้อ</span>
+                                <input type="text" value={formData.pack_unit} onChange={e => setFormData({...formData, pack_unit: e.target.value})} className="w-full p-2 rounded border border-blue-200 text-sm" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Usage Info */}
+                    <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 space-y-2">
+                        <label className="text-xs font-bold text-orange-800 block">การใช้ในสูตร (Usage)</label>
+                        <div className="flex gap-2 items-end">
+                            <div className="flex-1">
+                                <span className="text-[10px] text-gray-500">หน่วยที่ใช้จริง</span>
+                                <input 
+                                    type="text" 
+                                    value={formData.usage_unit} 
+                                    onChange={e => {
+                                        const newUnit = e.target.value;
+                                        // Auto-suggest conversion
+                                        const suggested = checkConversion(formData.pack_unit, newUnit);
+                                        setFormData({...formData, usage_unit: newUnit, conversion_factor: suggested !== 1 ? suggested : formData.conversion_factor});
+                                    }} 
+                                    className="w-full p-2 rounded border border-orange-200 text-sm font-bold" 
+                                />
+                            </div>
+                            <div className="dark:text-gray-400 pb-2">=</div>
+                            <div className="flex-1">
+                                <span className="text-[10px] text-gray-500">ตัวหาร/แปลงหน่วย</span>
+                                <input type="number" value={formData.conversion_factor} onChange={e => setFormData({...formData, conversion_factor: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-orange-200 text-sm" />
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-gray-400">
+                             1 {formData.pack_unit} = {formData.pack_size * formData.conversion_factor} {formData.usage_unit}
+                        </p>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="p-3 bg-gray-100 rounded-xl flex justify-between items-center">
+                        <span className="text-xs text-gray-500">ต้นทุนจริงเฉลี่ย</span>
+                        <span className="font-bold text-lg text-green-600">฿{realCostPerUsage.toFixed(4)} <span className="text-xs text-black font-normal">/ {formData.usage_unit}</span></span>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-200 text-gray-700 font-bold">ยกเลิก</button>
+                        <button onClick={() => onSave(item.id, formData)} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700">บันทึก</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Sortable Layer Component
-function SortableLayer({ id, ingredient, quantity, unit, cost, index, onDelete, onUpdate }) {
+function SortableLayer({ id, ingredient, quantity, unit, cost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition };
     
@@ -25,24 +120,27 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, index, onDelete, 
             {/* Visual Layer Indicator */}
             <div className={`w-3 h-12 rounded-full ${getLayerColor(index)}`}></div>
 
-            <div className="flex-1">
-                <div className="font-bold text-[#1A1A1A]">{ingredient.name}</div>
-                <div className="text-xs text-gray-500">
-                    ฿{ingredient.unitCost?.toFixed(4) || 0} / {ingredient.usage_unit}
-                </div>
+            <div className="flex-1 min-w-0">
+                <div className="font-bold text-[#1A1A1A] truncate">{ingredient.name}</div>
+                <button 
+                    onClick={() => onEditStock(ingredient)}
+                    className="text-xs text-gray-500 hover:text-blue-600 hover:underline flex items-center gap-1 transition-colors"
+                >
+                    ฿{ingredient.unitCost?.toFixed(4) || 0} / {ingredient.usage_unit} <Pencil size={10} />
+                </button>
             </div>
 
             <div className="flex items-center gap-2">
                 <input 
                     type="number" 
-                    className="w-20 bg-gray-50 border rounded-lg p-2 text-right font-bold"
+                    className="w-16 md:w-20 bg-gray-50 border rounded-lg p-2 text-right font-bold text-sm"
                     value={quantity}
                     onChange={(e) => onUpdate(id, parseFloat(e.target.value))}
                 />
-                <span className="text-xs text-gray-500 w-8">{unit}</span>
+                <span className="text-xs text-gray-500 w-8 truncate">{unit}</span>
             </div>
 
-            <div className="text-right w-24">
+            <div className="text-right w-20 md:w-24">
                 <div className="font-bold text-[#1A1A1A]">฿{cost.toFixed(2)}</div>
             </div>
 
@@ -64,9 +162,13 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     // Cost State
     const [totalCost, setTotalCost] = useState(0);
 
+    // Edit Stock Modal
+    const [editingStockItem, setEditingStockItem] = useState(null);
+
     const sensors = useSensors(useSensor(PointerSensor));
 
     const loadData = async () => {
+        // ... (Keep existing loadData logic)
         setLoading(true);
         try {
             // 1. Fetch Existing Recipe
@@ -135,7 +237,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     }, [ingredients, availableItems]);
 
     const handleAddIngredient = async (item) => {
-        // Circular Check
+        // ... (Keep existing)
+         // Circular Check
         if (item.id === parentId) {
             toast.error('ไม่สามารถใส่ตัวเองเป็นส่วนผสมได้ (Infinity Loop)');
             return;
@@ -154,7 +257,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     };
 
     const handleSave = async () => {
-        setLoading(true);
+         // ... (Keep existing)
+         setLoading(true);
         try {
             // 1. Delete old links (Simplest strategy for MVP)
             const queryField = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
@@ -176,7 +280,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
             // 3. Update Parent Cost (Auto-Propagation Hook)
             // If it's a Stock Item (Base Recipe), we update its 'cost_price'.
-            // Assumption: The Recipe produces '1 Pack' of the Stock Item.
             if (parentType === 'stock') {
                  const { error: updateError } = await supabase
                     .from('stock_items')
@@ -184,8 +287,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     .eq('id', parentId);
                  if (updateError) console.error("Failed to update parent cost", updateError);
             }
-            // If it's Menu Item, we could update a 'cost' column if it existed, but we rely on live calc for now
-            // or we can add it later.
 
             toast.success('บันทึกสูตรเรียบร้อย');
             onClose();
@@ -199,13 +300,41 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     };
 
     const handleDragEnd = (event) => {
-        const { active, over } = event;
+        // ... (Keep existing)
+         const { active, over } = event;
         if (active.id !== over.id) {
             setIngredients((items) => {
                 const oldIndex = items.findIndex((i) => i.id === active.id);
                 const newIndex = items.findIndex((i) => i.id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
+        }
+    };
+
+    // --- Handling Inline Stock Edit ---
+    const handleUpdateStock = async (id, newFormData) => {
+        try {
+            const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
+            if (error) throw error;
+            
+            toast.success('อัปเดตข้อมูลวัตถุดิบแล้ว');
+            setEditingStockItem(null);
+
+            // Refresh Local Data (both available list and current ingredients)
+            const updatedAvailable = availableItems.map(item => item.id === id ? { ...item, ...newFormData } : item);
+            setAvailableItems(updatedAvailable);
+
+            // Also update any ingredients in the list that match this, so the UI cost updates immediately
+            setIngredients(prev => prev.map(p => {
+                if (p.ingredientId === id) {
+                    return { ...p, ingredient: { ...p.ingredient, ...newFormData } };
+                }
+                return p;
+            }));
+
+        } catch (err) {
+            console.error(err);
+            toast.error('อัปเดตไม่สำเร็จ');
         }
     };
 
@@ -217,6 +346,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     return (
         <div className="fixed inset-0 z-[70] bg-white flex flex-col md:flex-row animate-in fade-in">
+            {/* Edit Stock Modal */}
+            {editingStockItem && (
+                <EditStockModal 
+                    item={editingStockItem} 
+                    onClose={() => setEditingStockItem(null)} 
+                    onSave={handleUpdateStock} 
+                />
+            )}
+
             {/* Left: Recipe Stack (The "Soul" Visual) */}
             <div className="flex-1 flex flex-col bg-gray-50 border-r border-gray-200">
                 <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10">
@@ -253,9 +391,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                                         key={item.id} 
                                         index={idx}
                                         {...item}
-                                        cost={(item.ingredient?.cost_price / (item.ingredient?.pack_size * item.ingredient?.conversion_factor || 1)) * item.quantity} // Rough calc for display
+                                        cost={(item.ingredient?.cost_price / (item.ingredient?.pack_size * item.ingredient?.conversion_factor || 1)) * item.quantity} // Rough calc
                                         onDelete={(id) => setIngredients(prev => prev.filter(x => x.id !== id))}
                                         onUpdate={(id, qty) => setIngredients(prev => prev.map(x => x.id === id ? { ...x, quantity: qty } : x))}
+                                        onEditStock={setEditingStockItem}
                                     />
                                 ))}
                             </SortableContext>
@@ -281,7 +420,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             {/* Right: Ingredient Picker */}
             <div className="w-full md:w-[400px] bg-white flex flex-col shadow-2xl z-20">
                 <div className="p-4 border-b">
-                    <h3 className="font-bold mb-2">คลังวัตถุดิบ</h3>
+                     <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-bold">คลังวัตถุดิบ</h3>
+                        <button className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">จัดการสต็อก</button>
+                     </div>
                     <input 
                         className="w-full bg-gray-100 border-none rounded-xl py-2 px-4"
                         placeholder="ค้นหาวัตถุดิบ..."
@@ -293,16 +435,18 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     {filteredItems.map(item => (
                         <div 
                             key={item.id}
-                            onClick={() => handleAddIngredient(item)}
                             className="p-3 mb-2 rounded-xl border hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all flex justify-between items-center group"
                         >
-                            <div>
+                             <div className="flex-1" onClick={() => handleAddIngredient(item)}>
                                 <div className="font-bold text-sm">{item.name}</div>
                                 <div className="text-xs text-gray-400">{item.usage_unit}</div>
                             </div>
-                            <button className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                <Plus size={16} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {/* Quick Edit in Picker too? Maybe later. For now just add button */}
+                                <button className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors" onClick={() => handleAddIngredient(item)}>
+                                    <Plus size={16} />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
