@@ -187,7 +187,7 @@ function EditStockModal({ item, onClose, onSave }) {
 }
 
 // Sortable Layer Component
-function SortableLayer({ id, ingredient, quantity, unit, cost, index, onDelete, onUpdate, onEditStock }) {
+function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition };
     
@@ -209,7 +209,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, index, onDelete, 
                     onClick={() => onEditStock(ingredient)}
                     className="text-xs text-gray-500 hover:text-blue-600 hover:underline flex items-center gap-1 transition-colors"
                 >
-                    ฿{ingredient.unitCost?.toFixed(4) || 0} / {ingredient.usage_unit} <Pencil size={10} />
+                    ฿{unitCost?.toFixed(4) || 0} / {ingredient.usage_unit} <Pencil size={10} />
                 </button>
             </div>
 
