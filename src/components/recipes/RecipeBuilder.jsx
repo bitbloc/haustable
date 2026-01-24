@@ -354,53 +354,41 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 console.warn("No active session! RLS might block.");
             }
 
-            // 1. Delete old links (Simplest strategy for MVP)
-            const queryField = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
-            await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
-
-            // 2. Insert new
-            const payloads = ingredients.map((ing, idx) => ({
-                [queryField]: parentId,
+            // 1. Prepare Payload
+            const payloadItems = ingredients.map((ing, idx) => ({
                 ingredient_id: ing.ingredientId,
                 quantity: ing.quantity,
                 unit: ing.unit,
                 layer_order: idx
             }));
 
-            // DEBUG: Show what we are sending
-            // console.log("Payload:", payloads);
-            // toast.info("DEBUG: Saving " + payloads.length + " items...");
+            if (parentType === 'menu') {
+                // USE RPC (Atomic & Bypasses RLS)
+                const { data: rpcData, error: rpcError } = await supabase.rpc('save_menu_recipe', {
+                    p_menu_id: parentId,
+                    p_ingredients: payloadItems
+                });
 
-            if (payloads.length > 0) {
-                const { error, count } = await supabase.from('recipe_ingredients').insert(payloads).select();
-                if (error) throw error;
+                if (rpcError) throw rpcError;
+                if (!rpcData.success) throw new Error(rpcData.error || 'RPC reported failure');
                 
-                // Verification: Did RLS block it?
-                // .select() returns the inserted rows.
-                // console.log("Inserted:", count); 
-            }
+                // console.log("RPC Success:", rpcData);
 
-            // 3. Update Parent Cost (Auto-Propagation Hook)
-            // If it's a Stock Item (Base Recipe), we update its 'cost_price'.
-            if (parentType === 'stock') {
-                 const { error: updateError } = await supabase
-                    .from('stock_items')
-                    .update({ cost_price: totalCost })
-                    .eq('id', parentId);
-                 if (updateError) console.error("Failed to update parent cost", updateError);
-            }
+            } else {
+                // MANUAL FALLBACK (For Stock Parent - Base Recipe)
+                // If the user hasn't run the generic RLS fix, this might still fail.
+                const queryField = 'parent_stock_item_id';
+                await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
+                
+                const payloads = payloadItems.map(p => ({
+                    [queryField]: parentId,
+                    ...p
+                }));
 
-            // Double Check Verification using simple SELECT
-            // Because insert().select() might return mock data in some client versions if RLS blocks silently? 
-            // Better to trust the query.
-            const queryFieldCheck = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
-            const { count: finalCount } = await supabase
-                .from('recipe_ingredients')
-                .select('*', { count: 'exact', head: true })
-                .eq(queryFieldCheck, parentId);
-            
-            if (ingredients.length > 0 && finalCount === 0) {
-                throw new Error("Persist Failed - Row Level Security (RLS) Likely Blocking Write. Please run the Fix SQL.");
+                if (payloads.length > 0) {
+                     const { error } = await supabase.from('recipe_ingredients').insert(payloads);
+                     if (error) throw error;
+                }
             }
 
             toast.success('บันทึกสูตรเรียบร้อย');
