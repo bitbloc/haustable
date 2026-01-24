@@ -329,9 +329,9 @@ export default function MenuCostPage() {
                     parentId={recipeTarget.id}
                     parentType="menu"
                     initialPrice={recipeTarget.price}
-                    onClose={() => {
+                    onClose={async () => {
                         setIsRecipeOpen(false);
-                        loadData(); // Refresh after edit
+                        await loadData(); // Refresh after edit
                     }}
                 />
             )}

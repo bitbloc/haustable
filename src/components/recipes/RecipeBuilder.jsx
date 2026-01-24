@@ -376,7 +376,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
         } catch (err) {
             console.error(err);
-            toast.error('บันทึกไม่สำเร็จ');
+            toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown Error'));
         } finally {
             setLoading(false);
         }
