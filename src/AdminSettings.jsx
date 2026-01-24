@@ -317,54 +317,55 @@ export default function AdminSettings() {
             </div>
 
                 {/* Blocked Dates Management */}
-                <div className="bg-[#111] p-6 md:p-8 rounded-3xl border border-white/5 space-y-6 flex flex-col">
+                {/* Blocked Dates Management */}
+                <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-6 flex flex-col shadow-sm">
                     <div className="flex-1">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-2">
+                        <h2 className="text-xl font-bold text-ink flex items-center gap-2 mb-2">
                             <Calendar size={20} className="text-red-500" /> Blocked Dates
                         </h2>
-                        <p className="text-xs text-gray-500 mb-6">Close bookings for specific days or ranges.</p>
+                        <p className="text-xs text-subInk mb-6">Close bookings for specific days or ranges.</p>
 
-                        <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-6 bg-white/5 p-4 rounded-xl border border-white/5">
+                        <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-6 bg-canvas p-4 rounded-xl border border-gray-200">
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-gray-400 uppercase font-bold">วันที่เริ่มหยุด (Start)</label>
+                                    <label className="text-[10px] text-subInk uppercase font-bold">วันที่เริ่มหยุด (Start)</label>
                                     <input
                                         type="date"
                                         value={blockForm.startDate}
                                         onClick={(e) => e.target.showPicker?.()}
                                         onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })}
-                                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none cursor-pointer"
+                                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-ink text-sm focus:border-brand outline-none cursor-pointer"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-gray-400 uppercase font-bold">ถึงวันที่ (End)</label>
+                                    <label className="text-[10px] text-subInk uppercase font-bold">ถึงวันที่ (End)</label>
                                     <input
                                         type="date"
                                         value={blockForm.endDate}
                                         min={blockForm.startDate}
                                         onClick={(e) => e.target.showPicker?.()}
                                         onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })}
-                                        className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none cursor-pointer"
+                                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-ink text-sm focus:border-brand outline-none cursor-pointer"
                                     />
                                 </div>
                             </div>
-                            <input type="text" placeholder="Reason (e.g. Holiday)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-[#DFFF00] outline-none" />
-                            <button className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded-lg text-sm transition-colors mt-1">Block Dates</button>
+                            <input type="text" placeholder="Reason (e.g. Holiday)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-ink text-sm focus:border-brand outline-none" />
+                            <button className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg text-sm transition-colors mt-1">Block Dates</button>
                         </form>
 
                         <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar">
                             {blockedList.map(item => (
-                                <div key={item.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                                <div key={item.id} className="flex justify-between items-center bg-canvas p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
                                     <div>
-                                        <div className="text-white text-sm font-bold">{new Date(item.blocked_date).toLocaleDateString()}</div>
-                                        <div className="text-xs text-gray-400">{item.reason}</div>
+                                        <div className="text-ink text-sm font-bold">{new Date(item.blocked_date).toLocaleDateString()}</div>
+                                        <div className="text-xs text-subInk">{item.reason}</div>
                                     </div>
                                     <button onClick={() => handleDeleteBlockedDate(item.id)} className="text-red-500 hover:text-red-400 p-2"><Trash2 size={16} /></button>
                                 </div>
                             ))}
                             {blockedList.length === 0 && (
-                                <div className="text-center text-gray-600 text-xs py-10">No blocked dates</div>
+                                <div className="text-center text-subInk text-xs py-10">No blocked dates</div>
                             )}
                         </div>
                     </div>
@@ -372,9 +373,9 @@ export default function AdminSettings() {
             </div>
 
             {/* Announcement Card Settings */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
+            <div className="bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 shadow-sm">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                         Announcement Card
                     </h2>
                     <button
@@ -393,139 +394,139 @@ export default function AdminSettings() {
                             await handleSave('contact_map_url', settings.contact_map_url)
                             alert('บันทึกการตั้งค่าเรียบร้อย!')
                         }}
-                        className="flex items-center gap-2 bg-[#DFFF00] text-black px-4 py-2 rounded-full font-bold text-sm hover:scale-105 transition-transform"
+                        className="flex items-center gap-2 bg-brand text-ink px-4 py-2 rounded-full font-bold text-sm hover:scale-105 transition-transform shadow"
                     >
                         <Save size={16} /> บันทึก
                     </button>
                 </div>
                 <div>
-                    <label className="block text-xs text-gray-500 mb-1">Headline (Bold)</label>
+                    <label className="block text-xs text-subInk mb-1">Headline (Bold)</label>
                     <input
                         type="text"
                         value={settings.announcement_headline || ''}
                         onChange={(e) => setSettings(prev => ({ ...prev, announcement_headline: e.target.value }))}
                         placeholder="e.g. BY ร้านในบ้าน"
-                        className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                        className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
                     />
                 </div>
                 <div>
-                    <label className="block text-xs text-gray-500 mb-1">Detail (Marquee)</label>
+                    <label className="block text-xs text-subInk mb-1">Detail (Marquee)</label>
                     <input
                         type="text"
                         value={settings.announcement_detail || ''}
                         onChange={(e) => setSettings(prev => ({ ...prev, announcement_detail: e.target.value }))}
                         placeholder="e.g. IN THE HAUS..."
-                        className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                        className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
                     />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                      <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Contact Phone</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Contact Phone</label>
                         <input
                             type="text"
                             value={settings.contact_phone || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, contact_phone: e.target.value }))}
                             placeholder="e.g. 0812345678"
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand font-mono"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono"
                         />
                      </div>
                      <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Google Maps URL</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Google Maps URL</label>
                         <input
                             type="text"
                             value={settings.contact_map_url || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, contact_map_url: e.target.value }))}
                             placeholder="https://maps.google.com/..."
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
                         />
                      </div>
                 </div>
 
                 {/* --- New Policy & Rate Settings --- */}
-                <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="pt-4 border-t border-gray-100 space-y-4">
                     <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Minimum Spend per Person (THB)</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Minimum Spend per Person (THB)</label>
                         <input
                             type="number"
                             value={settings.booking_min_spend || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, booking_min_spend: e.target.value }))}
                             placeholder="e.g. 150"
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Min Advance Booking (Hours)</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Min Advance Booking (Hours)</label>
                         <input
                             type="number"
                             value={settings.booking_min_advance_hours || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, booking_min_advance_hours: e.target.value }))}
                             placeholder="e.g. 2"
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Min Advance Pickup (Hours)</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Min Advance Pickup (Hours)</label>
                         <input
                             type="number"
                             value={settings.pickup_min_advance_hours || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, pickup_min_advance_hours: e.target.value }))}
                             placeholder="e.g. 1"
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Service Time Slots (Comma separated)</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Service Time Slots (Comma separated)</label>
                         <input
                             type="text"
                             value={settings.booking_time_slots || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, booking_time_slots: e.target.value }))}
                             placeholder="e.g. 11:00, 12:00, 13:00"
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand font-mono"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Dine-in Policy (Before Pay)</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Dine-in Policy (Before Pay)</label>
                         <textarea
                             rows={3}
                             value={settings.policy_dine_in || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, policy_dine_in: e.target.value }))}
                             placeholder="Message above the confirm checkbox..."
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand text-sm"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand text-sm"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs text-[#DFFF00] font-bold mb-1">Pickup Policy (Before Pay)</label>
+                        <label className="block text-xs text-brandDark font-bold mb-1">Pickup Policy (Before Pay)</label>
                         <textarea
                             rows={3}
                             value={settings.policy_pickup || ''}
                             onChange={(e) => setSettings(prev => ({ ...prev, policy_pickup: e.target.value }))}
                             placeholder="Message above the confirm checkbox..."
-                            className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand text-sm"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand text-sm"
                         />
                     </div>
                 </div>
             </div>
 
             {/* --- Sound Alert Settings --- */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Volume2 className="text-[#DFFF00]" /> Sound Alert (Loop)
+            <div className="bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 mt-8 shadow-sm">
+                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                    <Volume2 className="text-brandDark" /> Sound Alert (Loop)
                 </h2>
                 <div className="flex items-center gap-4">
-                    <div className="flex-1 bg-black rounded-xl p-4 flex items-center justify-between border border-white/10">
+                    <div className="flex-1 bg-canvas rounded-xl p-4 flex items-center justify-between border border-gray-200">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#DFFF00]/10 flex items-center justify-center text-[#DFFF00]">
+                            <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center text-brandDark">
                                 <Bell size={20} />
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-white">Current Alert Sound</p>
-                                <p className="text-xs text-gray-400">
+                                <p className="text-sm font-bold text-ink">Current Alert Sound</p>
+                                <p className="text-xs text-subInk">
                                     {settings.alert_sound_url ? 'Custom File Uploaded' : 'System Default (Beep)'}
                                 </p>
                             </div>
@@ -537,7 +538,7 @@ export default function AdminSettings() {
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                    <label className="block text-xs font-bold text-subInk uppercase mb-2">
                         Upload New Sound (Max 1MB, .mp3/.wav)
                     </label>
                     <input
@@ -551,15 +552,15 @@ export default function AdminSettings() {
                             }
                         }}
                         disabled={uploadingSound}
-                        className="block w-full text-sm text-gray-400
+                        className="block w-full text-sm text-subInk
                         file:mr-4 file:py-2 file:px-4
                         file:rounded-full file:border-0
                         file:text-xs file:font-semibold
-                        file:bg-[#DFFF00] file:text-black
-                        hover:file:bg-[#eaff66]
+                        file:bg-brand file:text-ink
+                        hover:file:bg-brand/80
                         cursor-pointer"
                     />
-                    <p className="mt-2 text-xs text-gray-500">{uploadingSound ? 'Uploading...' : 'Recommended: Short loopable sound'}</p>
+                    <p className="mt-2 text-xs text-gray-400">{uploadingSound ? 'Uploading...' : 'Recommended: Short loopable sound'}</p>
                 </div>
             </div>
 
@@ -567,61 +568,61 @@ export default function AdminSettings() {
 
             {/* Floor Plan & QR */}
             {/* QR Code Section */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5">
-                <h2 className="text-xl font-bold text-white mb-2">QR Payment</h2>
+            <div className="bg-paper p-8 rounded-3xl border border-gray-200 shadow-sm">
+                <h2 className="text-xl font-bold text-ink mb-2">QR Payment</h2>
                 <div className="mb-6 flex justify-center">
                     {settings.payment_qr_url ? (
-                        <img src={`${settings.payment_qr_url}?t=${timestamp}`} className="w-48 h-48 object-cover rounded-2xl border-2 border-[#DFFF00]" />
+                        <img src={`${settings.payment_qr_url}?t=${timestamp}`} className="w-48 h-48 object-cover rounded-2xl border-2 border-brand" />
                     ) : (
-                        <div className="w-48 h-48 bg-gray-800 rounded-2xl flex items-center justify-center text-gray-500">No QR</div>
+                        <div className="w-48 h-48 bg-gray-100 rounded-2xl flex items-center justify-center text-subInk">No QR</div>
                     )}
                 </div>
                 <label className="block w-full cursor-pointer group">
-                    <div className="bg-black border border-dashed border-gray-700 rounded-xl p-4 text-center group-hover:border-[#DFFF00] transition-colors">
-                        <span className="text-gray-400 text-sm group-hover:text-white">{uploadingQr ? 'Uploading...' : 'Click to replace QR'}</span>
+                    <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-4 text-center group-hover:border-brand transition-colors">
+                        <span className="text-subInk text-sm group-hover:text-ink">{uploadingQr ? 'Uploading...' : 'Click to replace QR'}</span>
                     </div>
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'payment_qr_url', setUploadingQr)} />
                 </label>
-                <p className="text-[10px] text-gray-500 mt-2 text-center">Recommended: Square image (1:1), JPG/PNG, Max 500KB</p>
+                <p className="text-[10px] text-gray-400 mt-2 text-center">Recommended: Square image (1:1), JPG/PNG, Max 500KB</p>
             </div>
 
             {/* Floor Plan Section */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5">
-                <h2 className="text-xl font-bold text-white mb-2">Floor Plan</h2>
+            <div className="bg-paper p-8 rounded-3xl border border-gray-200 shadow-sm mt-8">
+                <h2 className="text-xl font-bold text-ink mb-2">Floor Plan</h2>
                 <div className="mb-6">
                     {settings.floorplan_url ? (
-                        <img src={`${settings.floorplan_url}?t=${timestamp}`} className="w-full h-40 object-cover rounded-2xl border border-gray-700 opacity-60" />
+                        <img src={`${settings.floorplan_url}?t=${timestamp}`} className="w-full h-40 object-cover rounded-2xl border border-gray-200 opacity-90" />
                     ) : (
-                        <div className="w-full h-40 bg-gray-800 rounded-2xl flex items-center justify-center text-gray-500">No Plan</div>
+                        <div className="w-full h-40 bg-gray-100 rounded-2xl flex items-center justify-center text-subInk">No Plan</div>
                     )}
                 </div>
                 <label className="block w-full cursor-pointer group">
-                    <div className="bg-black border border-dashed border-gray-700 rounded-xl p-4 text-center group-hover:border-[#DFFF00] transition-colors">
-                        <span className="text-gray-400 text-sm group-hover:text-white">{uploadingFloor ? 'Uploading...' : 'Click to replace Floor Plan'}</span>
+                    <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-4 text-center group-hover:border-brand transition-colors">
+                        <span className="text-subInk text-sm group-hover:text-ink">{uploadingFloor ? 'Uploading...' : 'Click to replace Floor Plan'}</span>
                     </div>
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'floorplan_url', setUploadingFloor)} />
                 </label>
-                <p className="text-[10px] text-gray-500 mt-2 text-center">Recommended: Landscape (16:9), High resolution, Max 2MB</p>
+                <p className="text-[10px] text-gray-400 mt-2 text-center">Recommended: Landscape (16:9), High resolution, Max 2MB</p>
             </div>
 
             {/* Home Background Section */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 mt-8">
-                <h2 className="text-xl font-bold text-white mb-2">Home Background</h2>
+            <div className="bg-paper p-8 rounded-3xl border border-gray-200 mt-8 shadow-sm">
+                <h2 className="text-xl font-bold text-ink mb-2">Home Background</h2>
                 <div className="mb-6">
                     {settings.home_background_url ? (
-                        <img src={`${settings.home_background_url}?t=${timestamp}`} className="w-full h-40 object-cover rounded-2xl border border-gray-700 opacity-80" />
+                        <img src={`${settings.home_background_url}?t=${timestamp}`} className="w-full h-40 object-cover rounded-2xl border border-gray-200 opacity-90" />
                     ) : (
-                        <div className="w-full h-40 bg-gray-800 rounded-2xl flex items-center justify-center text-gray-500">Default (Ken Burns)</div>
+                        <div className="w-full h-40 bg-gray-100 rounded-2xl flex items-center justify-center text-subInk">Default (Ken Burns)</div>
                     )}
                 </div>
                 <label className="block w-full cursor-pointer group">
-                    <div className="bg-black border border-dashed border-gray-700 rounded-xl p-4 text-center group-hover:border-[#DFFF00] transition-colors">
-                        <span className="text-gray-400 text-sm group-hover:text-white">{uploadingHomeBg ? 'Uploading...' : 'Click to replace Home Background'}</span>
+                    <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-4 text-center group-hover:border-brand transition-colors">
+                        <span className="text-subInk text-sm group-hover:text-ink">{uploadingHomeBg ? 'Uploading...' : 'Click to replace Home Background'}</span>
                     </div>
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'home_background_url', setUploadingHomeBg)} />
                 </label>
                 <div className="flex justify-between items-center mt-2">
-                     <p className="text-[10px] text-gray-500 text-center">Recommended: 1920x1080 (HD), Dark Tone, Max 2MB</p>
+                     <p className="text-[10px] text-gray-400 text-center">Recommended: 1920x1080 (HD), Dark Tone, Max 2MB</p>
                      {settings.home_background_url && (
                         <button 
                             onClick={() => handleSave('home_background_url', '')}
@@ -634,57 +635,57 @@ export default function AdminSettings() {
             </div>
 
             {/* Steak Wizard Settings */}
-            <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
-                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 mt-8 shadow-sm">
+                 <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                     🥩 Steak Wizard Config
                 </h2>
                 
                 {/* Special Details */}
                 <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Special Details Texts</h3>
+                    <h3 className="text-sm font-bold text-brandDark uppercase border-b border-gray-200 pb-2">Special Details Texts</h3>
                     
                     <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs text-gray-400 mb-1">Cake Request Label</label>
+                            <label className="block text-xs text-subInk mb-1">Cake Request Label</label>
                             <input 
                                 value={settings.steak_qt_cake_label || ''} 
                                 onChange={(e) => setSettings({...settings, steak_qt_cake_label: e.target.value})}
                                 onBlur={() => handleSave('steak_qt_cake_label', settings.steak_qt_cake_label)}
                                 placeholder="Cake / Special Decoration Request"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                className="w-full bg-canvas border border-gray-200 p-2 rounded-lg text-ink text-sm"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs text-gray-400 mb-1">Cake Placeholder</label>
+                            <label className="block text-xs text-subInk mb-1">Cake Placeholder</label>
                             <input 
                                 value={settings.steak_qt_cake_placeholder || ''} 
                                 onChange={(e) => setSettings({...settings, steak_qt_cake_placeholder: e.target.value})}
                                 onBlur={() => handleSave('steak_qt_cake_placeholder', settings.steak_qt_cake_placeholder)}
                                 placeholder="Need a cake? Write here..."
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                className="w-full bg-canvas border border-gray-200 p-2 rounded-lg text-ink text-sm"
                             />
                         </div>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs text-gray-400 mb-1">Dietary Label</label>
+                            <label className="block text-xs text-subInk mb-1">Dietary Label</label>
                             <input 
                                 value={settings.steak_qt_dietary_label || ''} 
                                 onChange={(e) => setSettings({...settings, steak_qt_dietary_label: e.target.value})}
                                 onBlur={() => handleSave('steak_qt_dietary_label', settings.steak_qt_dietary_label)}
                                 placeholder="Dietary Restrictions / Allergies"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                className="w-full bg-canvas border border-gray-200 p-2 rounded-lg text-ink text-sm"
                             />
                         </div>
                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Dietary Placeholder</label>
+                            <label className="block text-xs text-subInk mb-1">Dietary Placeholder</label>
                             <input 
                                 value={settings.steak_qt_dietary_placeholder || ''} 
                                 onChange={(e) => setSettings({...settings, steak_qt_dietary_placeholder: e.target.value})}
                                 onBlur={() => handleSave('steak_qt_dietary_placeholder', settings.steak_qt_dietary_placeholder)}
                                 placeholder="e.g. No Nuts"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                className="w-full bg-canvas border border-gray-200 p-2 rounded-lg text-ink text-sm"
                             />
                         </div>
                     </div>
@@ -693,17 +694,17 @@ export default function AdminSettings() {
                 </div>
 
                 {/* Add-ons Configuration (Cake & Flower) */}
-                <div className="space-y-6 pt-6 border-t border-white/10">
-                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Add-ons Configuration</h3>
+                <div className="space-y-6 pt-6 border-t border-gray-200">
+                    <h3 className="text-sm font-bold text-brandDark uppercase border-b border-gray-200 pb-2">Add-ons Configuration</h3>
                     
                     {/* Cake Config */}
-                    <div className="bg-[#1a1a1a] p-4 rounded-2xl border border-white/5">
+                    <div className="bg-canvas p-4 rounded-2xl border border-gray-200">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.steak_addon_cake_enabled === 'true' ? 'bg-[#DFFF00]/20 text-[#DFFF00]' : 'bg-gray-800 text-gray-500'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.steak_addon_cake_enabled === 'true' ? 'bg-brand/20 text-brandDark' : 'bg-gray-200 text-gray-500'}`}>
                                     <Cake size={16} />
                                 </div>
-                                <span className={`text-sm font-bold ${settings.steak_addon_cake_enabled === 'true' ? 'text-white' : 'text-gray-500'}`}>
+                                <span className={`text-sm font-bold ${settings.steak_addon_cake_enabled === 'true' ? 'text-ink' : 'text-subInk'}`}>
                                     Add-on #1 (Default: Cake)
                                 </span>
                             </div>
@@ -714,43 +715,43 @@ export default function AdminSettings() {
                                     checked={settings.steak_addon_cake_enabled === 'true'} 
                                     onChange={e => handleSave('steak_addon_cake_enabled', e.target.checked ? 'true' : 'false')} 
                                 />
-                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#DFFF00]"></div>
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
                             </label>
                         </div>
                         
                         <div className={`grid md:grid-cols-2 gap-4 transition-all ${settings.steak_addon_cake_enabled === 'true' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                             <div>
-                                 <label className="block text-xs text-gray-400 mb-1">Display Name (Label)</label>
+                                 <label className="block text-xs text-subInk mb-1">Display Name (Label)</label>
                                  <input 
                                     value={settings.steak_addon_cake_name || ''} 
                                     onChange={(e) => setSettings({...settings, steak_addon_cake_name: e.target.value})}
                                     onBlur={() => handleSave('steak_addon_cake_name', settings.steak_addon_cake_name)}
                                     placeholder="e.g. รับเค้ก (Receive Cake)"
-                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                    className="w-full bg-white border border-gray-200 p-2 rounded-lg text-ink text-sm"
                                  />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Price (THB)</label>
+                                <label className="block text-xs text-subInk mb-1">Price (THB)</label>
                                 <input 
                                     type="number"
                                     value={settings.steak_addon_cake_price || ''} 
                                     onChange={(e) => setSettings({...settings, steak_addon_cake_price: e.target.value})}
                                     onBlur={() => handleSave('steak_addon_cake_price', settings.steak_addon_cake_price)}
                                     placeholder="1000"
-                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                                    className="w-full bg-white border border-gray-200 p-2 rounded-lg text-ink text-sm font-mono"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Flower Config */}
-                    <div className="bg-[#1a1a1a] p-4 rounded-2xl border border-white/5">
+                    <div className="bg-canvas p-4 rounded-2xl border border-gray-200">
                         <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.steak_addon_flower_enabled === 'true' ? 'bg-[#DFFF00]/20 text-[#DFFF00]' : 'bg-gray-800 text-gray-500'}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${settings.steak_addon_flower_enabled === 'true' ? 'bg-brand/20 text-brandDark' : 'bg-gray-200 text-gray-500'}`}>
                                     <Heart size={16} />
                                 </div>
-                                <span className={`text-sm font-bold ${settings.steak_addon_flower_enabled === 'true' ? 'text-white' : 'text-gray-500'}`}>
+                                <span className={`text-sm font-bold ${settings.steak_addon_flower_enabled === 'true' ? 'text-ink' : 'text-subInk'}`}>
                                     Add-on #2 (Default: Flower)
                                 </span>
                             </div>
@@ -761,30 +762,30 @@ export default function AdminSettings() {
                                     checked={settings.steak_addon_flower_enabled === 'true'} 
                                     onChange={e => handleSave('steak_addon_flower_enabled', e.target.checked ? 'true' : 'false')} 
                                 />
-                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#DFFF00]"></div>
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
                             </label>
                         </div>
                         
                         <div className={`grid md:grid-cols-2 gap-4 transition-all ${settings.steak_addon_flower_enabled === 'true' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                             <div>
-                                 <label className="block text-xs text-gray-400 mb-1">Display Name (Label)</label>
+                                 <label className="block text-xs text-subInk mb-1">Display Name (Label)</label>
                                  <input 
                                     value={settings.steak_addon_flower_name || ''} 
                                     onChange={(e) => setSettings({...settings, steak_addon_flower_name: e.target.value})}
                                     onBlur={() => handleSave('steak_addon_flower_name', settings.steak_addon_flower_name)}
                                     placeholder="e.g. รับดอกไม้ (Receive Flower)"
-                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                    className="w-full bg-white border border-gray-200 p-2 rounded-lg text-ink text-sm"
                                  />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">Price (THB)</label>
+                                <label className="block text-xs text-subInk mb-1">Price (THB)</label>
                                 <input 
                                     type="number"
                                     value={settings.steak_addon_flower_price || ''} 
                                     onChange={(e) => setSettings({...settings, steak_addon_flower_price: e.target.value})}
                                     onBlur={() => handleSave('steak_addon_flower_price', settings.steak_addon_flower_price)}
                                     placeholder="1000"
-                                    className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                                    className="w-full bg-white border border-gray-200 p-2 rounded-lg text-ink text-sm font-mono"
                                 />
                             </div>
                         </div>
@@ -792,8 +793,8 @@ export default function AdminSettings() {
                 </div>
 
                 {/* Wine List Manager */}
-                <div className="space-y-4 pt-4 border-t border-white/10">
-                    <h3 className="text-sm font-bold text-[#DFFF00] uppercase border-b border-white/10 pb-2">Wine List Manager</h3>
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                    <h3 className="text-sm font-bold text-brandDark uppercase border-b border-gray-200 pb-2">Wine List Manager</h3>
                     
                     {/* Render List */}
                     <div className="space-y-2">
@@ -802,7 +803,7 @@ export default function AdminSettings() {
                             try { wines = JSON.parse(settings.steak_wine_list || '[]') } catch (e) { wines = [] }
                             
                             return wines.map((wine, idx) => (
-                                <div key={idx} className="bg-black/40 border border-white/10 p-3 rounded-xl flex items-center justify-between gap-4">
+                                <div key={idx} className="bg-canvas border border-gray-200 p-3 rounded-xl flex items-center justify-between gap-4">
                                     <div className="flex-1 grid grid-cols-3 gap-2">
                                         <input 
                                             placeholder="Wine Name"
@@ -813,7 +814,7 @@ export default function AdminSettings() {
                                                 setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
                                             }}
                                             onBlur={() => handleSave('steak_wine_list', JSON.stringify(wines))}
-                                            className="bg-transparent border border-white/5 rounded px-2 py-1 text-white text-xs"
+                                            className="bg-white border border-gray-200 rounded px-2 py-1 text-ink text-xs"
                                         />
                                         <input 
                                             placeholder="Price (THB)"
@@ -825,7 +826,7 @@ export default function AdminSettings() {
                                                 setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
                                             }}
                                             onBlur={() => handleSave('steak_wine_list', JSON.stringify(wines))}
-                                            className="bg-transparent border border-white/5 rounded px-2 py-1 text-white text-xs font-mono"
+                                            className="bg-white border border-gray-200 rounded px-2 py-1 text-ink text-xs font-mono"
                                         />
                                         <input 
                                             placeholder="Description"
@@ -836,7 +837,7 @@ export default function AdminSettings() {
                                                 setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
                                             }}
                                             onBlur={() => handleSave('steak_wine_list', JSON.stringify(wines))}
-                                            className="bg-transparent border border-white/5 rounded px-2 py-1 text-gray-400 text-xs"
+                                            className="bg-white border border-gray-200 rounded px-2 py-1 text-subInk text-xs"
                                         />
                                     </div>
                                     <button 
@@ -863,31 +864,31 @@ export default function AdminSettings() {
                             setSettings({...settings, steak_wine_list: JSON.stringify(newWines)})
                             handleSave('steak_wine_list', JSON.stringify(newWines))
                         }}
-                        className="w-full py-2 border border-dashed border-white/20 text-gray-400 text-xs rounded-xl hover:border-[#DFFF00] hover:text-[#DFFF00] transition-colors"
+                        className="w-full py-2 border border-dashed border-gray-300 text-subInk text-xs rounded-xl hover:border-brand hover:text-brandDark transition-colors"
                     >
                         + Add New Wine
                     </button>
 
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="pt-2">
-                             <label className="block text-xs text-gray-400 mb-1">Corkage Fee (Label)</label>
+                             <label className="block text-xs text-subInk mb-1">Corkage Fee (Label)</label>
                              <input 
                                 value={settings.steak_corkage_fee || ''} 
                                 onChange={(e) => setSettings({...settings, steak_corkage_fee: e.target.value})}
                                 onBlur={() => handleSave('steak_corkage_fee', settings.steak_corkage_fee)}
                                 placeholder="Corkage Fee"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
+                                className="w-full bg-white border border-gray-200 p-2 rounded-lg text-ink text-sm"
                             />
                         </div>
                         <div className="pt-2">
-                             <label className="block text-xs text-gray-400 mb-1">Corkage Price (THB)</label>
+                             <label className="block text-xs text-subInk mb-1">Corkage Price (THB)</label>
                              <input 
                                 type="number"
                                 value={settings.steak_corkage_price || '0'} 
                                 onChange={(e) => setSettings({...settings, steak_corkage_price: e.target.value})}
                                 onBlur={() => handleSave('steak_corkage_price', settings.steak_corkage_price)}
                                 placeholder="0"
-                                className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm font-mono"
+                                className="w-full bg-white border border-gray-200 p-2 rounded-lg text-ink text-sm font-mono"
                             />
                         </div>
                     </div>
@@ -895,14 +896,14 @@ export default function AdminSettings() {
 
 
             {/* Data Maintenance Section */}
-            <div className="mt-8 bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <div className="mt-8 bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 shadow-sm">
+                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
                     <span className="text-red-500">⚠</span> Data Maintenance
                 </h2>
-                <div className="flex items-center justify-between p-4 border border-white/10 rounded-2xl bg-black/20">
+                <div className="flex items-center justify-between p-4 border border-red-100 rounded-2xl bg-red-50/50">
                     <div>
-                        <h3 className="font-bold text-white">Clean Old Slips (&gt;30 Days)</h3>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <h3 className="font-bold text-ink">Clean Old Slips (&gt;30 Days)</h3>
+                        <p className="text-xs text-subInk mt-1">
                             ลบรูปสลิปที่เก่ากว่า 30 วันออกจาก Storage เพื่อประหยัดพื้นที่ (ข้อมูลการจองยังอยู่)
                         </p>
                     </div>
@@ -957,7 +958,7 @@ export default function AdminSettings() {
                             }
                         }}
                         disabled={loading}
-                        className="px-6 py-3 bg-red-900/30 text-red-500 border border-red-500/50 rounded-xl font-bold hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                        className="px-6 py-3 bg-white text-red-500 border border-red-200 rounded-xl font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
                     >
                         {loading ? 'Cleaning...' : 'Clean Now'}
                     </button>
