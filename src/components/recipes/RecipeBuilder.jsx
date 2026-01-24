@@ -20,30 +20,35 @@ function EditStockModal({ item, onClose, onSave }) {
         yield_percent: item.yield_percent || 100
     });
 
-    // Helper: Determine if units are identifiable
+    // Helper: Is this a standard metric conversion?
+    const getStandardFactor = (from, to) => {
+        if (from === 'kg' && to === 'g') return 1000;
+        if (from === 'g' && to === 'kg') return 0.001;
+        if (from === 'l' && to === 'ml') return 1000;
+        if (from === 'ml' && to === 'l') return 0.001;
+        if (from === to) return 1;
+        return null; // Not standard (e.g. Pack -> g)
+    };
+
+    const standardFactor = getStandardFactor(formData.pack_unit, formData.usage_unit);
+    const isStandard = standardFactor !== null;
+
+    // Helper: Determine if units are IDENTICAL (Display "Same Unit")
     const areUnitsSame = formData.pack_unit === formData.usage_unit;
     
-    // Reverse Logic State (e.g. 1 UsageUnit = X PackUnit)
-    // If factor is 0.0555... (1/18), we want to show "18".
-    // Let's use a local state for the "Display" of conversion
-    // But easier: Just toggles.
-    
-    // If usage unit != pack unit, we show conversion logic.
-    // Default to "1 [Usage] uses [X] [PackUnit]" logic if factor < 1? 
-    // Or just always show "How much [PackUnit] in 1 [UsageUnit]?"
-    
-    const [useRatioMode, setUseRatioMode] = useState(false); // true = "1 Usage = X PackUnit" (Divide), false = "1 Pack = X Usage" (Multiply)
+    // Toggle for Custom Calculation (Divide vs Multiply) - Only relevant for Custom Units
+    const [useRatioMode, setUseRatioMode] = useState(false); 
 
-    // Auto-calculate Real Cost for preview
+    // Auto-calculate Real Cost
     const realCostPerUsage = (formData.cost_price / (formData.pack_size * formData.conversion_factor)) * (100 / formData.yield_percent);
     const costPerPackUnit = formData.cost_price / formData.pack_size;
 
     useEffect(() => {
-        // Force factor 1 if same units
-        if (formData.pack_unit === formData.usage_unit && formData.conversion_factor !== 1) {
-             setFormData(prev => ({ ...prev, conversion_factor: 1 }));
+        // Enforce standard factor if applicable
+        if (standardFactor !== null && formData.conversion_factor !== standardFactor) {
+             setFormData(prev => ({ ...prev, conversion_factor: standardFactor }));
         }
-    }, [formData.pack_unit, formData.usage_unit]);
+    }, [formData.pack_unit, formData.usage_unit, standardFactor]);
 
     return (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
@@ -91,8 +96,8 @@ function EditStockModal({ item, onClose, onSave }) {
                                     value={formData.usage_unit} 
                                     onChange={e => {
                                         const newUnit = e.target.value;
-                                        const suggested = suggestConversionFactor(formData.pack_unit, newUnit);
-                                        setFormData({...formData, usage_unit: newUnit, conversion_factor: suggested !== 1 ? suggested : 1});
+                                        // We let useEffect handle the factor update if standard
+                                        setFormData({...formData, usage_unit: newUnit}); 
                                     }} 
                                     className="w-full p-2 rounded border border-orange-200 text-sm font-bold bg-white" 
                                 >
@@ -101,54 +106,62 @@ function EditStockModal({ item, onClose, onSave }) {
                             </div>
                         </div>
 
-                        {/* Conversion Logic */}
-                        {!areUnitsSame && (
-                            <div className="bg-white p-2 rounded-lg border border-orange-100 mt-2">
-                                <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[10px] font-bold text-gray-500">ตั้งค่าการแปลงหน่วย</label>
-                                    <button 
-                                        onClick={() => setUseRatioMode(!useRatioMode)}
-                                        className="text-[10px] text-blue-600 underline"
-                                    >
-                                        สลับวิธีคำนวณ
-                                    </button>
+                        {/* Conversion Logic Display */}
+                        <div className="bg-white p-3 rounded-lg border border-orange-100 mt-2">
+                            {isStandard ? (
+                                // LOCKED STANDARD
+                                <div className="text-sm text-gray-500 flex items-center justify-between">
+                                    <span className="font-bold flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        มาตราฐานสากล
+                                    </span>
+                                    <span>1 {formData.pack_unit} = <strong>{standardFactor}</strong> {formData.usage_unit}</span>
                                 </div>
-                                
-                                <div className="flex items-center gap-2 text-sm">
-                                    {useRatioMode ? (
-                                        // Ratio Mode: 1 UsageUnit = X PackUnit (e.g. 1 Glass = 18 g)
-                                        // Factor = 1 / X
-                                        <>
-                                            <span className="whitespace-nowrap">1 {formData.usage_unit} ใช้</span>
-                                            <input 
-                                                type="number" 
-                                                className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
-                                                placeholder="?"
-                                                value={formData.conversion_factor === 0 ? 0 : Math.round((1 / formData.conversion_factor) * 10000) / 10000} 
-                                                onChange={e => {
-                                                    const val = parseFloat(e.target.value);
-                                                    if (val > 0) setFormData({...formData, conversion_factor: 1 / val});
-                                                }}
-                                            />
-                                            <span>{formData.pack_unit}</span>
-                                        </>
-                                    ) : (
-                                        // Direct Mode: 1 PackUnit = X UsageUnit (e.g. 1 kg = 1000 g)
-                                        // Factor = X
-                                        <>
-                                            <span className="whitespace-nowrap">1 {formData.pack_unit} =</span>
-                                            <input 
-                                                type="number" 
-                                                className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
-                                                value={formData.conversion_factor}
-                                                onChange={e => setFormData({...formData, conversion_factor: parseFloat(e.target.value)})}
-                                            />
-                                            <span>{formData.usage_unit}</span>
-                                        </>
-                                    )}
+                            ) : (
+                                // CUSTOM (Pack -> g, Bottle -> ml)
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="text-[10px] font-bold text-gray-500">กำหนดปริมาณต่อแพ็ค</label>
+                                        <button 
+                                            onClick={() => setUseRatioMode(!useRatioMode)}
+                                            className="text-[10px] text-blue-600 underline"
+                                        >
+                                            {useRatioMode ? "สลับเป็น × (คูณ)" : "สลับเป็น ÷ (หาร)"}
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 text-sm">
+                                        {useRatioMode ? (
+                                            <>
+                                                <span className="whitespace-nowrap">1 {formData.usage_unit} ใช้</span>
+                                                <input 
+                                                    type="number" 
+                                                    className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
+                                                    placeholder="?"
+                                                    value={formData.conversion_factor === 0 ? 0 : Math.round((1 / formData.conversion_factor) * 10000) / 10000} 
+                                                    onChange={e => {
+                                                        const val = parseFloat(e.target.value);
+                                                        if (val > 0) setFormData({...formData, conversion_factor: 1 / val});
+                                                    }}
+                                                />
+                                                <span>{formData.pack_unit}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="whitespace-nowrap">1 {formData.pack_unit} =</span>
+                                                <input 
+                                                    type="number" 
+                                                    className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
+                                                    value={formData.conversion_factor}
+                                                    onChange={e => setFormData({...formData, conversion_factor: parseFloat(e.target.value)})}
+                                                />
+                                                <span>{formData.usage_unit}</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
 
                     {/* Preview */}
@@ -159,9 +172,8 @@ function EditStockModal({ item, onClose, onSave }) {
                         </div>
                     </div>
                      
-                    {/* Calculation Helper for User Confidence */}
                     <div className="text-[10px] text-gray-400 text-center">
-                        สูตร: ({formData.cost_price} / {formData.pack_size}) ÷ {formData.conversion_factor.toFixed(4)}
+                        สูตร: ราคาซื้อ ÷ (ขนาด × ตัวแปลง)
                     </div>
 
                     <div className="flex gap-2 pt-2">
