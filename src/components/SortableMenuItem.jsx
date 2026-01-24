@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Pencil, Trash2, Star, Lock, Scroll } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, Star, Lock, ScrollText } from 'lucide-react';
 
 export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, isOverlay }) {
   if (!item) return null; // Safety check
@@ -73,7 +73,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, i
 
         {/* ACTIONS */}
         <div className="flex gap-2">
-           <button onClick={() => onRecipe(item)} className="p-2 text-gray-500 hover:text-blue-400 transition-colors"><Scroll size={16}/></button>
+           <button onClick={() => onRecipe(item)} className="p-2 text-gray-500 hover:text-blue-400 transition-colors"><ScrollText size={16}/></button>
            <button onClick={() => onEdit(item)} className="p-2 text-gray-500 hover:text-white transition-colors"><Pencil size={16}/></button>
            {!isRecommended && <button onClick={() => onDelete(item.id)} className="p-2 text-gray-500 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>}
         </div>
@@ -119,7 +119,7 @@ export function SortableMenuItem({ item, isMobile, onEdit, onDelete, onRecipe, i
         <div className="flex justify-between items-center mt-4 border-t border-white/5 pt-3">
             <span className="text-xs text-gray-600 uppercase tracking-wider font-medium">{item.category}</span>
              <div className="flex gap-1">
-                <button onClick={() => onRecipe(item)} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-blue-400 transition-colors" title="จัดการสูตร (Recipe)"><Scroll size={16} /></button>
+                <button onClick={() => onRecipe(item)} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-blue-400 transition-colors" title="จัดการสูตร (Recipe)"><ScrollText size={16} /></button>
                 <button onClick={() => onEdit(item)} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors" title="แก้ไขข้อมูล"><Pencil size={16} /></button>
                 {!isRecommended && <button onClick={() => onDelete(item.id)} className="p-2 hover:bg-red-500/10 text-gray-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 size={16}/></button>}
              </div>

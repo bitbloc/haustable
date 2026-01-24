@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, AlertTriangle, Scroll } from 'lucide-react';
+import { Package, AlertTriangle, ScrollText } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ item, onClick, onRecipe }) {
@@ -40,7 +40,7 @@ export default function StockCard({ item, onClick, onRecipe }) {
                     }}
                     className="absolute top-2 left-2 p-1.5 bg-orange-100/80 hover:bg-orange-200 text-orange-700 rounded-lg backdrop-blur-sm z-10 transition-colors"
                 >
-                    <Scroll className="w-4 h-4" />
+                    <ScrollText className="w-4 h-4" />
                 </div>
             )}
 
