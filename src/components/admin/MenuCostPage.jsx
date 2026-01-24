@@ -22,10 +22,90 @@ export default function MenuCostPage() {
     const [filterMode, setFilterMode] = useState('all'); // 'all', 'missing_recipe', 'low_margin'
 
     const loadData = async () => {
-        // ... (Keep loadData logic)
+        setLoading(true);
+        try {
+            // 1. Fetch Menu Items
+            const { menuItems: data } = await fetchAndSortMenu();
+            
+            // 2. Fetch All Recipe Links (for bulk calculation)
+            const { data: recipeLinks } = await supabase
+                .from('recipe_ingredients')
+                .select(`
+                    parent_menu_item_id,
+                    quantity,
+                    unit,
+                    ingredient:stock_items (
+                        id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
+                    )
+                `);
+
+            // 3. Map Recipe to Menu ID
+            const recipesByMenu = {};
+            if (recipeLinks) {
+                recipeLinks.forEach(link => {
+                    if (link.parent_menu_item_id) {
+                        if (!recipesByMenu[link.parent_menu_item_id]) {
+                            recipesByMenu[link.parent_menu_item_id] = [];
+                        }
+                        recipesByMenu[link.parent_menu_item_id].push({
+                            ingredient_id: link.ingredient?.id,
+                            ingredient: link.ingredient,
+                            quantity: link.quantity,
+                            unit: link.unit
+                        });
+                    }
+                });
+            }
+
+            // 4. Calculate Costs
+            let revObserved = 0;
+            let costObserved = 0;
+            let count = 0;
+
+            const enrichedItems = data.map(item => {
+                const ingredients = recipesByMenu[item.id] || [];
+                // Helper to mimic 'getIngredientById' for costUtils, but we already have full object in 'ingredient'
+                const breakdown = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient, { qFactorPercent: item.q_factor_percent || 0 });
+                
+                const cost = breakdown.totalCost;
+                const price = item.price || 0;
+                const profit = price - cost;
+                const margin = price > 0 ? (profit / price) * 100 : 0;
+                const costPercent = price > 0 ? (cost / price) * 100 : 0;
+
+                if (cost > 0) {
+                    revObserved += price;
+                    costObserved += cost;
+                    count++;
+                }
+
+                return {
+                    ...item,
+                    cost,
+                    profit,
+                    margin,
+                    costPercent,
+                    hasRecipe: ingredients.length > 0
+                };
+            });
+
+            setMenuItems(enrichedItems);
+            setSummary({
+                totalRevenue: revObserved,
+                totalCost: costObserved,
+                avgMargin: revObserved > 0 ? ((revObserved - costObserved) / revObserved) * 100 : 0
+            });
+
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // ... (useEffect remains same) ...
+    useEffect(() => {
+        loadData();
+    }, []);
 
     const handleSort = (key) => {
         setSortConfig(current => ({
