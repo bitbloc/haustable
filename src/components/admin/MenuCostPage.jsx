@@ -33,24 +33,29 @@ export default function MenuCostPage() {
                 .from('recipe_ingredients')
                 .select(`
                     parent_menu_item_id,
+                    ingredient_id,
                     quantity,
                     unit,
                     ingredient:stock_items (
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
                 `);
+            
+            // Debug: Check if we actually got links
+            // console.log("Recipe Links Found:", recipeLinks?.length);
 
             // 3. Map Recipe to Menu ID
             const recipesByMenu = {};
             if (recipeLinks) {
                 recipeLinks.forEach(link => {
-                    if (link.parent_menu_item_id) {
-                        if (!recipesByMenu[link.parent_menu_item_id]) {
-                            recipesByMenu[link.parent_menu_item_id] = [];
+                    const mid = link.parent_menu_item_id;
+                    if (mid) {
+                        if (!recipesByMenu[mid]) {
+                            recipesByMenu[mid] = [];
                         }
-                        recipesByMenu[link.parent_menu_item_id].push({
-                            ingredient_id: link.ingredient?.id,
-                            ingredient: link.ingredient,
+                        recipesByMenu[mid].push({
+                            ingredient_id: link.ingredient_id, // Use Raw ID
+                            ingredient: link.ingredient,       // Joined Data (might be null)
                             quantity: link.quantity,
                             unit: link.unit
                         });
@@ -331,7 +336,8 @@ export default function MenuCostPage() {
                     initialPrice={recipeTarget.price}
                     onClose={async () => {
                         setIsRecipeOpen(false);
-                        await loadData(); // Refresh after edit
+                        // Add small delay to ensure DB write propagation
+                        setTimeout(() => loadData(), 500); 
                     }}
                 />
             )}
