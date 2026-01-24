@@ -217,7 +217,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                 <input 
                     type="number" 
                     className="w-16 md:w-20 bg-gray-50 border rounded-lg p-2 text-right font-bold text-sm"
-                    value={quantity || ''}
+                    value={quantity ?? ''}
                     placeholder="0"
                     onChange={(e) => {
                         const val = e.target.value;
@@ -359,6 +359,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 unit: ing.unit,
                 layer_order: idx
             }));
+
+            // DEBUG: Show what we are sending
+            // console.log("Payload:", payloads);
+            // toast.info("DEBUG: Saving " + payloads.length + " items...");
 
             if (payloads.length > 0) {
                 const { error } = await supabase.from('recipe_ingredients').insert(payloads);
