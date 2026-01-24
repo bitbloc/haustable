@@ -17,15 +17,15 @@ export default function AdminMenuPage() {
     ]
 
     return (
-        <div className="min-h-screen bg-black pb-20">
+        <div className="min-h-screen bg-canvas pb-20">
             {/* Header */}
-            <header className="bg-[#111] border-b border-white/10 sticky top-0 z-10">
+            <header className="bg-paper border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link to="/admin" className="text-gray-400 hover:text-white transition-colors">
+                        <Link to="/admin" className="text-subInk hover:text-ink transition-colors font-medium text-sm">
                             ← Dashboard
                         </Link>
-                        <h1 className="text-xl font-bold text-white">Menu Management</h1>
+                        <h1 className="text-xl font-bold text-ink">Menu Management</h1>
                     </div>
                 </div>
 
@@ -38,10 +38,10 @@ export default function AdminMenuPage() {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${isActive ? 'border-[#DFFF00] text-[#DFFF00]' : 'border-transparent text-gray-500 hover:text-white'}`}
+                                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${isActive ? 'border-brand text-brandDark' : 'border-transparent text-subInk hover:text-ink'}`}
                             >
                                 <Icon size={18} />
-                                <span className="font-bold text-sm">{tab.label}</span>
+                                <span className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>{tab.label}</span>
                             </button>
                         )
                     })}

@@ -4,6 +4,7 @@ import { Search, Calendar, ChevronDown, Check, X, Phone, User, Clock, Printer, C
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
+import { format } from 'date-fns'
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -109,7 +110,7 @@ export default function AdminBookings() {
                 })
             } else {
                  console.log("Not a LINE user (or no line_user_id linked), skipping LINE Push.")
-                 alert("Debug: Push skipped because 'line_user_id' is missing for this user.")
+                 // alert("Debug: Push skipped because 'line_user_id' is missing for this user.")
             }
 
         } catch (error) {
@@ -245,25 +246,24 @@ export default function AdminBookings() {
     })
 
     const statusColors = {
-        pending: 'bg-yellow-500/20 text-yellow-500',
-        confirmed: 'bg-green-500/20 text-green-500',
-        completed: 'bg-blue-500/20 text-blue-500',
-        cancelled: 'bg-red-500/20 text-red-500'
+        pending: 'bg-yellow-50 text-yellow-600 border border-yellow-100',
+        confirmed: 'bg-green-50 text-green-600 border border-green-100',
+        completed: 'bg-blue-50 text-blue-600 border border-blue-100',
+        cancelled: 'bg-red-50 text-red-600 border border-red-100'
     }
 
     return (
         <div className="max-w-6xl mx-auto pb-20 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Booking History</h1>
-                    <p className="text-gray-500 mt-1">Manage all reservations and orders</p>
+                    <h1 className="text-3xl font-bold text-ink tracking-tight">Booking History</h1>
+                    <p className="text-subInk mt-1">Manage all reservations and orders</p>
                 </div>
 
                 <div className="flex gap-2">
-                    <button onClick={fetchBookings} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white text-sm font-bold transition-colors">
-                        Refresh
+                    <button onClick={fetchBookings} className="px-4 py-2 bg-paper hover:bg-gray-50 rounded-xl text-ink border border-gray-200 shadow-sm text-sm font-bold transition-all flex items-center gap-2">
+                         Refresh
                     </button>
-                    {/* Add Quick Links if needed */}
                 </div>
             </div>
 
@@ -271,13 +271,13 @@ export default function AdminBookings() {
             <div className="grid md:grid-cols-3 gap-4 mb-8">
                 {/* Search */}
                 <div className="relative">
-                    <Search className="absolute left-3 top-3 text-gray-500 w-4 h-4" />
+                    <Search className="absolute left-3 top-3 text-subInk w-4 h-4" />
                     <input
                         type="text"
                         placeholder="Search Name, Phone, ID (#ABCD)..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full bg-[#111] border border-white/10 pl-10 pr-4 py-2.5 rounded-xl text-white text-sm outline-none focus:border-[#DFFF00]"
+                        className="w-full bg-paper border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-ink text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand shadow-sm"
                     />
                 </div>
 
@@ -287,7 +287,7 @@ export default function AdminBookings() {
                         <button
                             key={s}
                             onClick={() => setFilter(s)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-all ${filter === s ? 'bg-[#DFFF00] text-black' : 'bg-[#111] text-gray-400 border border-white/10 hover:border-white/30'}`}
+                            className={`px-4 py-2.5 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-all border ${filter === s ? 'bg-ink text-white border-ink' : 'bg-paper text-subInk border-gray-200 hover:border-gray-300'}`}
                         >
                             {s}
                         </button>
@@ -301,7 +301,7 @@ export default function AdminBookings() {
                         <button
                             key={t}
                             onClick={() => setTypeFilter(t)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-all flex items-center gap-2 ${typeFilter === t ? 'bg-white text-black' : 'bg-[#111] text-gray-400 border border-white/10 hover:border-white/30'}`}
+                            className={`px-4 py-2 rounded-full text-xs font-bold capitalize whitespace-nowrap transition-all flex items-center gap-2 border ${typeFilter === t ? 'bg-brand text-ink border-brand' : 'bg-paper text-subInk border-gray-200 hover:border-gray-300'}`}
                         >
                             {t === 'dine_in' ? 'Table' : t.replace('_', ' ')}
                         </button>
@@ -311,26 +311,24 @@ export default function AdminBookings() {
 
             {/* Batch Action Bar */}
             {selectedIds.length > 0 && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between animate-fade-in gap-4">
-                    <span className="text-red-400 text-sm font-medium pl-2">
+                <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between animate-fade-in gap-4 shadow-sm">
+                    <span className="text-red-600 text-sm font-medium pl-2">
                         {selectedIds.length} orders selected
                     </span>
                     
-                    {/* Filter Selected (ensure only deletable ones are passed) */}
                      {(() => {
                         const validBookings = bookings.filter(b => selectedIds.includes(b.id) && (b.status === 'completed' || b.status === 'cancelled'))
                         
-                        // Disable if no valid bookings
                         if (validBookings.length === 0) return (
-                            <div className="text-xs text-red-500/50">Only Completed/Cancelled orders can be deleted</div>
+                            <div className="text-xs text-red-400">Only Completed/Cancelled orders can be deleted</div>
                         )
 
                         return (
                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] uppercase text-red-500/60 font-bold tracking-wider">Hold 5s to Delete</span>
+                                <span className="text-[10px] uppercase text-red-400 font-bold tracking-wider">Hold 5s to Delete</span>
                                 <HoldToDeleteButton 
                                     onConfirm={() => executeDelete(validBookings)}
-                                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg flex items-center gap-2 font-bold transition-colors"
+                                    className="px-4 py-2 bg-white hover:bg-red-50 text-red-500 border border-red-200 rounded-lg flex items-center gap-2 font-bold transition-colors shadow-sm"
                                 />
                              </div>
                         )
@@ -339,29 +337,29 @@ export default function AdminBookings() {
             )}
 
             {/* Table */}
-            <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
+            <div className="bg-paper border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-white/5 text-gray-500 text-xs uppercase tracking-wider">
+                            <tr className="bg-canvas border-b border-gray-100 text-subInk text-xs uppercase tracking-wider">
                                 <th className="p-4 w-12 text-center">
                                     <input 
                                         type="checkbox" 
-                                        className="rounded border-gray-600 bg-transparent checked:bg-[#DFFF00]"
+                                        className="rounded border-gray-300 bg-white checked:bg-brand checked:border-brand focus:ring-brand"
                                         checked={filteredBookings.length > 0 && selectedIds.length === filteredBookings.length}
                                         onChange={() => toggleSelectAll(filteredBookings)}
                                     />
                                 </th>
-                                <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('booking_time')}>
+                                <th className="p-4 font-bold cursor-pointer hover:text-ink transition-colors" onClick={() => handleSort('booking_time')}>
                                     <div className="flex items-center gap-1">
                                         Booking Date
-                                        <ArrowUpDown size={12} className={sortConfig.key === 'booking_time' ? 'text-[#DFFF00]' : 'opacity-30'} />
+                                        <ArrowUpDown size={12} className={sortConfig.key === 'booking_time' ? 'text-brandDark' : 'opacity-30'} />
                                     </div>
                                 </th>
-                                <th className="p-4 font-bold cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('customer')}>
+                                <th className="p-4 font-bold cursor-pointer hover:text-ink transition-colors" onClick={() => handleSort('customer')}>
                                     <div className="flex items-center gap-1">
                                         Customer
-                                        <ArrowUpDown size={12} className={sortConfig.key === 'customer' ? 'text-[#DFFF00]' : 'opacity-30'} />
+                                        <ArrowUpDown size={12} className={sortConfig.key === 'customer' ? 'text-brandDark' : 'opacity-30'} />
                                     </div>
                                 </th>
                                 <th className="p-4 font-bold">Total</th>
@@ -369,18 +367,18 @@ export default function AdminBookings() {
                                 <th className="p-4 font-bold text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-gray-100">
                             {loading ? (
-                                <tr><td colSpan="6" className="p-8 text-center text-gray-500">Loading...</td></tr>
+                                <tr><td colSpan="6" className="p-8 text-center text-subInk">Loading...</td></tr>
                             ) : filteredBookings.length === 0 ? (
-                                <tr><td colSpan="6" className="p-8 text-center text-gray-500">No bookings found</td></tr>
+                                <tr><td colSpan="6" className="p-8 text-center text-subInk">No bookings found</td></tr>
                             ) : (
                                 filteredBookings.map(booking => (
-                                    <tr key={booking.id} className={`hover:bg-white/[0.02] transition-colors ${selectedIds.includes(booking.id) ? 'bg-white/[0.03]' : ''}`}>
+                                    <tr key={booking.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(booking.id) ? 'bg-brand/5' : ''}`}>
                                         <td className="p-4 text-center">
                                             <input 
                                                 type="checkbox" 
-                                                className="rounded border-gray-600 bg-transparent checked:bg-[#DFFF00]"
+                                                className="rounded border-gray-300 bg-white checked:bg-brand checked:border-brand focus:ring-brand"
                                                 checked={selectedIds.includes(booking.id)}
                                                 onChange={() => toggleSelect(booking.id)}
                                             />
@@ -389,38 +387,38 @@ export default function AdminBookings() {
                                             <div className="flex flex-col gap-1.5">
                                                 {/* Booking Time (Primary) */}
                                                 <div className="flex items-center gap-2">
-                                                    <span className="bg-[#DFFF00] text-black text-xs font-bold px-1.5 py-0.5 rounded">
+                                                    <span className="bg-brand text-ink text-xs font-bold px-1.5 py-0.5 rounded border border-brandDark/20">
                                                         #{getShortId(booking.tracking_token)}
                                                     </span>
-                                                    <span className="text-white font-bold text-sm">
+                                                    <span className="text-ink font-bold text-sm">
                                                         {new Date(booking.booking_time).toLocaleDateString()}
                                                     </span>
-                                                    <span className="text-gray-400 text-xs">
+                                                    <span className="text-subInk text-xs">
                                                         {new Date(booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
 
                                                 {/* Order Time (Secondary) */}
-                                                <div className="flex items-center gap-1.5 text-xs text-gray-600 pl-1 border-l-2 border-gray-800">
+                                                <div className="flex items-center gap-1.5 text-xs text-subInk pl-2 border-l-2 border-gray-200">
                                                     <History size={10} />
                                                     <span>Order: {new Date(booking.created_at).toLocaleString('th-TH', { 
                                                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
                                                     })}</span>
                                                 </div>
 
-                                                <span className="text-gray-500 text-xs font-mono mt-0.5">
+                                                <span className="text-subInk text-xs font-mono mt-0.5">
                                                     {booking.tables_layout?.table_name || 'N/A'} 
-                                                    {booking.booking_type === 'pickup' && <span className="ml-2 text-blue-400 font-bold">PICKUP</span>}
-                                                    {booking.booking_type === 'steak' && <span className="ml-2 text-[#DFFF00] font-bold">STEAK</span>}
+                                                    {booking.booking_type === 'pickup' && <span className="ml-2 text-blue-600 font-bold">PICKUP</span>}
+                                                    {booking.booking_type === 'steak' && <span className="ml-2 text-brandDark font-bold">STEAK</span>}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="p-4">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-medium text-sm">
+                                                <span className="text-ink font-medium text-sm">
                                                     {booking.pickup_contact_name || booking.profiles?.display_name || 'Guest User'}
                                                 </span>
-                                                <span className="text-gray-500 text-xs flex items-center gap-1 mt-1">
+                                                <span className="text-subInk text-xs flex items-center gap-1 mt-1">
                                                     <Phone size={10} />
                                                     {booking.pickup_contact_phone || booking.profiles?.phone_number || '-'}
                                                 </span>
@@ -428,57 +426,56 @@ export default function AdminBookings() {
                                         </td>
                                         <td className="p-4">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-mono">{booking.total_amount?.toLocaleString()}.-</span>
+                                                <span className="text-ink font-mono font-bold">{booking.total_amount?.toLocaleString()}.-</span>
                                                 {booking.discount_amount > 0 && (
-                                                    <span className="text-green-500 text-[10px] font-mono">
+                                                    <span className="text-green-600 text-[10px] font-mono">
                                                         -{booking.discount_amount} ({booking.promotion_codes?.code})
                                                     </span>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[booking.status] || 'bg-gray-500/20 text-gray-400'}`}>
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${statusColors[booking.status] || 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
                                                 {booking.status}
                                             </span>
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 {/* Print Buttons */}
-                                                <button onClick={() => handlePrint(booking, 'kitchen')} className="p-2 bg-gray-700/50 hover:bg-gray-600 text-gray-200 rounded-lg" title="Kitchen Slip">
+                                                <button onClick={() => handlePrint(booking, 'kitchen')} className="p-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-subInk rounded-lg shadow-sm transition-colors" title="Kitchen Slip">
                                                     <ChefHat size={16} />
                                                 </button>
-                                                <button onClick={() => handlePrint(booking, 'customer')} className="p-2 bg-gray-700/50 hover:bg-gray-600 text-gray-200 rounded-lg" title="Customer Bill">
+                                                <button onClick={() => handlePrint(booking, 'customer')} className="p-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-subInk rounded-lg shadow-sm transition-colors" title="Customer Bill">
                                                     <Printer size={16} />
                                                 </button>
                                                 {booking.payment_slip_url && (
-                                                    <button onClick={() => setViewSlipUrl(booking.payment_slip_url)} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg" title="View Slip">
+                                                    <button onClick={() => setViewSlipUrl(booking.payment_slip_url)} className="p-2 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg shadow-sm transition-colors" title="View Slip">
                                                         <ImageIcon size={16} />
                                                     </button>
                                                 )}
-                                                <div className="w-px bg-white/10 mx-1"></div>
+                                                <div className="w-px bg-gray-200 mx-1"></div>
 
                                                 {booking.status === 'pending' && (
                                                     <>
-                                                        <button onClick={() => updateStatus(booking, 'confirmed')} className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 rounded-lg" title="Confirm">
+                                                        <button onClick={() => updateStatus(booking, 'confirmed')} className="p-2 bg-green-50 text-green-600 border border-green-100 hover:bg-green-100 rounded-lg shadow-sm" title="Confirm">
                                                             <Check size={16} />
                                                         </button>
-                                                        <button onClick={() => updateStatus(booking, 'cancelled')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg" title="Cancel">
+                                                        <button onClick={() => updateStatus(booking, 'cancelled')} className="p-2 bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 rounded-lg shadow-sm" title="Cancel">
                                                             <X size={16} />
                                                         </button>
                                                     </>
                                                 )}
                                                 {booking.status === 'confirmed' && (
-                                                    <button onClick={() => updateStatus(booking, 'completed')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg" title="Complete (Check Bill)">
+                                                    <button onClick={() => updateStatus(booking, 'completed')} className="p-2 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg shadow-sm" title="Complete (Check Bill)">
                                                         <Check size={16} />
                                                     </button>
                                                 )}
                                                 
-                                                <div className="w-px bg-white/10 mx-1"></div>
-                                                <div className="w-px bg-white/10 mx-1"></div>
+                                                <div className="w-px bg-gray-200 mx-1"></div>
                                                 <HoldToDeleteButton 
                                                     onConfirm={() => executeDelete([booking])}
                                                     disabled={booking.status !== 'completed' && booking.status !== 'cancelled'}
-                                                    className={`p-2 rounded-lg transition-colors ${(booking.status === 'completed' || booking.status === 'cancelled') ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500' : 'bg-gray-800 text-gray-600'}`}
+                                                    className={`p-2 rounded-lg transition-colors border shadow-sm ${(booking.status === 'completed' || booking.status === 'cancelled') ? 'bg-white text-red-500 border-red-100 hover:bg-red-50' : 'bg-gray-50 text-gray-300 border-gray-100'}`}
                                                 />
                                             </div>
                                         </td>

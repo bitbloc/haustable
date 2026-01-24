@@ -97,13 +97,13 @@ export default function MenuCategoryList() {
     }
 
     return (
-        <div className="text-white">
+        <div className="text-ink pb-20 animate-fade-in">
             <div className="flex justify-between items-center mb-6">
                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-2xl font-bold">Categories</h2>
-                    {isSaving && <span className="text-xs text-[#DFFF00] animate-pulse">Saving order...</span>}
+                    <h2 className="text-2xl font-bold text-ink">Categories</h2>
+                    {isSaving && <span className="text-xs text-brandDark animate-pulse">Saving order...</span>}
                 </div>
-                <button onClick={handleCreate} className="bg-[#DFFF00] text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-[#b0cc00]">
+                <button onClick={handleCreate} className="bg-brand text-ink px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-brandDark border border-brandDark/10 shadow-sm transition-colors">
                     <Plus size={18} /> New Category
                 </button>
             </div>
@@ -122,33 +122,33 @@ export default function MenuCategoryList() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#1a1a1a] w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl p-6">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-paper w-full max-w-sm rounded-2xl border border-gray-200 shadow-2xl p-6">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold">{editingCategory ? 'Edit Category' : 'New Category'}</h2>
-                            <button onClick={() => setIsModalOpen(false)}><X className="text-gray-500 hover:text-white" /></button>
+                            <h2 className="text-xl font-bold text-ink">{editingCategory ? 'Edit Category' : 'New Category'}</h2>
+                            <button onClick={() => setIsModalOpen(false)}><X className="text-subInk hover:text-ink" /></button>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Name</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Name</label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-black border border-white/20 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none"
+                                    className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand outline-none transition-colors"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">Display Order</label>
+                                <label className="block text-xs font-bold text-subInk mb-1">Display Order</label>
                                 <input
                                     type="number"
                                     value={formData.display_order}
                                     onChange={e => setFormData({ ...formData, display_order: e.target.value })}
-                                    className="w-full bg-black border border-white/20 rounded-lg p-3 text-white focus:border-[#DFFF00] outline-none"
+                                    className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand outline-none transition-colors"
                                 />
                             </div>
-                            <button type="submit" className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:bg-[#cce600] mt-2">
+                            <button type="submit" className="w-full bg-brand text-ink font-bold py-3 rounded-xl hover:bg-brandDark mt-2 shadow-lg shadow-brand/20">
                                 Save
                             </button>
                         </form>
@@ -168,25 +168,25 @@ function CategoryItem({ category, onEdit, onDelete, onDragEnd }) {
             dragListener={false} 
             dragControls={controls}
             onDragEnd={onDragEnd}
-            className="bg-[#1a1a1a] border border-white/10 p-4 rounded-xl flex items-center justify-between group relative select-none"
+            className="bg-paper border border-gray-200 p-4 rounded-xl flex items-center justify-between group relative select-none hover:border-brand/50 hover:shadow-sm transition-all"
         >
             <div className="flex items-center gap-4">
                 {/* Drag Handle */}
                 <div 
                     onPointerDown={(e) => controls.start(e)}
-                    className="bg-black w-8 h-8 rounded flex items-center justify-center text-gray-500 cursor-grab active:cursor-grabbing hover:bg-gray-800 transition-colors touch-none"
+                    className="bg-gray-100 w-8 h-8 rounded flex items-center justify-center text-subInk cursor-grab active:cursor-grabbing hover:bg-gray-200 transition-colors touch-none"
                 >
                     <GripVertical size={16} />
                 </div>
                 <div>
-                     <span className="font-bold text-lg">{category.name}</span>
+                     <span className="font-bold text-lg text-ink">{category.name}</span>
                      {/* Debug or Order Info */}
-                     <span className="text-xs text-gray-600 block">Order: {category.display_order}</span>
+                     <span className="text-xs text-subInk block">Order: {category.display_order}</span>
                 </div>
             </div>
             <div className="flex gap-2">
-                <button onClick={onEdit} className="p-2 text-gray-400 hover:text-[#DFFF00]"><Edit2 size={16} /></button>
-                <button onClick={onDelete} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                <button onClick={onEdit} className="p-2 text-subInk hover:text-brandDark bg-transparent hover:bg-brand/10 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                <button onClick={onDelete} className="p-2 text-subInk hover:text-red-500 bg-transparent hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
             </div>
         </Reorder.Item>
     )

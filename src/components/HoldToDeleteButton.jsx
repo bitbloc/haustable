@@ -42,31 +42,29 @@ export default function HoldToDeleteButton({ onConfirm, duration = 5000, classNa
 
     return (
         <button
-            className={`relative group select-none touch-none ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden relative`}
+            className={`relative group select-none touch-none ${className} ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} overflow-hidden relative rounded-lg transition-colors`}
             onMouseDown={startHold}
             onMouseUp={cancelHold}
             onMouseLeave={cancelHold}
             onTouchStart={(e) => {
-                // Prevent scrolling while holding
-                // e.preventDefault() 
                 startHold()
             }}
             onTouchEnd={cancelHold}
             title={disabled ? "" : "Hold to Delete (5s)"}
             type="button"
         >
-            {/* Background Fill for visual feedback (Rectangular) */}
+            {/* Background Fill for visual feedback */}
             <motion.div 
-                className="absolute inset-0 bg-red-500/20 origin-left"
+                className="absolute inset-0 bg-red-100 origin-left"
                 initial={{ scaleX: 0 }}
                 animate={isHolding ? { scaleX: 1 } : { scaleX: 0 }}
                 transition={isHolding ? { duration: duration / 1000, ease: "linear" } : { duration: 0.1 }}
             />
 
-            {/* Circular Progress (for Icon style) */}
+            {/* Circular Progress */}
             <div className="relative z-10 flex items-center justify-center p-2">
                  <div className="relative">
-                    <Trash2 size={16} className={isHolding ? "text-red-500 animate-pulse" : disabled ? "text-gray-500" : "text-red-500"} />
+                    <Trash2 size={16} className={isHolding ? "text-red-600 animate-pulse" : disabled ? "text-subInk" : "text-red-500"} />
                     
                     {/* Ring Overlay */}
                     <svg className="absolute -inset-[6px] w-[calc(100%+12px)] h-[calc(100%+12px)] -rotate-90 pointer-events-none">
@@ -74,7 +72,7 @@ export default function HoldToDeleteButton({ onConfirm, duration = 5000, classNa
                             cx="50%"
                             cy="50%"
                             r="11"
-                            stroke="#ef4444" 
+                            stroke="#dc2626" 
                             strokeWidth="2"
                             initial={{ pathLength: 0 }}
                             animate={controls}

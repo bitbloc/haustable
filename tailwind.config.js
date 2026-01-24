@@ -7,14 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Dieter Rams Palette
-        canvas: '#F4F4F4',       // สีพื้นหลังเทาอ่อนมากๆ (Off-white)
-        paper: '#FFFFFF',        // สีพื้นหลังการ์ด (ขาวสนิท)
-        ink: '#111111',          // สีตัวหนังสือ (ดำเกือบสนิท)
-        subInk: '#888888',       // สีตัวหนังสือรอง (เทา)
-        brand: '#DFFF00',        // สีเขียวนีออน (Accent)
-        brandDark: '#B2CC00',    // สีเขียวเข้ม (Hover state)
-        error: '#FF3B30',        // สีแดง (System Alert)
+        // The Haus Workspace Palette
+        canvas: '#F5F5F7',       // Warm Stone / Off-white
+        paper: '#FFFFFF',        // Pure White
+        ink: '#1A1A1A',          // Deep Charcoal
+        subInk: '#888888',       // Muted Gray
+        brand: '#DFFF00',        // Acid Green
+        brandDark: '#B2CC00',    // Darker Acid Green (Hover)
+        error: '#FF3B30',        // System Red
       },
       fontFamily: {
         sans: ['Inter', 'Helvetica Neue', 'Arial', 'sans-serif'], // ฟอนต์ไม่มีหัว อ่านง่าย

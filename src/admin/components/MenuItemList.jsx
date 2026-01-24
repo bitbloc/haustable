@@ -14,15 +14,15 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
         attributes,
         listeners,
         setNodeRef,
-        setActivatorNodeRef, // For Drag Handle
+        setActivatorNodeRef, 
         transform,
         transition,
         isDragging
     } = useSortable({ 
         id: item.id,
-        disabled: isRecommended, // Disable dragging for Recommend items (Fixed functionality)
+        disabled: isRecommended, 
         data: { 
-            category_id: item.category_id, // Keep for reference if needed
+            category_id: item.category_id, 
             category: item.category,
             is_recommended: isRecommended
         }
@@ -30,28 +30,28 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
 
     const style = {
         transform: CSS.Transform.toString(transform),
-        transition, // Let dnd-kit handle transition
+        transition, 
         zIndex: isDragging ? 50 : "auto",
         opacity: isDragging ? 0.3 : 1
     }
 
     // Styles
-    const baseCardStyle = "bg-[#1a1a1a] border border-white/5 rounded-xl p-3 flex gap-4 transition-all relative select-none group hover:border-white/20";
-    const recommendCardStyle = "bg-neutral-900 border border-neutral-800 rounded-xl p-3 flex gap-4 opacity-75 relative select-none grayscale-[0.3]"; // Gray & Fixed
+    const baseCardStyle = "bg-paper border border-gray-200 rounded-xl p-3 flex gap-4 transition-all relative select-none group hover:border-gray-300 hover:shadow-md";
+    const recommendCardStyle = "bg-gray-50 border border-gray-200 rounded-xl p-3 flex gap-4 opacity-80 relative select-none grayscale-[0.2]"; 
     const currentStyle = isRecommended ? recommendCardStyle : baseCardStyle;
 
     // Overlay Render (Dragging Preview)
     if (isOverlay) {
          return (
-            <div className={`bg-[#1a1a1a] border-[#DFFF00] ring-2 ring-[#DFFF00] rounded-xl p-3 flex gap-4 shadow-2xl cursor-grabbing select-none z-50 scale-105`}>
-                 <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative">
-                    {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>}
+            <div className={`bg-paper border-brand ring-2 ring-brand rounded-xl p-3 flex gap-4 shadow-xl cursor-grabbing select-none z-50 scale-105`}>
+                 <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative border border-gray-100">
+                    {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
                          <div className="flex justify-between items-start">
-                            <h4 className="font-bold truncate text-base text-white">{item.name}</h4>
-                            <span className="text-[#DFFF00] font-mono font-bold">{item.price}</span>
+                            <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
+                            <span className="text-brandDark font-mono font-bold">{item.price}</span>
                         </div>
                     </div>
                 </div>
@@ -63,65 +63,63 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`${currentStyle} ${!isRecommended ? '' : ''}`}
+            className={`${currentStyle}`}
             onClick={(e) => {
-                // Allow edit on click, checking if we are dragging or not is handled by dnd-kit usually,
-                // but explicit check helps. Rely on button for edit primarily.
                 if (!isDragging) handleEdit(item); 
             }}
         >
-            {/* Drag Handle (Visible for Regular, Lock for Recommend) */}
+            {/* Drag Handle */}
             <div className="absolute top-2 right-2 z-20">
                 {!isRecommended ? (
                     <div 
                         ref={setActivatorNodeRef}
                         {...attributes}
                         {...listeners}
-                        className="p-2 text-gray-600 hover:text-white cursor-grab active:cursor-grabbing hover:bg-black/40 rounded-lg transition-colors"
-                        onClick={(e) => e.stopPropagation()} // Prevent triggering edit
+                        className="p-2 text-subInk hover:text-ink cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded-lg transition-colors"
+                        onClick={(e) => e.stopPropagation()} 
                     >
                         <GripVertical size={20} />
                     </div>
                 ) : (
-                    <div className="p-2 text-gray-600">
+                    <div className="p-2 text-gray-300">
                         <Lock size={16} />
                     </div>
                 )}
             </div>
 
-            <div className="w-20 h-20 bg-black rounded-lg overflow-hidden shrink-0 relative pointer-events-none">
+            <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative pointer-events-none border border-gray-100">
                 {item.image_url ? (
                     <img src={item.image_url} className="w-full h-full object-cover" />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-700"><ImageIcon size={20} /></div>
+                    <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>
                 )}
             </div>
             
             <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
                 <div>
-                    <div className="flex justify-between items-start pr-8"> {/* Padding for drag handle */}
-                        <h4 className={`font-bold truncate text-base ${isRecommended ? 'text-gray-400' : 'text-white'}`}>{item.name}</h4>
-                        <span className={`font-mono font-bold ${isRecommended ? 'text-gray-500' : 'text-[#DFFF00]'}`}>{item.price}</span>
+                    <div className="flex justify-between items-start pr-8"> 
+                        <h4 className={`font-bold truncate text-base ${isRecommended ? 'text-subInk' : 'text-ink'}`}>{item.name}</h4>
+                        <span className={`font-mono font-bold ${isRecommended ? 'text-subInk' : 'text-brandDark'}`}>{item.price}</span>
                     </div>
-                    <div className="text-xs text-gray-400 line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
+                    <div className="text-xs text-subInk line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                    {isRecommended && <span className="text-[10px] bg-neutral-800 text-gray-500 border border-neutral-700 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">FIXED SPOT</span>}
-                    {!item.is_available && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">หมด</span>}
+                    {isRecommended && <span className="text-[10px] bg-gray-200 text-subInk border border-gray-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">FIXED</span>}
+                    {!item.is_available && <span className="text-[10px] bg-red-50 text-red-500 border border-red-100 px-1.5 py-0.5 rounded">หมด</span>}
                 </div>
             </div>
 
-            {/* Inline Pickup Toggle (Bottom Right) - KEEP THIS FEATURE */}
+            {/* Inline Pickup Toggle */}
             <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10" 
                 onPointerDown={(e) => e.stopPropagation()} 
                 onClick={(e) => e.stopPropagation()}
             >
-                <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-gray-400' : 'text-gray-600'}`}>Pick-up</span>
+                <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-subInk' : 'text-gray-300'}`}>Pick-up</span>
                 <button
                     onClick={(e) => handleTogglePickup(e, item)}
-                    className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-[#DFFF00]' : 'bg-gray-700'}`}
+                    className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-brand' : 'bg-gray-200'}`}
                 >
-                    <div className={`w-3 h-3 bg-black rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                    <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
                 </button>
             </div>
         </div>
@@ -482,21 +480,21 @@ export default function MenuItemList() {
 
 
     return (
-        <div className="text-white pb-20">
+        <div className="pb-20 animate-fade-in text-ink">
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold">Menu Items</h2>
-                    <p className="text-gray-500 text-sm">จัดการเมนูอาหารและเครื่องดื่ม</p>
+                    <h2 className="text-2xl font-bold text-ink">Menu Items</h2>
+                    <p className="text-subInk text-sm">จัดการเมนูอาหารและเครื่องดื่ม</p>
                 </div>
-                <button onClick={handleCreate} className="bg-[#DFFF00] text-black px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-[#b0cc00]">
+                <button onClick={handleCreate} className="bg-brand text-ink px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-brandDark transition-colors shadow-sm border border-brandDark/10">
                     <Plus size={18} /> เพิ่มเมนู
                 </button>
             </div>
 
             <DndContext 
                 sensors={sensors} 
-                collisionDetection={rectIntersection} // Use rectIntersection for stability
+                collisionDetection={rectIntersection} 
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
@@ -505,12 +503,12 @@ export default function MenuItemList() {
                 {/* 1. Recommend Lane */}
                 <div 
                     id="container-recommend"
-                    className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-[#1E1E1E] to-[#121212] border border-[#DFFF00]/20 min-h-[160px]"
+                    className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white border border-brand/20 min-h-[160px] shadow-sm"
                 >
                     <div className="flex items-center gap-2 mb-4">
-                        <Star className="text-[#DFFF00] fill-[#DFFF00]" size={20} />
-                        <h3 className="text-lg font-bold text-[#DFFF00] tracking-wide">Recommend Menu (Top Fixed)</h3>
-                        <span className="text-xs text-gray-500 ml-auto">ลากเมนูขึ้นมาเพื่อแนะนำ</span>
+                        <Star className="text-brand fill-brand" size={20} />
+                        <h3 className="text-lg font-bold text-brandDark tracking-wide">Recommend Menu (Top Fixed)</h3>
+                        <span className="text-xs text-subInk ml-auto">ลากเมนูขึ้นมาเพื่อแนะนำ</span>
                     </div>
 
                     <SortableContext 
@@ -520,7 +518,7 @@ export default function MenuItemList() {
                     >
                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {sections.recommend.length === 0 && (
-                                <div className="col-span-full py-8 text-center border border-dashed border-gray-700 rounded-xl text-gray-500">
+                                <div className="col-span-full py-8 text-center border border-dashed border-gray-300 rounded-xl text-subInk bg-white/50">
                                     ยังไม่มีเมนูแนะนำ
                                 </div>
                             )}
@@ -539,22 +537,21 @@ export default function MenuItemList() {
                 {/* 2. Regular Categories */}
                 <div className="space-y-8">
                     {categories.map(cat => {
-                        // Get items for this category (that are NOT recommended)
                         const items = sections.regular[cat.id] || [];
 
                         return (
                             <div key={cat.id} id={`container-${cat.id}`} className="min-h-[100px] rounded-xl transition-colors">
-                                <h3 className="text-xl font-bold text-white mb-4 border-l-4 border-[#DFFF00] pl-3 flex items-center gap-2">
-                                    {cat.name} <span className="text-xs text-gray-500 font-normal">({items.length})</span>
+                                <h3 className="text-xl font-bold text-ink mb-4 border-l-4 border-brand pl-3 flex items-center gap-2">
+                                    {cat.name} <span className="text-xs text-subInk font-normal">({items.length})</span>
                                 </h3>
                                 
                                 <SortableContext 
-                                    id={cat.id} // Use Category ID for container ID
+                                    id={cat.id} 
                                     items={items.map(i => i.id)} 
                                     strategy={rectSortingStrategy}
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {items.length === 0 && <p className="text-gray-600 text-sm py-4">...</p>}
+                                        {items.length === 0 && <p className="text-subInk text-sm py-4 italic">No items in this category...</p>}
                                         {items.map(item => (
                                             <SortableMenuItem 
                                                 key={item.id} 
@@ -571,7 +568,7 @@ export default function MenuItemList() {
                     {/* Catch Uncategorized if any */}
                     {sections.regular['uncategorized'] && sections.regular['uncategorized'].length > 0 && (
                          <div id="container-uncategorized">
-                            <h3 className="text-xl font-bold text-gray-400 mb-4">Uncategorized</h3>
+                            <h3 className="text-xl font-bold text-subInk mb-4">Uncategorized</h3>
                             <SortableContext id="uncategorized" items={sections.regular['uncategorized'].map(i=>i.id)} strategy={rectSortingStrategy}>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {sections.regular['uncategorized'].map(item => (
@@ -595,73 +592,77 @@ export default function MenuItemList() {
                 </DragOverlay>
             </DndContext>
 
-            {/* Edit/Create Modal (Preserved) */}
+            {/* Edit/Create Modal */}
             <AnimatePresence>
                 {isModalOpen && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-0 md:p-4">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-0 md:p-4">
                          <motion.div
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 50, opacity: 0 }}
-                            className="bg-[#1a1a1a] w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] md:rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+                            className="bg-paper w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] md:rounded-3xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col"
                         >
-                            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#1a1a1a] z-10">
-                                <h2 className="text-xl font-bold">{editingItem ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}</h2>
-                                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full"><X className="text-white" /></button>
+                            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-paper z-10">
+                                <h2 className="text-xl font-bold text-ink">{editingItem ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}</h2>
+                                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full text-subInk hover:text-ink"><X /></button>
                             </div>
-                            <div className="flex-1 overflow-y-auto">
-                                <div className="w-full h-48 bg-[#111] relative group cursor-pointer" onClick={() => document.getElementById('menu-image-upload').click()}>
-                                    {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" /> : <div className="w-full h-full flex flex-col items-center justify-center text-gray-600 group-hover:bg-white/5 transition-colors"><ImageIcon size={48} className="mb-2 opacity-50" /><span className="text-sm">เพิ่มรูปภาพเมนู</span></div>}
+                            <div className="flex-1 overflow-y-auto bg-canvas">
+                                {/* Image Upload */}
+                                <div className="w-full h-48 bg-gray-100 relative group cursor-pointer border-b border-gray-200" onClick={() => document.getElementById('menu-image-upload').click()}>
+                                    {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" /> : <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 group-hover:bg-gray-200 transition-colors"><ImageIcon size={48} className="mb-2 opacity-50" /><span className="text-sm">เพิ่มรูปภาพเมนู</span></div>}
                                     <div className="absolute top-2 right-2 flex gap-2">
                                         {previewUrl && <button onClick={handleRemoveImage} className="bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full backdrop-blur-sm shadow-lg transition-transform hover:scale-105"><Trash2 size={16} /></button>}
                                     </div>
                                     <input id="menu-image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                 </div>
+                                
                                 <div className="p-6 space-y-6">
                                     <div className="space-y-4">
-                                        <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-transparent border-b border-white/20 p-2 text-xl font-bold text-white placeholder-gray-600 focus:border-[#DFFF00] outline-none transition-colors" placeholder="ชื่อเมนู (ภาษาไทย)" required />
+                                        <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-transparent border-b border-gray-200 p-2 text-xl font-bold text-ink placeholder-gray-400 focus:border-brand outline-none transition-colors" placeholder="ชื่อเมนู (ภาษาไทย)" required />
                                     </div>
                                     <div className="relative">
-                                        <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className="w-full bg-[#222] border border-white/10 rounded-xl p-4 text-white appearance-none outline-none focus:border-[#DFFF00]">
+                                        <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink appearance-none outline-none focus:border-brand shadow-sm">
                                             <option value="">เลือกหมวดหมู่</option>
                                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="text-xs font-bold text-gray-400 mb-2 block uppercase">ราคาขาย</label>
-                                        <div className="flex items-center gap-4 bg-[#222] rounded-xl p-4 border border-white/5">
-                                            <span className="font-bold">ราคา</span>
-                                            <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="flex-1 bg-transparent text-right font-mono text-xl font-bold outline-none placeholder-gray-600" placeholder="0.00" />
-                                            <span className="text-gray-500">฿</span>
+                                        <label className="text-xs font-bold text-subInk mb-2 block uppercase">ราคาขาย</label>
+                                        <div className="flex items-center gap-4 bg-paper rounded-xl p-4 border border-gray-200 shadow-sm">
+                                            <span className="font-bold text-ink">ราคา</span>
+                                            <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="flex-1 bg-transparent text-right font-mono text-xl font-bold outline-none placeholder-gray-400 text-ink" placeholder="0.00" />
+                                            <span className="text-subInk">฿</span>
                                         </div>
                                     </div>
+                                    
                                     {/* Option Groups Config */}
-                                    <div className="bg-[#222] rounded-xl p-4 border border-white/5">
+                                    <div className="bg-paper rounded-xl p-4 border border-gray-200 shadow-sm">
                                         <div className="flex justify-between items-center mb-4">
-                                            <h3 className="font-bold text-base">กลุ่มตัวเลือก (Options)</h3>
-                                            <button type="button" onClick={() => document.getElementById('option-picker').classList.toggle('hidden')} className="text-[#DFFF00] text-xs font-bold flex items-center gap-1"><Plus size={14} /> เพิ่มกลุ่มตัวเลือก</button>
+                                            <h3 className="font-bold text-base text-ink">กลุ่มตัวเลือก (Options)</h3>
+                                            <button type="button" onClick={() => document.getElementById('option-picker').classList.toggle('hidden')} className="text-brandDark text-xs font-bold flex items-center gap-1 hover:underline"><Plus size={14} /> เพิ่มกลุ่มตัวเลือก</button>
                                         </div>
                                         <div className="space-y-2 mb-4">
                                             {selectedOptionGroups.map(gid => {
                                                 const group = optionGroups.find(g => g.id === gid); if (!group) return null;
-                                                return <div key={gid} className="bg-[#333] p-3 rounded-lg flex justify-between items-center"><div><div className="font-bold text-sm">{group.name}</div><div className="text-xs text-gray-400">{group.selection_type}</div></div><button onClick={() => toggleOptionGroup(gid)}><X size={16} /></button></div>
+                                                return <div key={gid} className="bg-gray-50 border border-gray-200 p-3 rounded-lg flex justify-between items-center text-ink"><div><div className="font-bold text-sm">{group.name}</div><div className="text-xs text-subInk">{group.selection_type}</div></div><button onClick={() => toggleOptionGroup(gid)} className="text-gray-400 hover:text-red-500"><X size={16} /></button></div>
                                             })}
                                         </div>
-                                        <div id="option-picker" className="hidden border-t border-white/10 pt-4 mt-4 grid grid-cols-2 gap-2">
-                                            {optionGroups.filter(g => !selectedOptionGroups.includes(g.id)).map(g => <button key={g.id} onClick={() => toggleOptionGroup(g.id)} className="text-left text-xs p-2 bg-black border border-white/10 rounded hover:border-[#DFFF00]">{g.name}</button>)}
+                                        <div id="option-picker" className="hidden border-t border-gray-200 pt-4 mt-4 grid grid-cols-2 gap-2">
+                                            {optionGroups.filter(g => !selectedOptionGroups.includes(g.id)).map(g => <button key={g.id} onClick={() => toggleOptionGroup(g.id)} className="text-left text-xs p-2 bg-white border border-gray-200 rounded hover:border-brand text-ink shadow-sm transition-colors">{g.name}</button>)}
                                         </div>
                                     </div>
+
                                     <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_recommended ? 'bg-[#DFFF00]/20 text-[#DFFF00]' : 'bg-gray-800 text-gray-500'}`}><Star size={20} /></div><div><div className="font-bold text-sm">เมนูแนะนำ</div></div></div><input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" /></div>
-                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-500/20 text-green-500' : 'bg-gray-800 text-gray-500'}`}><Check size={20} /></div><div><div className="font-bold text-sm">เปิดขาย</div></div></div><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" /></div>
-                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-500/20 text-blue-500' : 'bg-gray-800 text-gray-500'}`}><ShoppingBag size={20} /></div><div><div className="font-bold text-sm">Pick-up</div></div></div><input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-[#DFFF00]" /></div>
+                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_recommended ? 'bg-brand/20 text-brandDark' : 'bg-gray-200 text-gray-400'}`}><Star size={20} /></div><div><div className="font-bold text-sm text-ink">เมนูแนะนำ</div></div></div><input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
+                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`}><Check size={20} /></div><div><div className="font-bold text-sm text-ink">เปิดขาย</div></div></div><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
+                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}><ShoppingBag size={20} /></div><div><div className="font-bold text-sm text-ink">Pick-up</div></div></div><input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
                                     </div>
-                                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-[#222] border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-[#DFFF00] outline-none resize-none h-32" placeholder="คำอธิบายเมนู"></textarea>
+                                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink placeholder-gray-400 focus:border-brand outline-none resize-none h-32 shadow-sm" placeholder="คำอธิบายเมนู"></textarea>
                                 </div>
                             </div>
-                            <div className="p-4 border-t border-white/10 bg-[#111] z-10">
-                                <button onClick={handleSubmit} className="w-full bg-[#DFFF00] text-black font-bold py-3 rounded-xl hover:bg-[#cce600] shadow-lg shadow-[#DFFF00]/20">บันทึกเมนู</button>
-                                {editingItem && <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:underline">ลบเมนูนี้</button>}
+                            <div className="p-4 border-t border-gray-200 bg-gray-50 z-10">
+                                <button onClick={handleSubmit} className="w-full bg-brand text-ink font-bold py-3 rounded-xl hover:bg-brandDark shadow-lg shadow-brand/20 transition-all transform active:scale-[0.98]">บันทึกเมนู</button>
+                                {editingItem && <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition-colors">ลบเมนูนี้</button>}
                             </div>
                         </motion.div>
                     </div>
