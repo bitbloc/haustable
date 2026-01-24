@@ -14,8 +14,8 @@
 @tailwind utilities;
 
 body {
-  background-color: #BFCBC2;
-  /* Sage Green Background */
+  background-color: #FFFFFF;
+  /* Pure White Background */
   color: #1A1A1A;
   /* Text Dark */
   font-family: 'Inter', sans-serif;
