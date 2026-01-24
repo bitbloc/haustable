@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart } from 'lucide-react'
 
@@ -45,8 +45,8 @@ export default function AdminSettings() {
         steak_addon_flower_price: '1000',
         steak_addon_cake_enabled: 'true',
         steak_addon_flower_enabled: 'true',
-        steak_addon_cake_name: 'รับเค้ก (Receive Cake)',
-        steak_addon_flower_name: 'รับดอกไม้ (Receive Flower)',
+        steak_addon_cake_name: 'เธฃเธฑเธเน€เธเนเธ (Receive Cake)',
+        steak_addon_flower_name: 'เธฃเธฑเธเธ”เธญเธเนเธกเน (Receive Flower)',
         steak_wine_list: '[]', // JSON string
         opening_time: '10:00',
         closing_time: '20:00',
@@ -81,7 +81,7 @@ export default function AdminSettings() {
         const { data } = await supabase.from('app_settings').select('*')
         if (data) {
             const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
-            // Merge กับค่า default เพื่อป้องกัน undefined
+            // Merge เธเธฑเธเธเนเธฒ default เน€เธเธทเนเธญเธเนเธญเธเธเธฑเธ undefined
             setSettings(prev => ({ ...prev, ...map }))
         }
 
@@ -90,19 +90,19 @@ export default function AdminSettings() {
         setBlockedList(bd || [])
     }
 
-    // Save Function (แก้ใหม่ให้ลื่นขึ้น)
+    // Save Function (เนเธเนเนเธซเธกเนเนเธซเนเธฅเธทเนเธเธเธถเนเธ)
     const handleSave = async (key, value) => {
-        // 1. อัปเดตหน้าจอทันที (UI Optimistic Update)
+        // 1. เธญเธฑเธเน€เธ”เธ•เธซเธเนเธฒเธเธญเธ—เธฑเธเธ—เธต (UI Optimistic Update)
         setSettings(prev => ({ ...prev, [key]: value }))
 
-        // 2. ส่งค่าไป Database เงียบๆ
+        // 2. เธชเนเธเธเนเธฒเนเธ Database เน€เธเธตเธขเธเน
         try {
             const { error } = await supabase.from('app_settings').upsert({ key, value: String(value) })
             if (error) throw error
         } catch (err) {
             console.error(err)
-            alert('บันทึกไม่สำเร็จ โปรดลองใหม่')
-            fetchSettings() // ถ้าพัง ให้โหลดค่าเดิมกลับมา
+            alert('เธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ เนเธเธฃเธ”เธฅเธญเธเนเธซเธกเน')
+            fetchSettings() // เธ–เนเธฒเธเธฑเธ เนเธซเนเนเธซเธฅเธ”เธเนเธฒเน€เธ”เธดเธกเธเธฅเธฑเธเธกเธฒ
         }
     }
 
@@ -111,7 +111,7 @@ export default function AdminSettings() {
         if (!file) return
         loadingSetter(true)
         try {
-            // 1. อัปโหลดทับไฟล์เดิม (ใช้ upsert: true)
+            // 1. เธญเธฑเธเนเธซเธฅเธ”เธ—เธฑเธเนเธเธฅเนเน€เธ”เธดเธก (เนเธเน upsert: true)
             const fileExt = file.name.split('.').pop()
             const fileName = `${settingKey}.${fileExt}`
 
@@ -121,16 +121,16 @@ export default function AdminSettings() {
 
             if (uploadError) throw uploadError
 
-            // 2. ได้ URL มา
+            // 2. เนเธ”เน URL เธกเธฒ
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
 
-            // 3. บันทึก URL ผ่าน handleSave เพื่อความ Consistent
+            // 3. เธเธฑเธเธ—เธถเธ URL เธเนเธฒเธ handleSave เน€เธเธทเนเธญเธเธงเธฒเธก Consistent
             await handleSave(settingKey, publicUrl)
 
-            // 4. อัปเดต timestamp
+            // 4. เธญเธฑเธเน€เธ”เธ• timestamp
             setTimestamp(Date.now())
 
-            alert('อัปเดตเรียบร้อย!')
+            alert('เธญเธฑเธเน€เธ”เธ•เน€เธฃเธตเธขเธเธฃเนเธญเธข!')
         } catch (error) {
             alert('Error: ' + error.message)
         } finally {
@@ -191,7 +191,51 @@ export default function AdminSettings() {
         <div className="max-w-4xl mx-auto pb-20 animate-fade-in pl-6 md:pl-0">
             <h1 className="text-3xl font-bold text-ink mb-8 tracking-tight">System Settings</h1>
 
+            {/* Network Connection Helper & Staff Access */}
+            <div className="bg-paper p-6 rounded-3xl border border-gray-200 mb-8 shadow-sm">
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                    {/* QR Code Column */}
+                    <div className="flex-shrink-0 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+                        <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                                settings.manual_ip 
+                                    ? `http://${settings.manual_ip}:5173/staff`
+                                    : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                                        ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
+                                        : `${window.location.origin}/staff`
+                            )}`} 
+                            alt="Staff Access QR" 
+                            className="w-32 h-32 md:w-40 md:h-40"
+                        />
+                    </div>
 
+                    {/* Text Column */}
+                    <div className="flex-1 text-center md:text-left space-y-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-ink flex items-center justify-center md:justify-start gap-2">
+                                <QrCode className="text-brandDark" /> Staff Mobile Access
+                            </h2>
+                            <p className="text-subInk text-sm mt-1">
+                                Scan to open Staff View for kitchen and service.
+                            </p>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row gap-3 justify-center md:justify-start">
+                             <div className="px-4 py-2 bg-gray-50 rounded-lg text-ink font-mono text-sm border border-gray-200 select-all">
+                                 {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+                                    ? `http://${process.env.HOST_IP || 'localhost'}:5173/staff`
+                                    : `${window.location.origin}/staff`
+                                 }
+                             </div>
+                             <InstallPWA />
+                        </div>
+
+                         <div className="text-[10px] text-gray-400">
+                             Mode: {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'Local Dev (LAN)' : 'Production (Cloud)'}
+                         </div>
+                    </div>
+                </div>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
                 <div className="space-y-6">
@@ -226,7 +270,7 @@ export default function AdminSettings() {
 
                         {/* 1. Table Booking Status */}
                         <div className="space-y-3">
-                            <h3 className="text-sm font-bold text-subInk uppercase">🍽 Table Booking Status</h3>
+                            <h3 className="text-sm font-bold text-subInk uppercase">๐ฝ Table Booking Status</h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {['auto', 'manual_open', 'manual_close'].map((mode) => (
                                     <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_table === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
@@ -240,7 +284,7 @@ export default function AdminSettings() {
                                         <div>
                                             <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
                                             <span className="text-[10px] text-subInk">
-                                                {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                                {mode === 'auto' ? 'เธเธณเธซเธเธ”เน€เธงเธฅเธฒเธเธฒเธฃเธเธญเธเธเธตเนเนเธกเธเธ–เธถเธเธเธตเนเนเธกเธ (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
                                             </span>
                                         </div>
                                     </label>
@@ -250,7 +294,7 @@ export default function AdminSettings() {
 
                         {/* 2. Pickup Status */}
                         <div className="space-y-3 border-t border-gray-100 pt-4">
-                            <h3 className="text-sm font-bold text-subInk uppercase">🛍 Pickup Status</h3>
+                            <h3 className="text-sm font-bold text-subInk uppercase">๐ Pickup Status</h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {['auto', 'manual_open', 'manual_close'].map((mode) => (
                                     <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_pickup === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
@@ -264,7 +308,7 @@ export default function AdminSettings() {
                                         <div>
                                             <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
                                             <span className="text-[10px] text-subInk">
-                                                {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                                {mode === 'auto' ? 'เธเธณเธซเธเธ”เน€เธงเธฅเธฒเธเธฒเธฃเธเธญเธเธเธตเนเนเธกเธเธ–เธถเธเธเธตเนเนเธกเธ (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
                                             </span>
                                         </div>
                                     </label>
@@ -274,7 +318,7 @@ export default function AdminSettings() {
 
                         {/* 3. Steak Pre-order Status */}
                         <div className="space-y-3 border-t border-gray-100 pt-4">
-                            <h3 className="text-sm font-bold text-subInk uppercase">🥩 Steak Pre-order Status</h3>
+                            <h3 className="text-sm font-bold text-subInk uppercase">๐ฅฉ Steak Pre-order Status</h3>
                             <div className="grid grid-cols-1 gap-2">
                                 {['auto', 'manual_open', 'manual_close'].map((mode) => (
                                     <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_steak === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
@@ -288,7 +332,7 @@ export default function AdminSettings() {
                                         <div>
                                             <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
                                             <span className="text-[10px] text-subInk">
-                                                {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
+                                                {mode === 'auto' ? 'เธเธณเธซเธเธ”เน€เธงเธฅเธฒเธเธฒเธฃเธเธญเธเธเธตเนเนเธกเธเธ–เธถเธเธเธตเนเนเธกเธ (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
                                             </span>
                                         </div>
                                     </label>
@@ -313,7 +357,23 @@ export default function AdminSettings() {
                     </div>
 
 
-
+                {/* Staff Access Settings */}
+                <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-4 shadow-sm">
+                    <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                            ๐‘จโ€๐ณ Staff Access
+                    </h2>
+                    <div>
+                        <label className="block text-xs text-subInk mb-1">Staff PIN Code</label>
+                        <input 
+                            type="text" 
+                            value={settings.staff_pin_code || ''} 
+                            onChange={(e) => handleSave('staff_pin_code', e.target.value)} 
+                            placeholder="e.g. 1234"
+                            className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono tracking-widest text-center text-lg shadow-inner" 
+                        />
+                        <p className="text-[10px] text-subInk mt-2">Simple code for staff to access Staff View without email login.</p>
+                    </div> w
+                </div>
             </div>
 
                 {/* Blocked Dates Management */}
@@ -327,7 +387,7 @@ export default function AdminSettings() {
                         <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-6 bg-white/5 p-4 rounded-xl border border-white/5">
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-gray-400 uppercase font-bold">วันที่เริ่มหยุด (Start)</label>
+                                    <label className="text-[10px] text-gray-400 uppercase font-bold">เธงเธฑเธเธ—เธตเนเน€เธฃเธดเนเธกเธซเธขเธธเธ” (Start)</label>
                                     <input
                                         type="date"
                                         value={blockForm.startDate}
@@ -338,7 +398,7 @@ export default function AdminSettings() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-gray-400 uppercase font-bold">ถึงวันที่ (End)</label>
+                                    <label className="text-[10px] text-gray-400 uppercase font-bold">เธ–เธถเธเธงเธฑเธเธ—เธตเน (End)</label>
                                     <input
                                         type="date"
                                         value={blockForm.endDate}
@@ -391,11 +451,11 @@ export default function AdminSettings() {
                             await handleSave('is_menu_system_enabled', settings.is_menu_system_enabled)
                             await handleSave('contact_phone', settings.contact_phone)
                             await handleSave('contact_map_url', settings.contact_map_url)
-                            alert('บันทึกการตั้งค่าเรียบร้อย!')
+                            alert('เธเธฑเธเธ—เธถเธเธเธฒเธฃเธ•เธฑเนเธเธเนเธฒเน€เธฃเธตเธขเธเธฃเนเธญเธข!')
                         }}
                         className="flex items-center gap-2 bg-[#DFFF00] text-black px-4 py-2 rounded-full font-bold text-sm hover:scale-105 transition-transform"
                     >
-                        <Save size={16} /> บันทึก
+                        <Save size={16} /> เธเธฑเธเธ—เธถเธ
                     </button>
                 </div>
                 <div>
@@ -404,7 +464,7 @@ export default function AdminSettings() {
                         type="text"
                         value={settings.announcement_headline || ''}
                         onChange={(e) => setSettings(prev => ({ ...prev, announcement_headline: e.target.value }))}
-                        placeholder="e.g. BY ร้านในบ้าน"
+                        placeholder="e.g. BY เธฃเนเธฒเธเนเธเธเนเธฒเธ"
                         className="w-full bg-black border border-white/10 p-3 rounded-xl text-white outline-none focus:border-brand"
                     />
                 </div>
@@ -636,7 +696,7 @@ export default function AdminSettings() {
             {/* Steak Wizard Settings */}
             <div className="bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6 mt-8">
                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    🥩 Steak Wizard Config
+                    ๐ฅฉ Steak Wizard Config
                 </h2>
                 
                 {/* Special Details */}
@@ -725,7 +785,7 @@ export default function AdminSettings() {
                                     value={settings.steak_addon_cake_name || ''} 
                                     onChange={(e) => setSettings({...settings, steak_addon_cake_name: e.target.value})}
                                     onBlur={() => handleSave('steak_addon_cake_name', settings.steak_addon_cake_name)}
-                                    placeholder="e.g. รับเค้ก (Receive Cake)"
+                                    placeholder="e.g. เธฃเธฑเธเน€เธเนเธ (Receive Cake)"
                                     className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
                                  />
                             </div>
@@ -772,7 +832,7 @@ export default function AdminSettings() {
                                     value={settings.steak_addon_flower_name || ''} 
                                     onChange={(e) => setSettings({...settings, steak_addon_flower_name: e.target.value})}
                                     onBlur={() => handleSave('steak_addon_flower_name', settings.steak_addon_flower_name)}
-                                    placeholder="e.g. รับดอกไม้ (Receive Flower)"
+                                    placeholder="e.g. เธฃเธฑเธเธ”เธญเธเนเธกเน (Receive Flower)"
                                     className="w-full bg-black border border-white/10 p-2 rounded-lg text-white text-sm"
                                  />
                             </div>
@@ -847,7 +907,7 @@ export default function AdminSettings() {
                                         }}
                                         className="text-red-500 hover:text-red-400 p-2"
                                     >
-                                        ✕
+                                        โ•
                                     </button>
                                 </div>
                             ))
@@ -897,13 +957,13 @@ export default function AdminSettings() {
             {/* Data Maintenance Section */}
             <div className="mt-8 bg-[#111] p-8 rounded-3xl border border-white/5 space-y-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <span className="text-red-500">⚠</span> Data Maintenance
+                    <span className="text-red-500">โ </span> Data Maintenance
                 </h2>
                 <div className="flex items-center justify-between p-4 border border-white/10 rounded-2xl bg-black/20">
                     <div>
                         <h3 className="font-bold text-white">Clean Old Slips (&gt;30 Days)</h3>
                         <p className="text-xs text-gray-400 mt-1">
-                            ลบรูปสลิปที่เก่ากว่า 30 วันออกจาก Storage เพื่อประหยัดพื้นที่ (ข้อมูลการจองยังอยู่)
+                            เธฅเธเธฃเธนเธเธชเธฅเธดเธเธ—เธตเนเน€เธเนเธฒเธเธงเนเธฒ 30 เธงเธฑเธเธญเธญเธเธเธฒเธ Storage เน€เธเธทเนเธญเธเธฃเธฐเธซเธขเธฑเธ”เธเธทเนเธเธ—เธตเน (เธเนเธญเธกเธนเธฅเธเธฒเธฃเธเธญเธเธขเธฑเธเธญเธขเธนเน)
                         </p>
                     </div>
                     <button
