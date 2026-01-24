@@ -21,7 +21,6 @@ export default function MenuCostPage() {
     const [sortConfig, setSortConfig] = useState({ key: 'category', direction: 'asc' }); // Default: Category A-Z
     const [filterMode, setFilterMode] = useState('all'); // 'all', 'missing_recipe', 'low_margin'
     const [searchTerm, setSearchTerm] = useState('');
-    const [debugLog, setDebugLog] = useState({});
 
     const loadData = async () => {
         setLoading(true);
@@ -30,7 +29,7 @@ export default function MenuCostPage() {
             const { menuItems: data } = await fetchAndSortMenu();
             
             // 2. Fetch All Recipe Links (for bulk calculation)
-            const { data: recipeLinks, error: recipeError } = await supabase
+            const { data: recipeLinks } = await supabase
                 .from('recipe_ingredients')
                 .select(`
                     parent_menu_item_id,
@@ -41,10 +40,6 @@ export default function MenuCostPage() {
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
                 `);
-            
-            if (recipeError) {
-                console.error("Recipe Fetch Error:", recipeError);
-            }
             
             // Debug: Check if we actually got links
             // console.log("Recipe Links Found:", recipeLinks?.length);
@@ -69,18 +64,7 @@ export default function MenuCostPage() {
                 });
             }
 
-            // DEBUG CAZY
-            setDebugLog({
-                ts: new Date().toISOString(),
-                totalMenu: data?.length,
-                totalLinks: recipeLinks?.length,
-                sampleMenuId: data?.[0] ? `${data[0].id} (${typeof data[0].id})` : 'N/A',
-                sampleMenuName: data?.[0]?.name,
-                sampleLinkParentId: recipeLinks?.[0] ? `${recipeLinks[0].parent_menu_item_id} (${typeof recipeLinks[0].parent_menu_item_id})` : 'N/A',
-                keysInMap: Object.keys(recipesByMenu).slice(0, 5),
-                isMatchFoundForFirst: data?.[0] ? !!recipesByMenu[String(data[0].id)] : false,
-                recipeError: recipeError // <--- ADDED THIS
-            });
+
 
             // 4. Calculate Costs
             let revObserved = 0;
@@ -361,13 +345,7 @@ export default function MenuCostPage() {
                 />
             )}
 
-            {/* DEBUG PANEL */}
-            <div className="max-w-7xl mx-auto p-4">
-                <div className="bg-black text-green-400 p-4 font-mono text-xs overflow-auto max-h-60 rounded-xl shadow-lg">
-                    <h3 className="text-white font-bold border-b border-gray-700 mb-2">DEBUG INFO (Refining Cost Logic)</h3>
-                    <pre>{JSON.stringify(debugLog, null, 2)}</pre>
-                </div>
-            </div>
+
         </div>
     );
 }
