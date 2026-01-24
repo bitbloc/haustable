@@ -30,7 +30,7 @@ export default function MenuCostPage() {
             const { menuItems: data } = await fetchAndSortMenu();
             
             // 2. Fetch All Recipe Links (for bulk calculation)
-            const { data: recipeLinks } = await supabase
+            const { data: recipeLinks, error: recipeError } = await supabase
                 .from('recipe_ingredients')
                 .select(`
                     parent_menu_item_id,
@@ -41,6 +41,10 @@ export default function MenuCostPage() {
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
                 `);
+            
+            if (recipeError) {
+                console.error("Recipe Fetch Error:", recipeError);
+            }
             
             // Debug: Check if we actually got links
             // console.log("Recipe Links Found:", recipeLinks?.length);
@@ -74,7 +78,8 @@ export default function MenuCostPage() {
                 sampleMenuName: data?.[0]?.name,
                 sampleLinkParentId: recipeLinks?.[0] ? `${recipeLinks[0].parent_menu_item_id} (${typeof recipeLinks[0].parent_menu_item_id})` : 'N/A',
                 keysInMap: Object.keys(recipesByMenu).slice(0, 5),
-                isMatchFoundForFirst: data?.[0] ? !!recipesByMenu[String(data[0].id)] : false
+                isMatchFoundForFirst: data?.[0] ? !!recipesByMenu[String(data[0].id)] : false,
+                recipeError: recipeError // <--- ADDED THIS
             });
 
             // 4. Calculate Costs
