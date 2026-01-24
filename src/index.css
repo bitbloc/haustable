@@ -7,6 +7,13 @@
   --color-primary: #DFFF00;
   --color-dark: #1A1A1A;
   --color-surface: #FFFFFF;
+  
+  /* Semantic Tokens for Admin Clean Theme */
+  --color-canvas: #F9FAFB; /* Background */
+  --color-paper: #FFFFFF;  /* Cards/Sidebar */
+  --color-ink: #111827;    /* Primary Text */
+  --color-subInk: #6B7280; /* Secondary Text */
+  --color-brand: #DFFF00;  /* Brand Accent */
 }
 
 @tailwind base;

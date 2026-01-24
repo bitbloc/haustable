@@ -276,8 +276,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
                                     <DollarSign className="w-4 h-4" /> 1. ข้อมูลการซื้อ (Buying) & ประเภท
                                 </h3>
-                                {/* User Request: Stock = Raw Material only. Hide Base Recipe UI. */}
-                                {/* 
                                 <div className="mb-3 p-3 bg-white rounded-lg border border-blue-200 flex items-center gap-3">
                                     <input 
                                         type="checkbox" 
@@ -291,7 +289,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         <span className="block text-xs text-gray-400 font-normal">ผลิตเองจากวัตถุดิบอื่น (เช่น ซอส, พริกแกง)</span>
                                     </label>
                                 </div>
-                                */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="col-span-2">
                                         <label className="text-xs text-gray-500">ราคาซื้อต่อแพ็ค (บาท)</label>

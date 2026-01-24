@@ -31,8 +31,6 @@ export default function StockCard({ item, onClick, onRecipe }) {
                 ${bgClass}
             `}
         >
-            {/* Recipe Button HIDDEN per user request (Stock = Raw Material) */}
-            {/* 
             <div 
                 onClick={(e) => {
                     e.stopPropagation();
@@ -44,14 +42,13 @@ export default function StockCard({ item, onClick, onRecipe }) {
                     flex items-center gap-1 px-2 py-1.5 rounded-lg backdrop-blur-md transition-all shadow-sm border
                     ${item.is_base_recipe 
                         ? 'bg-orange-100/90 border-orange-200 text-orange-800' // Active Base Recipe
-                        : 'bg-white/60 border-gray-200 text-gray-500 hover:bg-white hover:text-black' // Inactive (Click to create)
+                        : 'bg-white/60 border-gray-200 text-gray-500 hover:bg-white hover:text-black opacity-0 group-hover:opacity-100' // Inactive (Click to create)
                     }
                 `}>
                     <FileText className="w-3 h-3" />
                     <span className="text-[10px] font-bold">สูตร</span>
                 </div>
             </div>
-            */}
 
             {/* Status Indicator Icon (only for issues) */}
             {(isCritical || isWarning) && (

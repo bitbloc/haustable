@@ -65,58 +65,64 @@ export default function AdminLayout({ children }) {
     ];
 
     return (
-        <div className="min-h-screen bg-canvas text-ink font-sans flex flex-col md:flex-row transition-colors duration-300">
+        <div className="min-h-screen bg-canvas text-ink font-sans flex flex-col md:flex-row">
             {/* --- Mobile Navigation (Top Bar) --- */}
-            <nav className="md:hidden sticky top-0 z-50 bg-paper border-b border-gray-200 p-2 overflow-x-auto flex gap-2 no-scrollbar shadow-sm">
+            <nav className="md:hidden sticky top-0 z-50 bg-paper/80 backdrop-blur-md border-b border-gray-100 p-3 overflow-x-auto flex gap-3 no-scrollbar items-center">
+                <div className="flex-shrink-0 font-bold text-lg tracking-tighter mr-2">Haus.</div>
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
-                        <Link key={item.path} to={item.path} className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${isActive ? 'bg-brand text-ink' : 'text-subInk bg-canvas'}`}>
+                        <Link key={item.path} to={item.path} className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${isActive ? 'bg-black text-white shadow-md' : 'text-gray-500 bg-gray-50'}`}>
                             <item.icon size={16} />
                             <span>{item.label}</span>
                         </Link>
                     )
                 })}
-                <button onClick={handleLogout} className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap text-error bg-red-50 border border-red-100">
+                <button onClick={handleLogout} className="flex-shrink-0 p-2 text-red-500 bg-red-50 rounded-full ml-auto">
                     <LogOut size={16} />
                 </button>
             </nav>
 
             {/* Sidebar: Clean, Bright, Physical Interface */}
-            <aside className="w-64 bg-paper border-r border-gray-200 hidden md:flex flex-col p-6 fixed h-full z-50 shadow-sm">
-                <h1 className="text-xl font-bold tracking-tight mb-10 text-ink">
-                    The Haus Workspace
-                </h1>
+            <aside className="w-72 bg-paper border-r border-gray-100 hidden md:flex flex-col p-8 fixed h-full z-50">
+                <div className="mb-12">
+                    <h1 className="text-2xl font-black tracking-tighter text-ink flex items-center gap-2">
+                        <div className="w-8 h-8 bg-brand rounded-lg"></div>
+                        The Haus.
+                    </h1>
+                    <p className="text-xs text-gray-400 font-medium ml-10 mt-1">Workspace Admin</p>
+                </div>
 
                 <nav className="flex-1 space-y-2">
                     {menuItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
                             <Link key={item.path} to={item.path}>
-                                <div className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive ? 'bg-[#DFFF00] text-black font-bold shadow-sm' : 'text-subInk hover:text-ink hover:bg-gray-50'}`}>
-                                    <item.icon size={20} className={isActive ? "text-black" : "text-subInk"} />
-                                    <span className={isActive ? "tracking-tight" : "tracking-normal"}>{item.label}</span>
+                                <div className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group ${isActive ? 'bg-black text-white shadow-xl scale-105' : 'text-gray-500 hover:bg-gray-50 hover:text-black'}`}>
+                                    <item.icon size={20} className={`transition-colors ${isActive ? "text-brand" : "text-gray-400 group-hover:text-black"}`} />
+                                    <span className={`font-bold tracking-wide text-sm ${isActive ? "" : ""}`}>{item.label}</span>
                                 </div>
                             </Link>
                         )
                     })}
                 </nav>
 
-                <div className="mt-auto border-t border-gray-100 pt-4">
-                     <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-subInk hover:text-error hover:bg-red-50 rounded-xl transition-colors">
-                        <LogOut size={20} /> <span className="font-medium">Logout</span>
+                <div className="mt-auto border-t border-gray-50 pt-6">
+                     <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all font-bold text-sm">
+                        <LogOut size={20} /> Logout
                     </button>
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 md:ml-64 p-6 md:p-10 bg-canvas">
+            <main className="flex-1 md:ml-72 p-4 md:p-12 bg-canvas min-h-screen">
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="max-w-7xl mx-auto"
                 >
-                    <Outlet /> {/* เนื้อหาของแต่ละหน้าจะมาโผล่ตรงนี้ */}
+                    <Outlet />
                 </motion.div>
             </main>
         </div>
