@@ -4,7 +4,7 @@ import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from 
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil } from 'lucide-react';
-import { calculateRecipeCost, getLayerColor } from '../../utils/costUtils';
+import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
 import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
