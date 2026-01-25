@@ -28,6 +28,7 @@ import StaffDashboard from './StaffDashboard'
 import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
 import StockPage from './StockPage' // NEW
 import MenuCostPage from './components/admin/MenuCostPage' // NEW
+import RecipeLabPage from './components/admin/RecipeLabPage' // NEW
 import TrackingPage from './TrackingPage'
 
 function App() {
@@ -124,6 +125,7 @@ function App() {
               <Route path="members" element={<AdminMembers />} />
               <Route path="menu" element={<AdminMenu />} />
               <Route path="costing" element={<MenuCostPage />} />
+              <Route path="lab" element={<RecipeLabPage />} />
               <Route path="steaks" element={<AdminSteakDashboard />} />
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="tables" element={<AdminTableManager />} />

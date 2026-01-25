@@ -12,7 +12,9 @@ import {
     Plus,
     Bell,
     BellOff,
-    Send // Added
+    Bell,
+    BellOff,
+    Send
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
@@ -56,12 +58,11 @@ export default function StockPage() {
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState(null); // For Adjustment Modal
 
-    const fetchCategories = async () => {
+     const fetchCategories = async () => {
          const { data, error } = await supabase.from('stock_categories').select('*').order('sort_order');
          if (data && data.length > 0) {
              setCategories(data);
          } else {
-             // Fallback default
              // Fallback default
              setCategories([
                 { id: 'restock', label: 'ต้องเติม (Restock)', icon: '⚠️' },
