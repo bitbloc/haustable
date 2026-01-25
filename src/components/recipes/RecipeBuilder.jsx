@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download, Rocket } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
 import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { toast } from 'sonner';
@@ -467,6 +467,64 @@ function ExportTemplateModal({ onClose, onSave }) {
     );
 }
 
+// Promote Modal (Base Recipe -> Menu Item)
+function PromoteModal({ initialName, onClose, onPromote }) {
+    const [name, setName] = useState(initialName || '');
+    const [price, setPrice] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handlePromote = () => {
+        if (!name.trim()) return toast.error('Required Name');
+        if (!price || parseFloat(price) < 0) return toast.error('Invalid Price');
+        
+        setLoading(true);
+        onPromote(name, parseFloat(price)).finally(() => setLoading(false));
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-purple-600">
+                    <Rocket size={20} /> Promote to Menu
+                </h3>
+                
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500">ชื่อเมนู (Menu Name)</label>
+                        <input 
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            className="w-full p-2 border rounded-xl bg-gray-50 font-bold"
+                            autoFocus
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500">ราคาขาย (Selling Price)</label>
+                        <input 
+                            type="number"
+                            value={price}
+                            onChange={e => setPrice(e.target.value)}
+                            className="w-full p-2 border rounded-xl bg-white font-bold text-lg"
+                            placeholder="0.00"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                    <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">Cancel</button>
+                    <button 
+                        onClick={handlePromote}
+                        disabled={loading}
+                        className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                    >
+                        {loading ? 'Processing...' : 'Promote'}
+                    </button>
+                </div>
+             </div>
+        </div>
+    );
+}
+
 // Sortable Layer Component
 function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -535,6 +593,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false); // Added state
     const [isExportOpen, setIsExportOpen] = useState(false); // Added state
+    const [isPromoteOpen, setIsPromoteOpen] = useState(false); // Added state
     
     // Mobile Responsive State
     const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
@@ -824,6 +883,48 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
     };
 
+    const handlePromote = async (name, price) => {
+        try {
+            // 1. Create Menu Item
+            const { data: newItem, error: createError } = await supabase
+                .from('menu_items')
+                .insert({
+                    name: name,
+                    price: price, // Ensure column name is correct (price or selling_price? Schema says 'price' in AdminMenu, but check Supabase usually)
+                    // Checking AdminMenu.jsx: uses 'price'. 
+                    // Checking BookingMenu.jsx: uses 'price'.
+                    category: 'Uncategorized',
+                    is_available: true,
+                    is_recommended: false
+                })
+                .select()
+                .single();
+
+            if (createError) throw createError;
+
+            // 2. Copy Ingredients
+            const payloadItems = ingredients.map((ing, idx) => ({
+                parent_menu_item_id: newItem.id, // Link to Menu Item
+                ingredient_id: ing.ingredientId,
+                quantity: ing.quantity,
+                unit: ing.unit,
+                layer_order: idx
+            }));
+
+            if (payloadItems.length > 0) {
+                 const { error: ingError } = await supabase.from('recipe_ingredients').insert(payloadItems);
+                 if (ingError) throw ingError;
+            }
+
+            toast.success('Promoted to Menu Successfully!');
+            setIsPromoteOpen(false);
+
+        } catch (err) {
+            console.error(err);
+            toast.error('Promote Failed: ' + err.message);
+        }
+    };
+
     const filteredItems = availableItems.filter(i => 
         i.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
         !ingredients.some(existing => existing.ingredientId === i.id) // Hide already added
@@ -874,6 +975,15 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
+            {/* Promote Modal */}
+            {isPromoteOpen && (
+                <PromoteModal
+                    initialName={parentItem?.name}
+                    onClose={() => setIsPromoteOpen(false)}
+                    onPromote={handlePromote}
+                />
+            )}
+
             {/* Left: Recipe Stack (The "Soul" Visual) - Always Visible / Main View on Mobile */}
             <div className={`flex-1 flex flex-col bg-gray-50 border-r border-gray-200 h-full overflow-hidden relative`}>
                 <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10 sticky top-0">
@@ -904,6 +1014,17 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                         >
                             <Copy size={14} /> Save Tmpl
                         </button>
+                        
+                        {parentType === 'stock' && (
+                            <button 
+                                onClick={() => setIsPromoteOpen(true)}
+                                className="hidden md:flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg transition-colors border border-purple-100"
+                                title="Promote to Menu"
+                            >
+                                <Rocket size={14} /> Promote
+                            </button>
+                        )}
+
                         <div className="text-right">
                             <div className="text-[10px] md:text-sm text-gray-500">ต้นทุนรวม</div>
                             <div className="text-xl md:text-2xl font-bold text-blue-600">฿{totalCost.toFixed(2)}</div>
