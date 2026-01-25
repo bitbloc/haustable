@@ -409,6 +409,64 @@ function RecipeImportModal({ onClose, onImport }) {
     );
 }
 
+// Export Template Modal
+function ExportTemplateModal({ onClose, onSave }) {
+    const [name, setName] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSave = async () => {
+        if (!name.trim()) {
+            toast.error('กรุณาตั้งชื่อ Template');
+            return;
+        }
+        setLoading(true);
+        try {
+            onSave(name);
+        } catch (err) {
+            console.error(err);
+            toast.error('บันทึกไม่สำเร็จ');
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Copy size={20} className="text-blue-600" /> บันทึกเป็น Template
+                </h3>
+                
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500">ชื่อ Template (Base Recipe)</label>
+                        <input 
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            className="w-full p-2 border rounded-xl bg-gray-50 font-bold"
+                            placeholder="เช่น สูตรกาแฟเย็นมาตรฐาน..."
+                            autoFocus
+                        />
+                    </div>
+                     <div className="text-xs text-gray-400">
+                        *ระบบจะสร้างเป็นวัตถุดิบประเภท "Base Recipe" ให้โดยอัตโนมัติ ซึ่งคุณสามารถนำไปใช้กับเมนูอื่นได้
+                    </div>
+                </div>
+
+                <div className="flex gap-2 mt-4">
+                    <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">ยกเลิก</button>
+                    <button 
+                        onClick={handleSave}
+                        disabled={loading || !name}
+                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                    >
+                        {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+                    </button>
+                </div>
+             </div>
+        </div>
+    );
+}
+
 // Sortable Layer Component
 function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -476,6 +534,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const [editingStockItem, setEditingStockItem] = useState(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [isImportOpen, setIsImportOpen] = useState(false); // Added state
+    const [isExportOpen, setIsExportOpen] = useState(false); // Added state
     
     // Mobile Responsive State
     const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
@@ -494,13 +553,21 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 .order('layer_order');
 
             if (recipeData) {
-                const mapped = recipeData.map(r => ({
-                    id: r.id, // connection id
-                    ingredientId: r.ingredient_id,
-                    ingredient: r.ingredient, // joined data
-                    quantity: r.quantity,
-                    unit: r.unit
-                }));
+                const mapped = recipeData.map(r => {
+                    // Auto-sync legacy 'unit' to actual usage_unit if available
+                    let effectiveUnit = r.unit;
+                    if (r.unit === 'unit' && r.ingredient?.usage_unit && r.ingredient.usage_unit !== 'unit') {
+                        effectiveUnit = r.ingredient.usage_unit;
+                    }
+                    
+                    return {
+                        id: r.id, // connection id
+                        ingredientId: r.ingredient_id,
+                        ingredient: r.ingredient, // joined data
+                        quantity: r.quantity,
+                        unit: effectiveUnit
+                    };
+                });
                 setIngredients(mapped);
             }
 
@@ -709,6 +776,52 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
     };
 
+    const handleExport = async (templateName) => {
+        try {
+            // 1. Create Base Recipe Stock Item
+            const { data: newItem, error: createError } = await supabase
+                .from('stock_items')
+                .insert({
+                    name: templateName,
+                    category: 'restock', // or 'other'
+                    is_base_recipe: true,
+                    cost_price: 0, // Calculated later or user sets it
+                    pack_size: 1,
+                    pack_unit: 'unit',
+                    usage_unit: 'unit',
+                    current_quantity: 0
+                })
+                .select()
+                .single();
+
+            if (createError) throw createError;
+
+            // 2. Add Ingredients to it
+             const payloadItems = ingredients.map((ing, idx) => ({
+                parent_stock_item_id: newItem.id,
+                ingredient_id: ing.ingredientId,
+                quantity: ing.quantity,
+                unit: ing.unit,
+                layer_order: idx
+            }));
+
+            if (payloadItems.length > 0) {
+                 const { error: ingError } = await supabase.from('recipe_ingredients').insert(payloadItems);
+                 if (ingError) throw ingError;
+            }
+
+            toast.success(`บันทึก Template "${templateName}" เรียบร้อย`);
+            setIsExportOpen(false);
+            
+            // Update available list for future imports
+            setAvailableItems(prev => [...prev, newItem].sort((a,b) => a.name.localeCompare(b.name)));
+
+        } catch (err) {
+            console.error(err);
+            toast.error('Export Failed: ' + err.message);
+        }
+    };
+
     const filteredItems = availableItems.filter(i => 
         i.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
         !ingredients.some(existing => existing.ingredientId === i.id) // Hide already added
@@ -751,6 +864,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
+            {/* Export Modal */}
+            {isExportOpen && (
+                <ExportTemplateModal
+                    onClose={() => setIsExportOpen(false)}
+                    onSave={handleExport}
+                />
+            )}
+
             {/* Left: Recipe Stack (The "Soul" Visual) - Always Visible / Main View on Mobile */}
             <div className={`flex-1 flex flex-col bg-gray-50 border-r border-gray-200 h-full overflow-hidden relative`}>
                 <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10 sticky top-0">
@@ -772,7 +893,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                              className="hidden md:flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-blue-600 bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
                              title="Import Recipe"
                         >
-                            <Copy size={14} /> Import
+                            <Download size={14} /> Import
+                        </button>
+                        <button 
+                             onClick={() => setIsExportOpen(true)}
+                             className="hidden md:flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-blue-600 bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                             title="Save as Template"
+                        >
+                            <Copy size={14} /> Save Tmpl
                         </button>
                         <div className="text-right">
                             <div className="text-[10px] md:text-sm text-gray-500">ต้นทุนรวม</div>
