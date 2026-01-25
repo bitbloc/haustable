@@ -51,21 +51,24 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             }
             
     // --- Config กล้อง: SD (Safe) vs HD (Sharp) ---
-            const videoConstraints = {
-                facingMode: "environment",
-                // Improve default resolution for better barcode reading (720p minimum for SD usually helps)
-                width: useHD ? { min: 1280, ideal: 1920 } : { min: 720, ideal: 1280 },
+            // Html5Qrcode.start() allows strictly 1 key for camera config
+            const initialConfig = { facingMode: "environment" };
+
+            // Optimization constraints to apply AFTER start
+            const optimizationConstraints = {
+                width: useHD ? { min: 1280, ideal: 1920 } : { min: 640, ideal: 1280 },
                 height: useHD ? { min: 720, ideal: 1080 } : { min: 480, ideal: 720 },
-                // Use a wider aspect ratio if possible for barcodes, or just standard
-                aspectRatio: { ideal: 1.777 }, // 16:9
+                aspectRatio: { ideal: 1.0 },
+                // Try to force continuous focus on Android/Chrome
                 advanced: [{ focusMode: "continuous" }] 
             };
 
+            console.log("Starting camera with HD:", useHD);
+
             const config = { 
-                fps: 30, // Increased to 30 for smoother feedback
-                // Rectangular Scan Area: Better for 1D Barcodes
-                qrbox: { width: 300, height: 150 },
-                aspectRatio: 1.777,
+                fps: 25, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
                 experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true
                 },
@@ -90,7 +93,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             }
 
             await scannerRef.current.start(
-                videoConstraints, 
+                initialConfig, 
                 config,
                 (decodedText, decodedResult) => {
                     handleScanSuccess(decodedText);
