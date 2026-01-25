@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { X, Camera, Zap, PackageSearch, ScanLine } from 'lucide-react';
+import { X, Camera, Zap, PackageSearch, ScanLine, SwitchCamera, Type } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Real OpenFoodFacts API Lookup
@@ -38,6 +38,15 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
     const [torchOn, setTorchOn] = useState(false);
     const [torchSupported, setTorchSupported] = useState(false);
     const [useHD, setUseHD] = useState(false); // Default to SD (Safe)
+    
+    // Camera Switching
+    const [cameras, setCameras] = useState([]);
+    const [currentCameraId, setCurrentCameraId] = useState(null);
+
+    // OCR
+    const [isOcrActive, setIsOcrActive] = useState(false);
+    const ocrInterval = useRef(null);
+    const textDetectorRef = useRef(null);
 
     const startScanning = async () => {
         if (isScanning) return;
@@ -46,13 +55,27 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
         const scannerId = "reader-manual";
         
         try {
+            // Get Cameras first if not done
+            if (cameras.length === 0) {
+                try {
+                    const devices = await Html5Qrcode.getCameras();
+                    if (devices && devices.length > 0) {
+                         setCameras(devices);
+                         // Default to the last one (usually back main on phones) if not set
+                         if (!currentCameraId) setCurrentCameraId(devices[devices.length - 1].id);
+                    }
+                } catch (e) { console.warn("Could not fetch cameras", e); }
+            }
+
             if (!scannerRef.current) {
                 scannerRef.current = new Html5Qrcode(scannerId);
             }
             
     // --- Config กล้อง: SD (Safe) vs HD (Sharp) ---
-            // Html5Qrcode.start() allows strictly 1 key for camera config
-            const initialConfig = { facingMode: "environment" };
+            // Use specific deviceId if selected, otherwise fallback to facingMode
+            const initialConfig = currentCameraId 
+                ? { deviceId: { exact: currentCameraId } }
+                : { facingMode: "environment" };
 
             // Optimization constraints to apply AFTER start
             const optimizationConstraints = {
@@ -135,8 +158,11 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             setPermissionError(false);
             
             setTimeout(() => {
-                setCameraHint(useHD ? "หากสแกนยาก ให้ลองถอยห่าง" : "ลองเปิดโหมด HD หรือแตะเพื่อโฟกัส");
+                setCameraHint(useHD ? "หากภาพเบลอ ให้ถอยห่าง" : "ลองเปิดโหมด HD หากภาพไม่ชัด");
             }, 3000);
+
+            // --- Start OCR Loop (Native) ---
+            startOCR();
 
         } catch (err) {
             console.error("Camera start failed", err);
@@ -188,6 +214,72 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
         }
     };
 
+    // Camera Switcher
+    const switchCamera = async () => {
+        if (cameras.length < 2) return;
+
+        const currentIndex = cameras.findIndex(cam => cam.id === currentCameraId);
+        const nextIndex = (currentIndex + 1) % cameras.length;
+        const nextCamera = cameras[nextIndex];
+
+        if (scannerRef.current) {
+            await scannerRef.current.stop().catch(console.error);
+            scannerRef.current.clear();
+            scannerRef.current = null;
+        }
+        
+        setCurrentCameraId(nextCamera.id);
+        setIsScanning(false); // Force re-render and restart
+        setTimeout(() => startScanning(), 300);
+    };
+
+    // OCR Logic
+    const startOCR = async () => {
+        if (!('TextDetector' in window)) {
+            console.warn("TextDetector API not supported in this browser.");
+            setIsOcrActive(false);
+            return;
+        }
+        
+        if (!textDetectorRef.current) {
+            try {
+                textDetectorRef.current = new window.TextDetector();
+            } catch (e) {
+                console.error("Failed to create TextDetector", e);
+                setIsOcrActive(false);
+                return;
+            }
+        }
+
+        setIsOcrActive(true);
+        ocrInterval.current = setInterval(async () => {
+            if (!scannerRef.current || !scannerRef.current.isScanning) return;
+
+            try {
+                const videoElement = document.getElementById("reader-manual").querySelector("video");
+                if (videoElement && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                    const texts = await textDetectorRef.current.detect(videoElement);
+                    if (texts && texts.length > 0) {
+                        const detectedText = texts.map(t => t.rawValue).join(' ');
+                        // console.log("OCR Detected:", detectedText);
+                        // You can add logic here to process detected text, e.g., look for specific patterns
+                        // For now, we just log it.
+                    }
+                }
+            } catch (e) {
+                console.warn("OCR detection failed", e);
+            }
+        }, 1000); // Run OCR every 1 second
+    };
+
+    const stopOCR = () => {
+        if (ocrInterval.current) {
+            clearInterval(ocrInterval.current);
+            ocrInterval.current = null;
+        }
+        setIsOcrActive(false);
+    };
+
     // Scan Success
     const handleScanSuccess = async (barcode) => {
         if(scannerRef.current) await scannerRef.current.pause();
@@ -217,6 +309,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
     };
 
     const stopScanning = async () => {
+        stopOCR();
         if (scannerRef.current) {
             try {
                 const state = scannerRef.current.getState();
@@ -234,11 +327,11 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
         // startScanning();
         
         return () => {
-             if (scannerRef.current) {
-                 scannerRef.current.stop().catch(console.error).finally(() => {
-                     if (scannerRef.current) scannerRef.current.clear();
-                 });
+             stopOCR();
+             if (scannerRef.current && scannerRef.current.isScanning) {
+                 scannerRef.current.stop().catch(console.error);
              }
+             if (scannerRef.current) scannerRef.current.clear();
         };
     }, []);
 
@@ -309,11 +402,23 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                                     {/* HD Toggle Button */}
                                     <button 
                                         onClick={toggleHD}
-                                        className={`px-6 py-3 rounded-full backdrop-blur-md border transition-all font-bold text-sm tracking-wide ${useHD ? 'bg-emerald-500 text-black border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}
+                                        className={`px-4 py-3 rounded-full backdrop-blur-md border transition-all font-bold text-xs tracking-wide ${useHD ? 'bg-emerald-500 text-black border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}
                                     >
-                                        {useHD ? 'HD ON' : 'SD MODE'}
+                                        {useHD ? 'HD' : 'SD'}
                                     </button>
+
+                                    {/* Camera Switcher */}
+                                    {cameras.length > 1 && (
+                                         <button 
+                                            onClick={switchCamera}
+                                            className="p-4 rounded-full backdrop-blur-md border bg-white/10 text-white border-white/10 hover:bg-white/20"
+                                        >
+                                            <SwitchCamera className="w-6 h-6" />
+                                        </button>
+                                    )}
                                 </div>
+                                
+                                {isOcrActive && <div className="text-[10px] text-emerald-400 font-mono mt-1 flex items-center gap-1"><Type className="w-3 h-3"/> OCR Active</div>}
 
                                 <p className="text-white/50 text-xs text-center animate-pulse">
                                     {cameraHint}
