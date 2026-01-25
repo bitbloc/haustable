@@ -59,7 +59,7 @@ export default function RecipeLabPage() {
                     unit: l.unit
                 }));
                 
-                const { totalCost } = calculateRecipeCost(calcIngredients);
+                const { totalCost } = calculateRecipeCost(calcIngredients, (id) => calcIngredients.find(i => i.ingredient?.id === id)?.ingredient);
                 
                 return {
                     ...item,
