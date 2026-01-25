@@ -188,8 +188,10 @@ function EditStockModal({ item, onClose, onSave }) {
 
 // Quick Add Stock Modal (Simplified for Recipe Creation)
 function QuickAddStockModal({ onClose, onSave }) {
+    const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
+        category: 'veg', // Default
         cost_price: 0,
         pack_size: 1,
         pack_unit: 'kg',
@@ -197,6 +199,17 @@ function QuickAddStockModal({ onClose, onSave }) {
         conversion_factor: 1000,
         yield_percent: 100
     });
+
+    useEffect(() => {
+        const fetchCats = async () => {
+            const { data } = await supabase.from('stock_categories').select('*').order('sort_order');
+            if (data && data.length > 0) {
+                setCategories(data);
+                // Optional: set default to first item if needed, but 'veg' is a safe fallback usually
+            }
+        };
+        fetchCats();
+    }, []);
 
     return (
         <div className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-4">
@@ -211,10 +224,23 @@ function QuickAddStockModal({ onClose, onSave }) {
                         <input 
                             value={formData.name}
                             onChange={e => setFormData({...formData, name: e.target.value})}
-                            className="w-full p-2 border rounded-xl bg-gray-50"
+                            className="w-full p-2 border rounded-xl bg-gray-50 mb-2"
                             placeholder="เช่น เมล็ดกาแฟ, นมสด..."
                             autoFocus
                         />
+                        
+                        <label className="text-xs font-bold text-gray-500">หมวดหมู่</label>
+                        <select 
+                            value={formData.category}
+                            onChange={e => setFormData({...formData, category: e.target.value})}
+                            className="w-full p-2 border rounded-xl bg-white"
+                        >
+                            {categories.length > 0 ? (
+                                categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
+                            ) : (
+                                <option value="veg">ผัก (Default)</option>
+                            )}
+                        </select>
                     </div>
                     
                     <div className="flex gap-2">
