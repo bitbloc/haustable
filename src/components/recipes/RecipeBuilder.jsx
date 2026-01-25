@@ -3,8 +3,9 @@ import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
+import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
@@ -289,6 +290,126 @@ function QuickAddStockModal({ onClose, onSave }) {
     );
 }
 
+// Import Recipe Modal
+function RecipeImportModal({ onClose, onImport }) {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [templates, setTemplates] = useState([]); // { id, name, type: 'menu' | 'stock', price? }
+
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            setLoading(true);
+            try {
+                // 1. Fetch Menu Items
+                const { data: menus } = await supabase.from('menu_items').select('id, name, selling_price').order('name');
+                
+                // 2. Fetch Base Recipes (Stock)
+                const { data: stocks } = await supabase.from('stock_items').select('id, name').eq('is_base_recipe', true).order('name');
+
+                const list = [
+                    ...(menus || []).map(m => ({ ...m, type: 'menu' })),
+                    ...(stocks || []).map(s => ({ ...s, type: 'stock' }))
+                ];
+                setTemplates(list);
+            } catch (err) {
+                console.error(err);
+                toast.error('โหลดข้อมูลต้นแบบไม่สำเร็จ');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTemplates();
+    }, []);
+
+    const handleSelect = async (template) => {
+        try {
+            const queryField = template.type === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
+            const { data, error } = await supabase
+                .from('recipe_ingredients')
+                .select(`*, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(*)`)
+                .eq(queryField, template.id)
+                .order('layer_order');
+
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                toast.info('เมนูนี้ไม่มีสูตร');
+                return;
+            }
+
+            // Map to generic format
+            const ingredients = data.map(r => ({
+                ingredientId: r.ingredient_id,
+                ingredient: r.ingredient,
+                quantity: r.quantity,
+                unit: r.unit
+            }));
+
+            onImport(ingredients);
+            onClose();
+
+        } catch (err) {
+            console.error(err);
+            toast.error('นำเข้าสูตรไม่สำเร็จ');
+        }
+    };
+
+    const filtered = templates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+             <div className="bg-white rounded-2xl w-full max-w-md p-0 shadow-2xl animate-in fade-in zoom-in duration-200 overflow-hidden flex flex-col max-h-[80vh]">
+                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Download size={20} className="text-blue-600" /> นำเข้าสูตร (Import)
+                    </h3>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full"><X size={20}/></button>
+                </div>
+                
+                <div className="p-4 border-b">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input 
+                            className="w-full bg-gray-100 border-none rounded-xl py-2 pl-10 pr-4 focus:ring-2 focus:ring-blue-100 outline-none"
+                            placeholder="ค้นหาต้นแบบ (เมนู / Base Recipe)..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {loading ? (
+                        <div className="text-center py-10 text-gray-400">กำลังโหลด...</div>
+                    ) : filtered.length === 0 ? (
+                        <div className="text-center py-10 text-gray-400">ไม่พบข้อมูล</div>
+                    ) : (
+                        filtered.map(t => (
+                            <button 
+                                key={t.type + t.id}
+                                onClick={() => handleSelect(t)}
+                                className="w-full p-3 rounded-xl hover:bg-blue-50 hover:text-blue-700 flex justify-between items-center transition-colors group text-left"
+                            >
+                                <div>
+                                    <div className="font-bold flex items-center gap-2">
+                                        {t.type === 'stock' && <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px]">Base</span>}
+                                        {t.name}
+                                    </div>
+                                    <div className="text-xs text-gray-400 group-hover:text-blue-400">
+                                        {t.type === 'menu' ? 'Menu Item' : 'Stock Item'}
+                                    </div>
+                                </div>
+                                <Download size={16} className="text-gray-300 group-hover:text-blue-500" />
+                            </button>
+                        ))
+                    )}
+                </div>
+             </div>
+        </div>
+    );
+}
+
 // Sortable Layer Component
 function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -355,6 +476,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     // Edit Stock Modal
     const [editingStockItem, setEditingStockItem] = useState(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false); // Added state
     
     // Mobile Responsive State
     const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
@@ -537,7 +659,11 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             // Also update any ingredients in the list that match this, so the UI cost updates immediately
             setIngredients(prev => prev.map(p => {
                 if (p.ingredientId === id) {
-                    return { ...p, ingredient: { ...p.ingredient, ...newFormData } };
+                    return { 
+                        ...p, 
+                        ingredient: { ...p.ingredient, ...newFormData },
+                        unit: newFormData.usage_unit // Sync unit to new usage_unit
+                    };
                 }
                 return p;
             }));
@@ -608,6 +734,24 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
+            {/* Import Modal */}
+            {isImportOpen && (
+                <RecipeImportModal 
+                    onClose={() => setIsImportOpen(false)}
+                    onImport={(importedIngredients) => {
+                        const newItems = importedIngredients.map(item => ({
+                            id: 'temp-' + Date.now() + Math.random(),
+                            ingredientId: item.ingredientId,
+                            ingredient: item.ingredient,
+                            quantity: item.quantity,
+                            unit: item.unit
+                        }));
+                        setIngredients(prev => [...prev, ...newItems]);
+                        toast.success(`นำเข้า ${newItems.length} รายการแล้ว`);
+                    }}
+                />
+            )}
+
             {/* Left: Recipe Stack (The "Soul" Visual) - Always Visible / Main View on Mobile */}
             <div className={`flex-1 flex flex-col bg-gray-50 border-r border-gray-200 h-full overflow-hidden relative`}>
                 <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10 sticky top-0">
@@ -623,9 +767,18 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                              }
                         </p>
                     </div>
-                    <div className="text-right">
-                        <div className="text-[10px] md:text-sm text-gray-500">ต้นทุนรวม</div>
-                        <div className="text-xl md:text-2xl font-bold text-blue-600">฿{totalCost.toFixed(2)}</div>
+                    <div className="flex items-center gap-3">
+                        <button 
+                             onClick={() => setIsImportOpen(true)}
+                             className="hidden md:flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-blue-600 bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
+                             title="Import Recipe"
+                        >
+                            <Copy size={14} /> Import
+                        </button>
+                        <div className="text-right">
+                            <div className="text-[10px] md:text-sm text-gray-500">ต้นทุนรวม</div>
+                            <div className="text-xl md:text-2xl font-bold text-blue-600">฿{totalCost.toFixed(2)}</div>
+                        </div>
                     </div>
                 </div>
 
