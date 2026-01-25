@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
 import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { toast } from 'sonner';
@@ -186,6 +186,83 @@ function EditStockModal({ item, onClose, onSave }) {
     );
 }
 
+// Quick Add Stock Modal (Simplified for Recipe Creation)
+function QuickAddStockModal({ onClose, onSave }) {
+    const [formData, setFormData] = useState({
+        name: '',
+        cost_price: 0,
+        pack_size: 1,
+        pack_unit: 'kg',
+        usage_unit: 'g',
+        conversion_factor: 1000,
+        yield_percent: 100
+    });
+
+    return (
+        <div className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <PackagePlus size={20} className="text-blue-600" /> เพิ่มวัตถุดิบใหม่
+                </h3>
+                
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs font-bold text-gray-500">ชื่อวัตถุดิบ</label>
+                        <input 
+                            value={formData.name}
+                            onChange={e => setFormData({...formData, name: e.target.value})}
+                            className="w-full p-2 border rounded-xl bg-gray-50"
+                            placeholder="เช่น เมล็ดกาแฟ, นมสด..."
+                            autoFocus
+                        />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-500">ราคาซื้อ</label>
+                            <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-500">ขนาดแพ็ค</label>
+                            <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-500">หน่วยแพ็ค</label>
+                            <select value={formData.pack_unit} onChange={e => setFormData({...formData, pack_unit: e.target.value})} className="w-full p-2 border rounded-xl bg-white">
+                                {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-gray-500">หน่วยใช้จริง</label>
+                             <select value={formData.usage_unit} onChange={e => setFormData({...formData, usage_unit: e.target.value})} className="w-full p-2 border rounded-xl bg-white">
+                                {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700">
+                       ระบบจะคำนวณตัวแปลงหน่วยให้อัตโนมัติ (เช่น kg -&gt; g = 1000) หากต้องการแก้ไขละเอียดให้ทำในหน้าสต็อกหลัก
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                        <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">ยกเลิก</button>
+                        <button 
+                            onClick={() => onSave(formData)}
+                            disabled={!formData.name}
+                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                        >
+                            สร้างทันที
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Sortable Layer Component
 function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -251,6 +328,10 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     // Edit Stock Modal
     const [editingStockItem, setEditingStockItem] = useState(null);
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+    
+    // Mobile Responsive State
+    const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
 
     const sensors = useSensors(useSensor(PointerSensor));
 
@@ -441,7 +522,42 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
     };
 
-    // Filter available items
+    const handleCreateStock = async (formData) => {
+        try {
+            // Auto-calculate conversion factor if standard
+            // Simple logic: if kg->g factor=1000, etc.
+            // For now rely on defaults or backend triggers, but here we just insert what we have.
+            // Actually let's try to be smart matching the 'suggestConversionFactor' logic but simply.
+            
+            let factor = formData.conversion_factor;
+            // Basic override for standard units
+            if(formData.pack_unit === 'kg' && formData.usage_unit === 'g') factor = 1000;
+            if(formData.pack_unit === 'l' && formData.usage_unit === 'ml') factor = 1000;
+
+            const payload = {
+                ...formData,
+                conversion_factor: factor,
+                stock_quantity: 0, // Default 0
+                min_stock: 0
+            };
+
+            const { data, error } = await supabase.from('stock_items').insert(payload).select().single();
+            if(error) throw error;
+
+            toast.success('สร้างวัตถุดิบใหม่แล้ว');
+            setAvailableItems(prev => [...prev, data].sort((a,b) => a.name.localeCompare(b.name)));
+            setIsQuickAddOpen(false);
+            
+            // Auto add to recipe? Optional. Let's just let user pick it.
+            // But usually if they create it, they want to add it.
+            handleAddIngredient(data);
+
+        } catch (err) {
+            console.error(err);
+            toast.error('สร้างวัตถุดิบไม่สำเร็จ');
+        }
+    };
+
     const filteredItems = availableItems.filter(i => 
         i.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
         !ingredients.some(existing => existing.ingredientId === i.id) // Hide already added
@@ -458,33 +574,42 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
-            {/* Left: Recipe Stack (The "Soul" Visual) */}
-            <div className="flex-1 flex flex-col bg-gray-50 border-r border-gray-200">
-                <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10">
+            {/* Quick Add Stock Modal */}
+            {isQuickAddOpen && (
+                <QuickAddStockModal 
+                    onClose={() => setIsQuickAddOpen(false)}
+                    onSave={handleCreateStock}
+                />
+            )}
+
+            {/* Left: Recipe Stack (The "Soul" Visual) - Always Visible / Main View on Mobile */}
+            <div className={`flex-1 flex flex-col bg-gray-50 border-r border-gray-200 h-full overflow-hidden relative`}>
+                <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10 sticky top-0">
                     <div>
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             <Layers className="text-[#1A1A1A]" /> 
-                            {parentItem?.name ? `สูตรของ ${parentItem.name}` : 'ตัวเนรมิตสูตร'}
+                            {parentItem?.name ? `${parentItem.name}` : 'ตัวเนรมิตสูตร'}
                         </h2>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[10px] md:text-xs text-gray-500">
                              {parentType === 'stock' && parentItem 
-                                ? `สำหรับ 1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
-                                : 'ลากวางเพื่อเปลี่ยน Layer • คำนวณต้นทุน Real-time'
+                                ? `1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
+                                : 'ลากวางเพื่อเปลี่ยน Layer'
                              }
                         </p>
                     </div>
                     <div className="text-right">
-                        <div className="text-sm text-gray-500">ต้นทุนรวม (Sub Total)</div>
-                        <div className="text-2xl font-bold text-blue-600">฿{totalCost.toFixed(2)}</div>
+                        <div className="text-[10px] md:text-sm text-gray-500">ต้นทุนรวม</div>
+                        <div className="text-xl md:text-2xl font-bold text-blue-600">฿{totalCost.toFixed(2)}</div>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar pb-32 md:pb-4">
                     {ingredients.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded-2xl">
                             <Layers className="w-16 h-16 mb-4 opacity-20" />
                             <p>ยังไม่มีวัตถุดิบ</p>
-                            <p className="text-sm">เลือกวัตถุดิบจากด้านขวาเพื่อเริ่มปรุง</p>
+                            <p className="text-sm hidden md:block">เลือกวัตถุดิบจากด้านขวาเพื่อเริ่มปรุง</p>
+                            <p className="text-sm md:hidden">กดปุ่ม + เพื่อเพิ่มวัตถุดิบ</p>
                         </div>
                     ) : (
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -509,53 +634,88 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     )}
                 </div>
 
+                {/* Mobile Floating Action Button for Adding Ingredient */}
+                <button 
+                    onClick={() => setIsMobilePickerOpen(true)}
+                    className="md:hidden absolute bottom-24 right-4 w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center z-30 hover:scale-105 transition-transform"
+                >
+                    <Plus size={28} />
+                </button>
+
                 {/* Price Simulator Embedded */}
-                <div className="p-4 bg-white border-t border-gray-100">
+                <div className="p-4 bg-white border-t border-gray-100 hidden md:block">
                      <PriceSimulator totalCost={totalCost} initialPrice={initialPrice} />
                 </div>
 
-                <div className="p-4 bg-white border-t flex justify-end gap-3 shadow-lg">
-                    <button onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100">
+                <div className="p-4 bg-white border-t flex justify-end gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
+                    <button onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 flex-1 md:flex-none">
                         ยกเลิก
                     </button>
-                    <button onClick={handleSave} className="px-8 py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black shadow-xl">
+                    <button onClick={handleSave} className="px-8 py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black shadow-xl flex-1 md:flex-none">
                         บันทึกสูตร
                     </button>
                 </div>
             </div>
 
-            {/* Right: Ingredient Picker */}
-            <div className="w-full md:w-[400px] bg-white flex flex-col shadow-2xl z-20">
-                <div className="p-4 border-b">
-                     <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-bold">คลังวัตถุดิบ</h3>
-                        <button className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">จัดการสต็อก</button>
+            {/* Right: Ingredient Picker - Responsive Behavior */}
+            <div className={`
+                fixed inset-0 z-40 bg-white flex flex-col md:static md:w-[400px] md:shadow-2xl transition-transform duration-300
+                ${isMobilePickerOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
+            `}>
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50 md:bg-white">
+                     <div className="flex items-center gap-2">
+                        {/* Mobile Back Button */}
+                        <button onClick={() => setIsMobilePickerOpen(false)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-gray-200">
+                             <X size={24} />
+                        </button>
+                        <h3 className="font-bold text-lg">คลังวัตถุดิบ</h3>
                      </div>
-                    <input 
-                        className="w-full bg-gray-100 border-none rounded-xl py-2 px-4"
-                        placeholder="ค้นหาวัตถุดิบ..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                     <button 
+                        onClick={() => setIsQuickAddOpen(true)}
+                        className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg flex items-center gap-1 shadow-md"
+                    >
+                        <Plus size={14} /> สร้างใหม่
+                    </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2">
+
+                <div className="p-4 pb-2 border-b bg-gray-50 md:bg-white">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <input 
+                            className="w-full bg-white md:bg-gray-100 border border-gray-200 md:border-transparent rounded-xl py-2 pl-10 pr-4 focus:ring-2 focus:ring-blue-100 outline-none"
+                            placeholder="ค้นหาวัตถุดิบ..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            autoFocus={isMobilePickerOpen}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-2 bg-gray-50 md:bg-white pb-20 md:pb-0">
                     {filteredItems.map(item => (
                         <div 
                             key={item.id}
-                            className="p-3 mb-2 rounded-xl border hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all flex justify-between items-center group"
+                            className="p-3 mb-2 rounded-xl bg-white border shadow-sm md:shadow-none md:border-gray-200 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all flex justify-between items-center group"
+                            onClick={() => {
+                                handleAddIngredient(item);
+                                if(window.innerWidth < 768) setIsMobilePickerOpen(false); // Close on mobile after picking
+                            }}
                         >
-                             <div className="flex-1" onClick={() => handleAddIngredient(item)}>
-                                <div className="font-bold text-sm">{item.name}</div>
+                             <div className="flex-1">
+                                <div className="font-bold text-sm text-gray-800">{item.name}</div>
                                 <div className="text-xs text-gray-400">{item.usage_unit}</div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {/* Quick Edit in Picker too? Maybe later. For now just add button */}
-                                <button className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors" onClick={() => handleAddIngredient(item)}>
-                                    <Plus size={16} />
-                                </button>
-                            </div>
+                            <button className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                <Plus size={16} />
+                            </button>
                         </div>
                     ))}
+                    {filteredItems.length === 0 && (
+                        <div className="text-center py-10 text-gray-400 text-sm">
+                            ไม่พบวัตถุดิบ "{searchTerm}" <br/>
+                            <button onClick={() => setIsQuickAddOpen(true)} className="text-blue-600 underline mt-2">สร้างใหม่เลย?</button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
