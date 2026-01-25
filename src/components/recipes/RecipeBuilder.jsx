@@ -6,7 +6,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
 import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
-import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 
