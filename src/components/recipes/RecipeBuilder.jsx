@@ -261,7 +261,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             // 1. Fetch Existing Recipe
             const { data: recipeData } = await supabase
                 .from('recipe_ingredients')
-                .select(`*, ingredient:stock_items(*)`)
+                .select(`*, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(*)`)
                 .eq(parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id', parentId)
                 .order('layer_order');
 
