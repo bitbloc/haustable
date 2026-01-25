@@ -50,22 +50,22 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                 scannerRef.current = new Html5Qrcode(scannerId);
             }
             
-            // --- Config กล้อง: SD (Safe) vs HD (Sharp) ---
+    // --- Config กล้อง: SD (Safe) vs HD (Sharp) ---
             const videoConstraints = {
                 facingMode: "environment",
-                width: useHD ? { min: 1280, ideal: 1920 } : { min: 640, ideal: 1280 },
+                // Improve default resolution for better barcode reading (720p minimum for SD usually helps)
+                width: useHD ? { min: 1280, ideal: 1920 } : { min: 720, ideal: 1280 },
                 height: useHD ? { min: 720, ideal: 1080 } : { min: 480, ideal: 720 },
-                aspectRatio: { ideal: 1.0 },
-                // Try to force continuous focus on Android/Chrome
+                // Use a wider aspect ratio if possible for barcodes, or just standard
+                aspectRatio: { ideal: 1.777 }, // 16:9
                 advanced: [{ focusMode: "continuous" }] 
             };
 
-            console.log("Starting camera with HD:", useHD);
-
             const config = { 
-                fps: 25, // Increased from 15 for faster scanning
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
+                fps: 30, // Increased to 30 for smoother feedback
+                // Rectangular Scan Area: Better for 1D Barcodes
+                qrbox: { width: 300, height: 150 },
+                aspectRatio: 1.777,
                 experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true
                 },
@@ -78,6 +78,16 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                     Html5QrcodeSupportedFormats.UPC_E
                 ]
             };
+
+            // Double check cleanup before start
+            if (scannerRef.current) {
+                try {
+                    const state = scannerRef.current.getState();
+                    if (state === 2 || state === 3) { // SCANNING or PAUSED
+                         await scannerRef.current.stop();
+                    }
+                } catch (e) { console.warn("Cleanup check warning", e); }
+            }
 
             await scannerRef.current.start(
                 videoConstraints, 
@@ -122,14 +132,14 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             setPermissionError(false);
             
             setTimeout(() => {
-                setCameraHint(useHD ? "หากภาพเบลอ ให้ถอยห่าง" : "ลองเปิดโหมด HD หากภาพไม่ชัด");
+                setCameraHint(useHD ? "หากสแกนยาก ให้ลองถอยห่าง" : "ลองเปิดโหมด HD หรือแตะเพื่อโฟกัส");
             }, 3000);
 
         } catch (err) {
             console.error("Camera start failed", err);
             setPermissionError(true);
             setErrorMessage(err.name + ": " + err.message || "Unknown error");
-            toast.error("Camera Error: " + (err.message || "Unknown"));
+            // toast.error("Camera Error: " + (err.message || "Unknown"));
             setIsScanning(false);
         }
     };
@@ -156,11 +166,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             await scannerRef.current.stop().catch(() => {});
         }
         setUseHD(!useHD);
-        // Effect hook below will restart scanning when useHD changes? 
-        // Better to manually restart to avoid loops.
-        // We leave isScanning=false, user hits "Retry" or we auto-restart?
-        // Let's auto-restart in a timeout to let state update.
-        setTimeout(() => startScanning(), 500);
+        setTimeout(() => startScanning(), 300);
     };
 
     // Zoom Handler
@@ -197,7 +203,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             } else {
                  onScan({ barcode, found: false });
             }
-            await stopScanning();
+            // await stopScanning(); // Don't stop fully yet, let parent close or we close
             onClose();
         } catch (error) {
             toast.error("Error processing scan");
@@ -212,15 +218,23 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
             try {
                 const state = scannerRef.current.getState();
                 if (state === 2 || state === 3) await scannerRef.current.stop();
+                scannerRef.current.clear(); // Important: Clear to remove DOM element issues
+                scannerRef.current = null;
             } catch (err) { console.warn("Stop warning:", err); } 
             finally { setIsScanning(false); }
         }
     };
 
     useEffect(() => {
+        // Auto-start (optional) or just cleanup
+        // If we want to auto-start:
+        // startScanning();
+        
         return () => {
-             if (scannerRef.current && scannerRef.current.isScanning) {
-                 scannerRef.current.stop().catch(console.error);
+             if (scannerRef.current) {
+                 scannerRef.current.stop().catch(console.error).finally(() => {
+                     if (scannerRef.current) scannerRef.current.clear();
+                 });
              }
         };
     }, []);
@@ -247,7 +261,8 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
                     {isScanning && !isLoadingData && (
                         <>
                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                <div className="w-64 h-40 border-2 border-white/60 rounded-xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+                                {/* Rectangular Scan Area for Barcodes */}
+                                <div className="w-[300px] h-[150px] border-2 border-white/60 rounded-xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
                                     <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-500 rounded-tl -mt-1 -ml-1"></div>
                                     <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-500 rounded-tr -mt-1 -mr-1"></div>
                                     <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-500 rounded-bl -mb-1 -ml-1"></div>
