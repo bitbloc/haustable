@@ -271,7 +271,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
     return (
         <div 
             ref={setNodeRef} style={style} {...attributes}
-            className={`flex items-center gap-3 p-3 rounded-xl border mb-2 bg-white shadow-sm ${index === 0 ? 'border-b-4 border-b-gray-200' : ''}`}
+            className={`flex items-center gap-3 p-3 rounded-xl border border-gray-200 mb-2 bg-white shadow-sm hover:shadow-md transition-all`}
         >
             <div {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600">
                 <GripVertical size={20} />
