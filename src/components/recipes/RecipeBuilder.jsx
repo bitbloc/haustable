@@ -754,6 +754,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
             const payload = {
                 ...formData,
+                unit: formData.usage_unit, // Sync for backward compatibility
                 conversion_factor: factor,
                 stock_quantity: 0, // Default 0
                 min_stock: 0
@@ -789,6 +790,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     pack_size: 1,
                     pack_unit: 'unit',
                     usage_unit: 'unit',
+                    unit: 'unit', // Sync for backward compatibility
                     current_quantity: 0
                 })
                 .select()
