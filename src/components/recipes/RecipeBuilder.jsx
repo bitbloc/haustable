@@ -873,8 +873,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 ...formData,
                 unit: formData.usage_unit, // Sync for backward compatibility
                 conversion_factor: factor,
-                stock_quantity: 0, // Default 0
-                min_stock: 0
+                current_quantity: 0, // Default 0
+                min_stock_threshold: 0
             };
 
             const { data, error } = await supabase.from('stock_items').insert(payload).select().single();
@@ -1129,16 +1129,34 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     <Plus size={28} />
                 </button>
 
+                {/* Fixed Cost Input */}
+                <div className="px-4 py-2 bg-purple-50 border-t border-purple-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-purple-800 font-bold text-sm">
+                        <AlertTriangle size={16} />
+                        <span>Fixed Cost (ค่าคงที่/แรงงาน/บรรจุภัณฑ์)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input 
+                            type="number" 
+                            value={fixedCost} 
+                            onChange={e => handleUpdateFixedCost(e.target.value)}
+                            className="w-24 p-1 text-right border border-purple-200 rounded text-purple-900 font-bold focus:outline-none focus:border-purple-500 bg-white"
+                            placeholder="0.00"
+                        />
+                        <span className="text-xs text-purple-600">บาท</span>
+                    </div>
+                </div>
+
                 {/* Price Simulator Embedded */}
                 <div className="p-4 bg-white border-t border-gray-100 hidden md:block">
-                     <PriceSimulator totalCost={totalCost} initialPrice={initialPrice} />
+                     <PriceSimulator totalCost={totalCost + fixedCost} initialPrice={initialPrice} />
                 </div>
 
                 <div className="p-4 bg-white border-t flex justify-end gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
                     <button onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 flex-1 md:flex-none">
                         ยกเลิก
                     </button>
-                    <button onClick={handleSave} className="px-8 py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black shadow-xl flex-1 md:flex-none">
+                    <button onClick={handleSaveWithFixed} className="px-8 py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black shadow-xl flex-1 md:flex-none">
                         บันทึกสูตร
                     </button>
                 </div>

@@ -145,7 +145,9 @@ export default function MenuItemList() {
         description: '',
         is_available: true,
         is_recommended: false,
-        is_pickup_available: true 
+        is_pickup_available: true,
+        fixed_cost: 0,
+        material_cost: 0 
     })
 
     const [selectedOptionGroups, setSelectedOptionGroups] = useState([])
@@ -200,7 +202,9 @@ export default function MenuItemList() {
             description: '',
             is_available: true,
             is_recommended: false,
-            is_pickup_available: true
+            is_pickup_available: true,
+            fixed_cost: 0,
+            material_cost: 0
         })
         setIsModalOpen(true)
     }
@@ -214,8 +218,40 @@ export default function MenuItemList() {
             description: item.description || '',
             is_available: item.is_available,
             is_recommended: item.is_recommended,
-            is_pickup_available: item.is_pickup_available !== false 
+            is_pickup_available: item.is_pickup_available !== false,
+            fixed_cost: item.fixed_cost || 0,
+            material_cost: 0 // Will fetch below
         })
+
+        // Fetch Material Cost from Recipe
+        const { data: recipeIng } = await supabase
+            .from('recipe_ingredients')
+            .select(`
+                quantity,
+                unit,
+                ingredient:stock_items!ingredient_id (
+                    cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
+                )
+            `)
+            .eq('parent_menu_item_id', item.id);
+
+        let calculatedMatCost = 0;
+        if(recipeIng) {
+            // Simple logic from costUtils - duplicate for now or import? 
+            // Better to import but let's do inline specifically for this view to avoid complex dependency if not needed.
+            // Actually let's just calculate crudely:
+            calculatedMatCost = recipeIng.reduce((sum, ri) => {
+               if(!ri.ingredient) return sum;
+               // Unit Cost Logic
+               const price = ri.ingredient.cost_price || 0;
+               const packSize = ri.ingredient.pack_size || 1;
+               const totalUnits = packSize * (ri.ingredient.conversion_factor || 1) * ((ri.ingredient.yield_percent||100)/100);
+               const unitCost = totalUnits > 0 ? price / totalUnits : 0;
+               return sum + (unitCost * (ri.quantity || 0));
+            }, 0);
+        }
+        
+        setFormData(prev => ({ ...prev, material_cost: calculatedMatCost }));
 
         // Lazy Load Options
         const { data: options } = await supabase.from('menu_item_options')
@@ -331,7 +367,9 @@ export default function MenuItemList() {
                 is_available: formData.is_available,
                 is_recommended: formData.is_recommended,
                 is_pickup_available: formData.is_pickup_available,
-                image_url: imageUrl
+                image_url: imageUrl,
+                fixed_cost: formData.fixed_cost,
+                // Material Cost is NOT saved in menu_items (calculated from recipe), but fixed_cost IS.
             }
 
             let newItemId = editingItem?.id
@@ -657,6 +695,56 @@ export default function MenuItemList() {
                                         <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`}><Check size={20} /></div><div><div className="font-bold text-sm text-ink">เปิดขาย</div></div></div><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
                                         <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}><ShoppingBag size={20} /></div><div><div className="font-bold text-sm text-ink">Pick-up</div></div></div><input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
                                     </div>
+                                    
+                                    {/* Cost & Profit Section */}
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
+                                        <h3 className="font-bold text-sm text-ink flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div> 
+                                            ต้นทุน & กำไร (Cost & Profit)
+                                        </h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-subInk uppercase">Material Cost</label>
+                                                <div className="text-gray-500 font-mono text-sm mt-1">
+                                                    {formData.material_cost ? `฿${formData.material_cost.toFixed(2)}` : '-'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-bold text-subInk uppercase">Fixed Cost</label>
+                                                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-1 mt-1">
+                                                    <span className="text-gray-400 text-xs">฿</span>
+                                                    <input 
+                                                        type="number" 
+                                                        value={formData.fixed_cost} 
+                                                        onChange={e => setFormData({ ...formData, fixed_cost: parseFloat(e.target.value) || 0 })}
+                                                        className="w-full text-right font-mono text-sm outline-none text-purple-600 font-bold bg-transparent"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Profit Summary */}
+                                        {(formData.price && (formData.material_cost || formData.fixed_cost)) && (
+                                            <div className="pt-2 border-t border-gray-200 mt-2">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-gray-500">Gross Profit:</span>
+                                                    <span className={`font-bold font-mono ${
+                                                        (parseFloat(formData.price) - (formData.material_cost||0) - (formData.fixed_cost||0)) >= 0 ? 'text-green-600' : 'text-red-500'
+                                                    }`}>
+                                                        ฿{(parseFloat(formData.price) - (formData.material_cost||0) - (formData.fixed_cost||0)).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs mt-1">
+                                                    <span className="text-gray-400">Margin:</span>
+                                                    <span className="font-mono text-gray-600">
+                                                        {((parseFloat(formData.price) - (formData.material_cost||0) - (formData.fixed_cost||0)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink placeholder-gray-400 focus:border-brand outline-none resize-none h-32 shadow-sm" placeholder="คำอธิบายเมนู"></textarea>
                                 </div>
                             </div>
