@@ -300,7 +300,7 @@ function RecipeImportModal({ onClose, onImport }) {
             setLoading(true);
             try {
                 // 1. Fetch Menu Items
-                const { data: menus } = await supabase.from('menu_items').select('id, name, selling_price').order('name');
+                const { data: menus } = await supabase.from('menu_items').select('id, name, price').order('name');
                 
                 // 2. Fetch Base Recipes (Stock)
                 const { data: stocks } = await supabase.from('stock_items').select('id, name').eq('is_base_recipe', true).order('name');
