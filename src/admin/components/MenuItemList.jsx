@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, Star, AlertCircle, Camera, ShoppingBag, GripVertical, Lock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -634,8 +635,10 @@ export default function MenuItemList() {
 
             {/* Edit/Create Modal */}
             <AnimatePresence>
-                {isModalOpen && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-0 md:p-4">
+            {/* Edit/Create Modal */}
+            <AnimatePresence>
+                {isModalOpen && createPortal(
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-0 md:p-4">
                          <motion.div
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
@@ -747,8 +750,10 @@ export default function MenuItemList() {
                                 {editingItem && <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition-colors">ลบเมนูนี้</button>}
                             </div>
                         </motion.div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
+            </AnimatePresence>
             </AnimatePresence>
         </div>
     )
