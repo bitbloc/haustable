@@ -634,127 +634,127 @@ export default function MenuItemList() {
             </DndContext>
 
             {/* Edit/Create Modal */}
-            <AnimatePresence>
-            {/* Edit/Create Modal */}
-            <AnimatePresence>
-                {isModalOpen && createPortal(
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-0 md:p-4">
-                         <motion.div
-                            initial={{ y: 50, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 50, opacity: 0 }}
-                            className="bg-paper w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] md:rounded-3xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col"
-                        >
-                            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-paper z-10">
-                                <h2 className="text-xl font-bold text-ink">{editingItem ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}</h2>
-                                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full text-subInk hover:text-ink"><X /></button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto bg-canvas">
-                                {/* Image Upload */}
-                                <div className="w-full h-48 bg-gray-100 relative group cursor-pointer border-b border-gray-200" onClick={() => document.getElementById('menu-image-upload').click()}>
-                                    {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" /> : <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 group-hover:bg-gray-200 transition-colors"><ImageIcon size={48} className="mb-2 opacity-50" /><span className="text-sm">เพิ่มรูปภาพเมนู</span></div>}
-                                    <div className="absolute top-2 right-2 flex gap-2">
-                                        {previewUrl && <button onClick={handleRemoveImage} className="bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full backdrop-blur-sm shadow-lg transition-transform hover:scale-105"><Trash2 size={16} /></button>}
-                                    </div>
-                                    <input id="menu-image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+            {/* Edit/Create Modal - Rendered via Portal for z-index containment */}
+            {createPortal(
+                <AnimatePresence>
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-0 md:p-4">
+                            <motion.div
+                                initial={{ y: 50, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: 50, opacity: 0 }}
+                                className="bg-paper w-full max-w-2xl h-full md:h-auto md:max-h-[85vh] md:rounded-3xl border border-gray-200 shadow-2xl overflow-hidden flex flex-col"
+                            >
+                                <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-paper z-10">
+                                    <h2 className="text-xl font-bold text-ink">{editingItem ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}</h2>
+                                    <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full text-subInk hover:text-ink"><X /></button>
                                 </div>
-                                
-                                <div className="p-6 space-y-6">
-                                    <div className="space-y-4">
-                                        <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-transparent border-b border-gray-200 p-2 text-xl font-bold text-ink placeholder-gray-400 focus:border-brand outline-none transition-colors" placeholder="ชื่อเมนู (ภาษาไทย)" required />
-                                    </div>
-                                    <div className="relative">
-                                        <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink appearance-none outline-none focus:border-brand shadow-sm">
-                                            <option value="">เลือกหมวดหมู่</option>
-                                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-subInk mb-2 block uppercase">ราคาขาย</label>
-                                        <div className="flex items-center gap-4 bg-paper rounded-xl p-4 border border-gray-200 shadow-sm">
-                                            <span className="font-bold text-ink">ราคา</span>
-                                            <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="flex-1 bg-transparent text-right font-mono text-xl font-bold outline-none placeholder-gray-400 text-ink" placeholder="0.00" />
-                                            <span className="text-subInk">฿</span>
+                                <div className="flex-1 overflow-y-auto bg-canvas">
+                                    {/* Image Upload */}
+                                    <div className="w-full h-48 bg-gray-100 relative group cursor-pointer border-b border-gray-200" onClick={() => document.getElementById('menu-image-upload').click()}>
+                                        {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" /> : <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 group-hover:bg-gray-200 transition-colors"><ImageIcon size={48} className="mb-2 opacity-50" /><span className="text-sm">เพิ่มรูปภาพเมนู</span></div>}
+                                        <div className="absolute top-2 right-2 flex gap-2">
+                                            {previewUrl && <button onClick={handleRemoveImage} className="bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full backdrop-blur-sm shadow-lg transition-transform hover:scale-105"><Trash2 size={16} /></button>}
                                         </div>
+                                        <input id="menu-image-upload" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                     </div>
                                     
-                                    {/* Option Groups Config */}
-                                    <div className="bg-paper rounded-xl p-4 border border-gray-200 shadow-sm">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="font-bold text-base text-ink">กลุ่มตัวเลือก (Options)</h3>
-                                            <button type="button" onClick={() => document.getElementById('option-picker').classList.toggle('hidden')} className="text-brandDark text-xs font-bold flex items-center gap-1 hover:underline"><Plus size={14} /> เพิ่มกลุ่มตัวเลือก</button>
+                                    <div className="p-6 space-y-6">
+                                        <div className="space-y-4">
+                                            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-transparent border-b border-gray-200 p-2 text-xl font-bold text-ink placeholder-gray-400 focus:border-brand outline-none transition-colors" placeholder="ชื่อเมนู (ภาษาไทย)" required />
                                         </div>
-                                        <div className="space-y-2 mb-4">
-                                            {selectedOptionGroups.map(gid => {
-                                                const group = optionGroups.find(g => g.id === gid); if (!group) return null;
-                                                return <div key={gid} className="bg-gray-50 border border-gray-200 p-3 rounded-lg flex justify-between items-center text-ink"><div><div className="font-bold text-sm">{group.name}</div><div className="text-xs text-subInk">{group.selection_type}</div></div><button onClick={() => toggleOptionGroup(gid)} className="text-gray-400 hover:text-red-500"><X size={16} /></button></div>
-                                            })}
+                                        <div className="relative">
+                                            <select value={formData.category_id} onChange={e => setFormData({ ...formData, category_id: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink appearance-none outline-none focus:border-brand shadow-sm">
+                                                <option value="">เลือกหมวดหมู่</option>
+                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
                                         </div>
-                                        <div id="option-picker" className="hidden border-t border-gray-200 pt-4 mt-4 grid grid-cols-2 gap-2">
-                                            {optionGroups.filter(g => !selectedOptionGroups.includes(g.id)).map(g => <button key={g.id} onClick={() => toggleOptionGroup(g.id)} className="text-left text-xs p-2 bg-white border border-gray-200 rounded hover:border-brand text-ink shadow-sm transition-colors">{g.name}</button>)}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_recommended ? 'bg-brand/20 text-brandDark' : 'bg-gray-200 text-gray-400'}`}><Star size={20} /></div><div><div className="font-bold text-sm text-ink">เมนูแนะนำ</div></div></div><input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
-                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`}><Check size={20} /></div><div><div className="font-bold text-sm text-ink">เปิดขาย</div></div></div><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
-                                        <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}><ShoppingBag size={20} /></div><div><div className="font-bold text-sm text-ink">Pick-up</div></div></div><input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
-                                    </div>
-                                    
-                                    {/* Cost & Profit Section */}
-                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
-                                        <h3 className="font-bold text-sm text-ink flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div> 
-                                            ต้นทุน & กำไร (Cost & Profit)
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-white border border-gray-200 rounded-lg p-2">
-                                                <label className="text-[10px] font-bold text-subInk uppercase">Material Cost</label>
-                                                <div className="text-gray-900 font-mono text-lg font-bold mt-1">
-                                                    {formData.material_cost ? `฿${formData.material_cost.toFixed(2)}` : '-'}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-end justify-center pb-2">
-                                                 <div className="text-xs text-center text-gray-400">
-                                                     Fixed Cost & GP are now calculated via Global Settings
-                                                 </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-subInk mb-2 block uppercase">ราคาขาย</label>
+                                            <div className="flex items-center gap-4 bg-paper rounded-xl p-4 text-ink appearance-none outline-none focus:border-brand shadow-sm">
+                                                <span className="font-bold text-ink">ราคา</span>
+                                                <input type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} className="flex-1 bg-transparent text-right font-mono text-xl font-bold outline-none placeholder-gray-400 text-ink" placeholder="0.00" />
+                                                <span className="text-subInk">฿</span>
                                             </div>
                                         </div>
                                         
-                                        {/* Profit Summary */}
-                                        {(formData.price && (formData.material_cost || formData.fixed_cost)) && (
-                                            <div className="pt-2 border-t border-gray-200 mt-2">
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-gray-500">Gross Profit:</span>
-                                                    <span className={`font-bold font-mono ${
-                                                        (parseFloat(formData.price) - (formData.material_cost||0)) >= 0 ? 'text-green-600' : 'text-red-500'
-                                                    }`}>
-                                                        ฿{(parseFloat(formData.price) - (formData.material_cost||0)).toFixed(2)}
-                                                    </span>
+                                        {/* Option Groups Config */}
+                                        <div className="bg-paper rounded-xl p-4 border border-gray-200 shadow-sm">
+                                            <div className="flex justify-between items-center mb-4">
+                                                <h3 className="font-bold text-base text-ink">กลุ่มตัวเลือก (Options)</h3>
+                                                <button type="button" onClick={() => document.getElementById('option-picker').classList.toggle('hidden')} className="text-brandDark text-xs font-bold flex items-center gap-1 hover:underline"><Plus size={14} /> เพิ่มกลุ่มตัวเลือก</button>
+                                            </div>
+                                            <div className="space-y-2 mb-4">
+                                                {selectedOptionGroups.map(gid => {
+                                                    const group = optionGroups.find(g => g.id === gid); if (!group) return null;
+                                                    return <div key={gid} className="bg-gray-50 border border-gray-200 p-3 rounded-lg flex justify-between items-center text-ink"><div><div className="font-bold text-sm">{group.name}</div><div className="text-xs text-subInk">{group.selection_type}</div></div><button onClick={() => toggleOptionGroup(gid)} className="text-gray-400 hover:text-red-500"><X size={16} /></button></div>
+                                                })}
+                                            </div>
+                                            <div id="option-picker" className="hidden border-t border-gray-200 pt-4 mt-4 grid grid-cols-2 gap-2">
+                                                {optionGroups.filter(g => !selectedOptionGroups.includes(g.id)).map(g => <button key={g.id} onClick={() => toggleOptionGroup(g.id)} className="text-left text-xs p-2 bg-white border border-gray-200 rounded hover:border-brand text-ink shadow-sm transition-colors">{g.name}</button>)}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_recommended ? 'bg-brand/20 text-brandDark' : 'bg-gray-200 text-gray-400'}`}><Star size={20} /></div><div><div className="font-bold text-sm text-ink">เมนูแนะนำ</div></div></div><input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
+                                            <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`}><Check size={20} /></div><div><div className="font-bold text-sm text-ink">เปิดขาย</div></div></div><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
+                                            <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}><ShoppingBag size={20} /></div><div><div className="font-bold text-sm text-ink">Pick-up</div></div></div><input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
+                                        </div>
+                                        
+                                        {/* Cost & Profit Section */}
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
+                                            <h3 className="font-bold text-sm text-ink flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div> 
+                                                ต้นทุน & กำไร (Cost & Profit)
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-white border border-gray-200 rounded-lg p-2">
+                                                    <label className="text-[10px] font-bold text-subInk uppercase">Material Cost</label>
+                                                    <div className="text-gray-900 font-mono text-lg font-bold mt-1">
+                                                        {formData.material_cost ? `฿${formData.material_cost.toFixed(2)}` : '-'}
+                                                    </div>
                                                 </div>
-                                                <div className="flex justify-between items-center text-xs mt-1">
-                                                    <span className="text-gray-400">Margin:</span>
-                                                    <span className="font-mono text-gray-600">
-                                                        {((parseFloat(formData.price) - (formData.material_cost||0)) / parseFloat(formData.price) * 100).toFixed(1)}%
-                                                    </span>
+                                                <div className="flex items-end justify-center pb-2">
+                                                     <div className="text-xs text-center text-gray-400">
+                                                         Fixed Cost & GP are now calculated via Global Settings
+                                                     </div>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
+                                            
+                                            {/* Profit Summary */}
+                                            {(formData.price && (formData.material_cost || formData.fixed_cost)) && (
+                                                <div className="pt-2 border-t border-gray-200 mt-2">
+                                                    <div className="flex justify-between items-center text-sm">
+                                                        <span className="text-gray-500">Gross Profit:</span>
+                                                        <span className={`font-bold font-mono ${
+                                                            (parseFloat(formData.price) - (formData.material_cost||0)) >= 0 ? 'text-green-600' : 'text-red-500'
+                                                        }`}>
+                                                            ฿{(parseFloat(formData.price) - (formData.material_cost||0)).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs mt-1">
+                                                        <span className="text-gray-400">Margin:</span>
+                                                        <span className="font-mono text-gray-600">
+                                                            {((parseFloat(formData.price) - (formData.material_cost||0)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink placeholder-gray-400 focus:border-brand outline-none resize-none h-32 shadow-sm" placeholder="คำอธิบายเมนู"></textarea>
+                                        <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-paper border border-gray-200 rounded-xl p-4 text-ink placeholder-gray-400 focus:border-brand outline-none resize-none h-32 shadow-sm" placeholder="คำอธิบายเมนู"></textarea>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="p-4 border-t border-gray-200 bg-gray-50 z-10">
-                                <button onClick={handleSubmit} className="w-full bg-brand text-ink font-bold py-3 rounded-xl hover:bg-brandDark shadow-lg shadow-brand/20 transition-all transform active:scale-[0.98]">บันทึกเมนู</button>
-                                {editingItem && <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition-colors">ลบเมนูนี้</button>}
-                            </div>
-                        </motion.div>
-                    </div>,
-                    document.body
-                )}
-            </AnimatePresence>
-            </AnimatePresence>
+                                <div className="p-4 border-t border-gray-200 bg-gray-50 z-10">
+                                    <button onClick={handleSubmit} className="w-full bg-brand text-ink font-bold py-3 rounded-xl hover:bg-brandDark shadow-lg shadow-brand/20 transition-all transform active:scale-[0.98]">บันทึกเมนู</button>
+                                    {editingItem && <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition-colors">ลบเมนูนี้</button>}
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     )
 }
