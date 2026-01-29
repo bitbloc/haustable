@@ -147,9 +147,6 @@ export default function MenuItemList() {
         is_recommended: false,
         is_pickup_available: true,
         is_pickup_available: true,
-        fixed_cost: 0,
-        fixed_cost_details: [],
-        is_fixed_cost_included: true,
         material_cost: 0 
     })
 
@@ -207,9 +204,6 @@ export default function MenuItemList() {
             is_recommended: false,
             is_pickup_available: true,
             is_pickup_available: true,
-            fixed_cost: 0,
-            fixed_cost_details: [],
-            is_fixed_cost_included: true,
             material_cost: 0
         })
         setIsModalOpen(true)
@@ -226,9 +220,7 @@ export default function MenuItemList() {
             is_recommended: item.is_recommended,
             is_pickup_available: item.is_pickup_available !== false,
             is_pickup_available: item.is_pickup_available !== false,
-            fixed_cost: item.fixed_cost || 0,
-            fixed_cost_details: item.fixed_cost_details || [],
-            is_fixed_cost_included: item.is_fixed_cost_included !== false,
+            // fixed_cost fields deprecated
             material_cost: 0 // Will fetch below
         })
 
@@ -378,10 +370,8 @@ export default function MenuItemList() {
                 is_pickup_available: formData.is_pickup_available,
                 image_url: imageUrl,
                 image_url: imageUrl,
-                fixed_cost: formData.fixed_cost,
-                fixed_cost_details: formData.fixed_cost_details,
-                is_fixed_cost_included: formData.is_fixed_cost_included,
-                // Material Cost is NOT saved in menu_items (calculated from recipe), but fixed_cost IS.
+                image_url: imageUrl,
+                // fixed_cost deprecated - not saving anymore
             }
 
             let newItemId = editingItem?.id
@@ -715,74 +705,16 @@ export default function MenuItemList() {
                                             ต้นทุน & กำไร (Cost & Profit)
                                         </h3>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div>
+                                            <div className="bg-white border border-gray-200 rounded-lg p-2">
                                                 <label className="text-[10px] font-bold text-subInk uppercase">Material Cost</label>
-                                                <div className="text-gray-500 font-mono text-sm mt-1">
+                                                <div className="text-gray-900 font-mono text-lg font-bold mt-1">
                                                     {formData.material_cost ? `฿${formData.material_cost.toFixed(2)}` : '-'}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <label className="text-[10px] font-bold text-subInk uppercase">Fixed Cost</label>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-[8px] text-purple-600 font-bold">รวม</span>
-                                                        <button 
-                                                            onClick={() => setFormData(prev => ({ ...prev, is_fixed_cost_included: !prev.is_fixed_cost_included }))}
-                                                            className={`w-6 h-3 rounded-full p-0.5 transition-colors ${formData.is_fixed_cost_included ? 'bg-purple-600' : 'bg-gray-300'}`}
-                                                        >
-                                                            <div className={`w-2 h-2 bg-white rounded-full shadow-sm transform transition-transform ${formData.is_fixed_cost_included ? 'translate-x-3' : 'translate-x-0'}`} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="bg-white border border-gray-200 rounded-lg p-2 max-h-32 overflow-y-auto space-y-2">
-                                                    {(formData.fixed_cost_details || []).map((fc, idx) => (
-                                                        <div key={idx} className="flex gap-1 items-center">
-                                                            <input 
-                                                                className="flex-1 min-w-0 text-[10px] border-b border-gray-100 outline-none text-purple-900"
-                                                                placeholder="Name"
-                                                                value={fc.name}
-                                                                onChange={e => {
-                                                                    const newList = [...(formData.fixed_cost_details || [])];
-                                                                    newList[idx] = { ...newList[idx], name: e.target.value };
-                                                                    setFormData(prev => ({ ...prev, fixed_cost_details: newList }));
-                                                                }}
-                                                            />
-                                                            <input 
-                                                                type="number"
-                                                                className="w-12 text-[10px] text-right font-bold text-purple-700 outline-none border-b border-gray-100"
-                                                                placeholder="0"
-                                                                value={fc.amount}
-                                                                onChange={e => {
-                                                                    const newList = [...(formData.fixed_cost_details || [])];
-                                                                    newList[idx] = { ...newList[idx], amount: e.target.value };
-                                                                    // Recalc total
-                                                                    const total = newList.reduce((sum, i) => sum + (parseFloat(i.amount)||0), 0);
-                                                                    setFormData(prev => ({ ...prev, fixed_cost_details: newList, fixed_cost: total }));
-                                                                }}
-                                                            />
-                                                            <button 
-                                                                onClick={() => {
-                                                                     const newList = (formData.fixed_cost_details || []).filter((_, i) => i !== idx);
-                                                                     const total = newList.reduce((sum, i) => sum + (parseFloat(i.amount)||0), 0);
-                                                                     setFormData(prev => ({ ...prev, fixed_cost_details: newList, fixed_cost: total }));
-                                                                }}
-                                                                className="text-gray-300 hover:text-red-500"
-                                                            >
-                                                                <Trash2 size={10} />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                    <button 
-                                                        onClick={() => setFormData(prev => ({ ...prev, fixed_cost_details: [...(prev.fixed_cost_details||[]), { name: '', amount: '' }] }))}
-                                                        className="w-full text-[10px] text-center text-purple-500 hover:bg-purple-50 rounded py-1"
-                                                    >
-                                                        + Add Item
-                                                    </button>
-                                                </div>
-                                                <div className="text-right mt-1">
-                                                    <span className="text-[10px] font-bold text-purple-600">Total: ฿{formData.fixed_cost.toFixed(2)}</span>
-                                                </div>
+                                            <div className="flex items-end justify-center pb-2">
+                                                 <div className="text-xs text-center text-gray-400">
+                                                     Fixed Cost & GP are now calculated via Global Settings
+                                                 </div>
                                             </div>
                                         </div>
                                         
@@ -792,15 +724,15 @@ export default function MenuItemList() {
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-gray-500">Gross Profit:</span>
                                                     <span className={`font-bold font-mono ${
-                                                        (parseFloat(formData.price) - (formData.material_cost||0) - (formData.is_fixed_cost_included ? (formData.fixed_cost||0) : 0)) >= 0 ? 'text-green-600' : 'text-red-500'
+                                                        (parseFloat(formData.price) - (formData.material_cost||0)) >= 0 ? 'text-green-600' : 'text-red-500'
                                                     }`}>
-                                                        ฿{(parseFloat(formData.price) - (formData.material_cost||0) - (formData.is_fixed_cost_included ? (formData.fixed_cost||0) : 0)).toFixed(2)}
+                                                        ฿{(parseFloat(formData.price) - (formData.material_cost||0)).toFixed(2)}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center text-xs mt-1">
                                                     <span className="text-gray-400">Margin:</span>
                                                     <span className="font-mono text-gray-600">
-                                                        {((parseFloat(formData.price) - (formData.material_cost||0) - (formData.is_fixed_cost_included ? (formData.fixed_cost||0) : 0)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                                                        {((parseFloat(formData.price) - (formData.material_cost||0)) / parseFloat(formData.price) * 100).toFixed(1)}%
                                                     </span>
                                                 </div>
                                             </div>

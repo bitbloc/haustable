@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp } from 'lucide-react'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -73,9 +73,34 @@ export default function AdminSettings() {
     // Blocked Dates
     const [blockedList, setBlockedList] = useState([])
     const [blockForm, setBlockForm] = useState({ startDate: '', endDate: '', reason: '' })
+    
+    // Store Settings (Relational Table)
+    const [targetFoodCost, setTargetFoodCost] = useState(30);
 
     // Load Settings
-    useEffect(() => { fetchSettings() }, [])
+    useEffect(() => { 
+        fetchSettings();
+        fetchStoreSettings();
+    }, [])
+
+    const fetchStoreSettings = async () => {
+        const { data } = await supabase.from('store_settings').select('target_food_cost_pct').single();
+        if (data) setTargetFoodCost(data.target_food_cost_pct || 30);
+    };
+
+    const handleSaveStoreSetting = async (key, value) => {
+         // Optimistic
+         if (key === 'target_food_cost_pct') setTargetFoodCost(value);
+
+         try {
+             const { error } = await supabase.from('store_settings').update({ [key]: value }).eq('id', 1); // Singleton ID 1
+             if (error) throw error;
+         } catch (err) {
+             console.error(err);
+             alert('Failed to save store setting'); // Changed toast.error to alert
+             fetchStoreSettings();
+         }
+    };
 
     const fetchSettings = async () => {
         const { data } = await supabase.from('app_settings').select('*')
@@ -217,6 +242,30 @@ export default function AdminSettings() {
                             />
                         </div>
                     </label>
+
+                    {/* Pricing Strategy Config */}
+                    <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
+                        <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                             <TrendingUp size={20} className="text-blue-600" /> Pricing Strategy
+                        </h2>
+                         <div>
+                            <label className="block text-xs font-bold text-subInk uppercase mb-1">Target Food Cost %</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="1" max="100"
+                                    value={targetFoodCost}
+                                    onChange={(e) => handleSaveStoreSetting('target_food_cost_pct', parseFloat(e.target.value))}
+                                    className="w-24 bg-canvas border border-gray-200 p-3 rounded-xl text-ink font-bold text-lg outline-none focus:border-blue-500 font-mono text-center"
+                                />
+                                <span className="text-ink font-bold">%</span>
+                                <div className="text-xs text-subInk ml-2">
+                                    used to calculate recommended selling price. <br/>
+                                    (e.g. Cost 30 / 30% = Price 100)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Shop Status Control - Split into 3 */}
                     <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-8 shadow-sm">

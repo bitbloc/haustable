@@ -799,75 +799,29 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
     };
     
-    // Fixed Cost Update Logic
-    const [fixedCostList, setFixedCostList] = useState([]); // [{id: 1, name: 'Labor', amount: 10}]
-    const [includeFixedCost, setIncludeFixedCost] = useState(true);
-
-    // Derived Total
-    const totalFixedAmt = fixedCostList.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    // --- PRICING LOGIC (GP Model) ---
+    const [targetFoodCostPct, setTargetFoodCostPct] = useState(30); // Default 30%
     
     useEffect(() => {
-        if (parentItem) {
-            // Load List if exists, otherwise migrate single value
-            if (parentItem.fixed_cost_details && Array.isArray(parentItem.fixed_cost_details) && parentItem.fixed_cost_details.length > 0) {
-                 setFixedCostList(parentItem.fixed_cost_details);
-            } else if (parentItem.fixed_cost > 0) {
-                 setFixedCostList([{ id: Date.now(), name: 'Fixed Cost', amount: parentItem.fixed_cost }]);
-            }
-            // Load Include Toggle
-            if (parentItem.is_fixed_cost_included !== undefined) {
-                setIncludeFixedCost(parentItem.is_fixed_cost_included);
-            }
-        }
-    }, [parentItem]);
+        const fetchSettings = async () => {
+             const { data } = await supabase.from('store_settings').select('target_food_cost_pct').single();
+             if (data) setTargetFoodCostPct(data.target_food_cost_pct || 30);
+        };
+        fetchSettings();
+    }, []);
 
-    const handleAddFixedItem = () => {
-        setFixedCostList(prev => [...prev, { id: Date.now(), name: '', amount: '' }]);
-    };
+    // New helper to get suggested price
+    const suggestedPrice = totalCost > 0 ? (totalCost / targetFoodCostPct) * 100 : 0;
 
-    const handleRemoveFixedItem = (id) => {
-        setFixedCostList(prev => prev.filter(i => i.id !== id));
-    };
-
-    const handleUpdateFixedItem = (id, field, value) => {
-        setFixedCostList(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
-    };
-
-    // Override handleSave to include Fixed Cost update
+    // Override handleSave to just save ingredients (Cost is dynamic now)
     const handleSaveWithFixed = async () => {
-        setLoading(true);
-        try {
-            // 1. Save Ingredients (Existing Logic)
-            await handleSave(); // This calls the original internal logic... wait, handleSave acts as the submit.
-            
-            // 2. Update Fixed Cost & Total Cost (Cost Price)
-            const grandTotal = totalCost + (includeFixedCost ? totalFixedAmt : 0);
-            const updatePayload = { 
-                fixed_cost: totalFixedAmt,
-                fixed_cost_details: fixedCostList,
-                is_fixed_cost_included: includeFixedCost,
-                // Only update cost_price if it's a Stock Item (Recipe Lab)
-                // For Menu Items, cost_price field doesn't exist (it has price = selling price).
-                // But we might want to store 'cost' somewhere? Currently menu_items table doesn't have a 'cost' column usually? 
-                // Checks schema... menu_items usually has 'price'.
-                // Request said "Add fixed_cost to menu_items".
-                // For stock_items, we definitely update cost_price.
-            };
-
-            if (parentType === 'stock') {
-                updatePayload.cost_price = grandTotal; // Update Estimated Cost
-                await supabase.from('stock_items').update(updatePayload).eq('id', parentId);
-            } else {
-                 await supabase.from('menu_items').update(updatePayload).eq('id', parentId);
-            }
-            toast.success('บันทึกสูตรและค่าคงที่เรียบร้อย');
-            onClose();
-
-        } catch (err) {
-            console.error("Error saving fixed cost", err);
-            toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown Error'));
-        } finally {
-            setLoading(false);
+        await handleSave();
+        // We no longer save fixed_cost to DB as per "GP Model" request.
+        // But if this is a Stock Item (Base Recipe), we might want to update its 'cost_price'
+        // which represents the Material Cost of the base recipe.
+        
+        if (parentType === 'stock') {
+             await supabase.from('stock_items').update({ cost_price: totalCost }).eq('id', parentId);
         }
     };
 
@@ -1143,60 +1097,35 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     <Plus size={28} />
                 </button>
 
-                {/* Fixed Cost Dynamic List */}
-                <div className="px-4 py-3 bg-purple-50 border-t border-purple-100">
-                    <div className="flex items-center justify-between mb-2">
-                         <div className="flex items-center gap-2 text-purple-800 font-bold text-sm">
-                            <AlertTriangle size={16} />
-                            <span>Fixed Cost (ค่าคงที่)</span>
+                {/* GP Pricing Calc */}
+                <div className="px-4 py-3 bg-blue-50 border-t border-blue-100 space-y-2">
+                    <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
+                            <Rocket size={16} />
+                            <span>Pricing Suggestion (GP Model)</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                             <span className="text-xs text-purple-600 font-bold">รวมในต้นทุน</span>
-                             <button 
-                                onClick={() => setIncludeFixedCost(!includeFixedCost)}
-                                className={`w-10 h-5 rounded-full p-0.5 transition-colors ${includeFixedCost ? 'bg-purple-600' : 'bg-gray-300'}`}
-                             >
-                                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${includeFixedCost ? 'translate-x-5' : 'translate-x-0'}`} />
-                             </button>
+                        <div className="text-[10px] text-blue-600 font-bold bg-blue-100 px-2 py-1 rounded-lg">
+                            Target Food Cost: {targetFoodCostPct}%
                         </div>
-                    </div>
-
-                    <div className="space-y-2 mb-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
-                        {fixedCostList.map(item => (
-                            <div key={item.id} className="flex gap-2 items-center">
-                                <input 
-                                    className="flex-1 min-w-0 bg-white border border-purple-100 rounded px-2 py-1 text-xs text-purple-900 placeholder-purple-300 focus:outline-purple-500"
-                                    placeholder="รายการ (เช่น ค่าแรง)"
-                                    value={item.name}
-                                    onChange={e => handleUpdateFixedItem(item.id, 'name', e.target.value)}
-                                />
-                                <input 
-                                    type="number"
-                                    className="w-20 bg-white border border-purple-100 rounded px-2 py-1 text-xs text-right font-bold text-purple-700 placeholder-purple-300 focus:outline-purple-500"
-                                    placeholder="0.00"
-                                    value={item.amount}
-                                    onChange={e => handleUpdateFixedItem(item.id, 'amount', e.target.value)}
-                                />
-                                <button onClick={() => handleRemoveFixedItem(item.id)} className="text-purple-300 hover:text-red-500">
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        ))}
                     </div>
                     
-                    <div className="flex justify-between items-center border-t border-purple-100 pt-2">
-                         <button onClick={handleAddFixedItem} className="text-xs font-bold text-purple-600 flex items-center gap-1 hover:bg-purple-100 px-2 py-1 rounded">
-                            <Plus size={12} /> เพิ่มรายการ
-                         </button>
-                         <div className="text-sm font-bold text-purple-900">
-                             รวม: ฿{totalFixedAmt.toFixed(2)}
+                    <div className="flex justify-between items-end border-t border-blue-200/50 pt-2">
+                         <div className="text-xs text-blue-600">
+                             Suggested Selling Price
+                             <div className="text-[10px] opacity-75">(Cost / {targetFoodCostPct}%)</div>
+                         </div>
+                         <div className="text-xl font-bold text-blue-900">
+                             ฿{Math.ceil(suggestedPrice)} 
+                             <span className="text-xs font-normal text-blue-500 ml-1">
+                                (Start @ {Math.ceil(suggestedPrice/5)*5})
+                             </span>
                          </div>
                     </div>
                 </div>
 
-                {/* Price Simulator Embedded */}
+                {/* Price Simulator Embedded - Pass RAW Material Cost for Analysis */}
                 <div className="p-4 bg-white border-t border-gray-100 hidden md:block">
-                     <PriceSimulator totalCost={totalCost + (includeFixedCost ? totalFixedAmt : 0)} initialPrice={initialPrice} />
+                     <PriceSimulator totalCost={totalCost} initialPrice={initialPrice} targetPct={targetFoodCostPct} />
                 </div>
 
                 <div className="p-4 bg-white border-t flex justify-end gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">

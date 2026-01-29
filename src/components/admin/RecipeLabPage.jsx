@@ -54,15 +54,13 @@ export default function RecipeLabPage() {
                 
                 const { totalCost } = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient);
                 
-                const fixedCost = item.fixed_cost || 0;
-                const isFixedIncluded = item.is_fixed_cost_included !== false;
-                const grandTotal = totalCost + (isFixedIncluded ? fixedCost : 0);
+                // GP Model: No added fixed cost. Material Cost is the key metric.
+                const grandTotal = totalCost;
 
                 return {
                     ...item,
                     materialCost: totalCost,
-                    fixedCost: fixedCost,
-                    isFixedIncluded: isFixedIncluded,
+                    // fixedCost deprecated
                     cost: grandTotal,
                     ingredientCount: ingredients.length
                 };
@@ -171,18 +169,10 @@ export default function RecipeLabPage() {
                                         
                                         {/* Cost Breakdown */}
                                         <div className="flex flex-col gap-1 mt-1 text-[10px]">
-                                            <div className="flex justify-end gap-1 text-gray-400">
-                                                <span>Material:</span>
+                                            <div className="flex justify-between items-center text-gray-400">
+                                                <span>Material Cost:</span>
                                                 <span className="font-mono text-gray-600">฿{item.materialCost.toFixed(2)}</span>
                                             </div>
-                                            {(item.fixedCost > 0) && (
-                                                <div className={`flex justify-between gap-1 ${item.isFixedIncluded ? 'text-gray-400' : 'text-gray-300 decoration-slate-300'}`}>
-                                                     <span>Fixed:</span>
-                                                     <span className={`font-mono ${item.isFixedIncluded ? 'text-purple-600' : 'text-gray-300 line-through'}`}>
-                                                        +฿{item.fixedCost.toFixed(2)}
-                                                     </span>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>

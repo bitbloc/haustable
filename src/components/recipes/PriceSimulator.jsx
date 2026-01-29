@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { calculateSuggestedPrice } from '../../utils/costUtils';
 import { DollarSign, TrendingUp, Target } from 'lucide-react';
 
-export default function PriceSimulator({ totalCost, initialPrice = 0 }) {
+export default function PriceSimulator({ totalCost, initialPrice = 0, targetPct = 30 }) {
     const [sellingPrice, setSellingPrice] = useState(initialPrice);
-    const [targetPercent, setTargetPercent] = useState(30); // Default Target 30% Cost
+    const [targetPercent, setTargetPercent] = useState(targetPct);
+    
+    // Sync if prop changes (e.g. loaded from settings)
+    useEffect(() => {
+        if(targetPct) setTargetPercent(targetPct);
+    }, [targetPct]);
     
     // Derived
     const profit = sellingPrice - totalCost;
