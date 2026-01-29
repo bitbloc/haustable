@@ -295,19 +295,36 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                             {useMlCalculator ? (
                                                 <div className="space-y-3">
                                                     <div className="grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="text-[10px] text-gray-500 mb-1 block">ปริมาตรเต็ม (ml)</label>
-                                                            <input type="number" value={fullCapacityMl} onChange={e => setFullCapacityMl(parseFloat(e.target.value))} className="w-full p-2 rounded-lg border border-gray-200 text-sm font-bold" />
+                                                            <div>
+                                                                <label className="text-[10px] text-gray-500 mb-1 block">ปริมาตรเต็ม (ml)</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    value={fullCapacityMl || ''} 
+                                                                    onChange={e => {
+                                                                        const val = e.target.value;
+                                                                        setFullCapacityMl(val === '' ? 0 : parseFloat(val));
+                                                                    }} 
+                                                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm font-bold" 
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] text-gray-500 mb-1 block">คงเหลือ (ml)</label>
+                                                                <input 
+                                                                    type="number" 
+                                                                    value={remainingMl || ''} 
+                                                                    onChange={e => {
+                                                                        const val = e.target.value;
+                                                                        setRemainingMl(val === '' ? 0 : parseFloat(val));
+                                                                    }} 
+                                                                    className="w-full p-2 rounded-lg border border-blue-200 bg-white text-sm font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none" 
+                                                                    autoFocus 
+                                                                />
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <label className="text-[10px] text-gray-500 mb-1 block">คงเหลือ (ml)</label>
-                                                            <input type="number" value={remainingMl} onChange={e => setRemainingMl(parseFloat(e.target.value))} className="w-full p-2 rounded-lg border border-blue-200 bg-white text-sm font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+                                                        <div className="flex justify-between items-center text-xs font-bold text-blue-800 pt-1">
+                                                            <span>= {((partialAmount || 0) * 100).toFixed(0)}%</span>
+                                                            <button onClick={() => setUseMlCalculator(false)} className="text-gray-400 underline decoration-dotted">ใช้แบบเลื่อน</button>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs font-bold text-blue-800 pt-1">
-                                                        <span>= {(partialAmount * 100).toFixed(0)}%</span>
-                                                        <button onClick={() => setUseMlCalculator(false)} className="text-gray-400 underline decoration-dotted">ใช้แบบเลื่อน</button>
-                                                    </div>
                                                 </div>
                                             ) : (
                                                 <>

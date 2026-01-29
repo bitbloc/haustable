@@ -19,8 +19,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         category: 'veg',
         current_quantity: 0,
         min_stock_threshold: 0,
-        reorder_point: 0,
-        par_level: 0,
+        reorder_point: item.reorder_point || 0,
+        par_level: item.par_level || 0,
         image_url: '',
         barcode: '',
         
@@ -228,7 +228,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             type="number"
                                             className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none text-lg font-bold" 
                                             value={formData.current_quantity}
-                                            onChange={e => setFormData({ ...formData, current_quantity: parseFloat(e.target.value) })}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                current_quantity: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
                                         />
                                         <span className="text-sm text-gray-400">{formData.usage_unit}</span>
                                     </div>
@@ -239,7 +242,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         type="number"
                                         className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none" 
                                         value={formData.reorder_point}
-                                        onChange={e => setFormData({ ...formData, reorder_point: parseFloat(e.target.value) })}
+                                        onChange={e => setFormData({ 
+                                            ...formData, 
+                                            reorder_point: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                        })}
                                     />
                                 </div>
                             </div>
@@ -296,7 +302,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             type="number" 
                                             className="w-full bg-white border border-blue-200 rounded-lg p-2 text-lg font-bold text-blue-700"
                                             value={formData.cost_price}
-                                            onChange={e => setFormData({ ...formData, cost_price: parseFloat(e.target.value) })}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
                                             placeholder="0.00"
                                         />
                                     </div>
@@ -306,7 +315,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             type="number" 
                                             className="w-full bg-white border border-blue-200 rounded-lg p-2"
                                             value={formData.pack_size}
-                                            onChange={e => setFormData({ ...formData, pack_size: parseFloat(e.target.value) })}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
                                         />
                                     </div>
                                     <div>
@@ -350,7 +362,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                                 type="number" 
                                                 className="flex-1 border-b border-green-300 text-center py-1 font-bold text-green-700 outline-none"
                                                 value={formData.conversion_factor}
-                                                onChange={e => setFormData({ ...formData, conversion_factor: parseFloat(e.target.value) })}
+                                                onChange={e => setFormData({ 
+                                                    ...formData, 
+                                                    conversion_factor: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                                })}
                                             />
                                         </div>
                                     </div>
@@ -368,7 +383,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             type="range" 
                                             min="1" max="100" 
                                             value={formData.yield_percent}
-                                            onChange={e => setFormData({ ...formData, yield_percent: parseFloat(e.target.value) })}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                yield_percent: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
                                             className="w-full accent-orange-500"
                                         />
                                     </div>
@@ -377,7 +395,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                             type="number" 
                                             className="w-full bg-white border border-orange-200 rounded-lg p-2 text-center font-bold"
                                             value={formData.yield_percent}
-                                            onChange={e => setFormData({ ...formData, yield_percent: parseFloat(e.target.value) })}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                yield_percent: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
                                         />
                                     </div>
                                 </div>

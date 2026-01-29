@@ -98,7 +98,6 @@ export default function StockPage() {
             let query = supabase
                 .from('stock_items')
                 .select('*')
-                .order('display_order', { ascending: true })
                 .order('name', { ascending: true });
 
             // If 'restock' tab, we fetch ALL to filter client-side (easier than complex SQL logic for column comparison)

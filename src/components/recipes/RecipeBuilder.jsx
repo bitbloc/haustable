@@ -64,11 +64,11 @@ function EditStockModal({ item, onClose, onSave }) {
                         <div className="flex gap-2">
                             <div className="flex-1">
                                 <span className="text-[10px] text-gray-500">ราคาซื้อ (บาท)</span>
-                                <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm font-bold bg-white" />
+                                <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm font-bold bg-white" />
                             </div>
                             <div className="flex-1">
                                 <span className="text-[10px] text-gray-500">ปริมาณ</span>
-                                <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm bg-white" />
+                                <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm bg-white" />
                             </div>
                             <div className="w-24">
                                 <span className="text-[10px] text-gray-500">หน่วย</span>
@@ -141,7 +141,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                                     value={formData.conversion_factor === 0 ? 0 : Math.round((1 / formData.conversion_factor) * 10000) / 10000} 
                                                     onChange={e => {
                                                         const val = parseFloat(e.target.value);
-                                                        if (val > 0) setFormData({...formData, conversion_factor: 1 / val});
+                                                        if (!isNaN(val) && val > 0) setFormData({...formData, conversion_factor: 1 / val});
                                                     }}
                                                 />
                                                 <span>{formData.pack_unit}</span>
@@ -153,7 +153,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                                     type="number" 
                                                     className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
                                                     value={formData.conversion_factor}
-                                                    onChange={e => setFormData({...formData, conversion_factor: parseFloat(e.target.value)})}
+                                                    onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? 0 : parseFloat(e.target.value)})}
                                                 />
                                                 <span>{formData.usage_unit}</span>
                                             </>
@@ -246,11 +246,11 @@ function QuickAddStockModal({ onClose, onSave }) {
                     <div className="flex gap-2">
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500">ราคาซื้อ</label>
-                            <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
+                            <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
                         </div>
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500">ขนาดแพ็ค</label>
-                            <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
+                            <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
                         </div>
                     </div>
 
@@ -560,7 +560,7 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                     placeholder="0"
                     onChange={(e) => {
                         const val = e.target.value;
-                        onUpdate(id, val === '' ? '' : parseFloat(val));
+                        onUpdate(id, val === '' ? 0 : parseFloat(val));
                     }}
                 />
                 <span className="text-xs text-gray-500 w-8 truncate">{unit}</span>
@@ -796,6 +796,64 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         } catch (err) {
             console.error(err);
             toast.error('อัปเดตไม่สำเร็จ');
+        }
+    };
+    
+    // Fixed Cost Update Logic
+    const [fixedCost, setFixedCost] = useState(0);
+    
+    useEffect(() => {
+        if (parentItem) {
+            setFixedCost(parentItem.fixed_cost || 0);
+        }
+    }, [parentItem]);
+
+    const handleUpdateFixedCost = async (val) => {
+        const newVal = parseFloat(val) || 0;
+        setFixedCost(newVal);
+        
+        // Auto-save debounced or on blur? For now let's just set state and save on "Save" logic if we want to bundle it.
+        // OR better: Update Immediately to DB ?
+        // User probably expects "Save" button to commit everything.
+        // But handleSave currently only does ingredients. 
+        // Let's bundle it into handleSave or separate call.
+        // Given existing structure, let's update DB immediately on Blur or have a small save button?
+        // Let's modify handleSave to ALSO update parent.
+    };
+
+    // Override handleSave to include Fixed Cost update
+    const handleSaveWithFixed = async () => {
+        setLoading(true);
+        try {
+            // 1. Save Ingredients (Existing Logic)
+            await handleSave(); // This calls the original internal logic... wait, handleSave acts as the submit.
+            
+            // 2. Update Fixed Cost & Total Cost (Cost Price)
+            const grandTotal = totalCost + fixedCost;
+            const updatePayload = { 
+                fixed_cost: fixedCost,
+                // Only update cost_price if it's a Stock Item (Recipe Lab)
+                // For Menu Items, cost_price field doesn't exist (it has price = selling price).
+                // But we might want to store 'cost' somewhere? Currently menu_items table doesn't have a 'cost' column usually? 
+                // Checks schema... menu_items usually has 'price'.
+                // Request said "Add fixed_cost to menu_items".
+                // For stock_items, we definitely update cost_price.
+            };
+
+            if (parentType === 'stock') {
+                updatePayload.cost_price = grandTotal; // Update Estimated Cost
+                await supabase.from('stock_items').update(updatePayload).eq('id', parentId);
+            } else {
+                 await supabase.from('menu_items').update(updatePayload).eq('id', parentId);
+            }
+            toast.success('บันทึกสูตรและค่าคงที่เรียบร้อย');
+            onClose();
+
+        } catch (err) {
+            console.error("Error saving fixed cost", err);
+            toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown Error'));
+        } finally {
+            setLoading(false);
         }
     };
 

@@ -36,7 +36,10 @@ export default function PriceSimulator({ totalCost, initialPrice = 0 }) {
                         type="range" 
                         min="10" max="60" step="1"
                         value={targetPercent}
-                        onChange={(e) => setTargetPercent(parseFloat(e.target.value))}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setTargetPercent(val === '' ? 0 : parseFloat(val));
+                        }}
                         className="w-full accent-blue-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                     <div className="mt-2 text-right text-xs text-gray-500">
@@ -54,7 +57,10 @@ export default function PriceSimulator({ totalCost, initialPrice = 0 }) {
                                 type="number"
                                 className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl font-bold text-xl focus:border-[#DFFF00] focus:ring-0 outline-none transition-all"
                                 value={sellingPrice}
-                                onChange={(e) => setSellingPrice(parseFloat(e.target.value))}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSellingPrice(val === '' ? 0 : parseFloat(val));
+                                }}
                             />
                         </div>
                     </div>

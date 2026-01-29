@@ -52,18 +52,16 @@ export default function RecipeLabPage() {
             const enriched = stockItems.map(item => {
                 const ingredients = recipeLinks?.filter(l => l.parent_stock_item_id === item.id) || [];
                 
-                // transform for calculator
-                const calcIngredients = ingredients.map(l => ({
-                    ingredient: l.ingredient,
-                    quantity: l.quantity,
-                    unit: l.unit
-                }));
+                const { totalCost } = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient);
                 
-                const { totalCost } = calculateRecipeCost(calcIngredients, (id) => calcIngredients.find(i => i.ingredient?.id === id)?.ingredient);
-                
+                const fixedCost = item.fixed_cost || 0;
+                const grandTotal = totalCost + fixedCost;
+
                 return {
                     ...item,
-                    cost: totalCost,
+                    materialCost: totalCost,
+                    fixedCost: fixedCost,
+                    cost: grandTotal,
                     ingredientCount: ingredients.length
                 };
             });
@@ -89,6 +87,7 @@ export default function RecipeLabPage() {
                 is_base_recipe: true,
                 category: 'restock', // Hidden/Internal
                 cost_price: 0,
+                fixed_cost: 0,
                 pack_size: 1,
                 pack_unit: 'unit',
                 usage_unit: 'unit',
@@ -165,8 +164,22 @@ export default function RecipeLabPage() {
                                         <FlaskConical size={24} />
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-[10px] text-gray-400 uppercase font-bold">Estimated Cost</div>
-                                        <div className="text-xl font-mono font-bold text-gray-800">฿{item.cost.toFixed(2)}</div>
+                                        <div className="text-[10px] text-gray-400 uppercase font-bold">Estimated Cost/Unit</div>
+                                        <div className="text-2xl font-mono font-bold text-gray-800">฿{item.cost.toFixed(2)}</div>
+                                        
+                                        {/* Cost Breakdown */}
+                                        <div className="flex flex-col gap-1 mt-1 text-[10px]">
+                                            <div className="flex justify-end gap-1 text-gray-400">
+                                                <span>Material:</span>
+                                                <span className="font-mono text-gray-600">฿{item.materialCost.toFixed(2)}</span>
+                                            </div>
+                                            {(item.fixedCost > 0) && (
+                                                <div className="flex justify-end gap-1 text-gray-400">
+                                                     <span>Fixed:</span>
+                                                     <span className="font-mono text-purple-600">+฿{item.fixedCost.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 
