@@ -585,8 +585,14 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Cost State
-    const [totalCost, setTotalCost] = useState(0);
+    // Price State (Controlled)
+    const [currentPrice, setCurrentPrice] = useState(initialPrice || 0);
+
+    // Sync initial price if changed
+    useEffect(() => {
+        if (initialPrice !== undefined) setCurrentPrice(initialPrice);
+    }, [initialPrice]);
+
 
     // Edit Stock Modal
     const [editingStockItem, setEditingStockItem] = useState(null);
@@ -725,6 +731,13 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                 if (rpcError) throw rpcError;
                 if (!rpcData.success) throw new Error(rpcData.error || 'RPC reported failure');
+
+                // Also Update Price directly to menu_items (RPC might not handle it? Check RPC but safer to update here or ensure RPC does it)
+                // Let's update price manually to be sure.
+                await supabase.from('menu_items').update({ price: currentPrice }).eq('id', parentId);
+
+
+
                 
                 // console.log("RPC Success:", rpcData);
 
@@ -1125,7 +1138,12 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
                 {/* Price Simulator Embedded - Pass RAW Material Cost for Analysis */}
                 <div className="p-4 bg-white border-t border-gray-100 hidden md:block">
-                     <PriceSimulator totalCost={totalCost} initialPrice={initialPrice} targetPct={targetFoodCostPct} />
+                     <PriceSimulator 
+                        totalCost={totalCost} 
+                        price={currentPrice}
+                        onPriceChange={setCurrentPrice}
+                        targetPct={targetFoodCostPct} 
+                    />
                 </div>
 
                 <div className="p-4 bg-white border-t flex justify-end gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
