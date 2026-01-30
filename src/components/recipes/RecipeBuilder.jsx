@@ -585,6 +585,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     
+    // Cost State
+    const [totalCost, setTotalCost] = useState(0);
+    
     // Price State (Controlled)
     const [currentPrice, setCurrentPrice] = useState(initialPrice || 0);
 
