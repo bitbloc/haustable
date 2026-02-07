@@ -6,7 +6,7 @@ export default function HomeHeader({ t, status }) {
             {/* Secondary Logo (New) */}
             <div className="w-24 md:w-32 mb-[-10px] z-10">
                 <img 
-                    src="/assets/logo-secondary.png" 
+                    src="/logo-secondary.png" 
                     alt="Secondary Logo" 
                     className="w-full h-auto object-contain drop-shadow-md opacity-90"
                 />
