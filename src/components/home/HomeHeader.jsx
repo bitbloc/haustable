@@ -3,6 +3,15 @@ import KineticText from '../KineticText'
 export default function HomeHeader({ t, status }) {
     return (
         <div className="flex flex-col items-center mt-12 mb-4">
+            {/* Secondary Logo (New) */}
+            <div className="w-24 md:w-32 mb-[-10px] z-10">
+                <img 
+                    src="/assets/logo-secondary.png" 
+                    alt="Secondary Logo" 
+                    className="w-full h-auto object-contain drop-shadow-md opacity-90"
+                />
+            </div>
+
             {/* Logo Image */}
             <div className="w-full max-w-[280px] md:max-w-[400px] px-8 py-4">
                 <img 
