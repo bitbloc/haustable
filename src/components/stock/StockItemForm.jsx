@@ -27,9 +27,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         // Costing Fields
         cost_price: 0,      // Price per Pack
         pack_size: 1,       // Qty per Pack
-        pack_unit: 'kg',    // Unit bought
-        usage_unit: 'g',    // Unit used in recipe
-        conversion_factor: 1000, // 1 pack_unit = X usage_unit
+        pack_unit: item?.pack_unit || 'unit',    // Unit bought/counted
+        usage_unit: item?.usage_unit || 'unit',    // Unit used in recipe
+        conversion_factor: item?.conversion_factor || 1, // 1 pack_unit = X usage_unit
         yield_percent: 100, // Usable %
         is_base_recipe: false
     });
@@ -79,7 +79,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         try {
             const payload = { 
                 ...formData,
-                unit: formData.usage_unit, // Sync for backward compatibility
+                unit: formData.pack_unit, // FIX: Standardize on Purchase (Pack) Unit for counting and reordering
                 barcode: formData.barcode ? formData.barcode.trim() : null
             };
             
@@ -233,20 +233,39 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                                 current_quantity: e.target.value === '' ? 0 : parseFloat(e.target.value) 
                                             })}
                                         />
-                                        <span className="text-sm text-gray-400">{formData.usage_unit}</span>
+                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-gray-500 uppercase">จุดสั่งซื้อ (Reorder)</label>
-                                    <input 
-                                        type="number"
-                                        className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none" 
-                                        value={formData.reorder_point}
-                                        onChange={e => setFormData({ 
-                                            ...formData, 
-                                            reorder_point: e.target.value === '' ? 0 : parseFloat(e.target.value) 
-                                        })}
-                                    />
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none" 
+                                            value={formData.reorder_point}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                reorder_point: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
+                                        />
+                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
+                                    </div>
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">เป้าหมายสต๊อกเต็ม (Par Level)</label>
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none opacity-80" 
+                                            value={formData.par_level}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                par_level: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
+                                            placeholder="จำนวนสูงสุดที่ควรมี (ใช้แสดง % ใน ProgressBar)"
+                                        />
+                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
+                                    </div>
                                 </div>
                             </div>
 

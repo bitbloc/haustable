@@ -35,20 +35,29 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             }
             
             let options = [];
-            // Add Base Unit
+            // Add Base Unit (Purchase/Pack Unit)
             options.push({
                 key: 'base',
-                label: item.unit,
+                label: item.unit || 'unit',
                 factor: 1
             });
 
-            // Add configured units
+            // Add Usage Unit (Recipe Unit) if different
+            if (item.usage_unit && item.usage_unit !== item.unit) {
+                options.push({
+                    key: 'usage',
+                    label: item.usage_unit,
+                    factor: 1 / (Number(item.conversion_factor) || 1)
+                });
+            }
+
+            // Add configured multi-units (e.g., Boxes, Packs)
             if (item.unit_config) {
                 Object.entries(item.unit_config).forEach(([key, config]) => {
                     options.push({
                         key: key,
                         label: config.unit_label || key,
-                        factor: config.factor
+                        factor: Number(config.factor) || 1
                     });
                 });
             }
