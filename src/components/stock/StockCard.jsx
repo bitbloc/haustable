@@ -4,8 +4,12 @@ import { formatStockDisplay } from '../../utils/stockUtils';
 
 export default function StockCard({ item, onClick, onRecipe }) {
     // Nendo Logic: Visual Color Status
-    const isCritical = item.current_quantity <= (item.min_stock_threshold || 0);
-    const isWarning = !isCritical && item.current_quantity <= (item.reorder_point || 0);
+    const qty = Number(item.current_quantity) || 0;
+    const minThreshold = Number(item.min_stock_threshold) || 0;
+    const reorderPoint = Number(item.reorder_point) || 0;
+
+    const isCritical = qty <= minThreshold;
+    const isWarning = !isCritical && qty <= reorderPoint;
     
     // Choose styling based on status
     const bgClass = isCritical 
@@ -122,7 +126,7 @@ export default function StockCard({ item, onClick, onRecipe }) {
                 <div className="w-full h-1 bg-gray-200/50 rounded-full mt-2 overflow-hidden">
                     <div 
                         className={`h-full rounded-full transition-all duration-500 ${isCritical ? 'bg-red-500' : isWarning ? 'bg-orange-400' : 'bg-[#1A1A1A]'}`}
-                        style={{ width: `${Math.min((item.current_quantity / item.par_level) * 100, 100)}%` }}
+                        style={{ width: `${Math.min(((Number(item.current_quantity) || 0) / (Number(item.par_level) || 1)) * 100, 100)}%` }}
                     />
                 </div>
             )}

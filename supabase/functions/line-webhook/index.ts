@@ -166,9 +166,9 @@ Deno.serve(async (req) => {
               const itemUnit = item?.unit || ''
               
               // Status Logic
-              const current = item?.current_quantity ?? 0
-              const min = item?.min_stock_threshold ?? 0
-              const reorder = item?.reorder_point ?? 0
+              const current = Number(item?.current_quantity) || 0
+              const min = Number(item?.min_stock_threshold) || 0
+              const reorder = Number(item?.reorder_point) || 0
               
               let statusText = '(🟢 ปกติ)'
               if (current <= min) statusText = '(🔴 หมด/ต้องซื้อ!)'

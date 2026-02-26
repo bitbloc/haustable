@@ -113,7 +113,7 @@ export default function StockPage() {
             
             // Client-side filtering for Restock Tab
             if (activeCategory === 'restock') {
-                result = result.filter(item => item.current_quantity <= item.reorder_point);
+                result = result.filter(item => Number(item.current_quantity) <= Number(item.reorder_point));
             }
             
             setItems(result);
@@ -300,11 +300,14 @@ export default function StockPage() {
             let index = 1;
             Object.values(itemMap).forEach(({ item, types }) => {
                 // Determine Status
-                const qty = item.current_quantity;
+                const qty = Number(item.current_quantity) || 0;
+                const minThreshold = Number(item.min_stock_threshold) || 0;
+                const reorderPoint = Number(item.reorder_point) || 0;
+                
                 let statusEmoji = '🟢';
                 if (qty <= 0) statusEmoji = '⚫ หมด';
-                else if (qty <= item.min_stock_threshold) statusEmoji = '🔴 วิกฤต';
-                else if (qty <= item.reorder_point) statusEmoji = '🟠 ต้องเติม';
+                else if (qty <= minThreshold) statusEmoji = '🔴 วิกฤต';
+                else if (qty <= reorderPoint) statusEmoji = '🟠 ต้องเติม';
                 
                 // Friendly Format (Unopened + Opened)
                 const display = formatStockDisplay(qty, item.unit).displayString;
@@ -395,15 +398,18 @@ export default function StockPage() {
         )
         .sort((a, b) => {
             if (sortMode === 'low_stock') {
-                return (a.current_quantity || 0) - (b.current_quantity || 0);
+                return (Number(a.current_quantity) || 0) - (Number(b.current_quantity) || 0);
             }
             return a.name.localeCompare(b.name, 'th');
         });
 
     // Helper for List View Colors
     const getStatusColor = (qty, reorder, min) => {
-        if (qty <= (min || 0)) return 'bg-red-100 text-red-600'; // Critical
-        if (qty <= (reorder || 0)) return 'bg-orange-100 text-orange-700'; // Warning
+        const numQty = Number(qty) || 0;
+        const numMin = Number(min) || 0;
+        const numReorder = Number(reorder) || 0;
+        if (numQty <= numMin) return 'bg-red-100 text-red-600'; // Critical
+        if (numQty <= numReorder) return 'bg-orange-100 text-orange-700'; // Warning
         return 'bg-green-50 text-green-700'; // Safe
     };
 

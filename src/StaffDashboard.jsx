@@ -173,7 +173,7 @@ export default function StaffDashboard() {
             let lowStockCount = 0;
             if (stockResult.data) {
                 lowStockCount = stockResult.data.filter(i => 
-                    (i.current_quantity || 0) <= (i.min_stock_threshold || 5)
+                    (Number(i.current_quantity) || 0) <= (Number(i.min_stock_threshold) || 5)
                 ).length;
             }
             setStats({
