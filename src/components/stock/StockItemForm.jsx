@@ -19,8 +19,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         category: 'veg',
         current_quantity: 0,
         min_stock_threshold: 0,
-        reorder_point: item.reorder_point || 0,
-        par_level: item.par_level || 0,
+        reorder_point: item?.reorder_point || 0,
+        par_level: item?.par_level || 0,
         image_url: '',
         barcode: '',
         
