@@ -240,6 +240,116 @@ Deno.serve(async (req) => {
             console.log('LINE Reply Success')
           }
         }
+
+        // --- NEW: Staff Attendance Command ---
+        if (text === 'staff') {
+          console.log('Processing staff command...')
+          
+          // Use today's date in Thailand Time for the API Query
+          const now = new Date()
+          const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+          const dateStrApi = thNow.toISOString().split('T')[0] // YYYY-MM-DD
+          
+          const titleDateStr = thNow.toLocaleDateString('th-TH', { 
+            day: 'numeric', month: 'long', year: 'numeric' 
+          })
+
+          try {
+            // Fetch Data from HR API
+            const hrApiUrl = `https://inthehaus-hr.vercel.app/api/export/staff-data?startDate=${dateStrApi}&endDate=${dateStrApi}`
+            console.log(`Fetching HR Data from: ${hrApiUrl}`)
+            
+            const hrResp = await fetch(hrApiUrl)
+            if (!hrResp.ok) throw new Error(`HR API returned status: ${hrResp.status}`)
+            
+            const hrData = await hrResp.json()
+            const attendances = hrData.attendance || []
+            const leaves = hrData.leaves || []
+
+            let replyText = `🧑‍💼 สรุปการเข้างานวันนี้\n📅 ${titleDateStr}\n`
+
+            if (attendances.length === 0 && leaves.length === 0) {
+               replyText += "\n-----------------------------\n🚫 ยังไม่มีข้อมูลในวันนี้"
+            } else {
+               // 1. Process Attendances
+               if (attendances.length > 0) {
+                  replyText += `\n[บันทึกเข้า-ออกเวลา]\n-----------------------------`
+                  // Group by employee for cleaner display
+                  const empMap = new Map()
+                  attendances.forEach((record: any) => {
+                     if (!empMap.has(record.employee_id)) {
+                        empMap.set(record.employee_id, { name: record.employee_name, in: null, out: null, moodIn: null, moodOut: null })
+                     }
+                     const emp = empMap.get(record.employee_id)
+                     
+                     // Ensure UTC to TH time conversion
+                     const timeStr = new Date(new Date(record.timestamp).getTime() + (7 * 60 * 60 * 1000))
+                                       .toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                     
+                     if (record.action_type === 'check_in' || (record.action_type === 'clock_in')) {
+                        emp.in = timeStr
+                        emp.moodIn = record.mood_status || ''
+                     } else if (record.action_type === 'check_out' || (record.action_type === 'clock_out')) {
+                        emp.out = timeStr
+                        emp.moodOut = record.mood_status || ''
+                     }
+                  })
+
+                  Array.from(empMap.values()).forEach(emp => {
+                     const inTxt = emp.in ? `${emp.in} น. ${emp.moodIn}` : '-'
+                     const outTxt = emp.out ? `${emp.out} น. ${emp.moodOut}` : '-'
+                     replyText += `\n👤 ${emp.name}\n🟢 เข้า: ${inTxt}\n🔴 ออก: ${outTxt}\n`
+                  })
+               }
+
+               // 2. Process Leaves
+               if (leaves.length > 0) {
+                  replyText += `\n[พนักงานที่ลาวันนี้]\n-----------------------------`
+                  leaves.forEach((leave: any) => {
+                     const statusBadge = leave.status === 'approved' ? '✅ อนุมัติแล้ว' : (leave.status === 'pending' ? '⏳ รออนุมัติ' : '❌ ไม่อนุมัติ')
+                     replyText += `\n⛱️ ${leave.employee_name}\nเหตุผล: ${leave.reason || '-'}\nสถานะ: ${statusBadge}\n`
+                  })
+               }
+            }
+
+            // Send Reply
+            console.log('Sending Staff Reply:', replyText)
+            
+            // Limit text to 5000 chars as per LINE spec
+            if (replyText.length > 5000) replyText = replyText.substring(0, 4995) + '...'
+
+            const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: replyText }]
+              }),
+            })
+            
+            if (!resp.ok) console.error('Staff Reply Failed:', await resp.text())
+            else console.log('Staff Reply Success')
+
+          } catch (apiErr) {
+             console.error('HR API Fetch Error:', apiErr)
+             
+             // Fallback Error Reply
+             await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลจากระบบ HR ได้ในขณะนี้ โปรดลองใหม่ภายหลัง' }]
+              }),
+            })
+          }
+        }
       }
     }
 

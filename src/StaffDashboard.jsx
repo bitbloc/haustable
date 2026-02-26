@@ -12,11 +12,13 @@ import {
     CheckCircle2,
     TrendingUp,
     AlertTriangle,
-    RefreshCw
+    RefreshCw,
+    Users
 } from 'lucide-react';
 import usePushNotifications from './hooks/usePushNotifications';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import StaffAttendanceModal from './components/staff/StaffAttendanceModal';
 
 // --- Sub-Components (Keep clean UI) ---
 
@@ -142,6 +144,7 @@ export default function StaffDashboard() {
     const [recentActivity, setRecentActivity] = useState([]); // Added
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false); 
+    const [showAttendanceModal, setShowAttendanceModal] = useState(false);
     const { permission, isSubscribed, requestPermission } = usePushNotifications(); 
 
     // 1. Fetch Stats & Activity Logic 
@@ -400,13 +403,22 @@ export default function StaffDashboard() {
                         delay={2}
                     />
                     <ActionButton 
+                        title="Attendance" 
+                        desc="Time & Leaves" 
+                        icon={Users} 
+                        bgClass="bg-pink-500"
+                        textClass="text-pink-600"
+                        onClick={() => setShowAttendanceModal(true)}
+                        delay={3}
+                    />
+                    <ActionButton 
                         title="Check-in" 
                         desc="Scan QR / Seat" 
                         icon={CheckCircle2} 
                         bgClass="bg-emerald-500"
                         textClass="text-emerald-600"
                         onClick={() => navigate('/staff/checkin')}
-                        delay={3}
+                        delay={4}
                     />
                     <ActionButton 
                         title="History" 
@@ -415,7 +427,7 @@ export default function StaffDashboard() {
                         bgClass="bg-purple-600"
                         textClass="text-purple-600"
                         onClick={() => navigate('/staff/history')}
-                        delay={4}
+                        delay={5}
                     />
                     <ActionButton 
                         title="Notifications" 
@@ -424,7 +436,7 @@ export default function StaffDashboard() {
                         bgClass={isSubscribed ? "bg-green-600" : "bg-gray-500"}
                         textClass={isSubscribed ? "text-green-600" : "text-gray-600"}
                         onClick={requestPermission}
-                        delay={5}
+                        delay={6}
                     />
                 </div>
 
@@ -467,6 +479,12 @@ export default function StaffDashboard() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Modals */}
+            <StaffAttendanceModal 
+                isOpen={showAttendanceModal} 
+                onClose={() => setShowAttendanceModal(false)} 
+            />
         </div>
     );
 }
