@@ -6,7 +6,7 @@
  * @param {string} unit - The unit label (e.g., 'ขวด', 'pack').
  * @returns {object} Formatted display data.
  */
-export const formatStockDisplay = (quantity, unit = '') => {
+export const formatStockDisplay = (quantity, unit = '', usageUnit = null, factor = 1) => {
   // Safe Number conversion
   const qty = Number(quantity) || 0;
   
@@ -18,6 +18,11 @@ export const formatStockDisplay = (quantity, unit = '') => {
   
   // Convert remainder to percentage (0-100)
   const percent = Math.round(remainder * 100);
+
+  // Convert remainder to Usage Units if available
+  const remainderUsage = usageUnit && factor > 1 
+    ? Number((remainder * factor).toFixed(2))
+    : null;
 
   const hasOpen = percent > 0;
   const openedUnits = hasOpen ? 1 : 0;
@@ -36,7 +41,10 @@ export const formatStockDisplay = (quantity, unit = '') => {
   }
   
   if (hasOpen) {
-      displayString += ` เปิดแล้ว ${openedUnits} ${(unit || 'หน่วย').replace('(', '').replace(')', '')} (เหลือ ${percent}%)`;
+      const breakdown = remainderUsage !== null 
+        ? `${remainderUsage} ${usageUnit}`
+        : `${percent}%`;
+      displayString += ` เปิดแล้ว 1 ${unit.replace('(', '').replace(')', '')} (เหลือ ${breakdown})`;
   }
 
   // Fallback for simple display if needed
@@ -48,6 +56,7 @@ export const formatStockDisplay = (quantity, unit = '') => {
     totalPhysical,
     percent,
     remainder,
+    remainderUsage,
     hasOpen,
     displayString,
     raw: qty

@@ -180,6 +180,26 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     
+                    {/* Unit Mismatch Warning */}
+                    {formData.unit && formData.pack_unit && formData.unit !== formData.pack_unit && (
+                        <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-xl flex gap-3 items-start animate-in slide-in-from-top-2">
+                             <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                             <div className="flex-1">
+                                 <div className="text-sm font-bold text-yellow-800">พบหน่วยไม่ตรงกัน (Unit Mismatch)</div>
+                                 <p className="text-xs text-yellow-700 mb-2">
+                                     ปัจจุบันหน่วยนับคือ <span className="font-bold underline">{formData.unit}</span> แต่หน่วยซื้อคือ <span className="font-bold underline">{formData.pack_unit}</span> 
+                                     ซึ่งอาจทำให้การแจ้งเตือน "จุดสั่งซื้อ" ผิดพลาดได้
+                                 </p>
+                                 <button 
+                                    onClick={() => setFormData({ ...formData, unit: formData.pack_unit })}
+                                    className="text-[10px] bg-yellow-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-yellow-700 transition-colors"
+                                 >
+                                     ปรับหน่วยนับให้เป็น "{formData.pack_unit}" ตามหน่วยซื้อ
+                                 </button>
+                             </div>
+                        </div>
+                    )}
+
                     {/* Basic Info Tab */}
                     {activeTab === 'basic' && (
                         <>
@@ -219,10 +239,10 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                 </div>
                             </div>
                             
-                            {/* Inventory Levels */}
+                            {/* Inventory Levels Grid */}
                             <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">จำนวนคงเหลือ</label>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">จำนวนคงเหลือปัจจุบัน</label>
                                     <div className="flex items-center gap-2">
                                         <input 
                                             type="number"
@@ -236,12 +256,31 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         <span className="text-sm text-gray-400">{formData.pack_unit}</span>
                                     </div>
                                 </div>
+                                
                                 <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">จุดสั่งซื้อ (Reorder)</label>
+                                    <label className="text-xs font-bold text-red-500 uppercase flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3" /> จุดวิกฤต (Critical)
+                                    </label>
                                     <div className="flex items-center gap-2">
                                         <input 
                                             type="number"
-                                            className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none" 
+                                            className="w-full bg-red-50 border border-red-200 rounded-xl p-3 outline-none font-bold text-red-700" 
+                                            value={formData.min_stock_threshold}
+                                            onChange={e => setFormData({ 
+                                                ...formData, 
+                                                min_stock_threshold: e.target.value === '' ? 0 : parseFloat(e.target.value) 
+                                            })}
+                                        />
+                                        <span className="text-sm text-gray-400">{formData.pack_unit}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-orange-500 uppercase">จุดสั่งซื้อ (Reorder)</label>
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-orange-50 border border-orange-200 rounded-xl p-3 outline-none font-bold text-orange-700" 
                                             value={formData.reorder_point}
                                             onChange={e => setFormData({ 
                                                 ...formData, 
@@ -251,18 +290,18 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         <span className="text-sm text-gray-400">{formData.pack_unit}</span>
                                     </div>
                                 </div>
-                                <div className="col-span-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase">เป้าหมายสต๊อกเต็ม (Par Level)</label>
+
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase">เป้าหมาย (Par Level)</label>
                                     <div className="flex items-center gap-2">
                                         <input 
                                             type="number"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none opacity-80" 
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none" 
                                             value={formData.par_level}
                                             onChange={e => setFormData({ 
                                                 ...formData, 
                                                 par_level: e.target.value === '' ? 0 : parseFloat(e.target.value) 
                                             })}
-                                            placeholder="จำนวนสูงสุดที่ควรมี (ใช้แสดง % ใน ProgressBar)"
                                         />
                                         <span className="text-sm text-gray-400">{formData.pack_unit}</span>
                                     </div>

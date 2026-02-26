@@ -165,14 +165,16 @@ Deno.serve(async (req) => {
               const itemName = item?.name || 'Unknown Item'
               const itemUnit = item?.unit || ''
               
-              // Status Logic
+              // Status Logic (Standardized)
               const current = Number(item?.current_quantity) || 0
               const min = Number(item?.min_stock_threshold) || 0
               const reorder = Number(item?.reorder_point) || 0
+              const EPSILON = 0.0001;
               
               let statusText = '(🟢 ปกติ)'
-              if (current <= min) statusText = '(🔴 หมด/ต้องซื้อ!)'
-              else if (current <= reorder) statusText = '(🟠 ใกล้หมด)'
+              if (current <= EPSILON) statusText = '(⚫ หมด!)'
+              else if (min > 0 && current <= min + EPSILON) statusText = '(🔴 วิกฤต/ต้องซื้อด่วน!)'
+              else if (reorder > 0 && current <= reorder + EPSILON) statusText = '(🟠 ใกล้หมด)'
 
               const line = `\n-----------------------------\n` +
                            `🕒 ${time} | ${itemName}\n` +

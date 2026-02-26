@@ -623,7 +623,7 @@ export default function StockPage() {
                                                 )}
                                             </div>
                                             <p className="text-xs text-gray-500">
-                                                {formatStockDisplay(item.current_quantity, item.unit).displayString}
+                                                {formatStockDisplay(item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor).displayString}
                                             </p>
                                         </div>
                                         <div className={`text-right px-3 py-1 rounded-full text-xs font-bold ${

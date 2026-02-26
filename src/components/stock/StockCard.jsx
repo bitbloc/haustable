@@ -26,7 +26,12 @@ export default function StockCard({ item, onClick, onRecipe }) {
             : 'text-gray-900';
 
     // Format Data
-    const { fullUnits, percent, hasOpen } = formatStockDisplay(item.current_quantity, item.unit);
+    const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
+        item.current_quantity, 
+        item.unit || item.pack_unit,
+        item.usage_unit,
+        item.conversion_factor
+    );
 
     return (
         <button 
@@ -97,7 +102,7 @@ export default function StockCard({ item, onClick, onRecipe }) {
                         {fullUnits > 0 && (
                             <div className="flex justify-between items-center text-xs bg-gray-50 p-1.5 rounded-lg border border-gray-100">
                                 <span className="text-gray-500 font-medium">ยังไม่เปิด</span>
-                                <span className="font-bold text-gray-900">{fullUnits} {item.unit}</span>
+                                <span className="font-bold text-gray-900">{fullUnits} {item.unit || item.pack_unit}</span>
                             </div>
                         )}
 
@@ -106,11 +111,9 @@ export default function StockCard({ item, onClick, onRecipe }) {
                              <div className="p-1.5 bg-blue-50/50 rounded-lg border border-blue-100 flex items-center justify-between text-xs">
                                  <span className="text-blue-800 font-bold text-[10px]">เปิดแล้ว</span>
                                  <div className="flex items-center gap-2">
-                                     <span className="text-blue-600 font-bold">1 {item.unit}</span>
-                                     <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden relative">
-                                         <div className="h-full bg-blue-500 rounded-full" style={{ width: `${percent}%` }} />
-                                     </div>
-                                     <span className="text-blue-600 font-bold min-w-[24px] text-right">{percent}%</span>
+                                     <span className="text-blue-600 font-bold min-w-[24px] text-right">
+                                        {remainderUsage !== null ? `${remainderUsage} ${item.usage_unit}` : `${percent}%`}
+                                     </span>
                                  </div>
                              </div>
                         )}
@@ -122,7 +125,7 @@ export default function StockCard({ item, onClick, onRecipe }) {
                 </div>
             </div>
             
-            {/* Visual Bar for Proportional Layout (Optional Micro-interaction) */}
+            {/* Visual Bar for Proportional Layout */}
             {item.par_level > 0 && (
                 <div className="w-full h-1 bg-gray-200/50 rounded-full mt-2 overflow-hidden">
                     <div 
