@@ -7,9 +7,10 @@ export default function StockCard({ item, onClick, onRecipe }) {
     const qty = Number(item.current_quantity) || 0;
     const minThreshold = Number(item.min_stock_threshold) || 0;
     const reorderPoint = Number(item.reorder_point) || 0;
+    const EPSILON = 0.0001;
 
-    const isCritical = qty <= minThreshold;
-    const isWarning = !isCritical && qty <= reorderPoint;
+    const isCritical = (minThreshold > 0 && qty <= minThreshold + EPSILON) || (qty <= EPSILON);
+    const isWarning = !isCritical && reorderPoint > 0 && qty <= reorderPoint + EPSILON;
     
     // Choose styling based on status
     const bgClass = isCritical 

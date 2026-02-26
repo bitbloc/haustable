@@ -160,7 +160,7 @@ export default function StaffDashboard() {
                     .in('status', ['confirmed', 'approved']) 
                     .gte('booking_time', now.toISOString())
                     .lte('booking_time', tomorrow.toISOString()),
-                supabase.from('stock_items').select('current_quantity, min_stock_threshold'),
+                supabase.from('stock_items').select('current_quantity, min_stock_threshold, reorder_point'),
                 
                 // 2. Activity - Stock (Last 5)
                 supabase.from('stock_transactions').select('*, stock_items(name)').order('created_at', { ascending: false }).limit(5),
@@ -172,9 +172,17 @@ export default function StaffDashboard() {
             // Process Stats
             let lowStockCount = 0;
             if (stockResult.data) {
-                lowStockCount = stockResult.data.filter(i => 
-                    (Number(i.current_quantity) || 0) <= (Number(i.min_stock_threshold) || 5)
-                ).length;
+                lowStockCount = stockResult.data.filter(i => {
+                    const qty = Number(i.current_quantity) || 0;
+                    const min = Number(i.min_stock_threshold) || 0;
+                    const reorder = Number(i.reorder_point) || 0;
+                    
+                    // Match the logic in StockPage.jsx (Restock Tab)
+                    // Trigger if stock reaches or falls below either set threshold, or is out of stock
+                    return (reorder > 0 && qty <= reorder + 0.0001) || 
+                           (min > 0 && qty <= min + 0.0001) || 
+                           (qty <= 0);
+                }).length;
             }
             setStats({
                 pendingOrders: pendingResult.count || 0,

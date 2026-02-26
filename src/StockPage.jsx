@@ -113,7 +113,15 @@ export default function StockPage() {
             
             // Client-side filtering for Restock Tab
             if (activeCategory === 'restock') {
-                result = result.filter(item => Number(item.current_quantity) <= Number(item.reorder_point));
+                result = result.filter(item => {
+                    const qty = Number(item.current_quantity) || 0;
+                    const reorder = Number(item.reorder_point) || 0;
+                    const min = Number(item.min_stock_threshold) || 0;
+                    
+                    // Trigger if stock reaches or falls below either threshold (at least one threshold must be > 0)
+                    // We use a small epsilon (0.0001) for float safety
+                    return (reorder > 0 && qty <= reorder + 0.0001) || (min > 0 && qty <= min + 0.0001) || (qty <= 0);
+                });
             }
             
             setItems(result);
@@ -299,15 +307,18 @@ export default function StockPage() {
             
             let index = 1;
             Object.values(itemMap).forEach(({ item, types }) => {
-                // Determine Status
+                // Determine Status (Logic should match StockCard and Dashboard)
                 const qty = Number(item.current_quantity) || 0;
                 const minThreshold = Number(item.min_stock_threshold) || 0;
                 const reorderPoint = Number(item.reorder_point) || 0;
+                const EPSILON = 0.0001;
                 
                 let statusEmoji = '🟢';
-                if (qty <= 0) statusEmoji = '⚫ หมด';
-                else if (qty <= minThreshold) statusEmoji = '🔴 วิกฤต';
-                else if (qty <= reorderPoint) statusEmoji = '🟠 ต้องเติม';
+                if (qty <= EPSILON) statusEmoji = '⚫ หมด';
+                else if (minThreshold > 0 && qty <= minThreshold + EPSILON) statusEmoji = '🔴 วิกฤต';
+                else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) statusEmoji = '🟠 ต้องเติม';
+                else if (qty <= minThreshold) statusEmoji = '🔴 วิกฤต'; // Fallback for 0 threshold if stock is somehow negative
+                
                 
                 // Friendly Format (Unopened + Opened)
                 const display = formatStockDisplay(qty, item.unit).displayString;
@@ -408,8 +419,10 @@ export default function StockPage() {
         const numQty = Number(qty) || 0;
         const numMin = Number(min) || 0;
         const numReorder = Number(reorder) || 0;
-        if (numQty <= numMin) return 'bg-red-100 text-red-600'; // Critical
-        if (numQty <= numReorder) return 'bg-orange-100 text-orange-700'; // Warning
+        const EPSILON = 0.0001;
+
+        if ((numMin > 0 && numQty <= numMin + EPSILON) || numQty <= EPSILON) return 'bg-red-100 text-red-600'; // Critical
+        if (numReorder > 0 && numQty <= numReorder + EPSILON) return 'bg-orange-100 text-orange-700'; // Warning
         return 'bg-green-50 text-green-700'; // Safe
     };
 
