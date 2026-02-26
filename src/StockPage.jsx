@@ -58,21 +58,30 @@ export default function StockPage() {
 
      const fetchCategories = async () => {
          const { data, error } = await supabase.from('stock_categories').select('*').order('sort_order');
+         
+         const defaultTabs = [
+             { id: 'restock', label: 'ต้องสั่งซื้อ (Restock)', icon: '⚠️' },
+             { id: 'all', label: 'สินค้าทั้งหมด (All)', icon: '📦' }
+         ];
+
          if (data && data.length > 0) {
-             setCategories(data);
+             const userCats = data.filter(c => c.id !== 'restock' && c.id !== 'all');
+             setCategories([...defaultTabs, ...userCats]);
          } else {
              // Fallback default
              setCategories([
-                { id: 'restock', label: 'ต้องเติม (Restock)', icon: '⚠️' },
+                ...defaultTabs,
+                { id: 'homemade', label: 'ซอสในบ้าน Homemade', icon: '🍳' },
+                { id: 'egg', label: 'ไข่ และข้าวสาร', icon: '🥚' },
                 { id: 'bar', label: 'บาร์ (Bar)', icon: '🍸' },
                 { id: 'meat', label: 'เนื้อสัตว์ (Meat)', icon: '🥩' },
                 { id: 'veg', label: 'ผัก (Veg)', icon: '🥬' },
-                { id: 'sauce', label: 'ซอส (Sauce)', icon: '🧂' },
+                { id: 'sauce', label: 'ซอส/เครื่องปรุง (Sauce)', icon: '🧂' },
                 { id: 'dry', label: 'ของแห้ง (Dry)', icon: '🥫' },
-                { id: 'curry', label: 'พริกแกง', icon: '🥘' },
-                { id: 'frozen', label: 'แช่แข็ง', icon: '❄️' },
-                { id: 'oil', label: 'น้ำมัน', icon: '🛢️' },
-                { id: 'soup', label: 'ซุป', icon: '🍲' },
+                { id: 'curry', label: 'พริกแกง (Curry)', icon: '🥘' },
+                { id: 'frozen', label: 'อาหารแช่แข็ง (Frozen)', icon: '❄️' },
+                { id: 'oil', label: 'น้ำมัน (Oil)', icon: '🛢️' },
+                { id: 'soup', label: 'ซุป/สต๊อก (Soup)', icon: '🍲' },
                 { id: 'preserved', label: 'ของดอง', icon: '🏺' },
                 { id: 'packaging', label: 'แพ็คเกจ', icon: '📦' },
                 { id: 'supplies', label: 'ของใช้', icon: '🧽' },
@@ -100,9 +109,8 @@ export default function StockPage() {
                 .select('*')
                 .order('name', { ascending: true });
 
-            // If 'restock' tab, we fetch ALL to filter client-side (easier than complex SQL logic for column comparison)
-            // Or if specific category, filter by it.
-            if (activeCategory !== 'restock' && activeCategory) {
+            // If 'restock' or 'all' tab, we fetch ALL to filter client-side / just show all
+            if (activeCategory !== 'restock' && activeCategory !== 'all' && activeCategory) {
                 query = query.eq('category', activeCategory);
             }
             

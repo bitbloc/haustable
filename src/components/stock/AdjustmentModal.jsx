@@ -238,10 +238,9 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                                 <button
                                     key={opt.key}
                                     onClick={() => setSelectedUnit(opt)}
-                                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-left flex justify-between items-center ${selectedUnit?.key === opt.key ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white' : 'border-gray-200 text-gray-600'}`}
+                                    className={`py-2 px-3 rounded-xl border text-sm font-bold transition-all text-center ${selectedUnit?.key === opt.key ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white' : 'border-gray-200 text-gray-600'}`}
                                 >
-                                    <span>{opt.label}</span>
-                                    {opt.factor !== 1 && <span className="opacity-60">x{opt.factor}</span>}
+                                    {opt.label}
                                 </button>
                             ))}
                         </div>
