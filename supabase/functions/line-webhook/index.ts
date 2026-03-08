@@ -375,6 +375,126 @@ Deno.serve(async (req) => {
             })
           }
         }
+
+        // --- NEW: Makro Search Command ---
+        if (text.startsWith('makro ')) {
+          console.log('Processing makro command...')
+          const keyword = text.substring(6).trim()
+          
+          if (!keyword) {
+             await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: 'กรุณาระบุคำค้นหา เช่น makro น้ำมันปาล์ม' }]
+              }),
+            })
+            continue
+          }
+
+          try {
+            // Get Notte API Key
+            const { data: notteKeyData } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'notte_api_key').single()
+            const NOTTE_API_KEY = notteKeyData?.value || Deno.env.get('NOTTE_API_KEY')
+
+            if (!NOTTE_API_KEY) {
+               throw new Error('NOTTE_API_KEY ไม่ได้ตั้งค่าไว้')
+            }
+
+            console.log(`Searching Makro. Keyword: ${keyword}`)
+            // Call Notte Function via HTTP
+            const notteResp = await fetch('https://api.notte.cc/v1/functions/81f38599-7e45-4ea9-baa5-a88b5eb56dce/run', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${NOTTE_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    variables: {
+                        keyword: keyword,
+                        page: 1,
+                        limit: 10
+                    }
+                })
+            })
+
+            if (!notteResp.ok) {
+                const errTxt = await notteResp.text()
+                console.error('Notte API failed:', errTxt)
+                throw new Error(`Notte API Error: ${notteResp.status}`)
+            }
+
+            const notteData = await notteResp.json()
+            const products = notteData.result || notteData.data || [] // Depending on Notte response structure
+
+            let replyText = `🛒 ผลลัพธ์ Makro: "${keyword}"\n`
+            
+            if (!Array.isArray(products) || products.length === 0) {
+               replyText += '\n-----------------------------\n❌ ไม่พบสินค้า'
+            } else {
+               const displayItems = products.slice(0, 5) // Line limits bubble size
+               displayItems.forEach((p: any) => {
+                  replyText += `\n-----------------------------\n`
+                  replyText += `🏷️ ${p.title}\n`
+                  replyText += `💰 ราคา: ฿${p.current_price} / ${p.price_unit}\n`
+                  if (p.price_per_unit) {
+                      replyText += `⚖️ ตกหน่วยละ: ฿${p.price_per_unit.toFixed(2)}${p.original_price_per_unit ? ` (เดิม ฿${p.original_price_per_unit.toFixed(2)})` : ''}\n`
+                  }
+                  if (p.unit_count && p.price_unit !== p.unit_size_label) {
+                      replyText += `📦 ขนาด: ${p.unit_count} ${p.unit_size_label || 'หน่วย'}\n`
+                  }
+                  if (p.is_discounted && p.discount_percent) {
+                      replyText += `🔥 ลด ${p.discount_percent}%`
+                      if (p.discount_end_date) {
+                         const endDate = new Date(p.discount_end_date).toLocaleDateString('th-TH')
+                         replyText += ` (ถึง ${endDate})`
+                      }
+                      replyText += `\n`
+                  }
+               })
+               
+               if (products.length > 5) {
+                   replyText += `\n...\n(แสดง 5 จาก ${products.length} รายการ)`
+               }
+            }
+
+            // Max LINE message length is 5000 chars
+            if (replyText.length > 5000) replyText = replyText.substring(0, 4995) + '...'
+
+            console.log('Sending Makro Reply...')
+            const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: replyText }]
+              }),
+            })
+            
+            if (!resp.ok) console.error('Makro Reply Failed:', await resp.text())
+
+          } catch (err) {
+             console.error('Makro Command Error:', err)
+             await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูล Makro ได้: ' + err.message }]
+              }),
+            })
+          }
+        }
       }
     }
 
