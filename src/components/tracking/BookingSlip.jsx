@@ -152,8 +152,8 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled, isF
                             />
                         )}
                         <div className="text-left">
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-bold mb-1">Scan to Track</p>
-                            <p className="text-xs font-bold text-black max-w-[120px]">Scan this code to check your order status.</p>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-bold mb-1">Staff Check-in</p>
+                            <p className="text-xs font-bold text-black max-w-[120px]">Show this QR code to staff.</p>
                         </div>
                     </div>
                 </div>

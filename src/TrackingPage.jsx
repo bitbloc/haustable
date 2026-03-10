@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
-import { MapPin, Phone, Copy, Share2, Calendar as CalendarIcon, AlertCircle, XCircle, CheckCircle } from 'lucide-react'
+import { MapPin, Phone, Copy, Share2, Calendar as CalendarIcon, AlertCircle, XCircle, CheckCircle, Ticket } from 'lucide-react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useLanguage } from './context/LanguageContext'
@@ -290,11 +290,12 @@ export default function TrackingPage() {
                 disabled={!canSaveSlip || isCancelled}
                 className={`w-full border py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all
                     ${(canSaveSlip && !isCancelled)
-                        ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900 active:scale-[0.98]' 
+                        ? 'bg-[#DFFF00] border-transparent text-black shadow-md hover:bg-[#cbe600] active:scale-[0.98]' 
                         : 'bg-gray-100 border-transparent text-gray-400 cursor-not-allowed'}
                 `}
               >
-                  {t('saveSlip')}
+                  <Ticket size={18} />
+                  {t('showTicketQr') || t('saveSlip')}
               </button>
               
               {/* Slip Modal */}

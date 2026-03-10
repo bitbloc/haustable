@@ -57,7 +57,8 @@ export default function SlipPreviewModal({ isOpen, onClose, data, optionMap }) {
         }
     }
 
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.href)}`
+    const checkInUrl = `${window.location.origin}/staff/checkin?id=${data?.tracking_token || data?.id}`
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(checkInUrl)}`
     
     return (
         <AnimatePresence>

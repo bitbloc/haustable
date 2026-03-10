@@ -85,6 +85,49 @@ export function useOrderSubmission() {
                 throw new Error("User not authenticated.")
             }
 
+            if (resultData) {
+                try {
+                    const profileId = resultData?.user_id
+                    let lineUserId = null
+                    let customerName = resultData?.customer_name || 'Guest'
+
+                    if (profileId) {
+                        const { data: profile } = await supabase.from('profiles').select('line_user_id, display_name').eq('id', profileId).single()
+                        if (profile?.line_user_id) {
+                            lineUserId = profile.line_user_id
+                            customerName = profile.display_name || customerName
+                        }
+                    }
+
+                    if (lineUserId) {
+                        const origin = window.location.origin
+                        const shopLogoUrl = `${origin}/logo.png`
+                        const checkInUrl = `${origin}/staff/checkin?id=${resultData.tracking_token || resultData.id}`
+                        
+                        const itemsSummary = orderItemsPayload && orderItemsPayload.length > 0
+                            ? orderItemsPayload.map(i => `${i.quantity}x ${i.name}`).join(', ') 
+                            : 'No items'
+
+                        supabase.functions.invoke('send-booking-ticket', {
+                            body: {
+                                lineUserId,
+                                bookingId: resultData.id,
+                                trackingToken: resultData.tracking_token,
+                                customerName,
+                                dateTime: new Date(resultData.booking_time).toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }),
+                                tableName: resultData.table_name || 'TBA',
+                                itemsSummary,
+                                totalAmount: resultData.total_amount,
+                                shopLogoUrl,
+                                checkInUrl
+                            }
+                        }).catch(err => console.error("Ticket Webhook Error:", err))
+                    }
+                } catch(e) {
+                    console.error("Failed to trigger ticket:", e)
+                }
+            }
+
             if (onSuccess) onSuccess(resultData)
             return { success: true, data: resultData, trackingToken }
 
