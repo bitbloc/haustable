@@ -152,7 +152,7 @@ export default function QnAPage() {
         className="fixed bottom-0 left-0 w-full p-6 md:p-10 flex justify-between items-end z-50 pointer-events-none mix-blend-difference text-white font-['Space_Mono'] text-sm tracking-widest uppercase"
       >
         <div className="hidden md:block">#LOCAL</div>
-        <div>ORIGINS</div>
+        <div className="hidden md:block">ORIGINS</div>
         <div>BOLD</div>
       </motion.footer>
 
