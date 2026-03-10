@@ -52,13 +52,14 @@ Deno.serve(async (req) => {
 
     console.log(`Searching Makro API for keyword: ${keyword}, page: ${page}, limit: ${limit}`)
 
-    const notteResp = await fetch('https://api.notte.cc/v1/functions/81f38599-7e45-4ea9-baa5-a88b5eb56dce/run', {
+    const notteResp = await fetch('https://api.notte.cc/v1/functions/run', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${NOTTE_API_KEY}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+            function_id: "81f38599-7e45-4ea9-baa5-a88b5eb56dce",
             variables: {
                 keyword: keyword,
                 page: page,
