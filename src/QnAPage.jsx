@@ -47,9 +47,9 @@ const qaData = [
   {
     id: 7,
     thQ: "ร้านเปิด-ปิดกี่โมง?",
-    thA: "ตอบ: เปิดให้บริการทุกวัน ตั้งแต่เวลา 11:30 - 23:30 น. ครับ แวะมาฝากท้องได้ทั้งมื้อเที่ยงยาวไปจนถึงมื้อดึกเลยครับ",
+    thA: "ตอบ: เปิดให้บริการทุกวัน ตั้งแต่เวลา 11:30 - 23:30 น. (ครัวปิด 22:00 น.) ครับ แวะมาฝากท้องได้ทั้งมื้อเที่ยงยาวไปจนถึงมื้อดึกเลยครับ",
     enQ: "What are your opening hours?",
-    enA: "A: We are open every day from 11:30 AM to 11:30 PM. Feel free to drop by for lunch all the way through to late-night dining."
+    enA: "A: We are open every day from 11:30 AM to 11:30 PM (Kitchen closes at 10:00 PM). Feel free to drop by for lunch all the way through to late-night dining."
   },
   {
     id: 8,
