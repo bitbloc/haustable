@@ -86,12 +86,12 @@ const QnAItem = ({ item }) => {
                 whileInView={{ opacity: 1, rotate: -10, scale: 1 }}
                 viewport={{ once: false }}
                 transition={{ duration: 0.8, type: "spring" }}
-                className="absolute top-16 right-8 md:top-24 md:right-16 text-[#DFFF00] font-black text-4xl md:text-6xl leading-none font-['Space_Mono'] drop-shadow-lg z-0 opacity-80"
+                className="absolute top-12 right-4 md:top-24 md:right-16 text-[#DFFF00] font-black text-3xl md:text-6xl leading-none font-['Space_Mono'] drop-shadow-lg z-0 opacity-20 md:opacity-80 pointer-events-none"
                 style={{ WebkitTextStroke: '2px #1A1A1A' }}
             >
                 <div>MADE!</div>
                 <div>IT BOLD</div>
-                <div className="text-xl md:text-2xl mt-1 text-center bg-[#1A1A1A] text-[#DFFF00] rounded-full w-12 h-12 flex items-center justify-center ml-auto border-4 border-[#DFFF00]">TH</div>
+                <div className="text-sm md:text-2xl mt-1 text-center bg-[#1A1A1A] text-[#DFFF00] rounded-full w-8 h-8 md:w-12 md:h-12 flex items-center justify-center ml-auto border-[2px] md:border-4 border-[#DFFF00]">TH</div>
             </motion.div>
         )}
 
