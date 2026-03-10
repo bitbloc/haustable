@@ -76,7 +76,7 @@ const qaData = [
 
 const QnAItem = ({ item }) => {
   return (
-    <section className="w-full min-h-screen flex items-center justify-center p-6 md:p-12 lg:p-24 snap-start snap-always relative overflow-hidden">
+    <section className="w-full min-h-screen flex items-center justify-center px-6 pt-24 pb-32 md:p-12 lg:p-24 snap-start snap-always relative overflow-hidden">
       <div className="w-full max-w-4xl mx-auto flex flex-col justify-center space-y-12 md:space-y-16 z-10">
         
         {/* Decorative elements removed per request */}
