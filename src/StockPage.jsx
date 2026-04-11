@@ -171,7 +171,7 @@ export default function StockPage() {
             if (item.id === itemId) {
                 const newQty = type === 'set' 
                     ? changeAmount 
-                    : (item.current_quantity || 0) + changeAmount;
+                    : Number(item.current_quantity || 0) + changeAmount;
                 return { ...item, current_quantity: newQty };
             }
             return item;
@@ -213,7 +213,7 @@ export default function StockPage() {
                  // Fallback
                  if (updateError) {
                      const item = items.find(i => i.id === itemId);
-                     const newQty = (item.current_quantity || 0) + changeAmount;
+                     const newQty = Number(item.current_quantity || 0) + changeAmount;
                      const { error: directError } = await supabase.from('stock_items').update({ current_quantity: newQty }).eq('id', itemId);
                      if (directError) throw directError;
                      updateError = null;
