@@ -13,7 +13,8 @@ import {
     TrendingUp,
     AlertTriangle,
     RefreshCw,
-    Users
+    Users,
+    UtensilsCrossed
 } from 'lucide-react';
 import usePushNotifications from './hooks/usePushNotifications';
 import { useNavigate } from 'react-router-dom';
@@ -428,6 +429,15 @@ export default function StaffDashboard() {
                         textClass="text-purple-600"
                         onClick={() => navigate('/staff/history')}
                         delay={5}
+                    />
+                    <ActionButton 
+                        title="POS System" 
+                        desc="Standalone POS" 
+                        icon={UtensilsCrossed} 
+                        bgClass="bg-orange-600"
+                        textClass="text-orange-600"
+                        onClick={() => navigate('/pos')}
+                        delay={6}
                     />
                     <ActionButton 
                         title="Notifications" 

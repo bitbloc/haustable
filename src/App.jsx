@@ -31,6 +31,8 @@ import StockPage from './StockPage' // NEW
 import MenuCostPage from './components/admin/MenuCostPage' // NEW
 import RecipeLabPage from './components/admin/RecipeLabPage' // NEW
 import TrackingPage from './TrackingPage'
+import POSDashboard from './pos/POSDashboard'
+
 
 function App() {
   const [session, setSession] = useState(null)
@@ -139,6 +141,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/staff/login" element={<LoginPage />} />
 
+            <Route path="/pos" element={<POSDashboard />} />
+            
             {/* Staff/Kitchen Route (Protected) */}
             <Route element={<StaffAuthLayout />}>
               <Route path="/staff" element={<StaffDashboard />} />
@@ -147,6 +151,7 @@ function App() {
               <Route path="/staff/checkin" element={<StaffLiveOrders />} />
               <Route path="/staff/stock" element={<StockPage />} />
             </Route>
+
           </Routes>
         </Router>
       </BookingProvider>
