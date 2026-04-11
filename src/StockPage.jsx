@@ -163,91 +163,40 @@ export default function StockPage() {
         };
     }, []);
 
-    // --- Logic ---
     const handleAdjustment = async (itemId, changeAmount, type, meta = {}) => {
+        const item = items.find(i => i.id === itemId) || { current_quantity: 0 };
+        const currentQty = Number(item.current_quantity || 0);
+
         // Optimistic Update
-        // Optimistic Update
-        setItems(prev => prev.map(item => {
-            if (item.id === itemId) {
+        setItems(prev => prev.map(i => {
+            if (i.id === itemId) {
                 const newQty = type === 'set' 
                     ? changeAmount 
-                    : Number(item.current_quantity || 0) + changeAmount;
-                return { ...item, current_quantity: newQty };
+                    : currentQty + changeAmount;
+                return { ...i, current_quantity: newQty };
             }
-            return item;
+            return i;
         }));
 
         try {
-            // 1. Update stock_items
-            let updateError;
+            const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
             
-            if (type === 'set') {
-                 // Absolute Update (Audit/Count)
-                 const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
-                 const { error } = await supabase.rpc('set_stock_quantity', {
-                     p_item_id: itemId,
-                     p_new_quantity: changeAmount, // In this case changeAmount IS the new quantity
-                     p_reason: meta.note || 'Audit',
-                     p_performed_by: performedBy
-                 });
-                 updateError = error;
-                 
-                 // Fallback if RPC fails? (Try direct update)
-                 if (updateError) {
-                      const { error: directError } = await supabase
-                        .from('stock_items')
-                        .update({ current_quantity: changeAmount })
-                        .eq('id', itemId);
-                      if (directError) throw directError;
-                      updateError = null; // Clear error if fallback succeeded
-                 }
-                 
-            } else {
-                 // Relative Update (In/Out)
-                 const { error } = await supabase.rpc('update_stock_quantity', {
-                     p_item_id: itemId,
-                     p_quantity_change: changeAmount
-                 });
-                 updateError = error;
-                 
-                 // Fallback
-                 if (updateError) {
-                     const item = items.find(i => i.id === itemId);
-                     const newQty = Number(item.current_quantity || 0) + changeAmount;
-                     const { error: directError } = await supabase.from('stock_items').update({ current_quantity: newQty }).eq('id', itemId);
-                     if (directError) throw directError;
-                     updateError = null;
-                 }
-            }
+            // Calculate the actual difference to insert into the transaction log
+            const diff = type === 'set' ? (changeAmount - currentQty) : changeAmount;
 
-            if (updateError) throw updateError;
+            // ONLY insert into stock_transactions. 
+            // The Postgres trigger "trg_stock_transaction_sync" will automatically apply this diff to stock_items!
+            const { error: logError } = await supabase.from('stock_transactions').insert({
+                stock_item_id: itemId,
+                transaction_type: type,
+                quantity_change: diff,
+                performed_by: performedBy, 
+                note: meta.note || (type === 'set' ? 'Audit' : undefined)
+            });
 
-            // 2. Transaction Log (Handled by RPC for 'set' usually, but our RPC log logic might be minimal or we want client-side consistency)
-            // Actually my RPC for 'set' DOES log. 
-            // My RPC for 'update' DOES NOT log? Let's check. 
-            // 'update_stock_quantity' (previous step) did NOT include logging inside RPC.
-            // So we log here for 'update', but 'set' RPC logs inside itself?
-            // Let's check 'set_stock_quantity' RPC content from previous step.
-            // Yes, 'set_stock_quantity' performs INSERT into stock_transactions.
-            // But 'update_stock_quantity' does not.
-            
-            if (type !== 'set') {
-                 const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
-                 const { error: logError } = await supabase.from('stock_transactions').insert({
-                    stock_item_id: itemId,
-                    transaction_type: type,
-                    quantity_change: changeAmount,
-                    performed_by: performedBy, 
-                    note: meta.note
-                });
-                if (logError) console.error("Log error", logError);
-            }
+            if (logError) throw logError;
 
             toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
-
-            // 3. Send LINE Notification (Fire and Forget) - REMOVED Auto-Push
-            // Now using Manual Update Button
-
             
         } catch (err) {
             toast.error('Sync failed');
