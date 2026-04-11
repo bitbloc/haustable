@@ -166,35 +166,75 @@ export default function StockPage() {
     const handleAdjustment = async (itemId, changeAmount, type, meta = {}) => {
         const item = items.find(i => i.id === itemId) || { current_quantity: 0 };
         const currentQty = Number(item.current_quantity || 0);
+        let newQty = currentQty;
 
         // Optimistic Update
         setItems(prev => prev.map(i => {
             if (i.id === itemId) {
-                const newQty = type === 'set' 
+                newQty = type === 'set' 
                     ? changeAmount 
-                    : currentQty + changeAmount;
+                    : Number(i.current_quantity || 0) + changeAmount;
                 return { ...i, current_quantity: newQty };
             }
             return i;
         }));
 
         try {
+            let updateError = null;
             const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
-            
-            // Calculate the actual difference to insert into the transaction log
-            const diff = type === 'set' ? (changeAmount - currentQty) : changeAmount;
 
-            // ONLY insert into stock_transactions. 
-            // The Postgres trigger "trg_stock_transaction_sync" will automatically apply this diff to stock_items!
-            const { error: logError } = await supabase.from('stock_transactions').insert({
-                stock_item_id: itemId,
-                transaction_type: type,
-                quantity_change: diff,
-                performed_by: performedBy, 
-                note: meta.note || (type === 'set' ? 'Audit' : undefined)
-            });
+            if (type === 'set') {
+                 // Absolute Update (Audit/Count)
+                 const { error } = await supabase.rpc('set_stock_quantity', {
+                     p_item_id: itemId,
+                     p_new_quantity: changeAmount,
+                     p_reason: meta.note || 'Audit',
+                     p_performed_by: performedBy
+                 });
+                 updateError = error;
+                 
+                 // Fallback if RPC fails
+                 if (updateError) {
+                      const { error: directError } = await supabase
+                        .from('stock_items')
+                        .update({ current_quantity: changeAmount })
+                        .eq('id', itemId);
+                      if (directError) throw directError;
+                      updateError = null;
+                 }
+            } else {
+                 // Relative Update (In/Out)
+                 const { error } = await supabase.rpc('update_stock_quantity', {
+                     p_item_id: itemId,
+                     p_quantity_change: changeAmount
+                 });
+                 updateError = error;
+                 
+                 // Fallback
+                 if (updateError) {
+                     const { error: directError } = await supabase
+                        .from('stock_items')
+                        .update({ current_quantity: newQty })
+                        .eq('id', itemId);
+                     if (directError) throw directError;
+                     updateError = null;
+                 }
+            }
 
-            if (logError) throw logError;
+            if (updateError) throw updateError;
+
+            // Transaction Log - Background
+            if (type !== 'set') {
+                 await supabase.from('stock_transactions').insert({
+                    stock_item_id: itemId,
+                    transaction_type: type,
+                    quantity_change: changeAmount,
+                    performed_by: performedBy, 
+                    note: meta.note
+                }).then(({error: logError}) => {
+                    if (logError) console.error("Log error", logError);
+                });
+            }
 
             toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
             
