@@ -21,11 +21,11 @@ BEGIN
     -- Calculate difference for logging
     v_diff := p_new_quantity - COALESCE(v_old_quantity, 0);
 
-    -- Update stock
-    UPDATE public.stock_items
-    SET current_quantity = p_new_quantity,
-        updated_at = NOW()
-    WHERE id = p_item_id;
+    -- Update stock (REMOVED: Handle by Trigger trg_stock_transaction_sync)
+    -- UPDATE public.stock_items
+    -- SET current_quantity = p_new_quantity,
+    --     updated_at = NOW()
+    -- WHERE id = p_item_id;
 
     -- Log transaction
     INSERT INTO public.stock_transactions (stock_item_id, transaction_type, quantity_change, performed_by, note)

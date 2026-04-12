@@ -200,30 +200,29 @@ export default function StockPage() {
                         .update({ current_quantity: changeAmount })
                         .eq('id', itemId);
                       if (directError) throw directError;
+                      
+                      // Manual Log if fallback used (since RPC failed)
+                      await supabase.from('stock_transactions').insert({
+                        stock_item_id: itemId,
+                        transaction_type: 'set',
+                        quantity_change: changeAmount - currentQty,
+                        performed_by: performedBy, 
+                        note: meta.note + ' (Manual Fallback)'
+                      });
                       updateError = null;
                  }
             } else {
                  // Relative Update (In/Out)
-                 const { error } = await supabase.rpc('update_stock_quantity', {
-                     p_item_id: itemId,
-                     p_quantity_change: changeAmount
-                 });
-                 updateError = error;
-                 
-                 // Fallback
-                 if (updateError) {
-                     const { error: directError } = await supabase
-                        .from('stock_items')
-                        .update({ current_quantity: newQty })
-                        .eq('id', itemId);
-                     if (directError) throw directError;
-                     updateError = null;
-                 }
+                 // NOTE: We do NOT call update_stock_quantity RPC here anymore 
+                 // because the transaction insert below will trigger the update_stock_quantity logic in DB
+                 // to avoid double calculation.
+                 updateError = null; 
             }
 
             if (updateError) throw updateError;
 
-            // Transaction Log - Background
+            // Transaction Log - Background (Only if RPC didn't handle it)
+            // If we used fallback, we MUST log manually
             if (type !== 'set') {
                  await supabase.from('stock_transactions').insert({
                     stock_item_id: itemId,
@@ -236,12 +235,24 @@ export default function StockPage() {
                 });
             }
 
-            toast.success(type === 'set' ? `Stock Set to: ${changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
+            // --- FINAL VERIFICATION FETCH ---
+            // Fetch the item directly from DB to confirm final quantity and bypass any race conditions
+            const { data: verifiedItem } = await supabase
+                .from('stock_items')
+                .select('*')
+                .eq('id', itemId)
+                .single();
+            
+            if (verifiedItem) {
+                setItems(prev => prev.map(i => i.id === itemId ? verifiedItem : i));
+            }
+
+            toast.success(type === 'set' ? `Stock Set to: ${verifiedItem?.current_quantity || changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
             
         } catch (err) {
             toast.error('Sync failed');
             console.error(err);
-            fetchItems(); // Revert
+            fetchItems(); // Full Revert
         }
     };
 

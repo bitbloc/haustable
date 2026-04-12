@@ -144,20 +144,14 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 // If I am counting Boxes, I should convert Boxes to Base first.
                 
                 let finalTotal = 0;
-                if (selectedUnit.factor > 1) {
-                     // MainVal is Multi-unit (e.g. 5 Boxes)
-                     // Partial is Base Unit (e.g. 0.5 Bottle)
-                     const qtyFromFull = mainVal * selectedUnit.factor;
-                     
-                     // We just add them. But we need to be careful of floats.
-                     // 12 + 0.5 = 12.5
-                     finalTotal = qtyFromFull + partialAmount;
-                     
-                     // Use fix to 4 digits
+                if (selectedUnit.factor !== 1) {
+                     // MainVal is Multi-unit or Usage-unit (e.g. 5 Boxes or 500 Glasses)
+                     // Partial is Base Unit (e.g. 0.5 Bottle) - we assume partial is always base unit remainder
+                     const qtyFromMain = mainVal * selectedUnit.factor;
+                     finalTotal = qtyFromMain + partialAmount;
                      finalTotal = Number(finalTotal.toFixed(4));
                 } else {
                      // Base Unit
-                     // Use utility for safe float math
                      finalTotal = calculateTotalFromComponents(mainVal, percent);
                 }
 
