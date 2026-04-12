@@ -182,12 +182,14 @@ export default function StockPage() {
         try {
             const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
 
+            const diagNote = (meta.note || 'Adjustment') + ` [JS_WEB_${Date.now()}]`;
+            
             if (type === 'set') {
                  // Absolute Update (Audit/Count) - Use RPC to calculate diff and log transaction
                  const { error } = await supabase.rpc('set_stock_quantity', {
                      p_item_id: itemId,
                      p_new_quantity: changeAmount,
-                     p_reason: meta.note || 'Audit',
+                     p_reason: diagNote, 
                      p_performed_by: performedBy
                  });
                  
@@ -199,7 +201,7 @@ export default function StockPage() {
                         transaction_type: 'set',
                         quantity_change: changeAmount - currentQty,
                         performed_by: performedBy, 
-                        note: meta.note + ' (JS Fallback)'
+                        note: diagNote + ' (Fallback)'
                       });
                       if (directError) throw directError;
                  }
@@ -210,7 +212,7 @@ export default function StockPage() {
                     transaction_type: type,
                     quantity_change: changeAmount,
                     performed_by: performedBy, 
-                    note: meta.note
+                    note: diagNote
                 });
                 if (error) throw error;
             }
