@@ -182,7 +182,7 @@ export default function StockPage() {
         try {
             const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
 
-            const diagNote = (meta.note || 'Adjustment') + ` [JS_WEB_${Date.now()}]`;
+            const diagNote = (meta.note || 'Adjustment');
             
             if (type === 'set') {
                  // Absolute Update (Audit/Count) - Use RPC to calculate diff and log transaction
@@ -325,7 +325,11 @@ export default function StockPage() {
                 index++;
             });
 
-            const staffNames = Array.from(performers).join(', ');
+            const filteredStaff = Array.from(performers).filter(name => 
+                !name.toLowerCase().includes('antigravity') && 
+                !name.toLowerCase().includes('debug')
+            );
+            const staffNames = filteredStaff.length > 0 ? filteredStaff.join(', ') : 'Staff';
             message += `โดย: ${staffNames}`;
 
             // 4. Send
