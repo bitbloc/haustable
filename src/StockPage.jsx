@@ -180,63 +180,43 @@ export default function StockPage() {
         }));
 
         try {
-            let updateError = null;
             const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
 
             if (type === 'set') {
-                 // Absolute Update (Audit/Count)
+                 // Absolute Update (Audit/Count) - Use RPC to calculate diff and log transaction
                  const { error } = await supabase.rpc('set_stock_quantity', {
                      p_item_id: itemId,
                      p_new_quantity: changeAmount,
                      p_reason: meta.note || 'Audit',
                      p_performed_by: performedBy
                  });
-                 updateError = error;
                  
-                 // Fallback if RPC fails
-                 if (updateError) {
-                      const { error: directError } = await supabase
-                        .from('stock_items')
-                        .update({ current_quantity: changeAmount })
-                        .eq('id', itemId);
-                      if (directError) throw directError;
-                      
-                      // Manual Log if fallback used (since RPC failed)
-                      await supabase.from('stock_transactions').insert({
+                 // If RPC fails (e.g. function not found), fallback to direct transaction logging
+                 if (error) {
+                      console.warn("RPC failed, falling back to direct log:", error);
+                      const { error: directError } = await supabase.from('stock_transactions').insert({
                         stock_item_id: itemId,
                         transaction_type: 'set',
                         quantity_change: changeAmount - currentQty,
                         performed_by: performedBy, 
-                        note: meta.note + ' (Manual Fallback)'
+                        note: meta.note + ' (JS Fallback)'
                       });
-                      updateError = null;
+                      if (directError) throw directError;
                  }
             } else {
                  // Relative Update (In/Out)
-                 // NOTE: We do NOT call update_stock_quantity RPC here anymore 
-                 // because the transaction insert below will trigger the update_stock_quantity logic in DB
-                 // to avoid double calculation.
-                 updateError = null; 
-            }
-
-            if (updateError) throw updateError;
-
-            // Transaction Log - Background (Only if RPC didn't handle it)
-            // If we used fallback, we MUST log manually
-            if (type !== 'set') {
-                 await supabase.from('stock_transactions').insert({
+                 const { error } = await supabase.from('stock_transactions').insert({
                     stock_item_id: itemId,
                     transaction_type: type,
                     quantity_change: changeAmount,
                     performed_by: performedBy, 
                     note: meta.note
-                }).then(({error: logError}) => {
-                    if (logError) console.error("Log error", logError);
                 });
+                if (error) throw error;
             }
 
             // --- FINAL VERIFICATION FETCH ---
-            // Fetch the item directly from DB to confirm final quantity and bypass any race conditions
+            // Fetch the item directly from DB to confirm final quantity
             const { data: verifiedItem } = await supabase
                 .from('stock_items')
                 .select('*')
