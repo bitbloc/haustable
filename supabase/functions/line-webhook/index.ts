@@ -89,6 +89,168 @@ Deno.serve(async (req) => {
           continue
         }
 
+        if (text === 'stbuy') {
+          try {
+            console.log('Processing stbuy command...')
+            const thNow = new Date(new Date().getTime() + (7 * 60 * 60 * 1000))
+            let dateStr = ""
+            try {
+              dateStr = thNow.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+            } catch (e) {
+              dateStr = thNow.toISOString().split('T')[0]
+            }
+
+            const { data: items, error } = await supabaseAdmin
+              .from('stock_items')
+              .select('name, unit, current_quantity, min_stock_threshold, reorder_point')
+              .order('name', { ascending: true })
+
+            if (error) throw error
+
+            const EPSILON = 0.0001;
+            const itemsToBuy = items.filter((item: any) => {
+               const qty = Number(item.current_quantity) || 0;
+               const min = Number(item.min_stock_threshold) || 0;
+               const reorder = Number(item.reorder_point) || 0;
+               return (qty <= EPSILON) || (min > 0 && qty <= min + EPSILON) || (reorder > 0 && qty <= reorder + EPSILON);
+            });
+
+            console.log(`Found ${itemsToBuy.length} items to buy`)
+
+            const headerTitle = "🛒 รายการของที่ต้องซื้อ";
+            let messages = [];
+
+            if (itemsToBuy.length === 0) {
+              messages.push({
+                type: "flex",
+                altText: headerTitle,
+                contents: {
+                  type: "bubble",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#1A1A1A",
+                    contents: [
+                      { type: "text", text: headerTitle, weight: "bold", color: "#FFFFFF", size: "lg" },
+                      { type: "text", text: dateStr, color: "#CCCCCC", size: "xs", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    contents: [{ type: "text", text: "✅ สต็อกเพียงพอทุกรายการ", color: "#06C755", size: "sm", align: "center", weight: "bold" }]
+                  }
+                }
+              })
+            } else {
+               const bubbles: any[] = []
+               let currentItems: any[] = []
+               
+               itemsToBuy.forEach((item: any, index: number) => {
+                 const itemName = item.name || 'Unknown Item'
+                 const current = Number(item.current_quantity) || 0
+                 const min = Number(item.min_stock_threshold) || 0
+                 const reorder = Number(item.reorder_point) || 0
+                 
+                 let statusEmoji = '🟢'
+                 let statusColor = '#06C755'
+                 if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#111111' }
+                 else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#EF4444' }
+                 else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#F59E0B' }
+
+                 currentItems.push({
+                     type: "box",
+                     layout: "horizontal",
+                     margin: "md",
+                     contents: [
+                         { type: "text", text: statusEmoji, flex: 0, margin: "none", size: "xs" },
+                         { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, margin: "md", flex: 3 },
+                         {
+                             type: "box",
+                             layout: "vertical",
+                             flex: 2,
+                             alignItems: "flex-end",
+                             contents: [
+                                 { type: "text", text: `เหลือ ${current}`, color: statusColor, size: "xs", weight: "bold" },
+                                 { type: "text", text: `(ขั้นต่ำ ${min > 0 ? min : reorder})`, color: "#aaaaaa", size: "xxs" }
+                             ]
+                         }
+                     ]
+                 })
+
+                 if (index < itemsToBuy.length - 1) {
+                     currentItems.push({ type: "separator", margin: "md", color: "#F0F0F0" })
+                 }
+
+                 if (currentItems.length >= 19 || index === itemsToBuy.length - 1) {
+                     if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
+                         currentItems.pop()
+                     }
+                     bubbles.push({
+                         type: "bubble",
+                         size: "mega",
+                         header: {
+                             type: "box",
+                             layout: "vertical",
+                             backgroundColor: "#1A1A1A",
+                             paddingAll: "20px",
+                             contents: [
+                                 { type: "text", text: headerTitle, weight: "bold", color: "#FFFFFF", size: "lg" },
+                                 { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#CCCCCC", size: "xs", margin: "xs" }
+                             ]
+                         },
+                         body: {
+                             type: "box",
+                             layout: "vertical",
+                             paddingAll: "20px",
+                             contents: currentItems
+                         }
+                     })
+                     currentItems = []
+                 }
+               })
+               
+               if (bubbles.length > 5) {
+                  bubbles.length = 5;
+                  bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
+                  bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#EF4444", size: "xs", margin: "md", align: "center" })
+               }
+               
+               if (bubbles.length === 1) {
+                  messages.push({ type: "flex", altText: headerTitle, contents: bubbles[0] })
+               } else {
+                  messages.push({ type: "flex", altText: headerTitle, contents: { type: "carousel", contents: bubbles } })
+               }
+            }
+
+            const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({ replyToken: event.replyToken, messages: messages })
+            })
+            if (!resp.ok) {
+              const txt = await resp.text()
+              console.error('stbuy Reply Failed:', txt)
+              const targetId = event.source.groupId || event.source.roomId || event.source.userId
+              if (targetId) {
+                 await fetch('https://api.line.me/v2/bot/message/push', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ระบบไม่สามารถส่งรายการซื้อของแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] })
+                })
+              }
+            }
+          } catch (err: any) {
+            console.error('stbuy Command Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการซื้อของ: ' + err.message }] })
+            })
+          }
+          continue
+        }
+
         if (text === 'stback' || text === 'stday' || text === 'sthour') {
           try {
             const isToday = text === 'stday'
