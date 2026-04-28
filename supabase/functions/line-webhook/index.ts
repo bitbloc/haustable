@@ -254,8 +254,8 @@ Deno.serve(async (req) => {
                     currentItems.push({ type: "separator", margin: "md", color: "#F0F0F0" })
                 }
 
-                // Chunk into bubbles every 15 items
-                if (currentItems.length >= 29 || index === transactions.length - 1) {
+                // Chunk into bubbles every 10 items
+                if (currentItems.length >= 19 || index === transactions.length - 1) {
                     // removing last separator if exists
                     if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
                         currentItems.pop()
@@ -284,10 +284,10 @@ Deno.serve(async (req) => {
                 }
               })
               
-              if (bubbles.length > 12) {
-                 bubbles.length = 12; // LINE Carousel max is 12 bubbles
-                 bubbles[11].body.contents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
-                 bubbles[11].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 12 หน้า)", color: "#EF4444", size: "xs", margin: "md", align: "center" })
+              if (bubbles.length > 5) {
+                 bubbles.length = 5; // LINE Carousel max safe size to avoid 50KB limit
+                 bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
+                 bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#EF4444", size: "xs", margin: "md", align: "center" })
               }
               
               messages.push({
@@ -318,14 +318,14 @@ Deno.serve(async (req) => {
               const txt = await resp.text()
               console.error('LINE Reply Failed:', txt)
               const targetId = event.source.groupId || event.source.roomId || event.source.userId
-              if (targetId && (txt.includes('Invalid reply token') || resp.status === 400)) {
+              if (targetId) {
                  const pushResp = await fetch('https://api.line.me/v2/bot/message/push', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
                   },
-                  body: JSON.stringify({ to: targetId, messages: messages }),
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ระบบไม่สามารถส่งสรุปสต็อกแบบ Flex ได้ (อาจจะรายการเยอะเกินไป)\nError: ${txt.substring(0, 100)}` }] }),
                 })
                 if (!pushResp.ok) console.error('LINE Push Failed:', await pushResp.text())
               }
@@ -442,7 +442,7 @@ Deno.serve(async (req) => {
                              }
                          ]
                      })
-                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0", style: "dashed" })
+                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
                   })
                }
 
@@ -480,7 +480,7 @@ Deno.serve(async (req) => {
                              }
                          ]
                      })
-                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0", style: "dashed" })
+                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
                   })
                }
             }
@@ -523,7 +523,18 @@ Deno.serve(async (req) => {
               }),
             })
             
-            if (!resp.ok) console.error('Staff Reply Failed:', await resp.text())
+            if (!resp.ok) {
+              const txt = await resp.text()
+              console.error('Staff Reply Failed:', txt)
+              const targetId = event.source.groupId || event.source.roomId || event.source.userId
+              if (targetId) {
+                 await fetch('https://api.line.me/v2/bot/message/push', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ไม่สามารถส่งข้อมูลพนักงานแบบ Flex ได้\nError: ${txt.substring(0, 100)}` }] }),
+                })
+              }
+            }
           } catch (apiErr) {
              console.error('Staff Command Error:', apiErr)
              await fetch('https://api.line.me/v2/bot/message/reply', {
@@ -711,7 +722,18 @@ Deno.serve(async (req) => {
               }),
             })
             
-            if (!resp.ok) console.error('Makro Reply Failed:', await resp.text())
+            if (!resp.ok) {
+              const txt = await resp.text()
+              console.error('Makro Reply Failed:', txt)
+              const targetId = event.source.groupId || event.source.roomId || event.source.userId
+              if (targetId) {
+                 await fetch('https://api.line.me/v2/bot/message/push', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ไม่สามารถส่งผลลัพธ์ Makro ได้\nError: ${txt.substring(0, 100)}` }] }),
+                })
+              }
+            }
 
           } catch (err) {
              console.error('Makro Command Error:', err)
