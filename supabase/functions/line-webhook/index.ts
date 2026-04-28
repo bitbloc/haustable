@@ -89,9 +89,10 @@ Deno.serve(async (req) => {
           continue
         }
 
-        if (text === 'stbuy') {
+        if (text === 'stbuy' || text === 'stbuyback') {
           try {
-            console.log('Processing stbuy command...')
+            const isBuyback = text === 'stbuyback';
+            console.log(`Processing ${text} command...`)
             const thNow = new Date(new Date().getTime() + (7 * 60 * 60 * 1000))
             let dateStr = ""
             try {
@@ -100,10 +101,17 @@ Deno.serve(async (req) => {
               dateStr = thNow.toISOString().split('T')[0]
             }
 
-            const { data: items, error } = await supabaseAdmin
+            let query = supabaseAdmin
               .from('stock_items')
-              .select('name, unit, current_quantity, min_stock_threshold, reorder_point')
+              .select('name, unit, current_quantity, min_stock_threshold, reorder_point, updated_at')
               .order('name', { ascending: true })
+
+            if (isBuyback) {
+               const dayAgo = new Date(new Date().getTime() - (24 * 60 * 60 * 1000)).toISOString()
+               query = query.gte('updated_at', dayAgo)
+            }
+
+            const { data: items, error } = await query
 
             if (error) throw error
 
@@ -117,7 +125,7 @@ Deno.serve(async (req) => {
 
             console.log(`Found ${itemsToBuy.length} items to buy`)
 
-            const headerTitle = "🛒 รายการของที่ต้องซื้อ";
+            const headerTitle = isBuyback ? "🛒 ของต้องซื้อ (อัพเดท 24 ชม.)" : "🛒 รายการของที่ต้องซื้อ";
             let messages = [];
 
             if (itemsToBuy.length === 0) {
