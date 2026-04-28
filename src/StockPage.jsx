@@ -295,6 +295,8 @@ export default function StockPage() {
             // 3. Format Message
             let message = `📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)\n\n`;
             
+            const flexItems = [];
+            
             let index = 1;
             Object.values(itemMap).forEach(({ item, types }) => {
                 // Determine Status (Logic should match StockCard and Dashboard)
@@ -304,11 +306,20 @@ export default function StockPage() {
                 const EPSILON = 0.0001;
                 
                 let statusEmoji = '🟢';
-                if (qty <= EPSILON) statusEmoji = '⚫ หมด';
-                else if (minThreshold > 0 && qty <= minThreshold + EPSILON) statusEmoji = '🔴 วิกฤต';
-                else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) statusEmoji = '🟠 ต้องเติม';
-                else if (qty <= minThreshold) statusEmoji = '🔴 วิกฤต'; // Fallback for 0 threshold if stock is somehow negative
-                
+                let statusColor = '#06C755';
+                if (qty <= EPSILON) {
+                    statusEmoji = '⚫ หมด';
+                    statusColor = '#111111';
+                } else if (minThreshold > 0 && qty <= minThreshold + EPSILON) {
+                    statusEmoji = '🔴 วิกฤต';
+                    statusColor = '#EF4444';
+                } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
+                    statusEmoji = '🟠 ต้องเติม';
+                    statusColor = '#F59E0B';
+                } else if (qty <= minThreshold) {
+                    statusEmoji = '🔴 วิกฤต';
+                    statusColor = '#EF4444';
+                }
                 
                 // Friendly Format (Unopened + Opened)
                 const display = formatStockDisplay(qty, item.unit).displayString;
@@ -322,8 +333,60 @@ export default function StockPage() {
                 }).join(', ');
 
                 message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${display} ${statusEmoji}\n\n`;
+                
+                flexItems.push({
+                    type: "box",
+                    layout: "vertical",
+                    margin: "md",
+                    contents: [
+                        {
+                            type: "text",
+                            text: `${index}. ${item.name}`,
+                            weight: "bold",
+                            size: "sm",
+                            color: "#1A1A1A",
+                            wrap: true
+                        },
+                        {
+                            type: "box",
+                            layout: "baseline",
+                            margin: "sm",
+                            contents: [
+                                {
+                                    type: "text",
+                                    text: `ทำรายการ: ${actionLabels}`,
+                                    color: "#888888",
+                                    size: "xs",
+                                    flex: 2
+                                },
+                                {
+                                    type: "text",
+                                    text: `${display} ${statusEmoji}`,
+                                    color: statusColor,
+                                    size: "sm",
+                                    align: "end",
+                                    weight: "bold",
+                                    flex: 3,
+                                    wrap: true
+                                }
+                            ]
+                        }
+                    ]
+                });
+                
+                flexItems.push({
+                    type: "separator",
+                    margin: "md",
+                    color: "#F0F0F0"
+                });
+
                 index++;
             });
+
+            // Remove the last separator if items exist
+            if (flexItems.length > 0 && flexItems[flexItems.length - 1].type === 'separator') {
+                flexItems.pop();
+            }
 
             const filteredStaff = Array.from(performers).filter(name => 
                 !name.toLowerCase().includes('antigravity') && 
@@ -332,9 +395,60 @@ export default function StockPage() {
             const staffNames = filteredStaff.length > 0 ? filteredStaff.join(', ') : 'Staff';
             message += `โดย: ${staffNames}`;
 
+            const flexPayload = {
+                type: "flex",
+                altText: "📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)",
+                contents: {
+                    type: "bubble",
+                    size: "mega",
+                    header: {
+                        type: "box",
+                        layout: "vertical",
+                        contents: [
+                            {
+                                type: "text",
+                                text: "📦 สรุปอัพเดทสต็อก",
+                                weight: "bold",
+                                size: "lg",
+                                color: "#FFFFFF"
+                            },
+                            {
+                                type: "text",
+                                text: "1 ชั่วโมงล่าสุด",
+                                color: "#CCCCCC",
+                                size: "xs",
+                                margin: "xs"
+                            }
+                        ],
+                        backgroundColor: "#1A1A1A",
+                        paddingAll: "20px"
+                    },
+                    body: {
+                        type: "box",
+                        layout: "vertical",
+                        paddingAll: "20px",
+                        contents: flexItems
+                    },
+                    footer: {
+                        type: "box",
+                        layout: "horizontal",
+                        contents: [
+                            {
+                                type: "text",
+                                text: `โดย: ${staffNames}`,
+                                color: "#aaaaaa",
+                                size: "xs",
+                                align: "end"
+                            }
+                        ],
+                        paddingAll: "20px"
+                    }
+                }
+            };
+
             // 4. Send
             const { error: sendError } = await supabase.functions.invoke('send-line-notify', {
-                body: { message }
+                body: { message, flexPayload }
             });
 
             if (sendError) throw sendError;

@@ -16,14 +16,21 @@ serve(async (req) => {
   }
 
   try {
-    const { message } = await req.json()
+    const { message, flexPayload } = await req.json()
 
-    if (!message) {
-      return new Response(JSON.stringify({ error: 'Message is required' }), { 
+    if (!message && !flexPayload) {
+      return new Response(JSON.stringify({ error: 'Message or flexPayload is required' }), { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    const messagesArray = flexPayload ? [flexPayload] : [
+      {
+        type: 'text',
+        text: message,
+      },
+    ]
 
     const res = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
@@ -33,12 +40,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         to: LINE_GROUP_ID,
-        messages: [
-          {
-            type: 'text',
-            text: message,
-          },
-        ],
+        messages: messagesArray,
       }),
     })
 
