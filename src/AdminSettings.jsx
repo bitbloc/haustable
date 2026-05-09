@@ -1034,7 +1034,6 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
     const [uploading, setUploading] = useState({})
     const [menuUrls, setMenuUrls] = useState([])
 
-    // Load existing menu URLs from settings on mount / settings change
     useEffect(() => {
         const urls = []
         for (let i = 1; i <= 10; i++) {
@@ -1050,13 +1049,8 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         try {
             const fileExt = file.name.split('.').pop()
             const fileName = `link/${settingKey}_${Date.now()}.${fileExt}`
-
-            const { error: uploadError } = await supabase.storage
-                .from('public-assets')
-                .upload(fileName, file, { upsert: true })
-
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true })
             if (uploadError) throw uploadError
-
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
             await handleSave(settingKey, publicUrl)
             setTimestamp(Date.now())
@@ -1070,22 +1064,15 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
     const handleMenuUpload = async (files) => {
         if (!files || files.length === 0) return
         const fileArr = Array.from(files)
-        
-        // Find next available slot
         let nextSlot = 1
         for (let i = 1; i <= 10; i++) {
             if (!settings[`link_menu_${i}`]) { nextSlot = i; break }
-            if (i === 10 && settings[`link_menu_${i}`]) {
-                alert('เมนูเต็ม 10 รูปแล้ว กรุณาลบรูปเก่าก่อน')
-                return
-            }
+            if (i === 10 && settings[`link_menu_${i}`]) { alert('เมนูเต็ม 10 รูปแล้ว'); return }
             nextSlot = i + 1
         }
-
         for (const file of fileArr) {
             if (nextSlot > 10) break
-            const key = `link_menu_${nextSlot}`
-            await uploadImage(file, key)
+            await uploadImage(file, `link_menu_${nextSlot}`)
             nextSlot++
         }
         alert(`อัพโหลดเมนูสำเร็จ ${fileArr.length} รูป!`)
@@ -1094,147 +1081,162 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
     const handleDeleteMenu = async (slot) => {
         if (!confirm('ลบรูปเมนูนี้?')) return
         await handleSave(`link_menu_${slot}`, '')
-        
-        // Re-order: shift remaining slots up
         const remaining = []
         for (let i = 1; i <= 10; i++) {
             if (i === slot) continue
             const url = settings[`link_menu_${i}`]
             if (url) remaining.push(url)
         }
-        // Re-save in order
         for (let i = 1; i <= 10; i++) {
-            const url = remaining[i - 1] || ''
-            await handleSave(`link_menu_${i}`, url)
+            await handleSave(`link_menu_${i}`, remaining[i - 1] || '')
         }
     }
+
+    // Helper: image upload block
+    const ImageUploadBlock = ({ settingKey, label, aspect = 'aspect-video', placeholder }) => (
+        <div className="space-y-2">
+            <label className="block text-xs font-bold text-brandDark uppercase">{label}</label>
+            <div className={`relative w-full ${aspect} rounded-2xl overflow-hidden bg-gray-100 border border-gray-200`}>
+                {settings[settingKey] ? (
+                    <img src={`${settings[settingKey]}?t=${timestamp}`} className="w-full h-full object-cover" alt={label} />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-subInk text-sm">{placeholder || 'ยังไม่มีรูป'}</div>
+                )}
+            </div>
+            <div className="flex gap-2">
+                <label className="flex-1 cursor-pointer group">
+                    <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-2.5 text-center group-hover:border-brand transition-colors">
+                        <span className="text-subInk text-xs group-hover:text-ink">
+                            {uploading[settingKey] ? 'กำลังอัพโหลด...' : '📸 เลือกรูป'}
+                        </span>
+                    </div>
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadImage(e.target.files[0], settingKey)} />
+                </label>
+                {settings[settingKey] && (
+                    <button onClick={() => handleSave(settingKey, '')} className="text-xs text-red-500 hover:text-red-400 px-2">ลบ</button>
+                )}
+            </div>
+        </div>
+    )
 
     return (
         <div className="bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 mt-8 shadow-sm">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                    🔗 Link Page Manager
-                </h2>
-                <a 
-                    href="/link" 
-                    target="_blank" 
-                    className="text-xs bg-zinc-800 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-zinc-700 transition-colors"
-                >
+                <h2 className="text-xl font-bold text-ink flex items-center gap-2">🔗 Link Page Manager</h2>
+                <a href="/link" target="_blank" className="text-xs bg-zinc-800 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-zinc-700 transition-colors">
                     ดูหน้า /link →
                 </a>
             </div>
             <p className="text-xs text-subInk -mt-4">จัดการรูปภาพ, เมนู และข้อความสำหรับ Landing Page (/link)</p>
 
-            {/* Hero Image */}
-            <div className="space-y-3">
-                <label className="block text-xs font-bold text-brandDark uppercase">Hero Image (รูปปก)</label>
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
-                    {settings.link_hero_url ? (
-                        <img src={`${settings.link_hero_url}?t=${timestamp}`} className="w-full h-full object-cover" alt="Hero" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-subInk text-sm">ยังไม่มีรูป Hero</div>
-                    )}
+            {/* Logo + Hero side by side */}
+            <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                    <ImageUploadBlock settingKey="link_logo_url" label="Logo (โลโก้)" aspect="aspect-square" placeholder="ยังไม่มีโลโก้" />
                 </div>
-                <div className="flex gap-2">
-                    <label className="flex-1 cursor-pointer group">
-                        <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-3 text-center group-hover:border-brand transition-colors">
-                            <span className="text-subInk text-sm group-hover:text-ink">
-                                {uploading['link_hero_url'] ? 'กำลังอัพโหลด...' : '📸 เลือกรูป Hero'}
-                            </span>
-                        </div>
-                        <input type="file" className="hidden" accept="image/*" 
-                            onChange={(e) => uploadImage(e.target.files[0], 'link_hero_url')} 
-                        />
-                    </label>
-                    {settings.link_hero_url && (
-                        <button onClick={() => handleSave('link_hero_url', '')} className="text-xs text-red-500 hover:text-red-400 px-3">ลบ</button>
-                    )}
+                <div className="md:col-span-2">
+                    <ImageUploadBlock settingKey="link_hero_url" label="Hero Banner (รูปปก)" aspect="aspect-[2/1]" placeholder="ยังไม่มีรูป Hero" />
                 </div>
             </div>
 
             {/* Text Fields */}
             <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-xs font-bold text-brandDark uppercase mb-1">ชื่อร้าน (Shop Name)</label>
-                    <input
-                        type="text"
-                        value={settings.link_shop_name || ''}
-                        onChange={(e) => handleSave('link_shop_name', e.target.value)}
-                        placeholder="IN THE HAUS | ในบ้าน"
-                        className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
-                    />
+                    <label className="block text-xs font-bold text-brandDark uppercase mb-1">ชื่อร้าน EN (Shop Name)</label>
+                    <input type="text" value={settings.link_shop_name || ''} onChange={(e) => handleSave('link_shop_name', e.target.value)}
+                        placeholder="IN THE HAUS" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand" />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-brandDark uppercase mb-1">Subtitle</label>
-                    <input
-                        type="text"
-                        value={settings.link_subtitle || ''}
-                        onChange={(e) => handleSave('link_subtitle', e.target.value)}
-                        placeholder="ต่างวัตถุดิบ ต่างวิธี"
-                        className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
-                    />
+                    <label className="block text-xs font-bold text-brandDark uppercase mb-1">ชื่อร้าน TH</label>
+                    <input type="text" value={settings.link_shop_name_th || ''} onChange={(e) => handleSave('link_shop_name_th', e.target.value)}
+                        placeholder="ในบ้าน" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand" />
+                </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-bold text-brandDark uppercase mb-1">Subtitle / Tagline</label>
+                    <input type="text" value={settings.link_subtitle || ''} onChange={(e) => handleSave('link_subtitle', e.target.value)}
+                        placeholder="จริตจัด รสชัดเจน" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand" />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-brandDark uppercase mb-1">เวลาเปิด-ปิด</label>
+                    <input type="text" value={settings.link_hours || ''} onChange={(e) => handleSave('link_hours', e.target.value)}
+                        placeholder="เปิดทุกวัน 11:30 - 23:30 น." className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand" />
                 </div>
             </div>
             <div>
-                <label className="block text-xs font-bold text-brandDark uppercase mb-1">เวลาเปิด-ปิด (Hours Text)</label>
-                <input
-                    type="text"
-                    value={settings.link_hours || ''}
-                    onChange={(e) => handleSave('link_hours', e.target.value)}
-                    placeholder="เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)"
-                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
-                />
+                <label className="block text-xs font-bold text-brandDark uppercase mb-1">📍 ที่อยู่ (Location Text)</label>
+                <input type="text" value={settings.link_location_text || ''} onChange={(e) => handleSave('link_location_text', e.target.value)}
+                    placeholder="ริมแม่น้ำโขง · นครพนม" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand" />
+            </div>
+
+            {/* Signature Dishes */}
+            <div className="space-y-4 border-t border-gray-100 pt-6">
+                <label className="block text-xs font-bold text-brandDark uppercase">🍽 Signature Dishes (เมนูแนะนำ สูงสุด 3 จาน)</label>
+                <p className="text-[10px] text-subInk -mt-2">ถ้าไม่ใส่จะไม่แสดงส่วนนี้ในหน้า /link</p>
+                <div className="grid grid-cols-3 gap-3">
+                    {[1, 2, 3].map(n => (
+                        <div key={n} className="space-y-2 bg-canvas p-3 rounded-xl border border-gray-200">
+                            <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                {settings[`link_sig_img_${n}`] ? (
+                                    <img src={`${settings[`link_sig_img_${n}`]}?t=${timestamp}`} className="w-full h-full object-cover" alt={`Sig ${n}`} />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-subInk text-[10px]">#{n}</div>
+                                )}
+                            </div>
+                            <label className="block cursor-pointer">
+                                <div className="text-center text-[10px] text-subInk hover:text-ink py-1 border border-dashed border-gray-300 rounded-lg cursor-pointer">
+                                    {uploading[`link_sig_img_${n}`] ? '...' : '📸'}
+                                </div>
+                                <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadImage(e.target.files[0], `link_sig_img_${n}`)} />
+                            </label>
+                            <input type="text" value={settings[`link_sig_name_${n}`] || ''} onChange={(e) => handleSave(`link_sig_name_${n}`, e.target.value)}
+                                placeholder="ชื่อเมนู" className="w-full bg-white border border-gray-200 p-1.5 rounded-lg text-ink text-xs outline-none focus:border-brand" />
+                            <input type="text" value={settings[`link_sig_price_${n}`] || ''} onChange={(e) => handleSave(`link_sig_price_${n}`, e.target.value)}
+                                placeholder="ราคา" className="w-full bg-white border border-gray-200 p-1.5 rounded-lg text-ink text-xs outline-none focus:border-brand font-mono" />
+                            {settings[`link_sig_img_${n}`] && (
+                                <button onClick={() => { handleSave(`link_sig_img_${n}`, ''); handleSave(`link_sig_name_${n}`, ''); handleSave(`link_sig_price_${n}`, ''); }}
+                                    className="text-[10px] text-red-500 hover:text-red-400 w-full text-center">ลบ</button>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Menu Images Manager */}
             <div className="space-y-3 border-t border-gray-100 pt-6">
                 <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-brandDark uppercase">เมนู (Menu Images)</label>
+                    <label className="block text-xs font-bold text-brandDark uppercase">📖 เมนู (Menu Images)</label>
                     <span className="text-[10px] text-subInk">{menuUrls.length}/10 รูป</span>
                 </div>
 
-                {/* Existing menus */}
                 <div className="grid grid-cols-2 gap-3">
                     {menuUrls.map(({ slot, url }) => (
                         <div key={slot} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                             <img src={`${url}?t=${timestamp}`} alt={`Menu ${slot}`} className="w-full h-auto object-contain" />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                <button 
-                                    onClick={() => handleDeleteMenu(slot)}
-                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity"
-                                >
+                                <button onClick={() => handleDeleteMenu(slot)}
+                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity">
                                     <Trash2 size={14} className="inline mr-1" /> ลบ
                                 </button>
                             </div>
-                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">
-                                #{slot}
-                            </div>
+                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">#{slot}</div>
                         </div>
                     ))}
                 </div>
 
-                {/* Upload new menu */}
                 {menuUrls.length < 10 && (
                     <label className="block w-full cursor-pointer group">
                         <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
                             <Upload size={24} className="mx-auto mb-2 text-subInk group-hover:text-brandDark transition-colors" />
-                            <span className="text-subInk text-sm group-hover:text-ink block">
-                                เพิ่มรูปเมนู (เลือกได้หลายรูป)
-                            </span>
-                            <span className="text-[10px] text-gray-400 mt-1 block">
-                                แนะนำ: Portrait (9:16), JPG/PNG, สูงสุด 10 รูป
-                            </span>
+                            <span className="text-subInk text-sm group-hover:text-ink block">เพิ่มรูปเมนู (เลือกได้หลายรูป)</span>
+                            <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: Portrait (9:16), JPG/PNG, สูงสุด 10 รูป</span>
                         </div>
-                        <input 
-                            type="file" 
-                            className="hidden" 
-                            accept="image/*" 
-                            multiple
-                            onChange={(e) => handleMenuUpload(e.target.files)} 
-                        />
+                        <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleMenuUpload(e.target.files)} />
                     </label>
                 )}
             </div>
         </div>
     )
 }
+
