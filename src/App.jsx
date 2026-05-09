@@ -14,6 +14,7 @@ import Home from './Home'
 import QnAPage from './QnAPage'
 import BookingPage from './BookingPage'
 import PickupPage from './PickupPage'
+import AdsLandingPage from './AdsLandingPage' // NEW
 import AdminDashboard from './AdminDashboard'
 import AdminSettings from './AdminSettings'
 import AdminTableEditor from './AdminTableEditor'
@@ -112,6 +113,7 @@ function App() {
             {/* Landing Page (Standalone Custom Theme) */}
             <Route path="/" element={<Home session={session} />} />
             <Route path="/qa" element={<QnAPage />} />
+            <Route path="/link" element={<AdsLandingPage />} />
 
             {/* Public Routes (Standard Layout) */}
             <Route element={<PublicLayout session={session} />}>
