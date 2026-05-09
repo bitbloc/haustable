@@ -52,6 +52,8 @@ export default function AdsLandingPage() {
     const subtitle = settings.link_subtitle || 'จริตจัด รสชัดเจน · Bold Attitude, Clear Taste';
     const hours = settings.link_hours || 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)';
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
+    const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
+    const videoUrl = settings.link_video_url || '';
 
     if (loading) {
         return (
@@ -213,6 +215,28 @@ export default function AdsLandingPage() {
                 </section>
             )}
 
+            {/* ─── VIDEO LOOP ─── */}
+            {videoUrl && (
+                <section className="w-full max-w-lg mx-auto px-4 pb-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5 }}
+                        className="relative w-full rounded-2xl overflow-hidden shadow-md bg-black"
+                    >
+                        <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-auto object-cover"
+                        />
+                    </motion.div>
+                </section>
+            )}
+
             {/* ─── MENU GALLERY ─── */}
             {menuImages.length > 0 && (
                 <section className="w-full bg-white py-10">
@@ -244,7 +268,7 @@ export default function AdsLandingPage() {
             {/* ─── TAGS ─── */}
             <section className="w-full max-w-lg mx-auto px-5 py-8">
                 <div className="flex flex-wrap justify-center gap-2">
-                    {['#inthehausth', '#homefood', '#southernthaifood', '#nakhonpathom'].map(tag => (
+                    {tags.map(tag => (
                         <span key={tag} className="px-3 py-1 bg-neutral-100 text-neutral-400 rounded-full text-[10px] font-bold font-mono tracking-wide">
                             {tag}
                         </span>

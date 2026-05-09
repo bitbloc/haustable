@@ -1043,13 +1043,37 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         setMenuUrls(urls)
     }, [settings])
 
+    // Auto-resize image before upload (max 1200px width, JPEG 0.8 quality)
+    const resizeImage = (file, maxWidth = 1200) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                const img = new Image()
+                img.onload = () => {
+                    const canvas = document.createElement('canvas')
+                    const scale = Math.min(1, maxWidth / img.width)
+                    canvas.width = img.width * scale
+                    canvas.height = img.height * scale
+                    const ctx = canvas.getContext('2d')
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }))
+                    }, 'image/jpeg', 0.8)
+                }
+                img.src = e.target.result
+            }
+            reader.readAsDataURL(file)
+        })
+    }
+
     const uploadImage = async (file, settingKey) => {
         if (!file) return
         setUploading(prev => ({ ...prev, [settingKey]: true }))
         try {
-            const fileExt = file.name.split('.').pop()
-            const fileName = `link/${settingKey}_${Date.now()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true })
+            // Resize image before uploading
+            const resized = await resizeImage(file)
+            const fileName = `link/${settingKey}_${Date.now()}.jpg`
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resized, { upsert: true, contentType: 'image/jpeg' })
             if (uploadError) throw uploadError
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
             await handleSave(settingKey, publicUrl)
@@ -1058,6 +1082,34 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             alert('Upload error: ' + error.message)
         } finally {
             setUploading(prev => ({ ...prev, [settingKey]: false }))
+        }
+    }
+
+    const uploadVideo = async (file) => {
+        if (!file) return
+        const ext = file.name.split('.').pop().toLowerCase()
+        if (!['mp4', 'mov'].includes(ext)) {
+            alert('รองรับเฉพาะไฟล์ .mp4 และ .mov เท่านั้น')
+            return
+        }
+        // Limit 50MB
+        if (file.size > 50 * 1024 * 1024) {
+            alert('ไฟล์วิดีโอต้องไม่เกิน 50MB')
+            return
+        }
+        setUploading(prev => ({ ...prev, link_video_url: true }))
+        try {
+            const fileName = `link/video_${Date.now()}.${ext}`
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true, contentType: ext === 'mp4' ? 'video/mp4' : 'video/quicktime' })
+            if (uploadError) throw uploadError
+            const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
+            await handleSave('link_video_url', publicUrl)
+            setTimestamp(Date.now())
+            alert('อัพโหลดวิดีโอสำเร็จ!')
+        } catch (error) {
+            alert('Upload error: ' + error.message)
+        } finally {
+            setUploading(prev => ({ ...prev, link_video_url: false }))
         }
     }
 
@@ -1169,6 +1221,12 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                 <input type="text" value={settings.link_location_text || ''} onChange={(e) => handleSave('link_location_text', e.target.value)}
                     placeholder="ริมแม่น้ำโขง · นครพนม" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand" />
             </div>
+            <div>
+                <label className="block text-xs font-bold text-brandDark uppercase mb-1">#️⃣ Hashtags (คั่นด้วย comma)</label>
+                <input type="text" value={settings.link_tags || ''} onChange={(e) => handleSave('link_tags', e.target.value)}
+                    placeholder="#inthehausth, #homefood, #southernthaifood" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono text-sm" />
+                <p className="text-[10px] text-gray-400 mt-1">ใส่ # นำหน้า คั่นด้วย comma เช่น #tag1, #tag2, #tag3</p>
+            </div>
 
             {/* Signature Dishes */}
             <div className="space-y-4 border-t border-gray-100 pt-6">
@@ -1201,6 +1259,29 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                         </div>
                     ))}
                 </div>
+            </div>
+
+            {/* Video Upload */}
+            <div className="space-y-3 border-t border-gray-100 pt-6">
+                <label className="block text-xs font-bold text-brandDark uppercase">🎬 วิดีโอสั้น (Short Video Loop)</label>
+                <p className="text-[10px] text-subInk -mt-1">อัพโหลดวิดีโอสั้นๆ (.mp4, .mov) สูงสุด 50MB จะแสดงเป็น loop ใต้ Signature Dishes</p>
+                {settings.link_video_url ? (
+                    <div className="relative rounded-2xl overflow-hidden border border-gray-200 bg-black">
+                        <video src={`${settings.link_video_url}?t=${timestamp}`} autoPlay loop muted playsInline className="w-full h-auto max-h-64 object-contain" />
+                        <button onClick={() => handleSave('link_video_url', '')} className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-3 py-1 rounded-lg font-bold hover:bg-red-600 transition-colors">ลบวิดีโอ</button>
+                    </div>
+                ) : (
+                    <label className="block w-full cursor-pointer group">
+                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
+                            <span className="text-3xl block mb-2">🎬</span>
+                            <span className="text-subInk text-sm group-hover:text-ink block">
+                                {uploading.link_video_url ? 'กำลังอัพโหลด...' : 'เลือกวิดีโอ (.mp4, .mov)'}
+                            </span>
+                            <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: ความยาว 5-15 วินาที, สูงสุด 50MB</span>
+                        </div>
+                        <input type="file" className="hidden" accept="video/mp4,video/quicktime,.mp4,.mov" onChange={(e) => uploadVideo(e.target.files[0])} />
+                    </label>
+                )}
             </div>
 
             {/* Menu Images Manager */}
