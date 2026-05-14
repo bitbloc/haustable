@@ -14,8 +14,24 @@ export default function SOPRecipeCard({
     darkMode = true,
     defaultExpanded = false 
 }) {
+    const isCustomMode = recipe?.scaling_rules?._mode === 'custom';
+    const customPresets = isCustomMode ? (recipe?.scaling_rules?.presets || []) : [];
+
     const [expanded, setExpanded] = useState(defaultExpanded);
-    const [selectedSizeOz, setSelectedSizeOz] = useState(recipe?.base_glass_size_oz || 16);
+    const [selectedSizeOz, setSelectedSizeOz] = useState(
+        isCustomMode 
+            ? (customPresets.find(p => p.isBase)?.name || customPresets[0]?.name || 'Base')
+            : (recipe?.base_glass_size_oz || 16)
+    );
+
+    // Reset selection if recipe changes
+    React.useEffect(() => {
+        if (isCustomMode) {
+            setSelectedSizeOz(customPresets.find(p => p.isBase)?.name || customPresets[0]?.name || 'Base');
+        } else {
+            setSelectedSizeOz(recipe?.base_glass_size_oz || 16);
+        }
+    }, [recipe?.id, isCustomMode]);
 
     // Scale ingredients based on selected glass size
     const scaledIngredients = useMemo(() => {
@@ -26,7 +42,11 @@ export default function SOPRecipeCard({
     const visibleIngredients = useMemo(() => scaledIngredients.filter(i => !i.isHidden), [scaledIngredients]);
 
     const steps = recipe?.steps || [];
-    const isBaseSize = selectedSizeOz === (recipe?.base_glass_size_oz || 16);
+    
+    // Check if current selection is the base size
+    const isBaseSize = isCustomMode 
+        ? (customPresets.find(p => p.name === selectedSizeOz)?.isBase === true)
+        : (selectedSizeOz === (recipe?.base_glass_size_oz || 16));
 
     // Theme classes
     const t = darkMode ? {
@@ -86,7 +106,7 @@ export default function SOPRecipeCard({
                             {recipe?.name || 'Untitled'}
                         </h3>
                         <div className={`flex items-center gap-2 mt-0.5 text-xs ${t.textMuted}`}>
-                            <span>{recipe?.base_glass_size_oz || 16}oz</span>
+                            <span>{isCustomMode ? 'Custom Prep' : `${recipe?.base_glass_size_oz || 16}oz`}</span>
                             <span>•</span>
                             <span>{steps.length} steps</span>
                             {recipe?.garnish && (
@@ -109,29 +129,50 @@ export default function SOPRecipeCard({
             {/* Expanded Content */}
             {expanded && (
                 <div className="px-5 pb-5 space-y-4 animate-fade-in">
-                    {/* Glass Size Selector */}
-                    {glassSizes.length > 0 && (
+                    {/* Size Selector */}
+                    {(isCustomMode ? customPresets.length > 0 : glassSizes.length > 0) && (
                         <div>
                             <div className={`text-[10px] uppercase tracking-wider font-bold mb-2 ${t.sectionLabel}`}>
-                                ขนาดแก้ว / Glass Size
+                                {isCustomMode ? 'ตัวเลือกขนาด / Size' : 'ขนาดแก้ว / Glass Size'}
                             </div>
                             <div className="flex gap-2 flex-wrap">
-                                {glassSizes.map(gs => {
-                                    const isActive = gs.size_oz === selectedSizeOz;
-                                    const isDefault = gs.size_oz === (recipe?.base_glass_size_oz || 16);
-                                    return (
-                                        <button
-                                            key={gs.id}
-                                            onClick={() => setSelectedSizeOz(gs.size_oz)}
-                                            className={`px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1 ${
-                                                isActive ? t.glassPillActive : t.glassPill
-                                            }`}
-                                        >
-                                            {gs.size_oz}oz
-                                            {isDefault && <Star size={10} className="opacity-60" />}
-                                        </button>
-                                    );
-                                })}
+                                {isCustomMode ? (
+                                    customPresets.map((preset, idx) => {
+                                        const isActive = preset.name === selectedSizeOz;
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setSelectedSizeOz(preset.name)}
+                                                className={`px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1 ${
+                                                    isActive ? t.glassPillActive : t.glassPill
+                                                }`}
+                                            >
+                                                {preset.name}
+                                                {preset.isBase && <Star size={10} className="opacity-60" />}
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    glassSizes.map(gs => {
+                                        const isBase = gs.size_oz === recipe.base_glass_size_oz;
+                                        const isAvailable = isBase || recipe?.scaling_rules?.[String(gs.size_oz)] !== undefined;
+                                        if (!isAvailable) return null; // Only show available sizes
+                                        
+                                        const isActive = gs.size_oz === selectedSizeOz;
+                                        return (
+                                            <button
+                                                key={gs.id}
+                                                onClick={() => setSelectedSizeOz(gs.size_oz)}
+                                                className={`px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1 ${
+                                                    isActive ? t.glassPillActive : t.glassPill
+                                                }`}
+                                            >
+                                                {gs.size_oz}oz
+                                                {isBase && <Star size={10} className="opacity-60" />}
+                                            </button>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
                     )}
@@ -146,7 +187,7 @@ export default function SOPRecipeCard({
                                 📦 ส่วนผสม
                                 {!isBaseSize && (
                                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${t.accentBg} ${t.accent}`}>
-                                        {selectedSizeOz}oz
+                                        {isCustomMode ? selectedSizeOz : `${selectedSizeOz}oz`}
                                     </span>
                                 )}
                             </div>

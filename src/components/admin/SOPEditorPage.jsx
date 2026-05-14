@@ -137,6 +137,26 @@ export default function SOPEditorPage() {
         });
     };
 
+    const isCustomMode = editing?.scaling_rules?._mode === 'custom';
+
+    const toggleCustomMode = (toCustom) => {
+        if (toCustom) {
+            setEditing({
+                ...editing,
+                scaling_rules: {
+                    _mode: 'custom',
+                    presets: [{ name: '1 ถัง', multiplier: 1, isBase: true }]
+                }
+            });
+        } else {
+            setEditing({
+                ...editing,
+                scaling_rules: { "8": 0.5, "12": 0.75, "16": 1, "22": 1.375 },
+                base_glass_size_oz: 16
+            });
+        }
+    };
+
     // ── Save ──
     const handleSave = async () => {
         if (!editing.name.trim()) { toast.error('กรุณาใส่ชื่อ SOP'); return; }
@@ -348,13 +368,15 @@ export default function SOPEditorPage() {
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
                             </select>
                         </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 block mb-1">ขนาดแก้วมาตรฐาน</label>
-                            <select value={editing.base_glass_size_oz} onChange={e => setEditing({ ...editing, base_glass_size_oz: parseInt(e.target.value) })} className="w-full p-3 border rounded-xl bg-white">
-                                {glassSizes.map(gs => <option key={gs.id} value={gs.size_oz}>{gs.label}</option>)}
-                                <option value="16">16 oz (default)</option>
-                            </select>
-                        </div>
+                        {!isCustomMode && (
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 block mb-1">ขนาดแก้วมาตรฐาน</label>
+                                <select value={editing.base_glass_size_oz} onChange={e => setEditing({ ...editing, base_glass_size_oz: parseInt(e.target.value) })} className="w-full p-3 border rounded-xl bg-white">
+                                    {glassSizes.map(gs => <option key={gs.id} value={gs.size_oz}>{gs.size_oz} oz ({gs.name})</option>)}
+                                    <option value="16">16 oz (default)</option>
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -423,48 +445,105 @@ export default function SOPEditorPage() {
                     <button onClick={addStep} className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 transition-colors font-bold">+ เพิ่มขั้นตอน</button>
                 </div>
 
-                {/* Scaling Rules Simplified (Checkboxes) */}
+                {/* Scaling Rules / Custom Presets */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                    <div>
-                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">🥤 ขนาดแก้วที่ขาย</h2>
-                        <p className="text-xs text-gray-400 mt-1">เลือกว่าเมนูนี้สามารถขายในแก้วขนาดใดได้บ้าง ระบบจะคำนวณสัดส่วนให้อัตโนมัติ</p>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">
+                                {isCustomMode ? '🪣 ตัวเลือกขนาด (Presets)' : '🥤 ขนาดแก้วที่ขาย'}
+                            </h2>
+                            <p className="text-xs text-gray-400 mt-1">
+                                {isCustomMode ? 'กำหนดปุ่มสำหรับให้พนักงานกดเลือกทำสูตร (เช่น 1 ลิตร, 1.5 ลิตร)' : 'เลือกว่าเมนูนี้สามารถขายในแก้วขนาดใดได้บ้าง'}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+                            <button onClick={() => toggleCustomMode(false)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${!isCustomMode ? 'bg-white shadow text-purple-700' : 'text-gray-500 hover:text-gray-700'}`}>แก้ว (oz)</button>
+                            <button onClick={() => toggleCustomMode(true)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${isCustomMode ? 'bg-white shadow text-purple-700' : 'text-gray-500 hover:text-gray-700'}`}>ทำเบส (Custom)</button>
+                        </div>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        {glassSizes.map(gs => {
-                            const isBase = gs.size_oz === editing.base_glass_size_oz;
-                            const isAvailable = isBase || editing.scaling_rules?.[String(gs.size_oz)] !== undefined;
-                            
-                            return (
-                                <button
-                                    key={gs.id}
-                                    onClick={() => {
-                                        if (isBase) return; // Cannot toggle base size
-                                        const newRules = { ...editing.scaling_rules };
-                                        if (isAvailable) {
-                                            delete newRules[String(gs.size_oz)];
-                                        } else {
-                                            // Auto calculate multiplier: target / base
-                                            newRules[String(gs.size_oz)] = gs.size_oz / editing.base_glass_size_oz;
-                                        }
-                                        setEditing({ ...editing, scaling_rules: newRules });
-                                    }}
-                                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all w-24 h-24 ${
-                                        isAvailable 
-                                        ? 'border-purple-500 bg-purple-50' 
-                                        : 'border-gray-200 bg-white hover:border-gray-300'
-                                    } ${isBase ? 'opacity-80 cursor-default' : 'cursor-pointer'}`}
-                                >
-                                    <div className={`w-6 h-6 rounded-md border flex items-center justify-center mb-2 ${
-                                        isAvailable ? 'bg-purple-500 border-purple-500 text-white' : 'bg-white border-gray-300'
-                                    }`}>
-                                        {isAvailable && <span className="text-sm font-bold">✓</span>}
+                    
+                    {isCustomMode ? (
+                        <div className="space-y-3">
+                            {(editing.scaling_rules?.presets || []).map((preset, idx) => (
+                                <div key={idx} className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <input 
+                                        value={preset.name} 
+                                        onChange={e => {
+                                            const newPresets = [...editing.scaling_rules.presets];
+                                            newPresets[idx].name = e.target.value;
+                                            setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
+                                        }}
+                                        placeholder="ชื่อปุ่ม (เช่น 1.5 ลิตร)"
+                                        className="flex-1 p-2 border rounded-lg text-sm font-bold focus:border-purple-400 outline-none"
+                                    />
+                                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase">ตัวคูณ (x)</span>
+                                        <input 
+                                            type="number" step="0.1"
+                                            value={preset.multiplier}
+                                            onChange={e => {
+                                                const newPresets = [...editing.scaling_rules.presets];
+                                                newPresets[idx].multiplier = parseFloat(e.target.value) || 1;
+                                                setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
+                                            }}
+                                            className={`w-16 p-1 text-sm text-center font-mono font-bold outline-none ${preset.isBase ? 'text-gray-500 bg-transparent' : 'text-purple-600'}`}
+                                            disabled={preset.isBase}
+                                            title={preset.isBase ? "สูตรมาตรฐาน ตัวคูณต้องเป็น 1 เสมอ" : "ตัวคูณสำหรับ Preset นี้"}
+                                        />
                                     </div>
-                                    <span className={`font-bold text-lg ${isAvailable ? 'text-purple-700' : 'text-gray-500'}`}>{gs.size_oz}oz</span>
-                                    {isBase && <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white">แก้วมาตรฐาน</span>}
-                                </button>
-                            );
-                        })}
-                    </div>
+                                    {!preset.isBase && (
+                                        <button onClick={() => {
+                                            const newPresets = editing.scaling_rules.presets.filter((_, i) => i !== idx);
+                                            setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
+                                        }} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            <button onClick={() => {
+                                const newPresets = [...(editing.scaling_rules?.presets || []), { name: 'ขนาดใหม่', multiplier: 1.5 }];
+                                setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
+                            }} className="text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors bg-purple-50 px-4 py-2 rounded-lg">+ เพิ่ม Preset</button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap gap-3">
+                            {glassSizes.map(gs => {
+                                const isBase = gs.size_oz === editing.base_glass_size_oz;
+                                const isAvailable = isBase || editing.scaling_rules?.[String(gs.size_oz)] !== undefined;
+                                
+                                return (
+                                    <button
+                                        key={gs.id}
+                                        onClick={() => {
+                                            if (isBase) return; // Cannot toggle base size
+                                            const newRules = { ...editing.scaling_rules };
+                                            if (isAvailable) {
+                                                delete newRules[String(gs.size_oz)];
+                                            } else {
+                                                // Auto calculate multiplier: target / base
+                                                newRules[String(gs.size_oz)] = gs.size_oz / editing.base_glass_size_oz;
+                                            }
+                                            setEditing({ ...editing, scaling_rules: newRules });
+                                        }}
+                                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all w-24 h-24 ${
+                                            isAvailable 
+                                            ? 'border-purple-500 bg-purple-50' 
+                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                        } ${isBase ? 'opacity-80 cursor-default' : 'cursor-pointer'}`}
+                                    >
+                                        <div className={`w-6 h-6 rounded-md border flex items-center justify-center mb-2 ${
+                                            isAvailable ? 'bg-purple-500 border-purple-500 text-white' : 'bg-white border-gray-300'
+                                        }`}>
+                                            {isAvailable && <span className="text-sm font-bold">✓</span>}
+                                        </div>
+                                        <span className={`font-bold text-lg ${isAvailable ? 'text-purple-700' : 'text-gray-500'}`}>{gs.size_oz}oz</span>
+                                        {isBase && <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white">แก้วมาตรฐาน</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* Garnish & Notes */}

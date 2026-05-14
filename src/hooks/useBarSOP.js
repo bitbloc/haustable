@@ -193,24 +193,33 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
 
     // ────────────────────────────────
     // Scale Ingredients
-    // ────────────────────────────────
-    const scaleIngredients = useCallback((recipe, targetSizeOz) => {
-        const ingredientsToScale = recipe?.display_ingredients || recipe?.ingredients || [];
-        if (!ingredientsToScale) return [];
-
-        const baseOz = recipe.base_glass_size_oz || 16;
+    // ── Helper: Scale Ingredients ──
+    const scaleIngredients = useCallback((recipe, targetSizeOrPreset) => {
+        if (!recipe) return [];
+        const ingredients = recipe.display_ingredients || recipe.ingredients || [];
         const rules = recipe.scaling_rules || {};
-
-        // Get multiplier from scaling rules
+        const isCustomMode = rules._mode === 'custom';
+        
+        // Get multiplier
         let multiplier = 1;
-        if (rules[String(targetSizeOz)] !== undefined) {
-            multiplier = rules[String(targetSizeOz)];
+        if (isCustomMode) {
+            const presets = rules.presets || [];
+            const preset = presets.find(p => p.name === targetSizeOrPreset);
+            if (preset) {
+                multiplier = parseFloat(preset.multiplier) || 1;
+            }
         } else {
-            // Fallback: linear ratio
-            multiplier = targetSizeOz / baseOz;
+            const baseOz = parseFloat(recipe.base_glass_size_oz) || 16;
+            const targetSizeOz = parseFloat(targetSizeOrPreset) || baseOz;
+            
+            if (rules[String(targetSizeOz)] !== undefined) {
+                multiplier = parseFloat(rules[String(targetSizeOz)]);
+            } else {
+                multiplier = targetSizeOz / baseOz;
+            }
         }
 
-        return ingredientsToScale.map(ing => ({
+        return ingredients.map(ing => ({
             ...ing,
             scaledQty: ing.scalable !== false
                 ? Math.round((ing.qty * multiplier) * 100) / 100
