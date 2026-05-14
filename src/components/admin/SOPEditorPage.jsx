@@ -8,7 +8,7 @@ import SOPCategoryManager from '../sop/SOPCategoryManager';
 import { toast } from 'sonner';
 
 // ── Step Editor Row ──
-function StepRow({ step, index, onUpdate, onDelete, onMove, isLast }) {
+function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients }) {
     return (
         <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-xl group">
             <div className="flex flex-col gap-0.5 pt-2">
@@ -19,16 +19,26 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast }) {
             <select
                 value={step.action || 'pour'}
                 onChange={e => onUpdate(index, { ...step, action: e.target.value })}
-                className="w-28 p-2 border rounded-lg text-sm bg-white flex-shrink-0"
+                className="w-24 p-2 border rounded-lg text-sm bg-white flex-shrink-0"
             >
                 {SOP_ACTIONS.map(a => (
                     <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
                 ))}
             </select>
+            <select
+                value={step.ingredient_ref || ''}
+                onChange={e => onUpdate(index, { ...step, ingredient_ref: e.target.value })}
+                className="w-32 p-2 border rounded-lg text-[13px] bg-white flex-shrink-0 text-gray-700 truncate"
+            >
+                <option value="">- ไม่ระบุวัตถุดิบ -</option>
+                {availableIngredients.map(ing => (
+                    <option key={ing.name} value={ing.name}>{ing.name}</option>
+                ))}
+            </select>
             <input
                 value={step.instruction || ''}
                 onChange={e => onUpdate(index, { ...step, instruction: e.target.value })}
-                placeholder="คำอธิบายขั้นตอน..."
+                placeholder="คำอธิบายเพิ่มเติม..."
                 className="flex-1 p-2 border rounded-lg text-sm"
             />
             <input
@@ -36,7 +46,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast }) {
                 value={step.duration_sec || ''}
                 onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value) : null })}
                 placeholder="วิ"
-                className="w-14 p-2 border rounded-lg text-sm text-center"
+                className="w-14 p-2 border rounded-lg text-sm text-center flex-shrink-0"
                 title="เวลา (วินาที)"
             />
             <button onClick={() => onDelete(index)} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
@@ -175,10 +185,26 @@ export default function SOPEditorPage() {
         }
     }, [editing?.id]);
 
-    // ── Ingredient CRUD ──
+    // ── Ingredient CRUD & Visibility ──
     const addIngredient = () => setEditing(prev => ({ ...prev, ingredients: [...(prev.ingredients || []), { name: '', qty: 0, unit: 'ml', scalable: true }] }));
     const updateIngredient = (i, val) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.map((ing, idx) => idx === i ? val : ing) }));
-    const deleteIngredient = (i) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.filter((_, idx) => idx !== i) }));
+    // Delete only true manual ingredients, not linked overrides
+    const deleteIngredient = (i) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.filter((ing, idx) => idx !== i) }));
+    
+    const toggleHideLinked = (ingName) => {
+        setEditing(prev => {
+            const existing = (prev.ingredients || []).find(i => i.name === ingName);
+            let newManuals;
+            if (existing) {
+                newManuals = prev.ingredients.map(i => i.name === ingName ? { ...i, isHidden: !i.isHidden } : i);
+            } else {
+                newManuals = [...(prev.ingredients || []), { name: ingName, isHidden: true }];
+            }
+            
+            const newPreview = (prev.linked_preview || []).map(i => i.name === ingName ? { ...i, isHidden: !i.isHidden } : i);
+            return { ...prev, ingredients: newManuals, linked_preview: newPreview };
+        });
+    };
 
     // ── Step CRUD ──
     const addStep = () => setEditing(prev => ({ ...prev, steps: [...(prev.steps || []), { order: (prev.steps?.length || 0) + 1, action: 'pour', instruction: '', duration_sec: null }] }));
@@ -347,8 +373,13 @@ export default function SOPEditorPage() {
                             </div>
                             <div className="space-y-1">
                                 {(editing.linked_preview || []).map((ing, i) => (
-                                    <div key={`linked-${i}`} className="flex justify-between items-center text-sm py-1 border-b border-purple-100/50 last:border-0">
-                                        <span className="text-gray-700">{ing.name}</span>
+                                    <div key={`linked-${i}`} className={`flex justify-between items-center text-sm py-1 border-b border-purple-100/50 last:border-0 ${ing.isHidden ? 'opacity-40' : ''}`}>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => toggleHideLinked(ing.name)} title={ing.isHidden ? "แสดงใน SOP" : "ซ่อนใน SOP (เช่น แก้ว)"} className="p-1 hover:bg-purple-100 rounded text-purple-400">
+                                                {ing.isHidden ? <EyeOff size={14} className="text-red-400" /> : <Eye size={14} />}
+                                            </button>
+                                            <span className={ing.isHidden ? 'line-through text-gray-500' : 'text-gray-700'}>{ing.name}</span>
+                                        </div>
                                         <span className="text-gray-500 font-mono">{ing.qty} {ing.unit}</span>
                                     </div>
                                 ))}
@@ -363,7 +394,7 @@ export default function SOPEditorPage() {
                     <div>
                         <h3 className="text-xs font-bold text-gray-500 mb-2">ส่วนผสมเพิ่มเติม (Manual)</h3>
                         <div className="space-y-2 mb-2">
-                            {(editing.ingredients || []).map((ing, i) => (
+                            {(editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined).map((ing, i) => (
                                 <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} />
                             ))}
                         </div>
@@ -376,7 +407,12 @@ export default function SOPEditorPage() {
                     <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📋 ขั้นตอน ({(editing.steps || []).length})</h2>
                     <div className="space-y-2">
                         {(editing.steps || []).map((step, i) => (
-                            <StepRow key={i} step={step} index={i} onUpdate={updateStep} onDelete={deleteStep} onMove={moveStep} isLast={i === editing.steps.length - 1} />
+                            <StepRow 
+                                key={i} step={step} index={i} 
+                                onUpdate={updateStep} onDelete={deleteStep} onMove={moveStep} 
+                                isLast={i === editing.steps.length - 1} 
+                                availableIngredients={[...(editing.linked_preview || []), ...(editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined)]}
+                            />
                         ))}
                     </div>
                     <button onClick={addStep} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:text-purple-600 transition-colors font-bold">+ เพิ่มขั้นตอน</button>

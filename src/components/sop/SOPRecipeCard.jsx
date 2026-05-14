@@ -23,6 +23,8 @@ export default function SOPRecipeCard({
         return scaleIngredients(recipe, selectedSizeOz);
     }, [recipe, selectedSizeOz, scaleIngredients]);
 
+    const visibleIngredients = useMemo(() => scaledIngredients.filter(i => !i.isHidden), [scaledIngredients]);
+
     const steps = recipe?.steps || [];
     const isBaseSize = selectedSizeOz === (recipe?.base_glass_size_oz || 16);
 
@@ -138,7 +140,7 @@ export default function SOPRecipeCard({
                     <div className={`border-t ${t.divider}`} />
 
                     {/* Ingredients */}
-                    {scaledIngredients.length > 0 && (
+                    {visibleIngredients.length > 0 && (
                         <div>
                             <div className={`text-[10px] uppercase tracking-wider font-bold mb-2 flex items-center gap-2 ${t.sectionLabel}`}>
                                 📦 ส่วนผสม
@@ -149,7 +151,7 @@ export default function SOPRecipeCard({
                                 )}
                             </div>
                             <div className="space-y-0">
-                                {scaledIngredients.map((ing, i) => (
+                                {visibleIngredients.map((ing, i) => (
                                     <div 
                                         key={i} 
                                         className={`flex items-center justify-between py-2 border-b last:border-0 ${t.ingredientRow}`}
@@ -177,6 +179,22 @@ export default function SOPRecipeCard({
                             <div className="space-y-2">
                                 {steps.map((step, i) => {
                                     const action = getActionByKey(step.action);
+                                    
+                                    // Resolve Dynamic Ingredient
+                                    let dynamicIngDisplay = null;
+                                    if (step.ingredient_ref) {
+                                        const linkedIng = scaledIngredients.find(ing => ing.name === step.ingredient_ref);
+                                        if (linkedIng) {
+                                            dynamicIngDisplay = (
+                                                <span className={`mx-1 ${linkedIng.isScaled ? t.scaledHighlight : 'font-bold'}`}>
+                                                    {linkedIng.name} ({linkedIng.scaledQty ?? linkedIng.qty} {linkedIng.unit})
+                                                </span>
+                                            );
+                                        } else {
+                                            dynamicIngDisplay = <span className="mx-1 font-bold">{step.ingredient_ref}</span>;
+                                        }
+                                    }
+
                                     return (
                                         <div 
                                             key={i}
@@ -187,14 +205,16 @@ export default function SOPRecipeCard({
                                                 {i + 1}
                                             </div>
                                             {/* Action icon */}
-                                            <span className="text-xl flex-shrink-0 select-none mt-0.5">
+                                            <span className="text-xl flex-shrink-0 select-none mt-0.5" title={action.label}>
                                                 {action.icon}
                                             </span>
                                             {/* Instruction */}
                                             <div className="flex-1 min-w-0">
-                                                <span className={`text-sm leading-relaxed ${t.text}`}>
-                                                    {step.instruction}
-                                                </span>
+                                                <div className={`text-sm leading-relaxed ${t.text}`}>
+                                                    <span className="font-bold mr-1">{action.label}</span>
+                                                    {dynamicIngDisplay}
+                                                    {step.instruction && <span>{step.instruction}</span>}
+                                                </div>
                                                 {step.duration_sec && (
                                                     <span className={`block text-xs mt-0.5 ${t.textMuted}`}>
                                                         ⏱ {step.duration_sec}s

@@ -130,17 +130,29 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                     dynamic = linkedIngs.filter(i => i.parent_stock_item_id === r.source_stock_item_id);
                 }
 
-                const mappedDynamic = dynamic.map(i => ({
-                    name: i.ingredient?.name || 'Unknown',
-                    qty: i.quantity || 0,
-                    unit: i.unit || i.ingredient?.usage_unit || 'unit',
-                    scalable: true,
-                    isLinked: true // Flag to show it's from Recipe Lab
-                }));
+                const mappedDynamic = dynamic.map(i => {
+                    const ingName = i.ingredient?.name || 'Unknown';
+                    // Find if there's an override in manual ingredients (e.g. isHidden)
+                    const override = (r.ingredients || []).find(m => m.name === ingName);
+                    
+                    return {
+                        name: ingName,
+                        qty: i.quantity || 0,
+                        unit: i.unit || i.ingredient?.usage_unit || 'unit',
+                        scalable: true,
+                        isLinked: true, // Flag to show it's from Recipe Lab
+                        isHidden: override?.isHidden || false
+                    };
+                });
+
+                // Extra manual ingredients are those in r.ingredients that are not linked overrides
+                const extraManuals = (r.ingredients || []).filter(m => 
+                    !mappedDynamic.some(d => d.name === m.name)
+                );
 
                 return {
                     ...r,
-                    display_ingredients: [...mappedDynamic, ...(r.ingredients || [])]
+                    display_ingredients: [...mappedDynamic, ...extraManuals]
                 };
             });
 
@@ -247,7 +259,8 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 qty: r.quantity || 0,
                 unit: r.unit || r.ingredient?.usage_unit || 'unit',
                 scalable: true,
-                isLinked: true
+                isLinked: true,
+                isHidden: false
             }));
         } catch (err) {
             console.error('Fetch linked failed:', err);
