@@ -95,23 +95,68 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 query = query.eq('category_id', categoryId);
             }
 
-            const { data, error } = await query;
-
+            // Fetch the SOP recipes
+            const { data: sops, error } = await query;
             if (error) throw error;
 
-            setRecipes(data || []);
+            // Dynamically fetch linked ingredients from Recipe Lab
+            const menuIds = sops.filter(r => r.source_menu_item_id).map(r => r.source_menu_item_id);
+            const stockIds = sops.filter(r => r.source_stock_item_id).map(r => r.source_stock_item_id);
+
+            let linkedIngs = [];
+            
+            if (menuIds.length > 0) {
+                const { data: mIngs } = await supabase
+                    .from('recipe_ingredients')
+                    .select('parent_menu_item_id, quantity, unit, ingredient:stock_items(name, usage_unit)')
+                    .in('parent_menu_item_id', menuIds);
+                if (mIngs) linkedIngs = [...linkedIngs, ...mIngs];
+            }
+
+            if (stockIds.length > 0) {
+                const { data: sIngs } = await supabase
+                    .from('recipe_ingredients')
+                    .select('parent_stock_item_id, quantity, unit, ingredient:stock_items(name, usage_unit)')
+                    .in('parent_stock_item_id', stockIds);
+                if (sIngs) linkedIngs = [...linkedIngs, ...sIngs];
+            }
+
+            // Populate each recipe with dynamic ingredients
+            const populatedData = sops.map(r => {
+                let dynamic = [];
+                if (r.source_menu_item_id) {
+                    dynamic = linkedIngs.filter(i => i.parent_menu_item_id === r.source_menu_item_id);
+                } else if (r.source_stock_item_id) {
+                    dynamic = linkedIngs.filter(i => i.parent_stock_item_id === r.source_stock_item_id);
+                }
+
+                const mappedDynamic = dynamic.map(i => ({
+                    name: i.ingredient?.name || 'Unknown',
+                    qty: i.quantity || 0,
+                    unit: i.unit || i.ingredient?.usage_unit || 'unit',
+                    scalable: true,
+                    isLinked: true // Flag to show it's from Recipe Lab
+                }));
+
+                return {
+                    ...r,
+                    display_ingredients: [...mappedDynamic, ...(r.ingredients || [])]
+                };
+            });
+
+            setRecipes(populatedData);
 
             // Cache for offline
             if (staffMode) {
                 try {
                     localStorage.setItem(`sop_cache_${department}`, JSON.stringify({
-                        data: data || [],
+                        data: populatedData,
                         timestamp: Date.now()
                     }));
                 } catch (e) { /* ignore storage errors */ }
             }
 
-            return data || [];
+            return populatedData;
         } catch (err) {
             console.error('Failed to load SOP recipes:', err);
 
@@ -138,10 +183,11 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     // Scale Ingredients
     // ────────────────────────────────
     const scaleIngredients = useCallback((recipe, targetSizeOz) => {
-        if (!recipe?.ingredients || !recipe?.scaling_rules) return recipe?.ingredients || [];
+        const ingredientsToScale = recipe?.display_ingredients || recipe?.ingredients || [];
+        if (!ingredientsToScale) return [];
 
         const baseOz = recipe.base_glass_size_oz || 16;
-        const rules = recipe.scaling_rules;
+        const rules = recipe.scaling_rules || {};
 
         // Get multiplier from scaling rules
         let multiplier = 1;
@@ -152,7 +198,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             multiplier = targetSizeOz / baseOz;
         }
 
-        return recipe.ingredients.map(ing => ({
+        return ingredientsToScale.map(ing => ({
             ...ing,
             scaledQty: ing.scalable !== false
                 ? Math.round((ing.qty * multiplier) * 100) / 100
@@ -175,9 +221,9 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     });
 
     // ────────────────────────────────
-    // Import from Recipe Lab
+    // Link to Recipe Lab (Fetch summary for preview)
     // ────────────────────────────────
-    const importFromRecipeLab = useCallback(async (sourceId, sourceType = 'stock') => {
+    const fetchRecipeLabSummary = useCallback(async (sourceId, sourceType = 'stock') => {
         try {
             const queryField = sourceType === 'menu'
                 ? 'parent_menu_item_id'
@@ -188,34 +234,23 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 .select(`
                     quantity,
                     unit,
-                    layer_order,
                     ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
                         id, name, usage_unit
                     )
                 `)
-                .eq(queryField, sourceId)
-                .order('layer_order');
+                .eq(queryField, sourceId);
 
             if (error) throw error;
-
-            if (!recipeData || recipeData.length === 0) {
-                toast.info('ไม่พบส่วนผสมจาก Recipe Lab');
-                return [];
-            }
-
-            // Convert to SOP ingredients format
-            const sopIngredients = recipeData.map(r => ({
+            
+            return recipeData.map(r => ({
                 name: r.ingredient?.name || 'Unknown',
                 qty: r.quantity || 0,
                 unit: r.unit || r.ingredient?.usage_unit || 'unit',
-                scalable: true
+                scalable: true,
+                isLinked: true
             }));
-
-            toast.success(`นำเข้า ${sopIngredients.length} รายการจาก Recipe Lab`);
-            return sopIngredients;
         } catch (err) {
-            console.error('Import failed:', err);
-            toast.error('นำเข้าจาก Recipe Lab ไม่สำเร็จ');
+            console.error('Fetch linked failed:', err);
             return [];
         }
     }, []);
@@ -398,7 +433,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         fetchCategories,
         fetchGlassSizes,
         scaleIngredients,
-        importFromRecipeLab,
+        fetchRecipeLabSummary,
         saveSOPRecipe,
         deleteSOPRecipe,
         saveCategory,

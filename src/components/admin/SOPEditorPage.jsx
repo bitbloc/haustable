@@ -149,14 +149,31 @@ export default function SOPEditorPage() {
         }
     };
 
-    // ── Import from Recipe Lab ──
-    const handleImport = async (sourceId, sourceType) => {
-        const ingredients = await importFromRecipeLab(sourceId, sourceType);
-        if (ingredients.length > 0) {
-            setEditing(prev => ({ ...prev, ingredients: [...(prev.ingredients || []), ...ingredients] }));
-        }
+    // ── Link to Recipe Lab ──
+    const handleLink = async (sourceId, sourceType) => {
+        const linkedIngs = await fetchRecipeLabSummary(sourceId, sourceType);
+        
+        setEditing(prev => ({ 
+            ...prev, 
+            source_menu_item_id: sourceType === 'menu' ? sourceId : null,
+            source_stock_item_id: sourceType === 'stock' ? sourceId : null,
+            linked_preview: linkedIngs,
+            // Automatically clear ingredients that were previously imported as static
+            ingredients: prev.ingredients?.filter(i => !i.isLinked) || []
+        }));
+        
         setShowImport(false);
     };
+
+    // Prepare linked preview on edit
+    useEffect(() => {
+        if (editing && editing.id && !editing.linked_preview) {
+            setEditing(prev => ({
+                ...prev,
+                linked_preview: prev.display_ingredients?.filter(i => i.isLinked) || []
+            }));
+        }
+    }, [editing?.id]);
 
     // ── Ingredient CRUD ──
     const addIngredient = () => setEditing(prev => ({ ...prev, ingredients: [...(prev.ingredients || []), { name: '', qty: 0, unit: 'ml', scalable: true }] }));
@@ -313,17 +330,45 @@ export default function SOPEditorPage() {
                 </div>
 
                 {/* Ingredients */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                     <div className="flex justify-between items-center">
-                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📦 ส่วนผสม ({(editing.ingredients || []).length})</h2>
-                        <button onClick={() => setShowImport(true)} className="text-xs text-purple-600 font-bold flex items-center gap-1 hover:underline"><Download size={14} /> Import</button>
+                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📦 ส่วนผสม</h2>
+                        <button onClick={() => setShowImport(true)} className="text-xs text-purple-600 font-bold flex items-center gap-1 hover:underline"><Download size={14} /> เชื่อมโยงข้อมูล Recipe Lab</button>
                     </div>
-                    <div className="space-y-2">
-                        {(editing.ingredients || []).map((ing, i) => (
-                            <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} />
-                        ))}
+
+                    {/* Linked Ingredients */}
+                    {(editing.source_menu_item_id || editing.source_stock_item_id) && (
+                        <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-3">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-bold text-purple-700 flex items-center gap-1">
+                                    <FlaskConical size={12} /> ดึงข้อมูลอัตโนมัติจาก Recipe Lab
+                                </span>
+                                <button onClick={() => setEditing(prev => ({ ...prev, source_menu_item_id: null, source_stock_item_id: null, linked_preview: [] }))} className="text-[10px] text-red-500 hover:underline">ยกเลิกเชื่อมโยง</button>
+                            </div>
+                            <div className="space-y-1">
+                                {(editing.linked_preview || []).map((ing, i) => (
+                                    <div key={`linked-${i}`} className="flex justify-between items-center text-sm py-1 border-b border-purple-100/50 last:border-0">
+                                        <span className="text-gray-700">{ing.name}</span>
+                                        <span className="text-gray-500 font-mono">{ing.qty} {ing.unit}</span>
+                                    </div>
+                                ))}
+                                {(!editing.linked_preview || editing.linked_preview.length === 0) && (
+                                    <div className="text-xs text-gray-400 italic">ไม่มีส่วนผสม หรือกำลังโหลด...</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Manual Extra Ingredients */}
+                    <div>
+                        <h3 className="text-xs font-bold text-gray-500 mb-2">ส่วนผสมเพิ่มเติม (Manual)</h3>
+                        <div className="space-y-2 mb-2">
+                            {(editing.ingredients || []).map((ing, i) => (
+                                <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} />
+                            ))}
+                        </div>
+                        <button onClick={addIngredient} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:text-purple-600 transition-colors font-bold">+ เพิ่มวัตถุดิบอื่น (เช่น Garnish พิเศษ)</button>
                     </div>
-                    <button onClick={addIngredient} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:text-purple-600 transition-colors font-bold">+ เพิ่มวัตถุดิบ</button>
                 </div>
 
                 {/* Steps */}
@@ -341,18 +386,20 @@ export default function SOPEditorPage() {
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
                     <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📐 Scaling Rules</h2>
                     <p className="text-xs text-gray-400">ตัวคูณสำหรับปรับปริมาณส่วนผสมตามขนาดแก้ว (ขนาดมาตรฐาน = 1.0x)</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="flex flex-wrap gap-3">
                         {glassSizes.map(gs => (
-                            <div key={gs.id} className="flex items-center gap-2">
-                                <label className="text-sm font-bold text-gray-600 w-12">{gs.size_oz}oz</label>
-                                <input
-                                    type="number" step="0.05"
-                                    value={editing.scaling_rules?.[String(gs.size_oz)] ?? ''}
-                                    onChange={e => setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, [String(gs.size_oz)]: parseFloat(e.target.value) || 0 }})}
-                                    className={`flex-1 p-2 border rounded-lg text-sm text-center font-mono ${gs.size_oz === editing.base_glass_size_oz ? 'bg-purple-50 border-purple-200 font-bold' : ''}`}
-                                    placeholder="1.0"
-                                />
-                                <span className="text-xs text-gray-400">x</span>
+                            <div key={gs.id} className="flex flex-col bg-gray-50 border border-gray-100 p-2 rounded-xl w-24">
+                                <label className="text-[10px] font-bold text-gray-500 text-center mb-1">{gs.size_oz}oz</label>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number" step="0.05"
+                                        value={editing.scaling_rules?.[String(gs.size_oz)] ?? ''}
+                                        onChange={e => setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, [String(gs.size_oz)]: parseFloat(e.target.value) || 0 }})}
+                                        className={`w-full p-1 border rounded bg-white text-sm text-center font-mono ${gs.size_oz === editing.base_glass_size_oz ? 'border-purple-300 bg-purple-50 font-bold text-purple-700' : ''}`}
+                                        placeholder="1.0"
+                                    />
+                                    <span className="text-[10px] text-gray-400">x</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -379,7 +426,7 @@ export default function SOPEditorPage() {
             </div>
 
             {/* Import Modal */}
-            {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleImport} />}
+            {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleLink} />}
         </div>
     );
 }

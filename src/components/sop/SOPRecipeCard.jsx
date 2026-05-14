@@ -19,7 +19,7 @@ export default function SOPRecipeCard({
 
     // Scale ingredients based on selected glass size
     const scaledIngredients = useMemo(() => {
-        if (!scaleIngredients) return recipe?.ingredients || [];
+        if (!scaleIngredients) return recipe?.display_ingredients || recipe?.ingredients || [];
         return scaleIngredients(recipe, selectedSizeOz);
     }, [recipe, selectedSizeOz, scaleIngredients]);
 
