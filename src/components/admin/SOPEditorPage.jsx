@@ -119,7 +119,7 @@ function ImportModal({ onClose, onImport }) {
 // ── Main Editor Page ──
 export default function SOPEditorPage() {
     const navigate = useNavigate();
-    const { recipes, categories, glassSizes, loading, activeCategory, setActiveCategory, fetchRecipes, saveSOPRecipe, deleteSOPRecipe, saveCategory, deleteCategory, scaleIngredients, importFromRecipeLab, refresh } = useBarSOP({ department: 'bar', staffMode: false });
+    const { recipes, categories, glassSizes, loading, activeCategory, setActiveCategory, fetchRecipes, saveSOPRecipe, deleteSOPRecipe, saveCategory, deleteCategory, scaleIngredients, fetchRecipeLabSummary, refresh } = useBarSOP({ department: 'bar', staffMode: false });
 
     const [editing, setEditing] = useState(null); // null = list view, object = editing
     const [showImport, setShowImport] = useState(false);
