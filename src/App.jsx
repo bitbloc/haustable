@@ -31,7 +31,9 @@ import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
 import StockPage from './StockPage' // NEW
 import MenuCostPage from './components/admin/MenuCostPage' // NEW
 import RecipeLabPage from './components/admin/RecipeLabPage' // NEW
+import SOPEditorPage from './components/admin/SOPEditorPage' // NEW: SOP
 import TrackingPage from './TrackingPage'
+import BarSOPPage from './components/sop/BarSOPPage' // NEW: SOP
 import POSDashboard from './pos/POSDashboard'
 
 
@@ -136,6 +138,7 @@ function App() {
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="tables" element={<AdminTableManager />} />
               <Route path="editor" element={<AdminTableEditor />} />
+              <Route path="sop" element={<SOPEditorPage />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
 
@@ -152,6 +155,7 @@ function App() {
               <Route path="/staff/history" element={<StaffLiveOrders />} />
               <Route path="/staff/checkin" element={<StaffLiveOrders />} />
               <Route path="/staff/stock" element={<StockPage />} />
+              <Route path="/staff/sop" element={<BarSOPPage />} />
             </Route>
 
           </Routes>

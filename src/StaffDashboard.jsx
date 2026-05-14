@@ -14,7 +14,8 @@ import {
     AlertTriangle,
     RefreshCw,
     Users,
-    UtensilsCrossed
+    UtensilsCrossed,
+    BookOpen
 } from 'lucide-react';
 import usePushNotifications from './hooks/usePushNotifications';
 import { useNavigate } from 'react-router-dom';
@@ -438,6 +439,15 @@ export default function StaffDashboard() {
                         textClass="text-orange-600"
                         onClick={() => navigate('/pos')}
                         delay={6}
+                    />
+                    <ActionButton 
+                        title="Bar SOP" 
+                        desc="สูตรเครื่องดื่ม" 
+                        icon={BookOpen} 
+                        bgClass="bg-amber-500"
+                        textClass="text-amber-600"
+                        onClick={() => navigate('/staff/sop')}
+                        delay={7}
                     />
                     <ActionButton 
                         title="Notifications" 
