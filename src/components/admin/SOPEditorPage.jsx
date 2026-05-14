@@ -312,7 +312,20 @@ export default function SOPEditorPage() {
                 {showPreview && (
                     <div className="bg-[#0D0D0D] p-4 rounded-2xl">
                         <p className="text-[10px] text-[#555] uppercase tracking-wider mb-2 px-1">Staff Preview</p>
-                        <SOPRecipeCard recipe={{ ...editing, category: categories.find(c => c.id === editing.category_id) }} glassSizes={glassSizes} scaleIngredients={scaleIngredients} darkMode={true} defaultExpanded={true} />
+                        <SOPRecipeCard 
+                            recipe={{ 
+                                ...editing, 
+                                category: categories.find(c => c.id === editing.category_id),
+                                display_ingredients: [
+                                    ...(editing.linked_preview || []),
+                                    ...(editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined)
+                                ]
+                            }} 
+                            glassSizes={glassSizes} 
+                            scaleIngredients={scaleIngredients} 
+                            darkMode={true} 
+                            defaultExpanded={true} 
+                        />
                     </div>
                 )}
 
