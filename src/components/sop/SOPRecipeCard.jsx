@@ -179,22 +179,6 @@ export default function SOPRecipeCard({
                             <div className="space-y-2">
                                 {steps.map((step, i) => {
                                     const action = getActionByKey(step.action);
-                                    
-                                    // Resolve Dynamic Ingredient
-                                    let dynamicIngDisplay = null;
-                                    if (step.ingredient_ref) {
-                                        const linkedIng = scaledIngredients.find(ing => ing.name === step.ingredient_ref);
-                                        if (linkedIng) {
-                                            dynamicIngDisplay = (
-                                                <span className={`mx-1 ${linkedIng.isScaled ? t.scaledHighlight : 'font-bold'}`}>
-                                                    {linkedIng.name} ({linkedIng.scaledQty ?? linkedIng.qty} {linkedIng.unit})
-                                                </span>
-                                            );
-                                        } else {
-                                            dynamicIngDisplay = <span className="mx-1 font-bold">{step.ingredient_ref}</span>;
-                                        }
-                                    }
-
                                     return (
                                         <div 
                                             key={i}
@@ -211,8 +195,7 @@ export default function SOPRecipeCard({
                                             {/* Instruction */}
                                             <div className="flex-1 min-w-0">
                                                 <div className={`text-sm leading-relaxed ${t.text}`}>
-                                                    <span className="font-bold mr-1">{action.label}</span>
-                                                    {dynamicIngDisplay}
+                                                    <span className="font-bold mr-2">{action.label}</span>
                                                     {step.instruction && <span>{step.instruction}</span>}
                                                 </div>
                                                 {step.duration_sec && (

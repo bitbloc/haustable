@@ -8,49 +8,39 @@ import SOPCategoryManager from '../sop/SOPCategoryManager';
 import { toast } from 'sonner';
 
 // ── Step Editor Row ──
-function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients }) {
+function StepRow({ step, index, onUpdate, onDelete, onMove, isLast }) {
     return (
-        <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-xl group">
+        <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-xl group border border-transparent hover:border-purple-100 transition-colors">
             <div className="flex flex-col gap-0.5 pt-2">
-                <button onClick={() => onMove(index, -1)} disabled={index === 0} className="text-gray-300 hover:text-gray-600 text-[10px] leading-none disabled:opacity-20">▲</button>
-                <button onClick={() => onMove(index, 1)} disabled={isLast} className="text-gray-300 hover:text-gray-600 text-[10px] leading-none disabled:opacity-20">▼</button>
+                <button onClick={() => onMove(index, -1)} disabled={index === 0} className="text-gray-300 hover:text-purple-600 text-[10px] leading-none disabled:opacity-20">▲</button>
+                <button onClick={() => onMove(index, 1)} disabled={isLast} className="text-gray-300 hover:text-purple-600 text-[10px] leading-none disabled:opacity-20">▼</button>
             </div>
             <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1">{index + 1}</div>
             <select
                 value={step.action || 'pour'}
                 onChange={e => onUpdate(index, { ...step, action: e.target.value })}
-                className="w-24 p-2 border rounded-lg text-sm bg-white flex-shrink-0"
+                className="w-24 p-2 border border-gray-200 rounded-lg text-sm bg-white flex-shrink-0 focus:border-purple-400 outline-none"
             >
                 {SOP_ACTIONS.map(a => (
                     <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
                 ))}
             </select>
-            <select
-                value={step.ingredient_ref || ''}
-                onChange={e => onUpdate(index, { ...step, ingredient_ref: e.target.value })}
-                className="w-32 p-2 border rounded-lg text-[13px] bg-white flex-shrink-0 text-gray-700 truncate"
-            >
-                <option value="">- ไม่ระบุวัตถุดิบ -</option>
-                {availableIngredients.map(ing => (
-                    <option key={ing.name} value={ing.name}>{ing.name}</option>
-                ))}
-            </select>
             <input
                 value={step.instruction || ''}
                 onChange={e => onUpdate(index, { ...step, instruction: e.target.value })}
-                placeholder="คำอธิบายเพิ่มเติม..."
-                className="flex-1 p-2 border rounded-lg text-sm"
+                placeholder="รายละเอียดขั้นตอน (เช่น ตวงใส่แก้วชง)"
+                className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none"
             />
             <input
                 type="number"
                 value={step.duration_sec || ''}
                 onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value) : null })}
-                placeholder="วิ"
-                className="w-14 p-2 border rounded-lg text-sm text-center flex-shrink-0"
+                placeholder="เวลา(วิ)"
+                className="w-16 p-2 border border-gray-200 rounded-lg text-sm text-center flex-shrink-0 focus:border-purple-400 outline-none"
                 title="เวลา (วินาที)"
             />
             <button onClick={() => onDelete(index)} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
-                <Trash2 size={14} />
+                <Trash2 size={16} />
             </button>
         </div>
     );
@@ -404,40 +394,63 @@ export default function SOPEditorPage() {
 
                 {/* Steps */}
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
-                    <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📋 ขั้นตอน ({(editing.steps || []).length})</h2>
+                    <div className="flex justify-between items-center">
+                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📋 ขั้นตอน ({(editing.steps || []).length})</h2>
+                        <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded">พนักงานดูปริมาณวัตถุดิบได้จากตารางด้านบน</span>
+                    </div>
                     <div className="space-y-2">
                         {(editing.steps || []).map((step, i) => (
                             <StepRow 
                                 key={i} step={step} index={i} 
                                 onUpdate={updateStep} onDelete={deleteStep} onMove={moveStep} 
                                 isLast={i === editing.steps.length - 1} 
-                                availableIngredients={[...(editing.linked_preview || []), ...(editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined)]}
                             />
                         ))}
                     </div>
-                    <button onClick={addStep} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:text-purple-600 transition-colors font-bold">+ เพิ่มขั้นตอน</button>
+                    <button onClick={addStep} className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 transition-colors font-bold">+ เพิ่มขั้นตอน</button>
                 </div>
 
-                {/* Scaling Rules */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
-                    <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📐 Scaling Rules</h2>
-                    <p className="text-xs text-gray-400">ตัวคูณสำหรับปรับปริมาณส่วนผสมตามขนาดแก้ว (ขนาดมาตรฐาน = 1.0x)</p>
+                {/* Scaling Rules Simplified (Checkboxes) */}
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                    <div>
+                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">🥤 ขนาดแก้วที่ขาย</h2>
+                        <p className="text-xs text-gray-400 mt-1">เลือกว่าเมนูนี้สามารถขายในแก้วขนาดใดได้บ้าง ระบบจะคำนวณสัดส่วนให้อัตโนมัติ</p>
+                    </div>
                     <div className="flex flex-wrap gap-3">
-                        {glassSizes.map(gs => (
-                            <div key={gs.id} className="flex flex-col bg-gray-50 border border-gray-100 p-2 rounded-xl w-24">
-                                <label className="text-[10px] font-bold text-gray-500 text-center mb-1">{gs.size_oz}oz</label>
-                                <div className="flex items-center gap-1">
-                                    <input
-                                        type="number" step="0.05"
-                                        value={editing.scaling_rules?.[String(gs.size_oz)] ?? ''}
-                                        onChange={e => setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, [String(gs.size_oz)]: parseFloat(e.target.value) || 0 }})}
-                                        className={`w-full p-1 border rounded bg-white text-sm text-center font-mono ${gs.size_oz === editing.base_glass_size_oz ? 'border-purple-300 bg-purple-50 font-bold text-purple-700' : ''}`}
-                                        placeholder="1.0"
-                                    />
-                                    <span className="text-[10px] text-gray-400">x</span>
-                                </div>
-                            </div>
-                        ))}
+                        {glassSizes.map(gs => {
+                            const isBase = gs.size_oz === editing.base_glass_size_oz;
+                            const isAvailable = isBase || editing.scaling_rules?.[String(gs.size_oz)] !== undefined;
+                            
+                            return (
+                                <button
+                                    key={gs.id}
+                                    onClick={() => {
+                                        if (isBase) return; // Cannot toggle base size
+                                        const newRules = { ...editing.scaling_rules };
+                                        if (isAvailable) {
+                                            delete newRules[String(gs.size_oz)];
+                                        } else {
+                                            // Auto calculate multiplier: target / base
+                                            newRules[String(gs.size_oz)] = gs.size_oz / editing.base_glass_size_oz;
+                                        }
+                                        setEditing({ ...editing, scaling_rules: newRules });
+                                    }}
+                                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all w-24 h-24 ${
+                                        isAvailable 
+                                        ? 'border-purple-500 bg-purple-50' 
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                    } ${isBase ? 'opacity-80 cursor-default' : 'cursor-pointer'}`}
+                                >
+                                    <div className={`w-6 h-6 rounded-md border flex items-center justify-center mb-2 ${
+                                        isAvailable ? 'bg-purple-500 border-purple-500 text-white' : 'bg-white border-gray-300'
+                                    }`}>
+                                        {isAvailable && <span className="text-sm font-bold">✓</span>}
+                                    </div>
+                                    <span className={`font-bold text-lg ${isAvailable ? 'text-purple-700' : 'text-gray-500'}`}>{gs.size_oz}oz</span>
+                                    {isBase && <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white">แก้วมาตรฐาน</span>}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
