@@ -255,7 +255,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 .select(`
                     quantity,
                     unit,
-                    ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
+                    ingredient:stock_items (
                         id, name, usage_unit
                     )
                 `)

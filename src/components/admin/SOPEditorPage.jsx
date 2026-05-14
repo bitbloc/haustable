@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, ChevronDown, GripVertical, Download, Settings, RefreshCw, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, ChevronDown, GripVertical, Download, Settings, RefreshCw, Link } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import useBarSOP, { SOP_ACTIONS, getActionByKey } from '../../hooks/useBarSOP';
@@ -404,7 +404,7 @@ export default function SOPEditorPage() {
                         <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-3">
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs font-bold text-purple-700 flex items-center gap-1">
-                                    <FlaskConical size={12} /> ดึงข้อมูลอัตโนมัติจาก Recipe Lab
+                                    <Link size={12} /> ดึงข้อมูลอัตโนมัติจาก Recipe Lab
                                 </span>
                                 <button onClick={() => setEditing(prev => ({ ...prev, source_menu_item_id: null, source_stock_item_id: null, linked_preview: [] }))} className="text-[10px] text-red-500 hover:underline">ยกเลิกเชื่อมโยง</button>
                             </div>
