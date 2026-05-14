@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, ChevronDown, GripVertical, Download, Settings, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, ChevronDown, GripVertical, Download, Settings, RefreshCw, FlaskConical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import useBarSOP, { SOP_ACTIONS, getActionByKey } from '../../hooks/useBarSOP';
