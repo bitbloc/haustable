@@ -108,7 +108,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             if (menuIds.length > 0) {
                 const { data: mIngs } = await supabase
                     .from('recipe_ingredients')
-                    .select('parent_menu_item_id, quantity, unit, ingredient:stock_items(name, usage_unit)')
+                    .select('parent_menu_item_id, quantity, unit, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(name, usage_unit)')
                     .in('parent_menu_item_id', menuIds);
                 if (mIngs) linkedIngs = [...linkedIngs, ...mIngs];
             }
@@ -116,7 +116,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             if (stockIds.length > 0) {
                 const { data: sIngs } = await supabase
                     .from('recipe_ingredients')
-                    .select('parent_stock_item_id, quantity, unit, ingredient:stock_items(name, usage_unit)')
+                    .select('parent_stock_item_id, quantity, unit, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(name, usage_unit)')
                     .in('parent_stock_item_id', stockIds);
                 if (sIngs) linkedIngs = [...linkedIngs, ...sIngs];
             }
@@ -255,7 +255,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 .select(`
                     quantity,
                     unit,
-                    ingredient:stock_items (
+                    ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
                         id, name, usage_unit
                     )
                 `)
