@@ -8,7 +8,7 @@ import SOPCategoryManager from '../sop/SOPCategoryManager';
 import { toast } from 'sonner';
 
 // ── Step Editor Row ──
-function StepRow({ step, index, onUpdate, onDelete, onMove, isLast }) {
+function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients }) {
     return (
         <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-xl group border border-transparent hover:border-purple-100 transition-colors">
             <div className="flex flex-col gap-0.5 pt-2">
@@ -25,12 +25,24 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast }) {
                     <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
                 ))}
             </select>
-            <input
-                value={step.instruction || ''}
-                onChange={e => onUpdate(index, { ...step, instruction: e.target.value })}
-                placeholder="รายละเอียดขั้นตอน (เช่น ตวงใส่แก้วชง)"
-                className="flex-1 p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none"
-            />
+            <div className="flex-1 flex flex-col gap-1.5">
+                <input
+                    value={step.instruction || ''}
+                    onChange={e => onUpdate(index, { ...step, instruction: e.target.value })}
+                    placeholder="รายละเอียดขั้นตอน (เช่น ตวงใส่แก้วชง)"
+                    className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none"
+                />
+                <select
+                    value={step.ingredient_ref || ''}
+                    onChange={e => onUpdate(index, { ...step, ingredient_ref: e.target.value })}
+                    className="w-full p-1 border border-gray-200 rounded-md text-[11px] text-gray-500 bg-white focus:border-purple-400 outline-none"
+                >
+                    <option value="">-- ไม่แทรกปริมาณวัตถุดิบลงในข้อความ --</option>
+                    {(availableIngredients || []).map(name => (
+                        <option key={name} value={name}>+ แนบปริมาณ: {name}</option>
+                    ))}
+                </select>
+            </div>
             <input
                 type="number"
                 value={step.duration_sec || ''}
@@ -439,6 +451,10 @@ export default function SOPEditorPage() {
                                 key={i} step={step} index={i} 
                                 onUpdate={updateStep} onDelete={deleteStep} onMove={moveStep} 
                                 isLast={i === editing.steps.length - 1} 
+                                availableIngredients={[
+                                    ...(editing.linked_preview || []).map(ing => ing.name),
+                                    ...(editing.ingredients || []).filter(ing => !ing.isLinked && ing.qty !== undefined).map(ing => ing.name)
+                                ]}
                             />
                         ))}
                     </div>

@@ -242,6 +242,21 @@ export default function SOPRecipeCard({
                                                 {step.instruction && (
                                                     <p className={`text-sm leading-relaxed ${t.textBright}`}>
                                                         {step.instruction}
+                                                        {step.ingredient_ref && (
+                                                            <span className="ml-2 font-bold whitespace-nowrap">
+                                                                {(() => {
+                                                                    const linkedIng = scaledIngredients.find(ing => ing.name === step.ingredient_ref);
+                                                                    if (linkedIng) {
+                                                                        return (
+                                                                            <span className={linkedIng.isScaled ? t.scaledHighlight : t.accent}>
+                                                                                ({linkedIng.scaledQty ?? linkedIng.qty} <span className="text-[10px] uppercase opacity-80">{linkedIng.unit}</span>)
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
+                                                            </span>
+                                                        )}
                                                     </p>
                                                 )}
                                                 {step.duration_sec && (
