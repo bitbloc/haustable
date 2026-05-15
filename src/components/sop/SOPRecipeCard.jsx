@@ -106,7 +106,9 @@ export default function SOPRecipeCard({
                             {recipe?.name || 'Untitled'}
                         </h3>
                         <div className={`flex items-center gap-2 mt-0.5 text-xs ${t.textMuted}`}>
-                            <span>{isCustomMode ? 'Custom Prep' : `${recipe?.base_glass_size_oz || 16}oz`}</span>
+                            {recipe?.advanced_details?.prep_time && <span className={`px-2 py-0.5 rounded ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-gray-100'}`}>⏱ {recipe.advanced_details.prep_time}</span>}
+                            {recipe?.advanced_details?.ice_level && <span className={`px-2 py-0.5 rounded ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-gray-100'}`}>🧊 {recipe.advanced_details.ice_level}</span>}
+                            {!recipe?.advanced_details?.prep_time && <span>{isCustomMode ? 'Custom Prep' : `${recipe?.base_glass_size_oz || 16}oz`}</span>}
                             <span>•</span>
                             <span>{steps.length} steps</span>
                             {recipe?.garnish && (
@@ -125,6 +127,15 @@ export default function SOPRecipeCard({
                     }
                 </div>
             </button>
+
+            {/* Profile Description */}
+            {expanded && recipe?.advanced_details?.profile && (
+                <div className="px-5 pb-3 animate-fade-in">
+                    <div className={`text-sm italic border-l-2 pl-3 py-1 ${darkMode ? 'border-[#DFFF00] text-gray-400' : 'border-purple-400 text-gray-500'}`}>
+                        {recipe.advanced_details.profile}
+                    </div>
+                </div>
+            )}
 
             {/* Expanded Content */}
             {expanded && (
@@ -181,6 +192,22 @@ export default function SOPRecipeCard({
                     {/* Divider */}
                     <div className={`border-t border-dashed ${t.divider}`} />
 
+                    {/* Equipment */}
+                    {recipe?.advanced_details?.equipment?.length > 0 && (
+                        <div className="mb-4">
+                            <div className={`text-[10px] uppercase tracking-widest font-bold mb-2 ${t.sectionLabel}`}>
+                                🛠 อุปกรณ์ / EQUIPMENT
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {recipe.advanced_details.equipment.map((eq, i) => (
+                                    <span key={i} className={`text-xs px-2.5 py-1 rounded-md ${darkMode ? 'bg-[#1A1A1A] text-gray-300 border border-[#333]' : 'bg-gray-100 text-gray-600'}`}>
+                                        {eq}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Ingredients (Menu Style) */}
                     {visibleIngredients.length > 0 && (
                         <div>
@@ -192,21 +219,21 @@ export default function SOPRecipeCard({
                                     </span>
                                 )}
                             </div>
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
                                 {visibleIngredients.map((ing, i) => (
-                                    <div 
-                                        key={i} 
-                                        className="flex items-end justify-between group"
-                                    >
-                                        <span className={`text-[15px] tracking-wide ${t.textBright}`}>
-                                            {ing.name}
-                                        </span>
-                                        <div className={`flex-1 mx-3 mb-1.5 border-b ${t.ingredientRow} group-hover:border-[#555] transition-colors`} />
-                                        <span className={`text-sm tabular-nums font-mono ${
-                                            ing.isScaled ? t.scaledHighlight : t.textBright
-                                        }`}>
-                                            {ing.scaledQty ?? ing.qty} <span className={`text-[10px] uppercase ml-0.5 ${t.textMuted}`}>{ing.unit}</span>
-                                        </span>
+                                    <div key={i} className="flex flex-col group">
+                                        <div className="flex items-end justify-between">
+                                            <span className={`text-[15px] tracking-wide ${t.textBright}`}>
+                                                {ing.name}
+                                            </span>
+                                            <div className={`flex-1 mx-3 mb-1.5 border-b ${t.ingredientRow} group-hover:border-[#555] transition-colors`} />
+                                            <span className={`text-sm tabular-nums font-mono ${
+                                                ing.isScaled ? t.scaledHighlight : t.textBright
+                                            }`}>
+                                                {ing.scaledQty ?? ing.qty} <span className={`text-[10px] uppercase ml-0.5 ${t.textMuted}`}>{ing.unit}</span>
+                                            </span>
+                                        </div>
+                                        {ing.remark && <div className={`text-[11px] italic mt-0.5 ${darkMode ? 'text-[#888]' : 'text-gray-500'}`}>{ing.remark}</div>}
                                     </div>
                                 ))}
                             </div>
@@ -237,7 +264,9 @@ export default function SOPRecipeCard({
                                             <div className={`p-4 rounded-xl ${t.stepBg}`}>
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <span className="text-xl drop-shadow-md">{action.icon}</span>
-                                                    <span className={`font-bold text-[13px] uppercase tracking-widest ${t.accent}`}>{action.label}</span>
+                                                    <span className={`font-bold text-[13px] uppercase tracking-widest ${t.accent}`}>
+                                                        {step.title ? step.title : action.label}
+                                                    </span>
                                                 </div>
                                                 {step.instruction && (
                                                     <p className={`text-sm leading-relaxed ${t.textBright}`}>
@@ -259,6 +288,19 @@ export default function SOPRecipeCard({
                                                         )}
                                                     </p>
                                                 )}
+                                                {step.key_points && (
+                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-yellow-50 border-yellow-200'}`}>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-yellow-700'}`}>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-[#DFFF00]' : 'bg-yellow-500'}`}></span> จุดสำคัญ
+                                                        </div>
+                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-yellow-900'}`}>{step.key_points}</p>
+                                                    </div>
+                                                )}
+                                                {step.reason && (
+                                                    <div className={`mt-2 text-[11px] italic pl-2 border-l ${darkMode ? 'text-gray-500 border-gray-600' : 'text-gray-500 border-gray-300'}`}>
+                                                        เหตุผล: {step.reason}
+                                                    </div>
+                                                )}
                                                 {step.duration_sec && (
                                                     <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${
                                                         darkMode ? 'bg-black/60 border-[#333333]' : 'bg-white border-gray-200'
@@ -271,6 +313,80 @@ export default function SOPRecipeCard({
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PRO DETAILS SECTION */}
+                    {(recipe?.advanced_details?.qc_standards?.length > 0 || 
+                      recipe?.advanced_details?.troubleshooting?.length > 0 || 
+                      recipe?.advanced_details?.shelf_life?.length > 0 || 
+                      recipe?.advanced_details?.checklist?.length > 0) && (
+                        <div className={`mt-6 pt-6 border-t border-dashed space-y-6 ${darkMode ? 'border-[#333]' : 'border-gray-200'}`}>
+                            
+                            {/* QC Standards */}
+                            {recipe?.advanced_details?.qc_standards?.length > 0 && (
+                                <div>
+                                    <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>🎯 มาตรฐานรสชาติ (QC)</div>
+                                    <div className={`rounded-xl overflow-hidden border ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-white border-gray-200'}`}>
+                                        {recipe.advanced_details.qc_standards.map((qc, i) => (
+                                            <div key={i} className={`flex border-b last:border-0 text-sm ${darkMode ? 'border-[#222]' : 'border-gray-100'}`}>
+                                                <div className={`w-1/3 p-2.5 font-bold ${darkMode ? 'bg-[#1A1A1A] text-[#888]' : 'bg-gray-50 text-gray-500'}`}>{qc.topic}</div>
+                                                <div className={`flex-1 p-2.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{qc.standard}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Troubleshooting */}
+                            {recipe?.advanced_details?.troubleshooting?.length > 0 && (
+                                <div>
+                                    <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>🔧 การแก้ปัญหา</div>
+                                    <div className="space-y-2">
+                                        {recipe.advanced_details.troubleshooting.map((tb, i) => (
+                                            <div key={i} className={`border p-3 rounded-xl text-sm ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-red-50/30 border-red-100'}`}>
+                                                <div className={`font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>⚠ {tb.problem}</div>
+                                                <div className={`mb-2 text-xs ${darkMode ? 'text-[#888]' : 'text-gray-500'}`}>สาเหตุ: {tb.cause}</div>
+                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-green-100 text-green-800 font-bold'}`}>
+                                                    ✓ {tb.solution}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Shelf Life */}
+                                {recipe?.advanced_details?.shelf_life?.length > 0 && (
+                                    <div>
+                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>⏳ การเก็บรักษา</div>
+                                        <ul className={`space-y-1.5 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                            {recipe.advanced_details.shelf_life.map((sl, i) => (
+                                                <li key={i} className={`flex justify-between items-center border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-white border-gray-200'}`}>
+                                                    <span>{sl.item}</span>
+                                                    <span className={`font-mono ${darkMode ? 'text-[#888]' : 'text-gray-400'}`}>{sl.age}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Checklist */}
+                                {recipe?.advanced_details?.checklist?.length > 0 && (
+                                    <div>
+                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>✅ ก่อนเสิร์ฟ</div>
+                                        <ul className={`space-y-1.5 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                            {recipe.advanced_details.checklist.map((cl, i) => (
+                                                <li key={i} className={`flex items-start gap-2 border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-white border-gray-200'}`}>
+                                                    <span className={`mt-0.5 ${darkMode ? 'text-[#DFFF00]' : 'text-green-500'}`}>☑</span>
+                                                    <span>{cl}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

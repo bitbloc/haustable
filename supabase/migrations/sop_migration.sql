@@ -130,3 +130,6 @@ GRANT ALL ON public.sop_glass_sizes TO authenticated;
 GRANT ALL ON public.sop_glass_sizes TO service_role;
 GRANT ALL ON public.sop_recipes TO authenticated;
 GRANT ALL ON public.sop_recipes TO service_role;
+
+-- Add advanced_details column for Pro SOP
+ALTER TABLE public.sop_recipes ADD COLUMN IF NOT EXISTS advanced_details JSONB DEFAULT '{}'::jsonb;

@@ -297,6 +297,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 notes: recipe.notes || null,
                 is_published: recipe.is_published ?? false,
                 sort_order: recipe.sort_order || 0,
+                advanced_details: recipe.advanced_details || {},
                 updated_at: new Date().toISOString()
             };
 
