@@ -591,31 +591,25 @@ export default function SOPEditorPage() {
                     
                     <div className="border-t pt-4 mt-4">
                         <h3 className="text-xs font-bold text-gray-500 mb-2">อุปกรณ์ที่ใช้ (Equipment)</h3>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {(editing.advanced_details?.equipment || []).map((eq, i) => (
-                                <div key={i} className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-full text-sm">
-                                    <span>{eq}</span>
-                                    <button onClick={() => {
-                                        const newEq = [...editing.advanced_details.equipment];
-                                        newEq.splice(i, 1);
-                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, equipment: newEq } });
-                                    }} className="text-gray-400 hover:text-red-500"><X size={14} /></button>
-                                </div>
-                            ))}
-                        </div>
-                        <input
-                            type="text"
-                            placeholder="พิมพ์ชื่ออุปกรณ์แล้วกด Enter (เช่น ช้อนตวง, ถ้วยตีมัทฉะ)"
-                            className="w-full p-3 border rounded-xl text-sm"
-                            onKeyDown={e => {
-                                if (e.key === 'Enter' && e.target.value.trim()) {
-                                    e.preventDefault();
-                                    const val = e.target.value.trim();
-                                    const current = editing.advanced_details?.equipment || [];
-                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, equipment: [...current, val] } });
-                                    e.target.value = '';
-                                }
+                        <textarea
+                            value={Array.isArray(editing.advanced_details?.equipment) 
+                                ? editing.advanced_details.equipment.join(', ') 
+                                : (editing.advanced_details?.equipment || '')}
+                            onChange={e => {
+                                // Save as an array separated by commas or newlines
+                                const val = e.target.value;
+                                const arr = val.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                                setEditing({ 
+                                    ...editing, 
+                                    advanced_details: { 
+                                        ...editing.advanced_details, 
+                                        equipment: arr 
+                                    } 
+                                });
                             }}
+                            className="w-full p-3 border rounded-xl text-sm resize-none"
+                            rows={3}
+                            placeholder="พิมพ์ชื่ออุปกรณ์ที่ใช้แล้วคั่นด้วยเครื่องหมายลูกน้ำ หรือ Enter (เช่น ช้อนตวง, ถ้วยตีมัทฉะ)"
                         />
                     </div>
                 </div>

@@ -194,7 +194,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     // ────────────────────────────────
     // Scale Ingredients
     // ── Helper: Scale Ingredients ──
-    const scaleIngredients = useCallback((recipe, targetSizeOrPreset) => {
+    const scaleIngredients = useCallback((recipe, targetSizeOrPreset, cups = 1) => {
         if (!recipe) return [];
         const ingredients = recipe.display_ingredients || recipe.ingredients || [];
         const rules = recipe.scaling_rules || {};
@@ -218,6 +218,9 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 multiplier = targetSizeOz / baseOz;
             }
         }
+
+        // Apply cups multiplier
+        multiplier *= cups;
 
         return ingredients.map(ing => ({
             ...ing,
@@ -477,6 +480,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
 // Action Types (ขั้นตอนการทำ)
 // ────────────────────────────────
 export const SOP_ACTIONS = [
+    { key: 'prepare',  icon: '🔪', label: 'เตรียม',     labelEn: 'Prepare' },
     { key: 'measure',  icon: '📏', label: 'ตวง',      labelEn: 'Measure' },
     { key: 'extract',  icon: '☕', label: 'ชง',       labelEn: 'Extract' },
     { key: 'dissolve', icon: '🫧', label: 'ละลาย',    labelEn: 'Dissolve' },
@@ -485,8 +489,6 @@ export const SOP_ACTIONS = [
     { key: 'ice',      icon: '🧊', label: 'น้ำแข็ง',   labelEn: 'Ice' },
     { key: 'pour',     icon: '🫗', label: 'เท',       labelEn: 'Pour' },
     { key: 'stir',     icon: '🥄', label: 'คน',       labelEn: 'Stir' },
-    { key: 'shake',    icon: '🫨', label: 'เขย่า',    labelEn: 'Shake' },
-    { key: 'strain',   icon: '🫙', label: 'กรอง',     labelEn: 'Strain' },
     { key: 'muddle',   icon: '🪵', label: 'บด',       labelEn: 'Muddle' },
     { key: 'blend',    icon: '⚡', label: 'ปั่น',     labelEn: 'Blend' },
     { key: 'build',    icon: '🏗️', label: 'ใส่',      labelEn: 'Build' },
