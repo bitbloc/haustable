@@ -87,7 +87,6 @@ export default function RecipeLabPage() {
                 is_base_recipe: true,
                 category: 'restock', // Hidden/Internal
                 cost_price: 0,
-                fixed_cost: 0,
                 pack_size: 1,
                 pack_unit: 'unit',
                 usage_unit: 'unit',

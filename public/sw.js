@@ -39,6 +39,11 @@ self.addEventListener('fetch', event => {
         return; 
     }
 
+    // Skip non-GET requests
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
     // HTML Navigation: Network First!
     // This prevents serving stale index.html which links to old JS hashes
     if (event.request.mode === 'navigate') {
@@ -54,7 +59,16 @@ self.addEventListener('fetch', event => {
     // Static Assets (JS, CSS, Images): Cache First -> Network
     event.respondWith(
         caches.match(event.request).then(response => {
-            return response || fetch(event.request);
+            return response || fetch(event.request).catch(err => {
+                console.error('[SW] Fetch failed for:', event.request.url, err);
+                // We can't provide a good fallback for all static assets or unknown routes,
+                // but returning a new Response prevents the "Uncaught (in promise)" error.
+                return new Response('Network error occurred', {
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                    headers: new Headers({ 'Content-Type': 'text/plain' })
+                });
+            });
         })
     );
 });
