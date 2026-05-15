@@ -295,21 +295,24 @@ export default function SOPRecipeCard({
                                                 {step.instruction && (
                                                     <p className={`text-sm leading-relaxed ${t.textBright}`}>
                                                         {step.instruction}
-                                                        {step.ingredient_ref && (
-                                                            <span className="ml-2 font-bold whitespace-nowrap">
-                                                                {(() => {
-                                                                    const linkedIng = scaledIngredients.find(ing => ing.name === step.ingredient_ref);
-                                                                    if (linkedIng) {
+                                                        {(() => {
+                                                            const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
+                                                            if (refs.length === 0) return null;
+                                                            return (
+                                                                <span className="ml-2 font-bold whitespace-normal inline-flex flex-wrap gap-x-2 gap-y-1 items-center">
+                                                                    {refs.map((ref, idx) => {
+                                                                        const linkedIng = scaledIngredients.find(ing => ing.name === ref);
+                                                                        if (!linkedIng) return null;
                                                                         return (
-                                                                            <span className={linkedIng.isScaled ? t.scaledHighlight : t.accent}>
-                                                                                ({linkedIng.scaledQty ?? linkedIng.qty} <span className="text-[10px] uppercase opacity-80">{linkedIng.unit}</span>)
+                                                                            <span key={idx} className={linkedIng.isScaled ? t.scaledHighlight : t.accent}>
+                                                                                {idx > 0 && <span className="mr-2 text-gray-500 font-normal">+</span>}
+                                                                                {linkedIng.name} ({linkedIng.scaledQty ?? linkedIng.qty} <span className="text-[10px] uppercase opacity-80">{linkedIng.unit}</span>)
                                                                             </span>
                                                                         );
-                                                                    }
-                                                                    return null;
-                                                                })()}
-                                                            </span>
-                                                        )}
+                                                                    })}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </p>
                                                 )}
                                                 {step.key_points && (

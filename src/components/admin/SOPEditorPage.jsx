@@ -30,16 +30,62 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                 <textarea value={step.instruction || ''} onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} placeholder="รายละเอียดขั้นตอน (เช่น ร่อนผงลงในถ้วย)" className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none resize-none" rows={2} />
                 <input value={step.key_points || ''} onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" className="w-full p-2 border border-yellow-200 bg-yellow-50 rounded-lg text-sm focus:border-yellow-400 outline-none" />
                 <input value={step.reason || ''} onChange={e => onUpdate(index, { ...step, reason: e.target.value })} placeholder="เหตุผล (เช่น ลดการจับตัวเป็นก้อน)" className="w-full p-2 border border-gray-200 bg-gray-50 rounded-lg text-xs italic focus:border-purple-400 outline-none" />
-                <select
-                    value={step.ingredient_ref || ''}
-                    onChange={e => onUpdate(index, { ...step, ingredient_ref: e.target.value })}
-                    className="w-full p-1 border border-gray-200 rounded-md text-[11px] text-gray-500 bg-white focus:border-purple-400 outline-none"
-                >
-                    <option value="">-- ไม่แทรกปริมาณวัตถุดิบลงในข้อความ --</option>
-                    {(availableIngredients || []).map(name => (
-                        <option key={name} value={name}>+ แนบปริมาณ: {name}</option>
-                    ))}
-                </select>
+                <div className="flex flex-col gap-1.5 mt-1 border-t pt-2 border-gray-100">
+                    <div className="text-[10px] text-gray-500 font-bold">แนบปริมาณวัตถุดิบ (อ้างอิงสูตร)</div>
+                    {(() => {
+                        const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
+                        if (refs.length === 0) return null;
+                        return (
+                            <div className="flex flex-wrap gap-1 mb-1">
+                                {refs.map((ref, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 bg-purple-50 border border-purple-100 text-purple-700 px-2 py-0.5 rounded text-[11px]">
+                                        {ref}
+                                        <button 
+                                            onClick={() => {
+                                                const newRefs = refs.filter((_, i) => i !== idx);
+                                                onUpdate(index, { 
+                                                    ...step, 
+                                                    ingredient_refs: newRefs, 
+                                                    ingredient_ref: newRefs.length > 0 ? newRefs[0] : null 
+                                                });
+                                            }} 
+                                            className="hover:text-red-500 hover:bg-purple-100 rounded p-0.5 transition-colors"
+                                        >
+                                            <X size={10} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        );
+                    })()}
+                    {(() => {
+                        const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
+                        const available = (availableIngredients || []).filter(name => !refs.includes(name));
+                        if (available.length === 0) return null;
+                        return (
+                            <select
+                                value=""
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val && !refs.includes(val)) {
+                                        const newRefs = [...refs, val];
+                                        onUpdate(index, { 
+                                            ...step, 
+                                            ingredient_refs: newRefs, 
+                                            ingredient_ref: newRefs[0] 
+                                        });
+                                    }
+                                }}
+                                className="w-full p-1 border border-gray-200 rounded-md text-[11px] text-gray-500 bg-white focus:border-purple-400 outline-none"
+                            >
+                                <option value="">+ แนบปริมาณวัตถุดิบเพิ่ม...</option>
+                                {available.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                ))}
+                            </select>
+                        );
+                    })()}
+                </div>
             </div>
             <input
                 type="number"
