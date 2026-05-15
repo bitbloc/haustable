@@ -176,7 +176,7 @@ function ImportModal({ onClose, onImport }) {
 // ── Main Editor Page ──
 export default function SOPEditorPage() {
     const navigate = useNavigate();
-    const { recipes, categories, glassSizes, loading, activeCategory, setActiveCategory, fetchRecipes, saveSOPRecipe, deleteSOPRecipe, saveCategory, deleteCategory, scaleIngredients, fetchRecipeLabSummary, refresh } = useBarSOP({ department: 'bar', staffMode: false });
+    const { recipes, categories, glassSizes, loading, activeCategory, setActiveCategory, searchQuery, setSearchQuery, fetchRecipes, saveSOPRecipe, deleteSOPRecipe, saveCategory, deleteCategory, scaleIngredients, fetchRecipeLabSummary, refresh } = useBarSOP({ department: 'bar', staffMode: false });
 
     const [editing, setEditing] = useState(null); // null = list view, object = editing
     const [showImport, setShowImport] = useState(false);
@@ -320,6 +320,26 @@ export default function SOPEditorPage() {
                 </div>
 
                 <div className="max-w-5xl mx-auto p-4 space-y-3 pb-20">
+                    {/* Search Bar */}
+                    <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="ค้นหาเมนู SOP (พิมพ์ชื่อเมนู หรือส่วนผสม...)"
+                            value={searchQuery || ''}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-sm"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+
                     {loading ? (
                         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-2xl animate-pulse" />)}</div>
                     ) : recipes.length === 0 ? (

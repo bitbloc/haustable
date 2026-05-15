@@ -433,11 +433,9 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         init();
     }, []);
 
-    // Fetch recipes when category changes
+    // Fetch recipes when category changes (including null for 'All')
     useEffect(() => {
-        if (activeCategory !== null) {
-            fetchRecipes(activeCategory);
-        }
+        fetchRecipes(activeCategory);
     }, [activeCategory, fetchRecipes]);
 
     return {
