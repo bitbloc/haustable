@@ -481,20 +481,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
 // ────────────────────────────────
 export const SOP_ACTIONS = [
     { key: 'prepare',  icon: '🔪', label: 'เตรียม',     labelEn: 'Prepare' },
-    { key: 'measure',  icon: '📏', label: 'ตวง',      labelEn: 'Measure' },
-    { key: 'extract',  icon: '☕', label: 'ชง',       labelEn: 'Extract' },
-    { key: 'dissolve', icon: '🫧', label: 'ละลาย',    labelEn: 'Dissolve' },
-    { key: 'steam',    icon: '♨️', label: 'สตีม',     labelEn: 'Steam' },
-    { key: 'heat',     icon: '🔥', label: 'อุ่น',     labelEn: 'Heat' },
-    { key: 'ice',      icon: '🧊', label: 'น้ำแข็ง',   labelEn: 'Ice' },
-    { key: 'pour',     icon: '🫗', label: 'เท',       labelEn: 'Pour' },
-    { key: 'stir',     icon: '🥄', label: 'คน',       labelEn: 'Stir' },
-    { key: 'muddle',   icon: '🪵', label: 'บด',       labelEn: 'Muddle' },
-    { key: 'blend',    icon: '⚡', label: 'ปั่น',     labelEn: 'Blend' },
-    { key: 'build',    icon: '🏗️', label: 'ใส่',      labelEn: 'Build' },
-    { key: 'layer',    icon: '📊', label: 'Float',    labelEn: 'Layer' },
-    { key: 'garnish',  icon: '🎀', label: 'ตกแต่ง',   labelEn: 'Garnish' },
-    { key: 'top',      icon: '🔝', label: 'เติม',     labelEn: 'Top Up' },
+    { key: 'bullet',   icon: '🔸', label: 'ขั้นตอน',    labelEn: 'Step' }
 ];
 
-export const getActionByKey = (key) => SOP_ACTIONS.find(a => a.key === key) || SOP_ACTIONS[0];
+export const getActionByKey = (key) => SOP_ACTIONS.find(a => a.key === key) || { key: 'bullet', icon: '🔸', label: 'ขั้นตอน', labelEn: 'Step' };
