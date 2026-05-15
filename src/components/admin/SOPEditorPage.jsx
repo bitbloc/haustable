@@ -688,6 +688,42 @@ export default function SOPEditorPage() {
                 {/* PRO DETAILS TAB */}
                 {activeTab === 'pro' && (
                 <div className="space-y-6">
+                    {/* Copy from existing recipe */}
+                    <div className="bg-purple-50 p-5 rounded-2xl border border-purple-100 flex items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-sm text-purple-900">🔄 คัดลอกข้อมูล Pro Details จากสูตรอื่น</h3>
+                            <p className="text-xs text-purple-700 mt-1">คัดลอก QC, การแก้ปัญหา, อายุการจัดเก็บ และ Checklist จากสูตรเดิมที่มีอยู่แล้ว</p>
+                        </div>
+                        <select
+                            className="w-64 p-2.5 border border-purple-200 rounded-lg text-sm bg-white focus:border-purple-400 outline-none"
+                            onChange={(e) => {
+                                const recipeId = e.target.value;
+                                if (!recipeId) return;
+                                const sourceRecipe = recipes.find(r => r.id === recipeId);
+                                if (sourceRecipe && sourceRecipe.advanced_details) {
+                                    if (confirm(`คัดลอกข้อมูล Pro Details จาก "${sourceRecipe.name}" ใช่หรือไม่? (ข้อมูลเดิมในแท็บนี้จะถูกทับทั้งหมด)`)) {
+                                        setEditing({
+                                            ...editing,
+                                            advanced_details: {
+                                                ...editing.advanced_details,
+                                                qc_standards: sourceRecipe.advanced_details.qc_standards || [],
+                                                troubleshooting: sourceRecipe.advanced_details.troubleshooting || [],
+                                                shelf_life: sourceRecipe.advanced_details.shelf_life || [],
+                                                checklist: sourceRecipe.advanced_details.checklist || []
+                                            }
+                                        });
+                                    }
+                                }
+                                e.target.value = ""; // Reset
+                            }}
+                        >
+                            <option value="">-- เลือกสูตรต้นแบบ --</option>
+                            {recipes.filter(r => r.id !== editing.id).map(r => (
+                                <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* QC Standards */}
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                         <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">🎯 มาตรฐานรสชาติ (QC)</h2>

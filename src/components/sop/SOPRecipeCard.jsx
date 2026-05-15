@@ -193,16 +193,16 @@ export default function SOPRecipeCard({
                         )}
 
                         {/* Cups Multiplier */}
-                        <div>
+                        <div className="flex-1 min-w-[200px]">
                             <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>
                                 🥤 จำนวน / Cups
                             </div>
-                            <div className={`p-1 rounded-lg inline-flex ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-gray-100 border border-gray-200'}`}>
+                            <div className={`p-1 rounded-lg flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-gray-100 border border-gray-200'}`}>
                                 {[1, 2, 3, 4, 5].map(num => (
                                     <button
                                         key={num}
                                         onClick={() => setCups(num)}
-                                        className={`w-10 h-9 text-sm transition-all duration-300 flex items-center justify-center ${
+                                        className={`flex-1 min-w-[36px] h-9 text-sm transition-all duration-300 flex items-center justify-center rounded-md ${
                                             cups === num ? t.glassPillActive : t.glassPill
                                         }`}
                                     >
@@ -293,27 +293,27 @@ export default function SOPRecipeCard({
                                                     </span>
                                                 </div>
                                                 {step.instruction && (
-                                                    <p className={`text-sm leading-relaxed ${t.textBright}`}>
-                                                        {step.instruction}
+                                                    <div className={`text-sm leading-relaxed ${t.textBright}`}>
+                                                        <p>{step.instruction}</p>
                                                         {(() => {
                                                             const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
                                                             if (refs.length === 0) return null;
                                                             return (
-                                                                <span className="ml-2 font-bold whitespace-normal inline-flex flex-wrap gap-x-2 gap-y-1 items-center">
+                                                                <div className="mt-2 font-bold flex flex-wrap gap-x-2 gap-y-1 items-center bg-[#DFFF00]/5 p-2 rounded-lg border border-[#DFFF00]/10">
                                                                     {refs.map((ref, idx) => {
                                                                         const linkedIng = scaledIngredients.find(ing => ing.name === ref);
                                                                         if (!linkedIng) return null;
                                                                         return (
-                                                                            <span key={idx} className={linkedIng.isScaled ? t.scaledHighlight : t.accent}>
+                                                                            <span key={idx} className={`inline-flex items-center ${linkedIng.isScaled ? t.scaledHighlight : t.accent}`}>
                                                                                 {idx > 0 && <span className="mr-2 text-gray-500 font-normal">+</span>}
-                                                                                {linkedIng.name} ({linkedIng.scaledQty ?? linkedIng.qty} <span className="text-[10px] uppercase opacity-80">{linkedIng.unit}</span>)
+                                                                                {linkedIng.name} ({linkedIng.scaledQty ?? linkedIng.qty} <span className="text-[10px] uppercase opacity-80 ml-0.5">{linkedIng.unit}</span>)
                                                                             </span>
                                                                         );
                                                                     })}
-                                                                </span>
+                                                                </div>
                                                             );
                                                         })()}
-                                                    </p>
+                                                    </div>
                                                 )}
                                                 {step.key_points && (
                                                     <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-yellow-50 border-yellow-200'}`}>

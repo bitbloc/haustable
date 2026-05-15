@@ -122,7 +122,9 @@ export default function SOPCategoryManager({
                             </div>
 
                             {/* Icon */}
-                            <span className="text-xl select-none">{item.icon}</span>
+                            <div className="text-2xl select-none flex-shrink-0 flex items-center justify-center min-w-[3rem]">
+                                {item.icon}
+                            </div>
 
                             {/* Label */}
                             {editingId === item.id ? (
@@ -208,7 +210,7 @@ export default function SOPCategoryManager({
                                         const idx = EMOJI_OPTIONS.indexOf(newIcon);
                                         setNewIcon(EMOJI_OPTIONS[(idx + 1) % EMOJI_OPTIONS.length]);
                                     }}
-                                    className="w-12 h-12 bg-white border rounded-xl text-2xl flex items-center justify-center hover:bg-gray-50"
+                                    className="w-12 h-12 flex-shrink-0 bg-white border rounded-xl text-2xl flex items-center justify-center hover:bg-gray-50"
                                 >
                                     {newIcon}
                                 </button>
