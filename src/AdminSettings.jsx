@@ -1247,14 +1247,9 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             </div>
             <p className="text-xs text-subInk -mt-4">จัดการรูปภาพ, เมนู และข้อความสำหรับ Landing Page (/link)</p>
 
-            {/* Logo + Hero side by side */}
-            <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                    <ImageUploadBlock settingKey="link_logo_url" label="Logo (โลโก้)" aspect="aspect-square" placeholder="ยังไม่มีโลโก้" />
-                </div>
-                <div className="md:col-span-2">
-                    <ImageUploadBlock settingKey="link_hero_url" label="Hero Banner (รูปปก)" aspect="aspect-[2/1]" placeholder="ยังไม่มีรูป Hero" />
-                </div>
+            {/* Logo */}
+            <div className="max-w-xs">
+                <ImageUploadBlock settingKey="link_logo_url" label="Logo (โลโก้)" aspect="aspect-square" placeholder="ยังไม่มีโลโก้" />
             </div>
 
             {/* Text Fields */}

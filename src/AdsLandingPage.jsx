@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
@@ -11,6 +11,7 @@ export default function AdsLandingPage() {
     const [atmImages, setAtmImages] = useState([]);
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedAtmImage, setSelectedAtmImage] = useState(null);
 
     useEffect(() => { fetchData(); }, []);
 
@@ -52,7 +53,6 @@ export default function AdsLandingPage() {
         }
     };
 
-    const heroUrl = settings.link_hero_url || FALLBACK_HERO;
     const logoUrl = settings.link_logo_url || '';
     const shopName = settings.link_shop_name || 'IN THE HAUS';
     const shopNameTh = settings.link_shop_name_th || 'ในบ้าน';
@@ -118,23 +118,33 @@ export default function AdsLandingPage() {
                 </motion.p>
             </header>
 
-            {/* ─── HERO BANNER ─── */}
-            <section className="w-full max-w-lg mx-auto px-4 mb-8">
-                <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15, duration: 0.5 }}
-                    className="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-md"
-                >
-                    <img
-                        src={heroUrl}
-                        alt={shopName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_HERO; }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                </motion.div>
-            </section>
+            {/* ─── ATMOSPHERE GALLERY (Replacing Hero) ─── */}
+            {atmImages.length > 0 && (
+                <section className="w-full max-w-lg mx-auto mb-8">
+                    <div className="px-5 mb-3 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-neutral-800 text-lg font-bold tracking-tight">สัมผัสบรรยากาศในบ้าน</h2>
+                            <p className="text-neutral-400 text-[10px] font-mono tracking-wider uppercase mt-0.5">Experience the Vibe</p>
+                        </div>
+                        <span className="text-[10px] text-neutral-300 animate-pulse">Swipe ➔</span>
+                    </div>
+                    
+                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-5 pb-4 no-scrollbar">
+                        {atmImages.map((url, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.4, delay: i * 0.1 }}
+                                onClick={() => setSelectedAtmImage(url)}
+                                className="flex-none w-[75%] max-w-[260px] snap-center rounded-2xl overflow-hidden shadow-sm border border-neutral-100 aspect-square cursor-pointer"
+                            >
+                                <img src={url} alt={`Atmosphere ${i + 1}`} className="w-full h-full object-cover" />
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             {/* ─── SOCIAL LINKS ─── */}
             <section className="w-full max-w-lg mx-auto px-5 pb-6">
@@ -267,34 +277,6 @@ export default function AdsLandingPage() {
                 </section>
             )}
 
-            {/* ─── ATMOSPHERE GALLERY ─── */}
-            {atmImages.length > 0 && (
-                <section className="w-full py-8">
-                    <div className="max-w-lg mx-auto px-5 mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="h-px bg-neutral-200 flex-1" />
-                            <h2 className="text-neutral-700 text-sm font-bold tracking-[0.2em] font-mono uppercase">Atmosphere</h2>
-                            <div className="h-px bg-neutral-200 flex-1" />
-                        </div>
-                    </div>
-                    
-                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-5 pb-4 no-scrollbar">
-                        {atmImages.map((url, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.4, delay: i * 0.1 }}
-                                className="flex-none w-[80%] max-w-[280px] snap-center rounded-2xl overflow-hidden shadow-sm border border-neutral-100 aspect-video"
-                            >
-                                <img src={url} alt={`Atmosphere ${i + 1}`} className="w-full h-full object-cover" />
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
             {/* ─── MENU GALLERY ─── */}
             {menuImages.length > 0 && (
                 <section className="w-full bg-white py-10">
@@ -338,6 +320,36 @@ export default function AdsLandingPage() {
             <footer className="bg-neutral-900 text-neutral-500 py-6 text-center text-[10px] font-mono tracking-widest">
                 <p>© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
             </footer>
+
+            {/* ─── LIGHTBOX ─── */}
+            <AnimatePresence>
+                {selectedAtmImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm"
+                        onClick={() => setSelectedAtmImage(null)}
+                    >
+                        <button 
+                            className="absolute top-6 right-6 w-10 h-10 bg-white/10 hover:bg-white/20 transition-colors rounded-full flex items-center justify-center text-white backdrop-blur-md"
+                            onClick={() => setSelectedAtmImage(null)}
+                        >
+                            ✕
+                        </button>
+                        <motion.img
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            src={selectedAtmImage}
+                            alt="Full size"
+                            className="max-w-full max-h-full object-contain rounded-xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
