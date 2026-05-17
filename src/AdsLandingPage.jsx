@@ -8,6 +8,7 @@ const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e
 export default function AdsLandingPage() {
     const [settings, setSettings] = useState({});
     const [menuImages, setMenuImages] = useState([]);
+    const [atmImages, setAtmImages] = useState([]);
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -25,6 +26,12 @@ export default function AdsLandingPage() {
                     if (map[`link_menu_${i}`]) menus.push(map[`link_menu_${i}`]);
                 }
                 setMenuImages(menus);
+
+                const atms = [];
+                for (let i = 1; i <= 10; i++) {
+                    if (map[`link_atm_${i}`]) atms.push(map[`link_atm_${i}`]);
+                }
+                setAtmImages(atms);
 
                 const sigs = [];
                 for (let i = 1; i <= 3; i++) {
@@ -54,6 +61,7 @@ export default function AdsLandingPage() {
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
     const videoUrl = settings.link_video_url || '';
+    const foodVideoUrl = settings.link_food_video_url || '';
 
     if (loading) {
         return (
@@ -234,6 +242,56 @@ export default function AdsLandingPage() {
                             className="w-full h-auto object-cover"
                         />
                     </motion.div>
+                </section>
+            )}
+
+            {/* ─── FOOD CONTENT VIDEO (VERTICAL) ─── */}
+            {foodVideoUrl && (
+                <section className="w-full max-w-lg mx-auto px-4 pb-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5 }}
+                        className="relative w-full rounded-2xl overflow-hidden shadow-md bg-black aspect-[9/16]"
+                    >
+                        <video
+                            src={foodVideoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover"
+                        />
+                    </motion.div>
+                </section>
+            )}
+
+            {/* ─── ATMOSPHERE GALLERY ─── */}
+            {atmImages.length > 0 && (
+                <section className="w-full py-8">
+                    <div className="max-w-lg mx-auto px-5 mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-px bg-neutral-200 flex-1" />
+                            <h2 className="text-neutral-700 text-sm font-bold tracking-[0.2em] font-mono uppercase">Atmosphere</h2>
+                            <div className="h-px bg-neutral-200 flex-1" />
+                        </div>
+                    </div>
+                    
+                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-5 pb-4 no-scrollbar">
+                        {atmImages.map((url, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.4, delay: i * 0.1 }}
+                                className="flex-none w-[80%] max-w-[280px] snap-center rounded-2xl overflow-hidden shadow-sm border border-neutral-100 aspect-video"
+                            >
+                                <img src={url} alt={`Atmosphere ${i + 1}`} className="w-full h-full object-cover" />
+                            </motion.div>
+                        ))}
+                    </div>
                 </section>
             )}
 

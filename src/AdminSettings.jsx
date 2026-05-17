@@ -1033,6 +1033,7 @@ export default function AdminSettings() {
 function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
     const [uploading, setUploading] = useState({})
     const [menuUrls, setMenuUrls] = useState([])
+    const [atmUrls, setAtmUrls] = useState([])
 
     useEffect(() => {
         const urls = []
@@ -1041,6 +1042,13 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             if (url) urls.push({ slot: i, url })
         }
         setMenuUrls(urls)
+
+        const aUrls = []
+        for (let i = 1; i <= 10; i++) {
+            const url = settings[`link_atm_${i}`]
+            if (url) aUrls.push({ slot: i, url })
+        }
+        setAtmUrls(aUrls)
     }, [settings])
 
     // Auto-resize image before upload (max 1200px width, JPEG 0.8 quality)
@@ -1113,6 +1121,33 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         }
     }
 
+    const uploadFoodVideo = async (file) => {
+        if (!file) return
+        const ext = file.name.split('.').pop().toLowerCase()
+        if (!['mp4', 'mov'].includes(ext)) {
+            alert('รองรับเฉพาะไฟล์ .mp4 และ .mov เท่านั้น')
+            return
+        }
+        if (file.size > 50 * 1024 * 1024) {
+            alert('ไฟล์วิดีโอต้องไม่เกิน 50MB')
+            return
+        }
+        setUploading(prev => ({ ...prev, link_food_video_url: true }))
+        try {
+            const fileName = `link/food_video_${Date.now()}.${ext}`
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true, contentType: ext === 'mp4' ? 'video/mp4' : 'video/quicktime' })
+            if (uploadError) throw uploadError
+            const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
+            await handleSave('link_food_video_url', publicUrl)
+            setTimestamp(Date.now())
+            alert('อัพโหลดวิดีโอสำเร็จ!')
+        } catch (error) {
+            alert('Upload error: ' + error.message)
+        } finally {
+            setUploading(prev => ({ ...prev, link_food_video_url: false }))
+        }
+    }
+
     const handleMenuUpload = async (files) => {
         if (!files || files.length === 0) return
         const fileArr = Array.from(files)
@@ -1141,6 +1176,37 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         }
         for (let i = 1; i <= 10; i++) {
             await handleSave(`link_menu_${i}`, remaining[i - 1] || '')
+        }
+    }
+
+    const handleAtmUpload = async (files) => {
+        if (!files || files.length === 0) return
+        const fileArr = Array.from(files)
+        let nextSlot = 1
+        for (let i = 1; i <= 10; i++) {
+            if (!settings[`link_atm_${i}`]) { nextSlot = i; break }
+            if (i === 10 && settings[`link_atm_${i}`]) { alert('รูปบรรยากาศเต็ม 10 รูปแล้ว'); return }
+            nextSlot = i + 1
+        }
+        for (const file of fileArr) {
+            if (nextSlot > 10) break
+            await uploadImage(file, `link_atm_${nextSlot}`)
+            nextSlot++
+        }
+        alert(`อัพโหลดรูปบรรยากาศสำเร็จ ${fileArr.length} รูป!`)
+    }
+
+    const handleDeleteAtm = async (slot) => {
+        if (!confirm('ลบรูปบรรยากาศนี้?')) return
+        await handleSave(`link_atm_${slot}`, '')
+        const remaining = []
+        for (let i = 1; i <= 10; i++) {
+            if (i === slot) continue
+            const url = settings[`link_atm_${i}`]
+            if (url) remaining.push(url)
+        }
+        for (let i = 1; i <= 10; i++) {
+            await handleSave(`link_atm_${i}`, remaining[i - 1] || '')
         }
     }
 
@@ -1280,6 +1346,63 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                             <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: ความยาว 5-15 วินาที, สูงสุด 50MB</span>
                         </div>
                         <input type="file" className="hidden" accept="video/mp4,video/quicktime,.mp4,.mov" onChange={(e) => uploadVideo(e.target.files[0])} />
+                    </label>
+        )}
+            </div>
+
+            {/* Food Vertical Video Upload */}
+            <div className="space-y-3 border-t border-gray-100 pt-6">
+                <label className="block text-xs font-bold text-brandDark uppercase">📱 วิดีโอคอนเทนต์อาหาร (Vertical 9:16)</label>
+                <p className="text-[10px] text-subInk -mt-1">อัพโหลดวิดีโอแนวตั้งเกี่ยวกับอาหาร (.mp4, .mov)</p>
+                {settings.link_food_video_url ? (
+                    <div className="relative rounded-2xl overflow-hidden border border-gray-200 bg-black aspect-[9/16] max-w-sm mx-auto">
+                        <video src={`${settings.link_food_video_url}?t=${timestamp}`} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                        <button onClick={() => handleSave('link_food_video_url', '')} className="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-3 py-1 rounded-lg font-bold hover:bg-red-600 transition-colors">ลบวิดีโอ</button>
+                    </div>
+                ) : (
+                    <label className="block w-full cursor-pointer group">
+                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
+                            <span className="text-3xl block mb-2">📱</span>
+                            <span className="text-subInk text-sm group-hover:text-ink block">
+                                {uploading.link_food_video_url ? 'กำลังอัพโหลด...' : 'เลือกวิดีโอแนวตั้ง (.mp4, .mov)'}
+                            </span>
+                            <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: อัตราส่วน 9:16, สูงสุด 50MB</span>
+                        </div>
+                        <input type="file" className="hidden" accept="video/mp4,video/quicktime,.mp4,.mov" onChange={(e) => uploadFoodVideo(e.target.files[0])} />
+                    </label>
+                )}
+            </div>
+
+            {/* Atmosphere Images Manager */}
+            <div className="space-y-3 border-t border-gray-100 pt-6">
+                <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-brandDark uppercase">✨ บรรยากาศร้าน (Atmosphere Images)</label>
+                    <span className="text-[10px] text-subInk">{atmUrls.length}/10 รูป</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    {atmUrls.map(({ slot, url }) => (
+                        <div key={slot} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-video">
+                            <img src={`${url}?t=${timestamp}`} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                <button onClick={() => handleDeleteAtm(slot)}
+                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity">
+                                    <Trash2 size={14} className="inline mr-1" /> ลบ
+                                </button>
+                            </div>
+                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">#{slot}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {atmUrls.length < 10 && (
+                    <label className="block w-full cursor-pointer group">
+                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
+                            <Upload size={24} className="mx-auto mb-2 text-subInk group-hover:text-brandDark transition-colors" />
+                            <span className="text-subInk text-sm group-hover:text-ink block">เพิ่มรูปบรรยากาศ (เลือกได้หลายรูป)</span>
+                            <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: Landscape (16:9) หรือ Square, JPG/PNG</span>
+                        </div>
+                        <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleAtmUpload(e.target.files)} />
                     </label>
                 )}
             </div>
