@@ -19,6 +19,7 @@ export default function SOPRecipeCard({
 
     const [expanded, setExpanded] = useState(defaultExpanded);
     const [cups, setCups] = useState(1);
+    const [sweetness, setSweetness] = useState('100%');
     const [selectedSizeOz, setSelectedSizeOz] = useState(
         isCustomMode 
             ? (customPresets.find(p => p.isBase)?.name || customPresets[0]?.name || 'Base')
@@ -28,6 +29,7 @@ export default function SOPRecipeCard({
     // Reset selection if recipe changes
     React.useEffect(() => {
         setCups(1);
+        setSweetness('100%');
         if (isCustomMode) {
             setSelectedSizeOz(customPresets.find(p => p.isBase)?.name || customPresets[0]?.name || 'Base');
         } else {
@@ -35,11 +37,11 @@ export default function SOPRecipeCard({
         }
     }, [recipe?.id, isCustomMode]);
 
-    // Scale ingredients based on selected glass size and cups
+    // Scale ingredients based on selected glass size, cups and sweetness
     const scaledIngredients = useMemo(() => {
         if (!scaleIngredients) return recipe?.display_ingredients || recipe?.ingredients || [];
-        return scaleIngredients(recipe, selectedSizeOz, cups);
-    }, [recipe, selectedSizeOz, scaleIngredients, cups]);
+        return scaleIngredients(recipe, selectedSizeOz, cups, sweetness);
+    }, [recipe, selectedSizeOz, scaleIngredients, cups, sweetness]);
 
     const visibleIngredients = useMemo(() => scaledIngredients.filter(i => !i.isHidden), [scaledIngredients]);
 
@@ -60,6 +62,8 @@ export default function SOPRecipeCard({
         textBright: 'text-[#FFFFFF]',
         accent: 'text-[#DFFF00]',
         accentBg: 'bg-[#DFFF00]/10 border border-[#DFFF00]/20',
+        sweetAccent: 'text-[#FF9F00]',
+        sweetAccentBg: 'bg-[#FF9F00]/10 border border-[#FF9F00]/20',
         divider: 'border-[#2A2A2A]',
         badge: 'bg-[#222222] text-[#888888] group-hover:bg-[#333333]',
         badgeActive: 'bg-[#DFFF00] text-[#0D0D0D]',
@@ -67,8 +71,10 @@ export default function SOPRecipeCard({
         sectionLabel: 'text-[#777777] flex items-center gap-2',
         ingredientRow: 'border-dashed border-[#333333]',
         scaledHighlight: 'text-[#DFFF00] font-bold drop-shadow-[0_0_8px_rgba(223,255,0,0.25)]',
+        sweetScaledHighlight: 'text-[#FF9F00] font-bold drop-shadow-[0_0_8px_rgba(255,159,0,0.25)]',
         glassPill: 'text-[#888888] hover:text-white',
         glassPillActive: 'bg-[#DFFF00] text-[#0D0D0D] font-bold shadow-[0_0_12px_rgba(223,255,0,0.3)] rounded-md',
+        sweetPillActive: 'bg-[#FF9F00] text-[#0D0D0D] font-bold shadow-[0_0_12px_rgba(255,159,0,0.3)] rounded-md',
     } : {
         card: 'bg-white border-gray-200',
         cardHover: 'hover:bg-gray-50',
@@ -78,6 +84,8 @@ export default function SOPRecipeCard({
         textBright: 'text-gray-900',
         accent: 'text-purple-600',
         accentBg: 'bg-purple-50 border border-purple-100',
+        sweetAccent: 'text-amber-600',
+        sweetAccentBg: 'bg-amber-50 border border-amber-100',
         divider: 'border-gray-200',
         badge: 'bg-gray-100 text-gray-500 group-hover:bg-gray-200',
         badgeActive: 'bg-purple-600 text-white',
@@ -85,8 +93,10 @@ export default function SOPRecipeCard({
         sectionLabel: 'text-gray-400 flex items-center gap-2',
         ingredientRow: 'border-dashed border-gray-200',
         scaledHighlight: 'text-purple-600 font-bold drop-shadow-sm',
+        sweetScaledHighlight: 'text-amber-600 font-bold drop-shadow-sm',
         glassPill: 'text-gray-500 hover:text-gray-800',
         glassPillActive: 'bg-white text-purple-700 font-bold shadow-sm rounded-md border border-gray-200',
+        sweetPillActive: 'bg-amber-100 text-amber-700 font-bold shadow-sm rounded-md border border-amber-200',
     };
 
     return (
@@ -213,6 +223,32 @@ export default function SOPRecipeCard({
                         </div>
                     </div>
 
+                    {/* Sweetness Selector */}
+                    <div>
+                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FF9F00] opacity-50"></span>
+                            ระดับความหวาน / Sweetness Level
+                        </div>
+                        <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-gray-100 border border-gray-200'}`}>
+                            {['0%', '25%', '50%', '100%', '120%'].map(level => {
+                                const isActive = sweetness === level;
+                                return (
+                                    <button
+                                        key={level}
+                                        onClick={() => setSweetness(level)}
+                                        className={`px-4 py-2 text-sm transition-all duration-300 flex items-center gap-1.5 ${
+                                            isActive ? t.sweetPillActive : t.glassPill
+                                        }`}
+                                    >
+                                        <span className={isActive ? 'text-lg font-bold' : ''}>
+                                            {level === '100%' ? '100% (ปกติ)' : level}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     {/* Divider */}
                     <div className={`border-t border-dashed ${t.divider}`} />
 
@@ -237,22 +273,41 @@ export default function SOPRecipeCard({
                         <div>
                             <div className={`text-[10px] uppercase tracking-widest font-bold mb-4 flex items-center justify-between ${t.sectionLabel}`}>
                                 <span>📦 ส่วนผสม / INGREDIENTS</span>
-                                {(!isBaseSize || cups > 1) && (
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${t.accentBg} ${t.accent}`}>
-                                        SCALED {cups > 1 ? `x${cups} ` : ''}({isCustomMode ? selectedSizeOz : `${selectedSizeOz}oz`})
-                                    </span>
+                                {(!isBaseSize || cups > 1 || sweetness !== '100%') && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(!isBaseSize || cups > 1) && (
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${t.accentBg} ${t.accent}`}>
+                                                SCALED {cups > 1 ? `x${cups} ` : ''}({isCustomMode ? selectedSizeOz : `${selectedSizeOz}oz`})
+                                            </span>
+                                        )}
+                                        {sweetness !== '100%' && (
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${t.sweetAccentBg} ${t.sweetAccent}`}>
+                                                หวาน: {sweetness === '120%' ? 'หวานมาก (120%)' : sweetness === '50%' ? 'หวานน้อย (50%)' : sweetness === '25%' ? 'หวานน้อยมาก (25%)' : sweetness === '0%' ? 'ไม่หวาน (0%)' : sweetness}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             <div className="space-y-2">
                                 {visibleIngredients.map((ing, i) => (
                                     <div key={i} className="flex flex-col group">
                                         <div className="flex items-end justify-between">
-                                            <span className={`text-[15px] tracking-wide ${t.textBright}`}>
-                                                {ing.name}
+                                            <span className={`text-[15px] tracking-wide ${t.textBright} flex items-center gap-1.5`}>
+                                                {ing.isSweetScaled && <span className="select-none text-xs">🍬</span>}
+                                                <span>{ing.name}</span>
+                                                {ing.isSweetScaled && (
+                                                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-sans ${t.sweetAccentBg} ${t.sweetAccent}`}>
+                                                        {sweetness === '120%' ? 'หวานมาก' : sweetness === '50%' ? 'หวานน้อย' : sweetness === '25%' ? 'หวานน้อยมาก' : sweetness === '0%' ? 'ไม่หวาน' : sweetness}
+                                                    </span>
+                                                )}
                                             </span>
                                             <div className={`flex-1 mx-3 mb-1.5 border-b ${t.ingredientRow} group-hover:border-[#555] transition-colors`} />
                                             <span className={`text-sm tabular-nums font-mono ${
-                                                ing.isScaled ? t.scaledHighlight : t.textBright
+                                                ing.isSweetScaled 
+                                                    ? t.sweetScaledHighlight 
+                                                    : ing.isScaled 
+                                                        ? t.scaledHighlight 
+                                                        : t.textBright
                                             }`}>
                                                 {ing.scaledQty ?? ing.qty} <span className={`text-[10px] uppercase ml-0.5 ${t.textMuted}`}>{ing.unit}</span>
                                             </span>
@@ -304,7 +359,13 @@ export default function SOPRecipeCard({
                                                                         const linkedIng = scaledIngredients.find(ing => ing.name === ref);
                                                                         if (!linkedIng) return null;
                                                                         return (
-                                                                            <span key={idx} className={`inline-flex items-center ${linkedIng.isScaled ? t.scaledHighlight : t.accent}`}>
+                                                                            <span key={idx} className={`inline-flex items-center ${
+                                                                                linkedIng.isSweetScaled 
+                                                                                    ? t.sweetScaledHighlight 
+                                                                                    : linkedIng.isScaled 
+                                                                                        ? t.scaledHighlight 
+                                                                                        : t.accent
+                                                                            }`}>
                                                                                 {idx > 0 && <span className="mr-2 text-gray-500 font-normal">+</span>}
                                                                                 {linkedIng.name} ({linkedIng.scaledQty ?? linkedIng.qty} <span className="text-[10px] uppercase opacity-80 ml-0.5">{linkedIng.unit}</span>)
                                                                             </span>

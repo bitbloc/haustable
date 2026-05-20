@@ -112,7 +112,11 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
             <input value={ing.remark || ''} onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} className="flex-1 p-2 border rounded-lg text-xs min-w-[150px]" placeholder="หมายเหตุ (เช่น ร่อนก่อนใช้)" />
             <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer flex-shrink-0">
                 <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded" />
-                Scale
+                Scale แก้ว
+            </label>
+            <label className="flex items-center gap-1 text-xs text-amber-600 font-bold cursor-pointer flex-shrink-0">
+                <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded text-amber-500 focus:ring-amber-400" />
+                🍬 สารหวาน (Sweetener)
             </label>
             <button onClick={() => onDelete(index)} className="p-1.5 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
         </div>
@@ -255,7 +259,7 @@ export default function SOPEditorPage() {
     }, [editing?.id]);
 
     // ── Ingredient CRUD & Visibility ──
-    const addIngredient = () => setEditing(prev => ({ ...prev, ingredients: [...(prev.ingredients || []), { name: '', qty: 0, unit: 'ml', scalable: true }] }));
+    const addIngredient = () => setEditing(prev => ({ ...prev, ingredients: [...(prev.ingredients || []), { name: '', qty: 0, unit: 'ml', scalable: true, is_sweetener: false }] }));
     const updateIngredient = (i, val) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.map((ing, idx) => idx === i ? val : ing) }));
     // Delete only true manual ingredients, not linked overrides
     const deleteIngredient = (i) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.filter((ing, idx) => idx !== i) }));
@@ -271,6 +275,21 @@ export default function SOPEditorPage() {
             }
             
             const newPreview = (prev.linked_preview || []).map(i => i.name === ingName ? { ...i, isHidden: !i.isHidden } : i);
+            return { ...prev, ingredients: newManuals, linked_preview: newPreview };
+        });
+    };
+
+    const toggleSweetenerLinked = (ingName) => {
+        setEditing(prev => {
+            const existing = (prev.ingredients || []).find(i => i.name === ingName);
+            let newManuals;
+            if (existing) {
+                newManuals = prev.ingredients.map(i => i.name === ingName ? { ...i, is_sweetener: !i.is_sweetener } : i);
+            } else {
+                newManuals = [...(prev.ingredients || []), { name: ingName, is_sweetener: true }];
+            }
+            
+            const newPreview = (prev.linked_preview || []).map(i => i.name === ingName ? { ...i, is_sweetener: !i.is_sweetener } : i);
             return { ...prev, ingredients: newManuals, linked_preview: newPreview };
         });
     };
@@ -632,6 +651,19 @@ export default function SOPEditorPage() {
                                             <button onClick={() => toggleHideLinked(ing.name)} title={ing.isHidden ? "แสดงใน SOP" : "ซ่อนใน SOP (เช่น แก้ว)"} className="p-1 hover:bg-purple-100 rounded text-purple-400">
                                                 {ing.isHidden ? <EyeOff size={14} className="text-red-400" /> : <Eye size={14} />}
                                             </button>
+                                            
+                                            <button 
+                                                onClick={() => toggleSweetenerLinked(ing.name)} 
+                                                title={ing.is_sweetener ? "เป็นสารหวาน" : "ทั่วไป (ไม่ใช่สารหวาน)"} 
+                                                className={`p-1 rounded transition-colors text-xs ${
+                                                    ing.is_sweetener 
+                                                        ? 'bg-amber-50 text-amber-500 border border-amber-200' 
+                                                        : 'text-gray-300 hover:text-amber-500 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                🍬
+                                            </button>
+
                                             <span className={ing.isHidden ? 'line-through text-gray-500' : 'text-gray-700'}>{ing.name}</span>
                                         </div>
                                         <span className="text-gray-500 font-mono">{ing.qty} {ing.unit}</span>

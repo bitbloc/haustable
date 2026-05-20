@@ -141,7 +141,8 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                         unit: i.unit || i.ingredient?.usage_unit || 'unit',
                         scalable: true,
                         isLinked: true, // Flag to show it's from Recipe Lab
-                        isHidden: override?.isHidden || false
+                        isHidden: override?.isHidden || false,
+                        is_sweetener: override?.is_sweetener || false
                     };
                 });
 
@@ -194,41 +195,81 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     // ────────────────────────────────
     // Scale Ingredients
     // ── Helper: Scale Ingredients ──
-    const scaleIngredients = useCallback((recipe, targetSizeOrPreset, cups = 1) => {
+    const scaleIngredients = useCallback((recipe, targetSizeOrPreset, cups = 1, sweetnessLevel = '100%') => {
         if (!recipe) return [];
         const ingredients = recipe.display_ingredients || recipe.ingredients || [];
         const rules = recipe.scaling_rules || {};
         const isCustomMode = rules._mode === 'custom';
         
-        // Get multiplier
-        let multiplier = 1;
+        // Get size multiplier
+        let sizeMultiplier = 1;
         if (isCustomMode) {
             const presets = rules.presets || [];
             const preset = presets.find(p => p.name === targetSizeOrPreset);
             if (preset) {
-                multiplier = parseFloat(preset.multiplier) || 1;
+                sizeMultiplier = parseFloat(preset.multiplier) || 1;
             }
         } else {
             const baseOz = parseFloat(recipe.base_glass_size_oz) || 16;
             const targetSizeOz = parseFloat(targetSizeOrPreset) || baseOz;
             
             if (rules[String(targetSizeOz)] !== undefined) {
-                multiplier = parseFloat(rules[String(targetSizeOz)]);
+                sizeMultiplier = parseFloat(rules[String(targetSizeOz)]);
             } else {
-                multiplier = targetSizeOz / baseOz;
+                sizeMultiplier = targetSizeOz / baseOz;
             }
         }
 
-        // Apply cups multiplier
-        multiplier *= cups;
+        // Sweetness Multiplier
+        // Support custom overrides in recipe.advanced_details.sweetness_rules or default values
+        const customRules = recipe.advanced_details?.sweetness_rules || {};
+        let sweetnessMultiplier = 1.0;
+        
+        switch (sweetnessLevel) {
+            case '0%':
+            case 'none':
+                sweetnessMultiplier = customRules.none !== undefined ? customRules.none : 0.0;
+                break;
+            case '25%':
+            case 'very_less':
+                sweetnessMultiplier = customRules.very_less !== undefined ? customRules.very_less : 0.25;
+                break;
+            case '50%':
+            case 'less':
+                sweetnessMultiplier = customRules.less !== undefined ? customRules.less : 0.5;
+                break;
+            case '100%':
+            case 'normal':
+                sweetnessMultiplier = customRules.normal !== undefined ? customRules.normal : 1.0;
+                break;
+            case '120%':
+            case 'extra':
+                sweetnessMultiplier = customRules.extra !== undefined ? customRules.extra : 1.2;
+                break;
+            default:
+                sweetnessMultiplier = 1.0;
+        }
 
-        return ingredients.map(ing => ({
-            ...ing,
-            scaledQty: ing.scalable !== false
-                ? Math.round((ing.qty * multiplier) * 100) / 100
-                : ing.qty,
-            isScaled: ing.scalable !== false && multiplier !== 1
-        }));
+        return ingredients.map(ing => {
+            let finalMultiplier = sizeMultiplier * cups;
+            
+            // Check if ingredient is a sweetener
+            const isSweet = ing.is_sweetener === true;
+            if (isSweet) {
+                finalMultiplier *= sweetnessMultiplier;
+            }
+
+            const isScalable = ing.scalable !== false;
+
+            return {
+                ...ing,
+                scaledQty: isScalable
+                    ? Math.round((ing.qty * finalMultiplier) * 100) / 100
+                    : ing.qty,
+                isScaled: isScalable && finalMultiplier !== 1,
+                isSweetScaled: isSweet && sweetnessMultiplier !== 1.0
+            };
+        });
     }, []);
 
     // ────────────────────────────────
