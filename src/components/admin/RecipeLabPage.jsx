@@ -43,7 +43,7 @@ export default function RecipeLabPage() {
                     quantity,
                     unit,
                     ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
-                        id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor
+                        id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
                 `)
                 .in('parent_stock_item_id', stockItems.map(i => i.id));
@@ -52,7 +52,7 @@ export default function RecipeLabPage() {
             const enriched = stockItems.map(item => {
                 const ingredients = recipeLinks?.filter(l => l.parent_stock_item_id === item.id) || [];
                 
-                const { totalCost } = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient);
+                const { totalCost } = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient, { qFactorPercent: item.q_factor_percent || 0 });
                 
                 // GP Model: No added fixed cost. Material Cost is the key metric.
                 const grandTotal = totalCost;

@@ -780,7 +780,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         });
 
         // Sum up from breakdown
-        setTotalCost(breakdown.subTotal);
+        setTotalCost(breakdown.totalCost);
     }, [ingredients, availableItems]);
 
     const handleAddIngredient = async (item) => {
@@ -923,8 +923,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         fetchSettings();
     }, []);
 
-    // New helper to get suggested price
-    const suggestedPrice = totalCost > 0 ? (totalCost / targetFoodCostPct) * 100 : 0;
+
+
 
     // Override handleSave to just save ingredients (Cost is dynamic now)
     const handleSaveWithFixed = async () => {
@@ -1192,52 +1192,28 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 {/* Mobile Floating Action Button for Adding Ingredient */}
                 <button 
                     onClick={() => setIsMobilePickerOpen(true)}
-                    className="md:hidden absolute bottom-24 right-4 w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center z-30 hover:scale-105 transition-transform"
+                    className="md:hidden absolute bottom-20 right-4 w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center z-30 hover:scale-105 active:scale-95 transition-transform"
                 >
                     <Plus size={28} />
                 </button>
 
-                {/* GP Pricing Calc */}
-                <div className="px-4 py-3 bg-blue-50 border-t border-blue-100 space-y-2">
-                    <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
-                            <Rocket size={16} />
-                            <span>Pricing Suggestion (GP Model)</span>
-                        </div>
-                        <div className="text-[10px] text-blue-600 font-bold bg-blue-100 px-2 py-1 rounded-lg">
-                            Target Food Cost: {targetFoodCostPct}%
-                        </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-end border-t border-blue-200/50 pt-2">
-                         <div className="text-xs text-blue-600">
-                             Suggested Selling Price
-                             <div className="text-[10px] opacity-75">(Cost / {targetFoodCostPct}%)</div>
-                         </div>
-                         <div className="text-xl font-bold text-blue-900">
-                             ฿{Math.ceil(suggestedPrice)} 
-                             <span className="text-xs font-normal text-blue-500 ml-1">
-                                (Start @ {Math.ceil(suggestedPrice/5)*5})
-                             </span>
-                         </div>
-                    </div>
-                </div>
-
-                {/* Price Simulator Embedded - Pass RAW Material Cost for Analysis */}
-                <div className="p-4 bg-white border-t border-gray-100 hidden md:block">
-                     <PriceSimulator 
+                {/* Unified Price Simulator — visible on both mobile & desktop */}
+                <div className="border-t border-gray-100 bg-white">
+                    <PriceSimulator 
                         totalCost={totalCost} 
                         price={currentPrice}
                         onPriceChange={setCurrentPrice}
-                        targetPct={targetFoodCostPct} 
+                        targetPct={targetFoodCostPct}
+                        compact={true}
                     />
                 </div>
 
-                <div className="p-4 bg-white border-t flex justify-end gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
-                    <button onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 flex-1 md:flex-none">
+                {/* Action Buttons */}
+                <div className="p-3 md:p-4 bg-white border-t flex justify-end gap-2 md:gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
+                    <button onClick={onClose} className="px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 active:bg-gray-200 flex-1 md:flex-none text-sm md:text-base transition-colors">
                         ยกเลิก
                     </button>
-                    <button onClick={handleSaveWithFixed} className="px-8 py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black shadow-xl flex-1 md:flex-none">
+                    <button onClick={handleSaveWithFixed} className="px-6 md:px-8 py-2.5 md:py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black active:bg-gray-900 shadow-xl flex-1 md:flex-none text-sm md:text-base transition-colors">
                         บันทึกสูตร
                     </button>
                 </div>
