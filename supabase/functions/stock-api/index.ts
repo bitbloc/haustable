@@ -5,6 +5,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-api-key',
 }
 
+function getUnitType(unit?: string): string {
+  const normalized = unit?.toLowerCase().trim();
+  if (!normalized) return 'unknown';
+
+  const massKeys = ['kg', 'g', 'mg', 'ขีด', 'lb', 'oz'];
+  const volumeKeys = ['l', 'ml', 'gallon', 'oz_fl', 'cup', 'tbsp', 'tsp', 'shot'];
+  const countKeys = ['unit', 'pcs', 'box', 'pack', 'can', 'bottle', 'bag', 'crate', 'carton', 'glass'];
+
+  if (massKeys.includes(normalized)) return 'mass';
+  if (volumeKeys.includes(normalized)) return 'volume';
+  if (countKeys.includes(normalized)) return 'count';
+
+  return 'unknown';
+}
+
+function areUnitTypesCompatible(unitA?: string, unitB?: string): boolean {
+  const typeA = getUnitType(unitA);
+  const typeB = getUnitType(unitB);
+  if (typeA === 'unknown' || typeB === 'unknown') return false;
+  return typeA === typeB;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -88,6 +110,23 @@ Deno.serve(async (req) => {
           throw new Error('เป้าหมายระดับสต็อกต้องไม่ต่ำกว่า 0')
         }
 
+        // Unit type compatibility validation
+        const packUnit = body.pack_unit
+        const usageUnit = body.usage_unit
+        if (packUnit && usageUnit) {
+          const isCompatible = areUnitTypesCompatible(packUnit, usageUnit)
+          const conversionFactorVal = parseFloat(body.conversion_factor)
+          if (!isCompatible) {
+            if (body.conversion_factor === undefined || body.conversion_factor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+              throw new Error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)')
+            }
+          } else {
+            if (body.conversion_factor !== undefined && (isNaN(conversionFactorVal) || conversionFactorVal <= 0)) {
+              throw new Error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0')
+            }
+          }
+        }
+
         const initialQty = parseFloat(body.current_quantity) || 0
         // Force current_quantity to 0 for initial insert
         body.current_quantity = 0
@@ -137,6 +176,35 @@ Deno.serve(async (req) => {
         }
         if (body.par_level !== undefined && parseFloat(body.par_level) < 0) {
           throw new Error('เป้าหมายระดับสต็อกต้องไม่ต่ำกว่า 0')
+        }
+
+        // Fetch existing item to check compatibility correctly
+        const { data: existingItem, error: fetchError } = await supabaseAdmin
+          .from('stock_items')
+          .select('pack_unit, usage_unit, conversion_factor')
+          .eq('id', idValue)
+          .single()
+
+        if (fetchError || !existingItem) {
+          throw new Error('ไม่พบข้อมูลสินค้าวัตถุดิบที่ต้องการแก้ไข')
+        }
+
+        const packUnit = body.pack_unit !== undefined ? body.pack_unit : existingItem.pack_unit
+        const usageUnit = body.usage_unit !== undefined ? body.usage_unit : existingItem.usage_unit
+        const conversionFactor = body.conversion_factor !== undefined ? body.conversion_factor : existingItem.conversion_factor
+
+        if (packUnit && usageUnit) {
+          const isCompatible = areUnitTypesCompatible(packUnit, usageUnit)
+          const conversionFactorVal = parseFloat(conversionFactor)
+          if (!isCompatible) {
+            if (conversionFactor === undefined || conversionFactor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+              throw new Error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)')
+            }
+          } else {
+            if (conversionFactor !== undefined && (isNaN(conversionFactorVal) || conversionFactorVal <= 0)) {
+              throw new Error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0')
+            }
+          }
         }
 
         // Prevent updating current_quantity directly through updates
