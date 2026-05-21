@@ -5,7 +5,7 @@ import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } 
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download, Rocket } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
-import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
+import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 
@@ -20,35 +20,58 @@ function EditStockModal({ item, onClose, onSave }) {
         yield_percent: item.yield_percent || 100
     });
 
-    // Helper: Is this a standard metric conversion?
-    const getStandardFactor = (from, to) => {
-        if (from === 'kg' && to === 'g') return 1000;
-        if (from === 'g' && to === 'kg') return 0.001;
-        if (from === 'l' && to === 'ml') return 1000;
-        if (from === 'ml' && to === 'l') return 0.001;
-        if (from === to) return 1;
-        return null; // Not standard (e.g. Pack -> g)
-    };
+    const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
+    const suggestedFactor = suggestConversionFactor(formData.pack_unit, formData.usage_unit);
+    const isStandard = suggestedFactor !== null;
 
-    const standardFactor = getStandardFactor(formData.pack_unit, formData.usage_unit);
-    const isStandard = standardFactor !== null;
-
-    // Helper: Determine if units are IDENTICAL (Display "Same Unit")
-    const areUnitsSame = formData.pack_unit === formData.usage_unit;
-    
     // Toggle for Custom Calculation (Divide vs Multiply) - Only relevant for Custom Units
     const [useRatioMode, setUseRatioMode] = useState(false); 
 
     // Auto-calculate Real Cost
-    const realCostPerUsage = (formData.cost_price / (formData.pack_size * formData.conversion_factor)) * (100 / formData.yield_percent);
+    const realCostPerUsage = (formData.cost_price / (formData.pack_size * (parseFloat(formData.conversion_factor) || 1))) * (100 / formData.yield_percent);
     const costPerPackUnit = formData.cost_price / formData.pack_size;
 
-    useEffect(() => {
-        // Enforce standard factor if applicable
-        if (standardFactor !== null && formData.conversion_factor !== standardFactor) {
-             setFormData(prev => ({ ...prev, conversion_factor: standardFactor }));
+    const handleUnitChange = (type, value) => {
+        const newData = { ...formData, [type]: value };
+        const factor = suggestConversionFactor(newData.pack_unit, newData.usage_unit);
+        newData.conversion_factor = factor !== null ? factor : '';
+        setFormData(newData);
+    };
+
+    const handleSave = () => {
+        const costPrice = parseFloat(formData.cost_price);
+        const packSize = parseFloat(formData.pack_size);
+        const conversionFactorVal = parseFloat(formData.conversion_factor);
+        const yieldPercent = parseFloat(formData.yield_percent);
+
+        if (isNaN(costPrice) || costPrice < 0) {
+            toast.error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท');
+            return;
         }
-    }, [formData.pack_unit, formData.usage_unit, standardFactor]);
+        if (isNaN(packSize) || packSize <= 0) {
+            toast.error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0');
+            return;
+        }
+
+        if (!isCompatible) {
+            if (formData.conversion_factor === '' || formData.conversion_factor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+                toast.error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)');
+                return;
+            }
+        } else {
+            if (isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+                toast.error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0');
+                return;
+            }
+        }
+
+        if (isNaN(yieldPercent) || yieldPercent < 1 || yieldPercent > 100) {
+            toast.error('Yield % ต้องอยู่ระหว่าง 1 ถึง 100%');
+            return;
+        }
+
+        onSave(item.id, formData);
+    };
 
     return (
         <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
@@ -58,6 +81,19 @@ function EditStockModal({ item, onClose, onSave }) {
                 </h3>
                 
                 <div className="space-y-4">
+                    {/* Unit Mismatch Warning */}
+                    {!isCompatible && (
+                        <div className="bg-red-50 border border-red-200 p-2.5 rounded-xl flex gap-2.5 items-start animate-in slide-in-from-top-2">
+                            <AlertTriangle className="w-4.5 h-4.5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <div className="text-xs font-bold text-red-800">คำเตือน: การแปลงหน่วยข้ามประเภท</div>
+                                <p className="text-[10px] text-red-700 leading-normal">
+                                    หน่วยซื้อ ({formData.pack_unit}) และหน่วยใช้จริง ({formData.usage_unit}) เป็นคนละประเภทกัน จำเป็นต้องป้อนตัวแปลงหน่วยด้วยตนเอง ห้ามใช้ค่าเริ่มต้นเป็น 1
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Buying Info */}
                     <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-2">
                         <label className="text-xs font-bold text-blue-800 block">1. ซื้อมา (Buying)</label>
@@ -74,7 +110,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <span className="text-[10px] text-gray-500">หน่วย</span>
                                 <select 
                                     value={formData.pack_unit} 
-                                    onChange={e => setFormData({...formData, pack_unit: e.target.value})} 
+                                    onChange={e => handleUnitChange('pack_unit', e.target.value)} 
                                     className="w-full p-2 rounded border border-blue-200 text-sm bg-white"
                                 >
                                     {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
@@ -94,11 +130,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <span className="text-[10px] text-gray-500">หน่วยหน่วยที่ใช้</span>
                                 <select
                                     value={formData.usage_unit} 
-                                    onChange={e => {
-                                        const newUnit = e.target.value;
-                                        // We let useEffect handle the factor update if standard
-                                        setFormData({...formData, usage_unit: newUnit}); 
-                                    }} 
+                                    onChange={e => handleUnitChange('usage_unit', e.target.value)} 
                                     className="w-full p-2 rounded border border-orange-200 text-sm font-bold bg-white" 
                                 >
                                     {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
@@ -113,9 +145,9 @@ function EditStockModal({ item, onClose, onSave }) {
                                 <div className="text-sm text-gray-500 flex items-center justify-between">
                                     <span className="font-bold flex items-center gap-2">
                                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        มาตราฐานสากล
+                                        มาตรฐานสากล
                                     </span>
-                                    <span>1 {formData.pack_unit} = <strong>{standardFactor}</strong> {formData.usage_unit}</span>
+                                    <span>1 {formData.pack_unit} = <strong>{suggestedFactor}</strong> {formData.usage_unit}</span>
                                 </div>
                             ) : (
                                 // CUSTOM (Pack -> g, Bottle -> ml)
@@ -138,10 +170,11 @@ function EditStockModal({ item, onClose, onSave }) {
                                                     type="number" 
                                                     className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
                                                     placeholder="?"
-                                                    value={formData.conversion_factor === 0 ? 0 : Math.round((1 / formData.conversion_factor) * 10000) / 10000} 
+                                                    value={formData.conversion_factor === 0 || !formData.conversion_factor ? '' : Math.round((1 / formData.conversion_factor) * 10000) / 10000} 
                                                     onChange={e => {
                                                         const val = parseFloat(e.target.value);
                                                         if (!isNaN(val) && val > 0) setFormData({...formData, conversion_factor: 1 / val});
+                                                        else setFormData({...formData, conversion_factor: ''});
                                                     }}
                                                 />
                                                 <span>{formData.pack_unit}</span>
@@ -153,7 +186,7 @@ function EditStockModal({ item, onClose, onSave }) {
                                                     type="number" 
                                                     className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
                                                     value={formData.conversion_factor}
-                                                    onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? 0 : parseFloat(e.target.value)})}
+                                                    onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value)})}
                                                 />
                                                 <span>{formData.usage_unit}</span>
                                             </>
@@ -178,7 +211,7 @@ function EditStockModal({ item, onClose, onSave }) {
 
                     <div className="flex gap-2 pt-2">
                         <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-200 text-gray-700 font-bold">ยกเลิก</button>
-                        <button onClick={() => onSave(item.id, formData)} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700">บันทึก</button>
+                        <button onClick={handleSave} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700">บันทึก</button>
                     </div>
                 </div>
             </div>
@@ -205,11 +238,53 @@ function QuickAddStockModal({ onClose, onSave }) {
             const { data } = await supabase.from('stock_categories').select('*').order('sort_order');
             if (data && data.length > 0) {
                 setCategories(data);
-                // Optional: set default to first item if needed, but 'veg' is a safe fallback usually
             }
         };
         fetchCats();
     }, []);
+
+    const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
+
+    const handleUnitChange = (type, value) => {
+        const newData = { ...formData, [type]: value };
+        const factor = suggestConversionFactor(newData.pack_unit, newData.usage_unit);
+        newData.conversion_factor = factor !== null ? factor : '';
+        setFormData(newData);
+    };
+
+    const handleSave = () => {
+        if (!formData.name || !formData.name.trim()) {
+            toast.error('กรุณากรอกชื่อวัตถุดิบ');
+            return;
+        }
+
+        const costPrice = parseFloat(formData.cost_price);
+        const packSize = parseFloat(formData.pack_size);
+        const conversionFactorVal = parseFloat(formData.conversion_factor);
+
+        if (isNaN(costPrice) || costPrice < 0) {
+            toast.error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท');
+            return;
+        }
+        if (isNaN(packSize) || packSize <= 0) {
+            toast.error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0');
+            return;
+        }
+
+        if (!isCompatible) {
+            if (formData.conversion_factor === '' || formData.conversion_factor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+                toast.error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)');
+                return;
+            }
+        } else {
+            if (isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+                toast.error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0');
+                return;
+            }
+        }
+
+        onSave(formData);
+    };
 
     return (
         <div className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-4">
@@ -224,7 +299,7 @@ function QuickAddStockModal({ onClose, onSave }) {
                         <input 
                             value={formData.name}
                             onChange={e => setFormData({...formData, name: e.target.value})}
-                            className="w-full p-2 border rounded-xl bg-gray-50 mb-2"
+                            className="w-full p-2 border rounded-xl bg-gray-50 mb-2 font-bold text-sm outline-none"
                             placeholder="เช่น เมล็ดกาแฟ, นมสด..."
                             autoFocus
                         />
@@ -233,7 +308,7 @@ function QuickAddStockModal({ onClose, onSave }) {
                         <select 
                             value={formData.category}
                             onChange={e => setFormData({...formData, category: e.target.value})}
-                            className="w-full p-2 border rounded-xl bg-white"
+                            className="w-full p-2 border rounded-xl bg-white text-sm outline-none"
                         >
                             {categories.length > 0 ? (
                                 categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
@@ -246,37 +321,59 @@ function QuickAddStockModal({ onClose, onSave }) {
                     <div className="flex gap-2">
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500">ราคาซื้อ</label>
-                            <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
+                            <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl text-sm" />
                         </div>
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500">ขนาดแพ็ค</label>
-                            <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl" />
+                            <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl text-sm" />
                         </div>
                     </div>
 
                     <div className="flex gap-2">
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500">หน่วยแพ็ค</label>
-                            <select value={formData.pack_unit} onChange={e => setFormData({...formData, pack_unit: e.target.value})} className="w-full p-2 border rounded-xl bg-white">
+                            <select value={formData.pack_unit} onChange={e => handleUnitChange('pack_unit', e.target.value)} className="w-full p-2 border rounded-xl bg-white text-sm outline-none">
                                 {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
                             </select>
                         </div>
                         <div className="flex-1">
                             <label className="text-xs font-bold text-gray-500">หน่วยใช้จริง</label>
-                             <select value={formData.usage_unit} onChange={e => setFormData({...formData, usage_unit: e.target.value})} className="w-full p-2 border rounded-xl bg-white">
+                             <select value={formData.usage_unit} onChange={e => handleUnitChange('usage_unit', e.target.value)} className="w-full p-2 border rounded-xl bg-white text-sm outline-none">
                                 {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                             </select>
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700">
-                       ระบบจะคำนวณตัวแปลงหน่วยให้อัตโนมัติ (เช่น kg -&gt; g = 1000) หากต้องการแก้ไขละเอียดให้ทำในหน้าสต็อกหลัก
-                    </div>
+                    {!isCompatible ? (
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-red-500 block">ตัวแปลงหน่วยสำหรับการแปลงข้ามประเภท</label>
+                            <div className="flex items-center gap-2 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                                <span className="text-xs font-bold text-gray-500">1 {formData.pack_unit} =</span>
+                                <input 
+                                    type="number" 
+                                    className="flex-1 p-1 bg-white border rounded text-center font-bold text-red-700 outline-none"
+                                    placeholder="กรอกตัวแปลงหน่วย"
+                                    value={formData.conversion_factor}
+                                    onChange={e => setFormData({ 
+                                        ...formData, 
+                                        conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value) 
+                                    })}
+                                />
+                                <span className="text-xs text-gray-500">{formData.usage_unit}</span>
+                            </div>
+                        </div>
+                    ) : (
+                        formData.pack_unit !== formData.usage_unit && (
+                            <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700">
+                                1 {formData.pack_unit} = {formData.conversion_factor} {formData.usage_unit} (คำนวณอัตโนมัติ)
+                            </div>
+                        )
+                    )}
 
                     <div className="flex gap-2 mt-4">
                         <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">ยกเลิก</button>
                         <button 
-                            onClick={() => onSave(formData)}
+                            onClick={handleSave}
                             disabled={!formData.name}
                             className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
                         >
@@ -843,20 +940,9 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     const handleCreateStock = async (formData) => {
         try {
-            // Auto-calculate conversion factor if standard
-            // Simple logic: if kg->g factor=1000, etc.
-            // For now rely on defaults or backend triggers, but here we just insert what we have.
-            // Actually let's try to be smart matching the 'suggestConversionFactor' logic but simply.
-            
-            let factor = formData.conversion_factor;
-            // Basic override for standard units
-            if(formData.pack_unit === 'kg' && formData.usage_unit === 'g') factor = 1000;
-            if(formData.pack_unit === 'l' && formData.usage_unit === 'ml') factor = 1000;
-
             const payload = {
                 ...formData,
                 unit: formData.usage_unit, // Sync for backward compatibility
-                conversion_factor: factor,
                 current_quantity: 0, // Default 0
                 min_stock_threshold: 0
             };
@@ -868,8 +954,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             setAvailableItems(prev => [...prev, data].sort((a,b) => a.name.localeCompare(b.name)));
             setIsQuickAddOpen(false);
             
-            // Auto add to recipe? Optional. Let's just let user pick it.
-            // But usually if they create it, they want to add it.
             handleAddIngredient(data);
 
         } catch (err) {

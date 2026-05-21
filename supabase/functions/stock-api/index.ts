@@ -64,14 +64,84 @@ Deno.serve(async (req) => {
       // POST /items (Create)
       if (req.method === 'POST') {
         const body = await req.json()
+        
+        // Data validation
+        if (body.cost_price !== undefined && parseFloat(body.cost_price) < 0) {
+          throw new Error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท')
+        }
+        if (body.pack_size !== undefined && parseFloat(body.pack_size) <= 0) {
+          throw new Error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0')
+        }
+        if (body.conversion_factor !== undefined && parseFloat(body.conversion_factor) <= 0) {
+          throw new Error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0')
+        }
+        if (body.yield_percent !== undefined && (parseFloat(body.yield_percent) < 1 || parseFloat(body.yield_percent) > 100)) {
+          throw new Error('Yield % ต้องอยู่ระหว่าง 1 ถึง 100%')
+        }
+        if (body.min_stock_threshold !== undefined && parseFloat(body.min_stock_threshold) < 0) {
+          throw new Error('ระดับแจ้งเตือนขั้นต่ำต้องไม่ต่ำกว่า 0')
+        }
+        if (body.reorder_point !== undefined && parseFloat(body.reorder_point) < 0) {
+          throw new Error('จุดสั่งซื้อต้องไม่ต่ำกว่า 0')
+        }
+        if (body.par_level !== undefined && parseFloat(body.par_level) < 0) {
+          throw new Error('เป้าหมายระดับสต็อกต้องไม่ต่ำกว่า 0')
+        }
+
+        const initialQty = parseFloat(body.current_quantity) || 0
+        // Force current_quantity to 0 for initial insert
+        body.current_quantity = 0
+
         const { data, error } = await supabaseAdmin.from('stock_items').insert(body).select().single()
         if (error) throw error
+
+        // If initialQty > 0, insert a stock transaction
+        if (initialQty > 0 && data) {
+          const { error: txError } = await supabaseAdmin.from('stock_transactions').insert({
+            stock_item_id: data.id,
+            transaction_type: 'audit',
+            quantity_change: initialQty,
+            performed_by: 'System (Initial Stock via API)',
+            note: 'จำนวนสต็อกเริ่มต้นเมื่อสร้างสินค้าวัตถุดิบผ่าน API'
+          })
+          if (txError) {
+            console.error("Initial transaction insert failed:", txError)
+          }
+        }
+
         return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 201 })
       }
 
       // PUT /items/:id (Update)
       if (req.method === 'PUT' && idValue) {
         const body = await req.json()
+
+        // Data validation
+        if (body.cost_price !== undefined && parseFloat(body.cost_price) < 0) {
+          throw new Error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท')
+        }
+        if (body.pack_size !== undefined && parseFloat(body.pack_size) <= 0) {
+          throw new Error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0')
+        }
+        if (body.conversion_factor !== undefined && parseFloat(body.conversion_factor) <= 0) {
+          throw new Error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0')
+        }
+        if (body.yield_percent !== undefined && (parseFloat(body.yield_percent) < 1 || parseFloat(body.yield_percent) > 100)) {
+          throw new Error('Yield % ต้องอยู่ระหว่าง 1 ถึง 100%')
+        }
+        if (body.min_stock_threshold !== undefined && parseFloat(body.min_stock_threshold) < 0) {
+          throw new Error('ระดับแจ้งเตือนขั้นต่ำต้องไม่ต่ำกว่า 0')
+        }
+        if (body.reorder_point !== undefined && parseFloat(body.reorder_point) < 0) {
+          throw new Error('จุดสั่งซื้อต้องไม่ต่ำกว่า 0')
+        }
+        if (body.par_level !== undefined && parseFloat(body.par_level) < 0) {
+          throw new Error('เป้าหมายระดับสต็อกต้องไม่ต่ำกว่า 0')
+        }
+
+        // Prevent updating current_quantity directly through updates
+        delete body.current_quantity
+
         const { data, error } = await supabaseAdmin.from('stock_items').update(body).eq('id', idValue).select().single()
         if (error) throw error
         return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

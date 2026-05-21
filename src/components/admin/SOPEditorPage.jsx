@@ -6,6 +6,7 @@ import useBarSOP, { SOP_ACTIONS, getActionByKey } from '../../hooks/useBarSOP';
 import SOPRecipeCard from '../sop/SOPRecipeCard';
 import SOPCategoryManager from '../sop/SOPCategoryManager';
 import { toast } from 'sonner';
+import { THAI_UNITS } from '../../utils/unitUtils';
 
 // ── Step Editor Row ──
 function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients }) {
@@ -104,11 +105,25 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
 
 // ── Ingredient Editor Row ──
 function IngredientRow({ ing, index, onUpdate, onDelete }) {
+    const isStandard = THAI_UNITS.some(u => u.value.toLowerCase() === (ing.unit || '').trim().toLowerCase());
+    const showWarning = ing.unit && !isStandard;
+
     return (
         <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg group flex-wrap">
             <input value={ing.name || ''} onChange={e => onUpdate(index, { ...ing, name: e.target.value })} placeholder="ชื่อวัตถุดิบ" className="w-1/3 p-2 border rounded-lg text-sm min-w-[120px]" />
             <input type="number" value={ing.qty || ''} onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })} className="w-16 p-2 border rounded-lg text-sm text-center" placeholder="จำนวน" />
-            <input value={ing.unit || ''} onChange={e => onUpdate(index, { ...ing, unit: e.target.value })} className="w-16 p-2 border rounded-lg text-sm text-center" placeholder="หน่วย" />
+            <div className="flex items-center gap-1">
+                <input 
+                    value={ing.unit || ''} 
+                    onChange={e => onUpdate(index, { ...ing, unit: e.target.value })} 
+                    list="sop-units"
+                    className={`w-16 p-2 border rounded-lg text-sm text-center ${showWarning ? 'border-orange-400 bg-orange-50 focus:border-orange-500 focus:ring-orange-200' : ''}`} 
+                    placeholder="หน่วย" 
+                />
+                {showWarning && (
+                    <span className="text-orange-500 cursor-help" title="หน่วยวัดนี้ไม่ได้เป็นมาตรฐานในการคำนวณต้นทุนคลังสินค้า">⚠️</span>
+                )}
+            </div>
             <input value={ing.remark || ''} onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} className="flex-1 p-2 border rounded-lg text-xs min-w-[150px]" placeholder="หมายเหตุ (เช่น ร่อนก่อนใช้)" />
             <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer flex-shrink-0">
                 <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded" />
@@ -223,6 +238,29 @@ export default function SOPEditorPage() {
     // ── Save ──
     const handleSave = async () => {
         if (!editing.name.trim()) { toast.error('กรุณาใส่ชื่อ SOP'); return; }
+
+        const manualIngs = (editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined && !i.isHidden);
+        const linkedIngs = (editing.linked_preview || []).filter(i => !i.isHidden);
+        const allIngs = [...manualIngs, ...linkedIngs];
+        
+        const nonStandardUnits = [];
+        allIngs.forEach(ing => {
+            const unitStr = (ing.unit || '').trim();
+            if (unitStr) {
+                const isStandard = THAI_UNITS.some(u => u.value.toLowerCase() === unitStr.toLowerCase());
+                if (!isStandard && !nonStandardUnits.includes(unitStr)) {
+                    nonStandardUnits.push(unitStr);
+                }
+            }
+        });
+        
+        if (nonStandardUnits.length > 0) {
+            const confirmMsg = `พบหน่วยส่วนผสมที่ไม่อยู่ในหน่วยมาตรฐาน (${nonStandardUnits.join(', ')}) ซึ่งจะไม่สามารถนำไปวิเคราะห์ต้นทุนอัตโนมัติได้ ยืนยันที่จะบันทึกสูตรใช่หรือไม่?`;
+            if (!window.confirm(confirmMsg)) {
+                return;
+            }
+        }
+
         setSaving(true);
         const result = await saveSOPRecipe(editing);
         setSaving(false);
@@ -906,6 +944,13 @@ export default function SOPEditorPage() {
 
             {/* Import Modal */}
             {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleLink} />}
+
+            {/* Standard units datalist */}
+            <datalist id="sop-units">
+                {THAI_UNITS.map(u => (
+                    <option key={u.value} value={u.value}>{u.label}</option>
+                ))}
+            </datalist>
         </div>
     );
 }

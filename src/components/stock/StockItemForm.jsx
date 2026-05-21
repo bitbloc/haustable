@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { X, Save, Trash2, Camera, Upload, Scan, Calculator, DollarSign, Scale, Percent, AlertTriangle, Search, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from './BarcodeScanner';
-import { THAI_UNITS, suggestConversionFactor } from '../../utils/unitUtils';
+import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { calculateRealUnitCost } from '../../utils/costUtils';
 
 export default function StockItemForm({ item, categories, onClose, onUpdate }) {
@@ -70,7 +70,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         // Suggest Factor if either unit changed
         if (type === 'pack_unit' || type === 'usage_unit') {
             const factor = suggestConversionFactor(newData.pack_unit, newData.usage_unit);
-            newData.conversion_factor = factor;
+            newData.conversion_factor = factor !== null ? factor : '';
         }
         
         setFormData(newData);
@@ -79,6 +79,44 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
     const realCost = calculateRealUnitCost(formData);
 
     const handleSave = async () => {
+        // Enforce validations
+        if (!formData.name || !formData.name.trim()) {
+            toast.error('กรุณากรอกชื่อสินค้าวัตถุดิบ');
+            return;
+        }
+        if (parseFloat(formData.cost_price) < 0) {
+            toast.error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท');
+            return;
+        }
+        if (!formData.pack_size || parseFloat(formData.pack_size) <= 0) {
+            toast.error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0');
+            return;
+        }
+        
+        // Check unit compatibility
+        const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
+        const conversionFactorVal = parseFloat(formData.conversion_factor);
+        if (!isCompatible) {
+            if (formData.conversion_factor === '' || formData.conversion_factor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+                toast.error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)');
+                return;
+            }
+        } else {
+            if (isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
+                toast.error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0');
+                return;
+            }
+        }
+        
+        if (parseFloat(formData.yield_percent) < 1 || parseFloat(formData.yield_percent) > 100) {
+            toast.error('Yield % ต้องอยู่ระหว่าง 1 ถึง 100%');
+            return;
+        }
+        if (parseFloat(formData.min_stock_threshold) < 0 || parseFloat(formData.reorder_point) < 0 || parseFloat(formData.par_level) < 0) {
+            toast.error('จำนวนสต็อกสำหรับระดับแจ้งเตือนต้องไม่ต่ำกว่า 0');
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = { 
@@ -89,11 +127,37 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
             
             let error;
             if (isEdit) {
+                 // Prevent Stale Update: Strip current_quantity from update payload
+                 delete payload.current_quantity;
                  const { error: err } = await supabase.from('stock_items').update(payload).eq('id', item.id);
                  error = err;
             } else {
-                 const { error: err } = await supabase.from('stock_items').insert(payload);
+                 // Create item with current_quantity: 0 first
+                 const initialQty = payload.current_quantity || 0;
+                 const { data: newItem, error: err } = await supabase
+                     .from('stock_items')
+                     .insert({ ...payload, current_quantity: 0 })
+                     .select()
+                     .single();
+                 
                  error = err;
+                 
+                 // If successful and initialQty > 0, write audit transaction to sync
+                 if (!err && newItem && initialQty > 0) {
+                     const { error: txError } = await supabase
+                         .from('stock_transactions')
+                         .insert({
+                             stock_item_id: newItem.id,
+                             transaction_type: 'audit',
+                             quantity_change: initialQty,
+                             performed_by: 'System (Initial Stock)',
+                             note: 'จำนวนสต็อกเริ่มต้นเมื่อสร้างสินค้าวัตถุดิบ'
+                         });
+                     if (txError) {
+                         console.error("Initial transaction insert failed:", txError);
+                         toast.error('สร้างวัตถุดิบสำเร็จ แต่บันทึกสต็อกเริ่มต้นลงประวัติล้มเหลว');
+                     }
+                 }
             }
 
             if (error) throw error;
@@ -308,7 +372,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                     <div className="flex items-center gap-2">
                                         <input 
                                             type="number"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none text-lg font-bold" 
+                                            disabled={isEdit}
+                                            className={`w-full border border-gray-200 rounded-xl p-3 outline-none text-lg font-bold ${isEdit ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`} 
                                             value={formData.current_quantity}
                                             onChange={e => setFormData({ 
                                                 ...formData, 
@@ -317,6 +382,11 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         />
                                         <span className="text-sm text-gray-400">{formData.pack_unit}</span>
                                     </div>
+                                    {isEdit && (
+                                        <div className="text-[10px] text-gray-500 mt-1">
+                                            * แก้ไขจำนวนได้ที่ปุ่มปรับปรุงสต็อก (รับเข้า/เบิกออก) หน้าแรกเท่านั้น เพื่อความถูกต้องของประวัติ
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 <div>
@@ -396,6 +466,18 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     {/* Costing Tab */}
                     {activeTab === 'costing' && (
                         <div className="space-y-6">
+                            {!areUnitTypesCompatible(formData.pack_unit, formData.usage_unit) && (
+                                <div className="bg-red-50 border border-red-200 p-3 rounded-xl flex gap-3 items-start animate-in slide-in-from-top-2">
+                                    <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1">
+                                        <div className="text-sm font-bold text-red-800">คำเตือน: การแปลงหน่วยข้ามประเภท</div>
+                                        <p className="text-xs text-red-700">
+                                            หน่วยซื้อ ({formData.pack_unit}) และหน่วยใช้จริง ({formData.usage_unit}) เป็นคนละประเภทกัน (เช่น น้ำหนักกับปริมาตร) 
+                                            จำเป็นต้องระบุตัวแปลงหน่วย (Conversion Factor) ตามน้ำหนักจริงหรือความหนาแน่น ห้ามใช้ค่าเริ่มต้นเป็น 1 หากไม่ใช่สัดส่วน 1:1 จริง
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                             
                             {/* 1. Buying Info */}
                             <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">

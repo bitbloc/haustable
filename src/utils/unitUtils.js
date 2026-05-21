@@ -69,28 +69,69 @@ export const THAI_UNITS = [
 ];
 
 /**
+ * Get the category of a unit (mass, volume, count, or unknown)
+ * @param {string} unit 
+ * @returns {string} type
+ */
+export const getUnitType = (unit) => {
+    const normalized = unit?.toLowerCase();
+    if (!normalized) return 'unknown';
+
+    const found = THAI_UNITS.find(u => u.value.toLowerCase() === normalized);
+    if (found) return found.type;
+
+    // Fallback classification from keys
+    const massKeys = ['kg', 'g', 'mg', 'ขีด', 'lb', 'oz'];
+    const volumeKeys = ['l', 'ml', 'gallon', 'oz_fl', 'cup', 'tbsp', 'tsp', 'shot'];
+    const countKeys = ['unit', 'pcs', 'box', 'pack', 'can', 'bottle', 'bag', 'crate', 'carton', 'glass'];
+
+    if (massKeys.includes(normalized)) return 'mass';
+    if (volumeKeys.includes(normalized)) return 'volume';
+    if (countKeys.includes(normalized)) return 'count';
+
+    return 'unknown';
+};
+
+/**
+ * Check if two unit types are compatible (i.e. same category and not unknown)
+ * @param {string} unitA 
+ * @param {string} unitB 
+ * @returns {boolean}
+ */
+export const areUnitTypesCompatible = (unitA, unitB) => {
+    const typeA = getUnitType(unitA);
+    const typeB = getUnitType(unitB);
+    if (typeA === 'unknown' || typeB === 'unknown') return false;
+    return typeA === typeB;
+};
+
+/**
  * Suggest a conversion factor based on From/To units
  * @param {string} fromUnit 
  * @param {string} toUnit 
- * @returns {number} Suggested factor (1 if unknown)
+ * @returns {number|null} Suggested factor (null if incompatible or custom required)
  */
 export const suggestConversionFactor = (fromUnit, toUnit) => {
     const from = fromUnit?.toLowerCase();
     const to = toUnit?.toLowerCase();
     
-    if (!from || !to) return 1;
+    if (!from || !to) return null;
     if (from === to) return 1;
 
-    const fromVal = UNIT_FACTORS[from];
-    const toVal = UNIT_FACTORS[to];
+    const typeFrom = getUnitType(from);
+    const typeTo = getUnitType(to);
 
-    if (fromVal && toVal) {
-        // Example: kg (1000) -> g (1) = 1000 / 1 = 1000
-        // Example: g (1) -> kg (1000) = 1 / 1000 = 0.001
-        return fromVal / toVal;
+    // Only suggest factor if they are standard compatible categories and not count/unknown
+    if (typeFrom === typeTo && typeFrom !== 'count' && typeFrom !== 'unknown') {
+        const fromVal = UNIT_FACTORS[from];
+        const toVal = UNIT_FACTORS[to];
+
+        if (fromVal && toVal) {
+            return fromVal / toVal;
+        }
     }
 
-    return 1; // Fallback manual
+    return null; // Force manual input
 };
 
 /**
@@ -99,3 +140,4 @@ export const suggestConversionFactor = (fromUnit, toUnit) => {
 export const convertValue = (value, factor) => {
     return (parseFloat(value) || 0) * (parseFloat(factor) || 1);
 };
+
