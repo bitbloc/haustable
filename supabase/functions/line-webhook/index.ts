@@ -721,10 +721,11 @@ Deno.serve(async (req) => {
           }
         }
 
-        // --- NEW: Makro Search Command ---
-        if (text.startsWith('makro ')) {
-          console.log('Processing makro command...')
-          const keyword = text.substring(6).trim()
+        // --- NEW: Web Price Search Command (Replaces Makro Search) ---
+        if (text.startsWith('ราคา ') || text.startsWith('makro ')) {
+          console.log('Processing price search command...')
+          const isMakroAlias = text.startsWith('makro ')
+          const keyword = text.substring(isMakroAlias ? 6 : 5).trim()
           
           if (!keyword) {
              await fetch('https://api.line.me/v2/bot/message/reply', {
@@ -735,106 +736,130 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: 'กรุณาระบุคำค้นหา เช่น makro น้ำมันปาล์ม' }]
+                messages: [{ type: 'text', text: 'กรุณาระบุคำค้นหา เช่น ราคา น้ำมันปาล์ม' }]
               }),
             })
             continue
           }
 
           try {
-            // Get Notte API Key
-            const { data: notteKeyData } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'notte_api_key').single()
-            const NOTTE_API_KEY = notteKeyData?.value || Deno.env.get('NOTTE_API_KEY')
-
-            if (!NOTTE_API_KEY) {
-               throw new Error('NOTTE_API_KEY ไม่ได้ตั้งค่าไว้')
-            }
-
-            console.log(`Searching Makro. Keyword: ${keyword}`)
-            // Call Notte Function via HTTP
-            const notteResp = await fetch('https://api.notte.cc/v1/functions/run', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${NOTTE_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    function_id: "81f38599-7e45-4ea9-baa5-a88b5eb56dce",
-                    variables: {
-                        keyword: keyword,
-                        page: 1,
-                        limit: 10
-                    }
-                })
+            console.log(`Searching Web for Price. Keyword: ${keyword}`)
+            // Query DuckDuckGo HTML
+            const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(keyword + ' ราคา')}`
+            const dResponse = await fetch(searchUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              }
             })
 
-            if (!notteResp.ok) {
-                const errTxt = await notteResp.text()
-                console.error('Notte API failed:', errTxt)
-                throw new Error(`Notte API Error: ${notteResp.status}`)
+            if (!dResponse.ok) {
+              throw new Error(`DuckDuckGo request failed with status: ${dResponse.status}`)
             }
 
-            const notteData = await notteResp.json()
-            const products = notteData.result || notteData.data || [] // Depending on Notte response structure
+            const html = await dResponse.text()
+            
+            // Split HTML by result block
+            const resultBlocks = html.split('class="result ')
+            const results = []
+            
+            const currentYear = new Date().getFullYear()
+            const thaiYear = currentYear + 543
+            const yearsToIgnore = [currentYear, currentYear - 1, currentYear + 1, thaiYear, thaiYear - 1, thaiYear + 1]
+
+            for (let i = 1; i < resultBlocks.length; i++) {
+              const block = resultBlocks[i]
+              const titleMatch = block.match(/<a[^>]+class="result__a"[^>]*>([\s\S]*?)<\/a>/)
+              const snippetMatch = block.match(/<a[^>]+class="result__snippet"[^>]*>([\s\S]*?)<\/a>/)
+              const urlMatch = block.match(/href="([^"]+uddg=([^"&]+)[^"]*)"/)
+
+              if (titleMatch && snippetMatch) {
+                const rawTitle = titleMatch[1].replace(/<[^>]*>/g, '').trim()
+                const rawSnippet = snippetMatch[1].replace(/<[^>]*>/g, '').trim()
+                
+                let targetUrl = ''
+                if (urlMatch) {
+                  try {
+                    targetUrl = decodeURIComponent(urlMatch[2])
+                  } catch {
+                    targetUrl = urlMatch[1]
+                  }
+                }
+
+                let domain = ''
+                try {
+                  const urlObj = new URL(targetUrl)
+                  domain = urlObj.hostname.replace('www.', '')
+                } catch {
+                  domain = ''
+                }
+
+                // Extract prices
+                const combinedText = `${rawTitle} ${rawSnippet}`
+                const prices: number[] = []
+                const priceRegexes = [
+                  /฿\s*(\d+(?:\.\d+)?)/g,
+                  /(\d+(?:\.\d+)?)\s*บาท/g,
+                  /ราคา\s*(\d+(?:\.\d+)?)/g,
+                  /(\d+(?:\.\d+)?)\s*\.-\s*/g
+                ]
+
+                for (const regex of priceRegexes) {
+                  let match
+                  regex.lastIndex = 0
+                  while ((match = regex.exec(combinedText)) !== null) {
+                    const price = parseFloat(match[1])
+                    if (price > 0 && !prices.includes(price) && price < 100000) {
+                      if (yearsToIgnore.includes(price)) continue
+                      prices.push(price)
+                    }
+                  }
+                }
+
+                results.push({
+                  title: rawTitle,
+                  snippet: rawSnippet,
+                  url: targetUrl,
+                  domain: domain,
+                  prices: prices.sort((a, b) => a - b)
+                })
+              }
+            }
 
             let flexContents = [];
             
-            if (!Array.isArray(products) || products.length === 0) {
-               flexContents.push({ type: "text", text: "❌ ไม่พบสินค้า", color: "#888888", size: "sm", align: "center" });
+            if (results.length === 0) {
+               flexContents.push({ type: "text", text: "❌ ไม่พบผลลัพธ์ราคากลางบนเว็บ", color: "#888888", size: "sm", align: "center" });
             } else {
-               const displayItems = products.slice(0, 5) // Line limits bubble size
-               displayItems.forEach((p: any, i: number, arr: any[]) => {
+               const displayItems = results.slice(0, 5)
+               displayItems.forEach((r: any, i: number, arr: any[]) => {
                   
                   const contents = [
-                      { type: "text", text: p.title, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true }
+                      { type: "text", text: r.title, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true }
                   ];
 
-                  if (p.is_discounted && p.discount_percent) {
-                      let promoStr = `🔥 ลด ${p.discount_percent}%`
-                      if (p.discount_end_date) {
-                         const endDate = new Date(p.discount_end_date).toLocaleDateString('th-TH')
-                         promoStr += ` (ถึง ${endDate})`
-                      }
+                  if (r.prices && r.prices.length > 0) {
+                      const priceStr = r.prices.map((p: number) => `฿${p}`).join(', ');
                       contents.push({
-                         type: "text", text: promoStr, color: "#EF4444", size: "xs", weight: "bold", margin: "xs"
+                         type: "text", text: `💰 ราคาที่พบ: ${priceStr}`, color: "#EF4444", size: "xs", weight: "bold", margin: "xs"
                       });
                   }
 
                   contents.push({
-                      type: "box",
-                      layout: "baseline",
-                      margin: "sm",
-                      contents: [
-                          { type: "text", text: "ราคา", color: "#aaaaaa", size: "xs", flex: 1 },
-                          { type: "text", text: `฿${p.current_price} / ${p.price_unit}`, color: "#1A1A1A", size: "sm", flex: 3, weight: "bold" }
-                      ]
+                      type: "text",
+                      text: r.snippet,
+                      color: "#666666",
+                      size: "xs",
+                      wrap: true,
+                      margin: "sm"
                   });
 
-                  if (p.price_per_unit) {
-                      let ppuText = `฿${p.price_per_unit.toFixed(2)}`;
-                      if (p.original_price_per_unit) {
-                         ppuText += ` (เดิม ฿${p.original_price_per_unit.toFixed(2)})`;
-                      }
+                  if (r.domain) {
                       contents.push({
-                          type: "box",
-                          layout: "baseline",
-                          margin: "xs",
-                          contents: [
-                              { type: "text", text: "ตกหน่วยละ", color: "#aaaaaa", size: "xs", flex: 1 },
-                              { type: "text", text: ppuText, color: "#1A1A1A", size: "xs", flex: 3 }
-                          ]
-                      });
-                  }
-
-                  if (p.unit_count && p.price_unit !== p.unit_size_label) {
-                      contents.push({
-                          type: "box",
-                          layout: "baseline",
-                          margin: "xs",
-                          contents: [
-                              { type: "text", text: "ขนาด", color: "#aaaaaa", size: "xs", flex: 1 },
-                              { type: "text", text: `${p.unit_count} ${p.unit_size_label || 'หน่วย'}`, color: "#1A1A1A", size: "xs", flex: 3 }
-                          ]
+                          type: "text",
+                          text: `แหล่งที่มา: ${r.domain}`,
+                          color: "#aaaaaa",
+                          size: "xs",
+                          margin: "xs"
                       });
                   }
 
@@ -848,26 +873,26 @@ Deno.serve(async (req) => {
                   if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" });
                })
                
-               if (products.length > 5) {
+               if (results.length > 5) {
                    flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" });
-                   flexContents.push({ type: "text", text: `(แสดง 5 จาก ${products.length} รายการ)`, color: "#aaaaaa", size: "xs", align: "center", margin: "md" });
+                   flexContents.push({ type: "text", text: `(แสดง 5 จาก ${results.length} รายการ)`, color: "#aaaaaa", size: "xs", align: "center", margin: "md" });
                }
             }
 
             const messagesPayload = [{
                 type: "flex",
-                altText: `🛒 ผลลัพธ์ Makro: ${keyword}`,
+                altText: `🔍 ราคากลาง: ${keyword}`,
                 contents: {
                     type: "bubble",
                     size: "mega",
                     header: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#D91C28", // Makro Red
+                        backgroundColor: "#1A1A1A", // Premium Dark Theme
                         paddingAll: "20px",
                         contents: [
-                            { type: "text", text: "🛒 ผลลัพธ์ Makro", weight: "bold", color: "#FFFFFF", size: "lg" },
-                            { type: "text", text: `คำค้นหา: "${keyword}"`, color: "#FFD0D0", size: "xs", margin: "xs" }
+                            { type: "text", text: "🔍 ผลค้นหาราคากลาง", weight: "bold", color: "#FFFFFF", size: "lg" },
+                            { type: "text", text: `ค้นหา: "${keyword}"`, color: "#AAAAAA", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -879,7 +904,7 @@ Deno.serve(async (req) => {
                 }
             }];
 
-            console.log('Sending Makro Reply...')
+            console.log('Sending Price Search Reply...')
             const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: {
@@ -894,19 +919,11 @@ Deno.serve(async (req) => {
             
             if (!resp.ok) {
               const txt = await resp.text()
-              console.error('Makro Reply Failed:', txt)
-              const targetId = event.source.groupId || event.source.roomId || event.source.userId
-              if (targetId) {
-                 await fetch('https://api.line.me/v2/bot/message/push', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
-                  body: JSON.stringify({ to: targetId, messages: [{ type: 'text', text: `❌ ไม่สามารถส่งผลลัพธ์ Makro ได้\nError: ${txt.substring(0, 100)}` }] }),
-                })
-              }
+              console.error('Price Reply Failed:', txt)
             }
 
           } catch (err) {
-             console.error('Makro Command Error:', err)
+             console.error('Price Command Error:', err)
              await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: {
@@ -915,11 +932,11 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูล Makro ได้: ' + err.message }]
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลราคากลางได้: ' + err.message }]
               }),
             })
-          }
         }
+      }
       }
     }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { X, Save, Trash2, Camera, Upload, Scan, Calculator, DollarSign, Scale, Percent, AlertTriangle, Search, ShoppingCart } from 'lucide-react';
+import { X, Save, Trash2, Camera, Upload, Scan, Calculator, DollarSign, Scale, Percent, AlertTriangle, Search, ShoppingCart, Globe, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import BarcodeScanner from './BarcodeScanner';
 import { THAI_UNITS, suggestConversionFactor, getUnitType, areUnitTypesCompatible } from '../../utils/unitUtils';
@@ -172,36 +172,45 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         }
     };
     
-    // --- Makro Search Modal State & Handlers ---
-    const [showMakroSearch, setShowMakroSearch] = useState(false);
-    const [makroSearchTerm, setMakroSearchTerm] = useState('');
-    const [makroResults, setMakroResults] = useState([]);
-    const [searchingMakro, setSearchingMakro] = useState(false);
+    // --- Web Reference Price Search Modal State & Handlers ---
+    const [showPriceSearch, setShowPriceSearch] = useState(false);
+    const [priceSearchTerm, setPriceSearchTerm] = useState('');
+    const [priceResults, setPriceResults] = useState([]);
+    const [searchingPrice, setSearchingPrice] = useState(false);
 
-    const handleSearchMakro = async (e) => {
-        e.preventDefault();
-        if (!makroSearchTerm.trim()) return;
+    const handleSearchPrice = async (e) => {
+        if (e) e.preventDefault();
+        if (!priceSearchTerm.trim()) return;
         
-        setSearchingMakro(true);
+        setSearchingPrice(true);
         try {
-            const { data, error } = await supabase.functions.invoke('makro-api', {
-                body: { keyword: makroSearchTerm, page: 1, limit: 10 }
+            const { data, error } = await supabase.functions.invoke('search-api', {
+                body: { keyword: priceSearchTerm }
             });
             if (error) throw error;
             if (data.error) throw new Error(data.error);
-            setMakroResults(data.products || []);
-            if (!data.products || data.products.length === 0) {
-                toast.info('ไม่พบสินค้าใน Makro');
+            setPriceResults(data.results || []);
+            if (!data.results || data.results.length === 0) {
+                toast.info('ไม่พบข้อมูลราคากลางบนเว็บ');
             }
         } catch (err) {
-            console.error('Makro search error:', err);
-            toast.error('ค้นหา Makro ไม่สำเร็จ: ' + err.message);
+            console.error('Price search error:', err);
+            toast.error('ค้นหาราคากลางไม่สำเร็จ: ' + err.message);
         } finally {
-            setSearchingMakro(false);
+            setSearchingPrice(false);
         }
     };
 
-    const handleSelectMakroProduct = (product) => {
+    const handleSelectPrice = (price) => {
+        setFormData({
+            ...formData,
+            cost_price: price
+        });
+        toast.success(`ใส่ราคากลาง ฿${price} เรียบร้อยแล้ว`);
+        setShowPriceSearch(false);
+    };
+
+    /* const handleSelectMakroProduct = (product) => {
         setFormData({
             ...formData,
             name: product.brand ? `${product.brand} ${product.title}` : product.title,
@@ -212,7 +221,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         });
         toast.success(`ดึงข้อมูล ${product.title} เรียบร้อยแล้ว แนะนำให้ตรวจสอบ "หน่วยซื้อ" และ "หน่วยใช้" อีกครั้ง`);
         setShowMakroSearch(false);
-    };
+    }; */
 
     // ... (Image handling same as before)
     const resizeImage = (file) => {
@@ -316,11 +325,6 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-500 uppercase flex justify-between">
                                     <span>ชื่อสินค้า</span>
-                                    {formData.makro_id && (
-                                        <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded flex items-center gap-1">
-                                            <ShoppingCart className="w-3 h-3" /> เชื่อมกับ Makro แล้ว
-                                        </span>
-                                    )}
                                 </label>
                                 <div className="flex gap-2">
                                     <input 
@@ -330,11 +334,16 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                                         placeholder="เช่น มะนาวแป้น, น้ำเชื่อมมิตรผล"
                                     />
                                     <button 
-                                        onClick={() => setShowMakroSearch(true)}
+                                        type="button"
+                                        onClick={() => {
+                                            setPriceSearchTerm(formData.name || '');
+                                            setShowPriceSearch(true);
+                                            setPriceResults([]);
+                                        }}
                                         className="bg-[#DFFF00] text-black px-4 rounded-xl font-bold border border-[#DFFF00] hover:bg-yellow-400 transition-colors flex items-center gap-2 whitespace-nowrap"
-                                        title="ค้นหาสินค้าจาก Makro เพื่อดึงราคาและขนาด"
+                                        title="ค้นหาราคากลางจากเว็บ"
                                     >
-                                        <Search className="w-4 h-4" /> Makro
+                                        <Globe className="w-4 h-4" /> ราคากลาง
                                     </button>
                                 </div>
                             </div>
@@ -684,62 +693,112 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                 }} onClose={() => setShowScanner(false)} />
             )}
 
-            {/* Makro Search Modal */}
-            {showMakroSearch && (
+            {/* Reference Price Search Modal */}
+            {showPriceSearch && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-red-50 rounded-t-2xl">
-                            <h2 className="font-bold text-lg text-red-800 flex items-center gap-2">
-                                <ShoppingCart className="w-5 h-5" /> ค้นหาสินค้า Makro
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-zinc-900 text-white rounded-t-2xl">
+                            <h2 className="font-bold text-lg flex items-center gap-2">
+                                <Globe className="w-5 h-5 text-[#DFFF00]" /> ค้นหาราคากลางวัตถุดิบ
                             </h2>
-                            <button onClick={() => setShowMakroSearch(false)} className="p-2 hover:bg-red-100 rounded-full text-red-600">
+                            <button 
+                                onClick={() => setShowPriceSearch(false)} 
+                                className="p-2 hover:bg-zinc-800 rounded-full text-gray-400 hover:text-white transition-colors"
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         
-                        <div className="p-4 border-b border-gray-100">
-                            <form onSubmit={handleSearchMakro} className="flex gap-2">
+                        {/* Search Bar */}
+                        <div className="p-4 border-b border-gray-100 bg-gray-50 flex flex-col gap-2">
+                            <form onSubmit={handleSearchPrice} className="flex gap-2">
                                 <input 
-                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-red-500" 
-                                    value={makroSearchTerm}
-                                    onChange={e => setMakroSearchTerm(e.target.value)}
-                                    placeholder="พิมพ์ชื่อสินค้า เช่น น้ำมันปาล์ม..."
+                                    className="flex-1 bg-white border border-gray-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#1A1A1A] font-medium" 
+                                    value={priceSearchTerm}
+                                    onChange={e => setPriceSearchTerm(e.target.value)}
+                                    placeholder="พิมพ์ชื่อวัตถุดิบ เช่น น้ำมันปาล์ม, มะนาว..."
                                     autoFocus
                                 />
                                 <button 
                                     type="submit"
-                                    disabled={searchingMakro}
-                                    className="bg-red-600 text-white px-6 rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+                                    disabled={searchingPrice}
+                                    className="bg-[#1A1A1A] text-white px-6 rounded-xl font-bold hover:bg-black transition-colors disabled:opacity-50 flex items-center justify-center min-w-[80px]"
                                 >
-                                    {searchingMakro ? '...' : 'ค้นหา'}
+                                    {searchingPrice ? '...' : 'ค้นหา'}
                                 </button>
                             </form>
+                            
+                            {/* Fallback Google Search Link */}
+                            <a 
+                                href={`https://www.google.com/search?q=${encodeURIComponent(priceSearchTerm + ' ราคา')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1.5 self-start mt-1 transition-colors"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" /> ค้นหาโดยตรงบน Google Search (เปิดหน้าต่างใหม่)
+                            </a>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-2 bg-gray-50">
-                            {makroResults.length === 0 && !searchingMakro ? (
-                                <div className="text-center text-gray-400 py-10">
-                                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                    พิมพ์ชื่อสินค้าเพื่อค้นหาจากคลัง Makro PRO
+                        {/* Search Results */}
+                        <div className="flex-1 overflow-y-auto p-3 bg-gray-100 space-y-3">
+                            {searchingPrice ? (
+                                <div className="text-center text-gray-500 py-12 flex flex-col items-center justify-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 mb-3"></div>
+                                    กำลังค้นหาข้อมูลราคากลางล่าสุด...
+                                </div>
+                            ) : priceResults.length === 0 ? (
+                                <div className="text-center text-gray-400 py-12">
+                                    <Globe className="w-12 h-12 mx-auto mb-3 opacity-20 text-zinc-900" />
+                                    <p className="font-medium text-sm">ค้นหาราคากลางอ้างอิงจากเว็บไซต์ต่างๆ</p>
+                                    <p className="text-xs text-gray-400 mt-1">พิมพ์คำค้นหาแล้วกดปุ่มค้นหาด้านบน</p>
                                 </div>
                             ) : (
-                                <div className="space-y-2">
-                                    {makroResults.map(p => (
+                                <div className="space-y-3">
+                                    {priceResults.map((r, idx) => (
                                         <div 
-                                            key={p.id}
-                                            onClick={() => handleSelectMakroProduct(p)}
-                                            className="bg-white p-4 rounded-xl border border-gray-200 hover:border-red-300 hover:shadow-md cursor-pointer transition-all mx-2"
+                                            key={idx}
+                                            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-2 hover:border-zinc-300 transition-all"
                                         >
-                                            <div className="font-bold text-gray-800 mb-1 leading-tight">{p.title}</div>
-                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                                                <span className="text-red-600 font-bold">฿{p.current_price}</span>
-                                                <span className="text-gray-500 whitespace-nowrap">ขนาด: {p.unit_count} {p.unit_size_label || p.price_unit}</span>
-                                                {p.price_per_unit && (
-                                                    <span className="text-gray-400 text-xs mt-0.5">({p.price_per_unit} บาท/{p.price_unit})</span>
+                                            {/* Domain and Title */}
+                                            <div className="flex justify-between items-start gap-2">
+                                                <a 
+                                                    href={r.url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="font-bold text-gray-800 hover:text-blue-600 leading-tight text-sm flex-1 hover:underline decoration-1"
+                                                >
+                                                    {r.title}
+                                                </a>
+                                                {r.domain && (
+                                                    <span className="text-[10px] bg-zinc-100 text-zinc-600 font-bold px-2 py-0.5 rounded-md flex-shrink-0">
+                                                        {r.domain}
+                                                    </span>
                                                 )}
                                             </div>
-                                            {p.brand && <div className="text-xs text-blue-600 mt-1">แบรนด์: {p.brand}</div>}
-                                            <div className="text-[10px] text-gray-400 mt-2">SKU: {p.sku} | ID: {p.id}</div>
+
+                                            {/* Snippet */}
+                                            <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">
+                                                {r.snippet}
+                                            </p>
+
+                                            {/* Parsed Prices Buttons */}
+                                            {r.prices && r.prices.length > 0 && (
+                                                <div className="pt-2 border-t border-gray-50 flex flex-wrap items-center gap-1.5">
+                                                    <span className="text-[11px] font-bold text-gray-400 mr-1">ราคาที่ตรวจพบ:</span>
+                                                    {r.prices.map((p, pIdx) => (
+                                                        <button
+                                                            key={pIdx}
+                                                            type="button"
+                                                            onClick={() => handleSelectPrice(p)}
+                                                            className="text-xs bg-green-50 hover:bg-green-100 text-green-700 font-bold px-2.5 py-1 rounded-lg border border-green-200 transition-colors flex items-center gap-1"
+                                                            title="คลิกเพื่อนำราคานี้ไปใช้"
+                                                        >
+                                                            ฿{p}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
