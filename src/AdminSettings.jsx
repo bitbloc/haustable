@@ -1051,7 +1051,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         setAtmUrls(aUrls)
     }, [settings])
 
-    // Auto-resize image before upload (max 1200px width, JPEG 0.8 quality)
+    // Auto-resize image before upload (max 1200px width, converts to WebP with JPEG fallback, 0.8 quality)
     const resizeImage = (file, maxWidth = 1200) => {
         return new Promise((resolve) => {
             const reader = new FileReader()
@@ -1064,9 +1064,24 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                     canvas.height = img.height * scale
                     const ctx = canvas.getContext('2d')
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+                    
+                    // Detect webp support via canvas
+                    let type = 'image/webp'
+                    let ext = '.webp'
+                    try {
+                        const testData = canvas.toDataURL('image/webp')
+                        if (!testData.startsWith('data:image/webp')) {
+                            type = 'image/jpeg'
+                            ext = '.jpg'
+                        }
+                    } catch (err) {
+                        type = 'image/jpeg'
+                        ext = '.jpg'
+                    }
+
                     canvas.toBlob((blob) => {
-                        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }))
-                    }, 'image/jpeg', 0.8)
+                        resolve(new File([blob], file.name.replace(/\.[^.]+$/, ext), { type, lastModified: Date.now() }))
+                    }, type, 0.8)
                 }
                 img.src = e.target.result
             }
@@ -1078,10 +1093,13 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         if (!file) return
         setUploading(prev => ({ ...prev, [settingKey]: true }))
         try {
+            // Optimize signature images to 600px width, others to 1200px
+            const maxWidth = settingKey.startsWith('link_sig_img_') ? 600 : 1200
             // Resize image before uploading
-            const resized = await resizeImage(file)
-            const fileName = `link/${settingKey}_${Date.now()}.jpg`
-            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resized, { upsert: true, contentType: 'image/jpeg' })
+            const resized = await resizeImage(file, maxWidth)
+            const ext = resized.name.split('.').pop()
+            const fileName = `link/${settingKey}_${Date.now()}.${ext}`
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resized, { upsert: true, contentType: resized.type })
             if (uploadError) throw uploadError
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
             await handleSave(settingKey, publicUrl)

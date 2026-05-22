@@ -147,7 +147,6 @@ export default function MenuItemList() {
         is_available: true,
         is_recommended: false,
         is_pickup_available: true,
-        is_pickup_available: true,
         material_cost: 0 
     })
 
@@ -204,7 +203,6 @@ export default function MenuItemList() {
             is_available: true,
             is_recommended: false,
             is_pickup_available: true,
-            is_pickup_available: true,
             material_cost: 0
         })
         setIsModalOpen(true)
@@ -219,7 +217,6 @@ export default function MenuItemList() {
             description: item.description || '',
             is_available: item.is_available,
             is_recommended: item.is_recommended,
-            is_pickup_available: item.is_pickup_available !== false,
             is_pickup_available: item.is_pickup_available !== false,
             // fixed_cost fields deprecated
             material_cost: 0 // Will fetch below
@@ -369,8 +366,6 @@ export default function MenuItemList() {
                 is_available: formData.is_available,
                 is_recommended: formData.is_recommended,
                 is_pickup_available: formData.is_pickup_available,
-                image_url: imageUrl,
-                image_url: imageUrl,
                 image_url: imageUrl,
                 // fixed_cost deprecated - not saving anymore
             }

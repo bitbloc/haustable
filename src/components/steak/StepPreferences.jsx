@@ -221,9 +221,16 @@ export default function StepPreferences({ state, dispatch, onNext }) {
             </div>
 
             {/* Contact Info */}
-            <div className="flex items-center gap-2 justify-center text-gray-400 text-xs py-2">
-                <Phone size={12} />
-                <span>For more details call 061-423-2455</span>
+            <div className="flex flex-col items-center gap-1 justify-center text-gray-400 text-xs py-2">
+                <div className="flex items-center gap-1.5">
+                    <Phone size={12} />
+                    <span>For more details call:</span>
+                </div>
+                <div className="flex gap-3 font-semibold mt-0.5">
+                    <a href="tel:0614232455" className="hover:text-gray-600 transition-colors">061-423-2455</a>
+                    <span>|</span>
+                    <a href="tel:0961424663" className="hover:text-gray-600 transition-colors">096-142-4663</a>
+                </div>
             </div>
              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur border-t border-gray-200 z-50">
                 <div className="max-w-2xl mx-auto">

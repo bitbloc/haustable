@@ -15,7 +15,7 @@ export default function HomeHeader({ t, status }) {
             {/* Logo Image */}
             <div className="w-full max-w-[280px] md:max-w-[400px] px-8 py-4">
                 <img 
-                    src="/assets/logo-script.png" 
+                    src="/assets/logo-script.webp" 
                     alt="HAUS TABLE" 
                     className="w-full h-auto object-contain drop-shadow-xl"
                 />

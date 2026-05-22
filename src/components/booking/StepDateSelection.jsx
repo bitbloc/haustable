@@ -134,11 +134,14 @@ export default function StepDateSelection() {
                                 {t('largeGroupDesc')}
                             </p>
                             <div className="flex flex-col gap-2 pt-2">
-                                <a href="tel:0961424663" className="bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                                <a href="tel:0614232455" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                                    📞 {t('call')} 061-423-2455
+                                </a>
+                                <a href="tel:0961424663" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
                                     📞 {t('call')} 096-142-4663
                                 </a>
-                                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors">
-                                    FB: ร้านในบ้าน นตรพนม
+                                <a href="https://www.facebook.com/inthehausth" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-2.5 rounded-xl font-bold hover:bg-[#166fe5] transition-colors flex items-center justify-center gap-1.5 text-sm">
+                                    FB: ร้านในบ้าน นครพนม
                                 </a>
                             </div>
                             <button onClick={() => setShowLargeGroupModal(false)} className="text-gray-400 text-xs hover:text-black mt-2">{t('close')}</button>
