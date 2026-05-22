@@ -6,14 +6,13 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
-  const { data: settingsData } = await supabase.from('app_settings').select('*');
-  const appSettings = settingsData?.reduce((acc, curr) => {
-    acc[curr.setting_key] = curr.setting_value
-    return acc
-  }, {}) || {};
-
-  console.log("SECRET:", appSettings.line_channel_secret ? 'EXISTS' : 'MISSING');
-  console.log("TOKEN:", appSettings.line_channel_access_token ? 'EXISTS' : 'MISSING');
+  const { data: secrets, error } = await supabase.from('app_settings')
+    .select('*')
+    .like('key', 'line_%');
+  console.log("LINE settings in DB:", secrets);
+  console.log("Error:", error);
 }
 
 run();
+
+

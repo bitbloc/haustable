@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function run() {
   const { data: settingsData } = await supabase.from('app_settings').select('*');
   const appSettings = settingsData?.reduce((acc, curr) => {
-    acc[curr.setting_key] = curr.setting_value
+    acc[curr.key] = curr.value
     return acc
   }, {}) || {};
 
@@ -35,7 +35,7 @@ async function run() {
   const body = JSON.stringify(payload);
   const signature = crypto.createHmac('SHA256', CHANNEL_SECRET).update(body).digest('base64');
 
-  const resp = await fetch('https://lxfavbzmebqqsffgyyph.supabase.co/functions/v1/line-webhook', {
+  const resp = await fetch('https://lxfavbzmebqqsffgyyph.supabase.co/functions/v1/line-webhook/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
