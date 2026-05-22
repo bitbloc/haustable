@@ -198,7 +198,7 @@ export default function AdsLandingPage() {
             {/* ─── SOCIAL LINKS ─── */}
             <section className="w-full max-w-lg mx-auto px-5 pb-6">
                 <div className="grid grid-cols-2 gap-2.5">
-                    {/* Primary Call to Action: Book Online */}
+                    {/* Primary Call to Action: Book Online - commented out for now as not ready to open online
                     <LinkCard 
                         href="/booking" 
                         icon={<Utensils size={18} />} 
@@ -209,6 +209,7 @@ export default function AdsLandingPage() {
                         internal 
                         id="cta-booking"
                     />
+                    */}
 
                     <LinkCard href="https://lin.ee/EuzwG7c" icon={<MessageCircle size={18} />} title="Line Official" bg="bg-[#00C300]" id="cta-line" />
                     <LinkCard href="https://www.facebook.com/inthehausth" icon={<ExternalLink size={18} />} title="Facebook" bg="bg-[#1877F2]" id="cta-facebook" />

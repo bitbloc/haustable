@@ -18,27 +18,7 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
 
     return (
         <>
-             {/* Book Table Button - Minimal Glass/Gradient */}
-             <Link to={tableStatus.isOpen ? "/booking" : "#"} 
-                   className={`relative w-full h-20 mb-6 group overflow-hidden rounded-2xl flex items-center justify-between px-8 border transition-all duration-300
-                   ${tableStatus.isOpen 
-                     ? 'border-white/15 bg-[#050505] backdrop-blur-xl hover:bg-[#111] hover:border-[#DFFF00]/50 shadow-lg' 
-                     : 'border-white/5 bg-white/5 opacity-50 grayscale cursor-not-allowed'}`}>
-                    
-                    {/* Animated Gradient Background (Subtle) */}
-                    {tableStatus.isOpen && (
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500 bg-gradient-to-r from-transparent via-[#DFFF00] to-transparent -translate-x-full group-hover:translate-x-full" style={{ transitionDuration: '1s' }} />
-                    )}
 
-                    <div className="flex flex-col items-start gap-1">
-                        <span className="text-[10px] font-bold tracking-[0.2em] text-[#DFFF00] uppercase">Reservation</span>
-                        <span className="font-bold text-2xl tracking-wide text-white uppercase">{t('bookTable')}</span>
-                    </div>
-
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${tableStatus.isOpen ? 'bg-[#DFFF00] text-black group-hover:scale-110' : 'bg-white/10 text-white/20'}`}>
-                        <ArrowRight className="w-5 h-5" />
-                    </div>
-             </Link>
 
              {/* Pickup - now full width */}
              <div className="w-full">
