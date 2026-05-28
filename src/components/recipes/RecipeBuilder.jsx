@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download, Rocket } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download, Rocket, Check } from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
 import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { toast } from 'sonner';
@@ -704,6 +704,37 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     // Mobile Responsive State
     const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
 
+    // Formula Name Renaming State & Handlers
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [tempName, setTempName] = useState('');
+
+    const handleStartEditName = () => {
+        if (parentItem) {
+            setTempName(parentItem.name);
+            setIsEditingName(true);
+        }
+    };
+
+    const handleSaveName = async () => {
+        if (!tempName.trim()) return;
+        try {
+            const table = parentType === 'menu' ? 'menu_items' : 'stock_items';
+            const { error } = await supabase
+                .from(table)
+                .update({ name: tempName.trim() })
+                .eq('id', parentId);
+            
+            if (error) throw error;
+            
+            setParentItem(prev => prev ? { ...prev, name: tempName.trim() } : null);
+            setIsEditingName(false);
+            toast.success('เปลี่ยนชื่อสูตรสำเร็จ');
+        } catch (err) {
+            console.error(err);
+            toast.error('เปลี่ยนชื่อสูตรล้มเหลว');
+        }
+    };
+
     const sensors = useSensors(useSensor(PointerSensor));
 
     const loadData = async () => {
@@ -1114,10 +1145,48 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             <div className={`flex-1 flex flex-col bg-gray-50 border-r border-gray-200 h-full overflow-hidden relative`}>
                 <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10 sticky top-0">
                     <div>
-                        <h2 className="text-xl font-bold flex items-center gap-2">
-                            <Layers className="text-[#1A1A1A]" /> 
-                            {parentItem?.name ? `${parentItem.name}` : 'ตัวเนรมิตสูตร'}
-                        </h2>
+                        {isEditingName ? (
+                            <div className="flex items-center gap-1.5">
+                                <input
+                                    value={tempName}
+                                    onChange={e => setTempName(e.target.value)}
+                                    className="border border-purple-300 rounded-lg px-2 py-1 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-purple-200"
+                                    autoFocus
+                                    onKeyDown={async e => {
+                                        if (e.key === 'Enter') {
+                                            await handleSaveName();
+                                        }
+                                        if (e.key === 'Escape') {
+                                            setIsEditingName(false);
+                                        }
+                                    }}
+                                />
+                                <button 
+                                    onClick={handleSaveName}
+                                    className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg"
+                                >
+                                    <Check size={14} />
+                                </button>
+                                <button 
+                                    onClick={() => setIsEditingName(false)}
+                                    className="p-1.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <h2 className="text-xl font-bold flex items-center gap-1.5 group/builder-title">
+                                <Layers className="text-[#1A1A1A]" /> 
+                                <span>{parentItem?.name ? `${parentItem.name}` : 'ตัวเนรมิตสูตร'}</span>
+                                <button
+                                    onClick={handleStartEditName}
+                                    className="opacity-0 group-hover/builder-title:opacity-100 p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-all"
+                                    title="แก้ไขชื่อสูตร"
+                                >
+                                    <Pencil size={14} />
+                                </button>
+                            </h2>
+                        )}
                         <p className="text-[10px] md:text-xs text-gray-500">
                              {parentType === 'stock' && parentItem 
                                 ? `1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
