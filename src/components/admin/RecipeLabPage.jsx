@@ -85,13 +85,16 @@ export default function RecipeLabPage() {
         loadData();
     }, []);
 
-    // Generate unique folder names
+    // Generate unique folder names (only recognize those starting with "folder:")
     const uniqueCats = Array.from(new Set(
-        labItems.map(item => {
-            const cat = item.category;
-            if (!cat || cat === 'restock' || cat === 'uncategorized') return 'uncategorized';
-            return cat;
-        })
+        labItems
+            .map(item => {
+                const cat = item.category;
+                if (cat && cat.startsWith('folder:')) {
+                    return cat.substring(7); // Strip "folder:" prefix
+                }
+                return 'uncategorized';
+            })
     ));
     const allFolders = ['all', ...uniqueCats.filter(c => c !== 'uncategorized'), ...customFolders.filter(c => !uniqueCats.includes(c)), 'uncategorized'];
 
@@ -99,10 +102,12 @@ export default function RecipeLabPage() {
     const getFolderCount = (folder) => {
         return labItems.filter(item => {
             const itemCat = item.category;
-            const isUncategorized = !itemCat || itemCat === 'restock' || itemCat === 'uncategorized';
+            const isFolder = itemCat && itemCat.startsWith('folder:');
+            const folderName = isFolder ? itemCat.substring(7) : 'uncategorized';
+            
             if (folder === 'all') return true;
-            if (folder === 'uncategorized') return isUncategorized;
-            return itemCat === folder;
+            if (folder === 'uncategorized') return folderName === 'uncategorized';
+            return folderName === folder;
         }).length;
     };
 
@@ -110,6 +115,10 @@ export default function RecipeLabPage() {
         const folderName = prompt('ป้อนชื่อหมวดหมู่ / โฟลเดอร์ใหม่:');
         if (folderName && folderName.trim()) {
             const trimmed = folderName.trim();
+            if (trimmed.toLowerCase() === 'all' || trimmed.toLowerCase() === 'uncategorized' || trimmed.toLowerCase() === 'restock') {
+                toast.error('ไม่สามารถใช้ชื่อโฟลเดอร์นี้ได้');
+                return;
+            }
             if (!customFolders.includes(trimmed)) {
                 setCustomFolders(prev => [...prev, trimmed]);
             }
@@ -122,7 +131,9 @@ export default function RecipeLabPage() {
         if (!newItemName.trim()) return;
         try {
             // Auto assign active folder (unless it is all/uncategorized)
-            const initialCategory = (activeCategory !== 'all' && activeCategory !== 'uncategorized') ? activeCategory : 'restock';
+            const initialCategory = (activeCategory !== 'all' && activeCategory !== 'uncategorized') 
+                ? `folder:${activeCategory}` 
+                : 'restock';
             
             const { data, error } = await supabase.from('stock_items').insert({
                 name: newItemName,
@@ -183,12 +194,16 @@ export default function RecipeLabPage() {
 
     const handleMoveFolder = async (itemId, targetCategory) => {
         try {
+            const dbCategory = (targetCategory === 'restock' || targetCategory === 'uncategorized')
+                ? 'restock'
+                : `folder:${targetCategory}`;
+
             const { error } = await supabase
                 .from('stock_items')
-                .update({ category: targetCategory })
+                .update({ category: dbCategory })
                 .eq('id', itemId);
             if (error) throw error;
-            toast.success(`ย้ายสูตรไปที่ "${targetCategory === 'restock' ? 'ยังไม่แยกหมวดหมู่' : targetCategory}" แล้ว`);
+            toast.success(`ย้ายสูตรไปที่ "${targetCategory === 'restock' ? 'ทั่วไป' : targetCategory}" แล้ว`);
             setActiveDropdownId(null);
             loadData();
         } catch (err) {
@@ -202,12 +217,13 @@ export default function RecipeLabPage() {
         return labItems.filter(item => {
             // Folder Filter
             const itemCat = item.category;
-            const isUncategorized = !itemCat || itemCat === 'restock' || itemCat === 'uncategorized';
+            const isFolder = itemCat && itemCat.startsWith('folder:');
+            const folderName = isFolder ? itemCat.substring(7) : 'uncategorized';
             
             if (activeCategory === 'uncategorized') {
-                if (!isUncategorized) return false;
+                if (folderName !== 'uncategorized') return false;
             } else if (activeCategory !== 'all') {
-                if (itemCat !== activeCategory) return false;
+                if (folderName !== activeCategory) return false;
             }
 
             // Search query Filter
@@ -450,9 +466,9 @@ export default function RecipeLabPage() {
                                                 >
                                                     <Folder size={12} className="text-purple-500" />
                                                     <span className="truncate max-w-[130px]">
-                                                        {(!item.category || item.category === 'restock' || item.category === 'uncategorized')
-                                                            ? 'ยังไม่แยกหมวดหมู่'
-                                                            : item.category
+                                                        {item.category && item.category.startsWith('folder:')
+                                                            ? item.category.substring(7)
+                                                            : 'ยังไม่แยกหมวดหมู่'
                                                         }
                                                     </span>
                                                     <ChevronDown size={12} className="text-gray-400" />
@@ -472,7 +488,7 @@ export default function RecipeLabPage() {
                                                                 📁 ทั่วไป (Uncategorized)
                                                             </button>
                                                             {allFolders
-                                                                .filter(f => f !== 'all' && f !== 'uncategorized' && f !== item.category)
+                                                                .filter(f => f !== 'all' && f !== 'uncategorized' && (item.category && item.category.startsWith('folder:') ? item.category.substring(7) !== f : true))
                                                                 .map(folder => (
                                                                     <button
                                                                         key={folder}
