@@ -267,17 +267,17 @@ export default function AdminTableEditor() {
 
     return (
         <PageTransition>
-            <div className="p-4 sm:p-6 bg-bgDark min-h-screen text-white flex flex-col gap-6">
+            <div className="p-0 flex flex-col gap-6 text-ink">
 
                 {/* --- Toolbar --- */}
-                <div className="flex flex-col md:flex-row justify-between items-center bg-cardDark p-4 rounded-2xl border border-gray-800 shadow-md z-10 sticky top-2">
-                    <h1 className="text-xl sm:text-2xl font-bold text-primary mb-4 md:mb-0">Floor Plan Editor</h1>
+                <div className="flex flex-col md:flex-row justify-between items-center bg-paper p-4 rounded-2xl border border-gray-100 shadow-sm z-10 sticky top-2">
+                    <h1 className="text-xl sm:text-2xl font-bold text-ink mb-4 md:mb-0">Floor Plan Editor</h1>
                     <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer bg-black/20 p-2 rounded-lg border border-white/5 hover:border-white/10 select-none transition-colors">
-                            <input type="checkbox" checked={snapToGrid} onChange={e => setSnapToGrid(e.target.checked)} className="accent-primary w-4 h-4" />
+                        <label className="flex items-center gap-2 text-xs text-subInk cursor-pointer bg-canvas p-2.5 rounded-xl border border-gray-100 select-none transition-colors">
+                            <input type="checkbox" checked={snapToGrid} onChange={e => setSnapToGrid(e.target.checked)} className="accent-black w-4 h-4" />
                             Snap Grid (1%)
                         </label>
-                        <button onClick={handleSavePositions} className="bg-primary text-bgDark px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/80 transition-shadow shadow-lg shadow-primary/20 active:scale-95">
+                        <button onClick={handleSavePositions} className="bg-black text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-zinc-800 transition-all shadow-md active:scale-95">
                             <Save size={20} /> Save Changes
                         </button>
                     </div>
@@ -286,7 +286,7 @@ export default function AdminTableEditor() {
                 <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[500px] lg:min-h-[600px] h-auto lg:h-[80vh]">
 
                     {/* --- Main Editor Area (Unlimited Workspace) --- */}
-                    <div className="flex-1 w-full lg:w-auto h-[50vh] lg:h-auto relative overflow-hidden rounded-3xl border-2 border-gray-800 bg-[#0f0f0f] shadow-inner flex flex-col order-1 lg:order-1">
+                    <div className="flex-1 w-full lg:w-auto h-[50vh] lg:h-auto relative overflow-hidden rounded-3xl border border-gray-100 bg-[#0f0f0f] shadow-inner flex flex-col order-1 lg:order-1">
                         <TransformWrapper
                             initialScale={0.8}
                             minScale={0.2}
@@ -298,10 +298,10 @@ export default function AdminTableEditor() {
                         >
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
-                                    <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 bg-cardDark/90 backdrop-blur p-2 rounded-xl border border-gray-700 shadow-lg">
-                                        <button onClick={() => zoomIn()} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Zoom In"><ZoomIn size={20} /></button>
-                                        <button onClick={() => zoomOut()} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Zoom Out"><ZoomOut size={20} /></button>
-                                        <button onClick={() => resetTransform()} className="p-2 text-primary hover:bg-white/10 rounded-lg transition-colors" title="Reset View"><Maximize size={20} /></button>
+                                    <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 bg-paper/90 backdrop-blur p-2 rounded-xl border border-gray-200 shadow-md">
+                                        <button onClick={() => zoomIn()} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors text-ink" title="Zoom In"><ZoomIn size={20} /></button>
+                                        <button onClick={() => zoomOut()} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors text-ink" title="Zoom Out"><ZoomOut size={20} /></button>
+                                        <button onClick={() => resetTransform()} className="p-2 text-black hover:bg-zinc-100 rounded-lg transition-colors" title="Reset View"><Maximize size={20} /></button>
                                     </div>
                                     <TransformComponent wrapperClass="w-full h-full cursor-grab active:cursor-grabbing" contentClass="w-full h-full flex items-center justify-center p-20">
                                         <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
@@ -315,7 +315,7 @@ export default function AdminTableEditor() {
                                                     backgroundSize: 'cover',
                                                     backgroundPosition: 'center',
                                                     backgroundColor: '#1a1a1a',
-                                                    borderColor: '#333',
+                                                    borderColor: '#ddd',
                                                     borderWidth: '1px',
                                                 }}
                                                 onClick={() => setSelectedTable(null)}
@@ -344,32 +344,32 @@ export default function AdminTableEditor() {
                     </div>
 
                     {/* --- Sidebar --- */}
-                    <div className="lg:w-96 bg-cardDark p-6 rounded-3xl border border-gray-800 h-full flex flex-col shadow-xl">
+                    <div className="lg:w-96 bg-paper p-6 rounded-3xl border border-gray-100 h-full flex flex-col shadow-sm">
                         {selectedTable ? (
                             // --- Edit Mode ---
                             <div className="space-y-6 flex-1 flex flex-col animate-fade-in custom-scrollbar overflow-y-auto">
-                                <div className="flex justify-between items-center border-b border-gray-700 pb-4">
-                                    <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-                                        <Edit size={22} /> Edit Table <span className="text-gray-500 text-sm font-normal ml-2">(แก้ไข)</span>
+                                <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+                                    <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                                        <Edit size={22} className="text-black" /> Edit Table <span className="text-gray-400 text-sm font-normal ml-2">(แก้ไข)</span>
                                     </h2>
-                                    <button onClick={() => setSelectedTable(null)} className="text-gray-400 hover:text-white transition-colors rounded-full p-1 hover:bg-white/10">
+                                    <button onClick={() => setSelectedTable(null)} className="text-gray-400 hover:text-black transition-colors rounded-full p-1 hover:bg-zinc-100">
                                         <X size={24} />
                                     </button>
                                 </div>
                                 <div className="space-y-5">
                                     <div>
-                                        <label className="text-sm text-secondaryText mb-1 block font-semibold">Name (ชื่อโต๊ะ)</label>
-                                        <input type="text" value={selectedTable.table_name} onChange={(e) => handleUpdateTable(selectedTable.id, 'table_name', e.target.value)} className="w-full p-3 bg-bgDark border border-gray-700 rounded-xl focus:border-primary outline-none text-white transition-colors" />
+                                        <label className="text-sm text-subInk mb-1 block font-semibold">Name (ชื่อโต๊ะ)</label>
+                                        <input type="text" value={selectedTable.table_name} onChange={(e) => handleUpdateTable(selectedTable.id, 'table_name', e.target.value)} className="w-full p-3 bg-canvas border border-gray-200 rounded-xl focus:border-zinc-500 outline-none text-ink transition-colors" />
                                     </div>
 
                                     <div>
-                                        <label className="text-sm text-secondaryText mb-2 block font-semibold">Color Theme (สี)</label>
+                                        <label className="text-sm text-subInk mb-2 block font-semibold">Color Theme (สี)</label>
                                         <div className="flex flex-wrap gap-2">
                                             {COLOR_PRESETS.map(c => (
                                                 <button
                                                     key={c.name}
                                                     onClick={() => handleUpdateTable(selectedTable.id, 'table_color', c.value)}
-                                                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${selectedTable.table_color === c.value ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                                    className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${selectedTable.table_color === c.value ? 'border-zinc-400 scale-110 shadow-md' : 'border-transparent opacity-70 hover:opacity-100'}`}
                                                     style={{ backgroundColor: c.value }}
                                                     title={c.name}
                                                 />
@@ -378,11 +378,11 @@ export default function AdminTableEditor() {
                                     </div>
 
                                     <div>
-                                        <label className="text-sm text-secondaryText mb-2 block font-semibold flex items-center gap-2">
+                                        <label className="text-sm text-subInk mb-2 block font-semibold flex items-center gap-2">
                                             <RotateCw size={14} /> Rotation: {selectedTable.rotation || 0}°
                                         </label>
-                                        <input type="range" min="0" max="360" step="15" value={selectedTable.rotation || 0} onChange={(e) => handleUpdateTable(selectedTable.id, 'rotation', parseInt(e.target.value))} className="w-full accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
-                                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                        <input type="range" min="0" max="360" step="15" value={selectedTable.rotation || 0} onChange={(e) => handleUpdateTable(selectedTable.id, 'rotation', parseInt(e.target.value))} className="w-full accent-black h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
+                                        <div className="flex justify-between text-xs text-gray-400 mt-1 font-mono">
                                             <span>0°</span>
                                             <span>90°</span>
                                             <span>180°</span>
@@ -392,51 +392,51 @@ export default function AdminTableEditor() {
 
                                     <div className="flex gap-4">
                                         <div className="flex-1">
-                                            <label className="text-sm text-secondaryText mb-1 block font-semibold">Seats (ที่นั่ง)</label>
-                                            <input type="number" min="1" value={selectedTable.capacity} onChange={(e) => handleUpdateTable(selectedTable.id, 'capacity', parseInt(e.target.value) || 1)} className="w-full p-3 bg-bgDark border border-gray-700 rounded-xl focus:border-primary outline-none text-white" />
+                                            <label className="text-sm text-subInk mb-1 block font-semibold">Seats (ที่นั่ง)</label>
+                                            <input type="number" min="1" value={selectedTable.capacity} onChange={(e) => handleUpdateTable(selectedTable.id, 'capacity', parseInt(e.target.value) || 1)} className="w-full p-3 bg-canvas border border-gray-200 rounded-xl focus:border-zinc-500 outline-none text-ink" />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="text-sm text-secondaryText mb-1 block font-semibold">Shape (รูปร่าง)</label>
-                                            <select value={selectedTable.shape} onChange={(e) => handleUpdateTable(selectedTable.id, 'shape', e.target.value)} className="w-full p-3 bg-bgDark border border-gray-700 rounded-xl focus:border-primary outline-none text-white appearance-none">
+                                            <label className="text-sm text-subInk mb-1 block font-semibold">Shape (รูปร่าง)</label>
+                                            <select value={selectedTable.shape} onChange={(e) => handleUpdateTable(selectedTable.id, 'shape', e.target.value)} className="w-full p-3 bg-canvas border border-gray-200 rounded-xl focus:border-zinc-500 outline-none text-ink appearance-none">
                                                 <option value="rect">Rectangle</option>
                                                 <option value="circle">Circle</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <div className="pt-2 border-t border-gray-700/50">
-                                        <label className="text-sm text-secondaryText mb-3 block font-semibold">Size (ขนาด %)</label>
+                                    <div className="pt-2 border-t border-gray-100">
+                                        <label className="text-sm text-subInk mb-3 block font-semibold">Size (ขนาด %)</label>
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs text-secondaryText w-8">Width</span>
-                                                <input type="range" min="2" max="50" value={selectedTable.width} onChange={(e) => handleUpdateTable(selectedTable.id, 'width', parseInt(e.target.value))} className="flex-1 accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                                                <span className="text-xs text-subInk w-8">Width</span>
+                                                <input type="range" min="2" max="50" value={selectedTable.width} onChange={(e) => handleUpdateTable(selectedTable.id, 'width', parseInt(e.target.value))} className="flex-1 accent-black h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                                                 <span className="text-xs font-mono w-8 text-right">{selectedTable.width}%</span>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs text-secondaryText w-8">Height</span>
-                                                <input type="range" min="2" max="50" value={selectedTable.height} onChange={(e) => handleUpdateTable(selectedTable.id, 'height', parseInt(e.target.value))} className="flex-1 accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                                                <span className="text-xs text-subInk w-8">Height</span>
+                                                <input type="range" min="2" max="50" value={selectedTable.height} onChange={(e) => handleUpdateTable(selectedTable.id, 'height', parseInt(e.target.value))} className="flex-1 accent-black h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                                                 <span className="text-xs font-mono w-8 text-right">{selectedTable.height}%</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="pt-2 border-t border-gray-700/50">
-                                        <label className="text-sm text-secondaryText mb-3 block font-semibold">Real Table Image (รูปจริง)</label>
+                                    <div className="pt-2 border-t border-gray-100">
+                                        <label className="text-sm text-subInk mb-3 block font-semibold">Real Table Image (รูปจริง)</label>
                                         <div className="flex flex-col gap-3">
                                             {selectedTable.image_url ? (
-                                                <div className="relative group rounded-xl overflow-hidden aspect-video border border-gray-700">
+                                                <div className="relative group rounded-xl overflow-hidden aspect-video border border-gray-200">
                                                     <img src={selectedTable.image_url} className="w-full h-full object-cover" />
                                                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <label className="cursor-pointer bg-white text-black px-3 py-1.5 rounded-full text-xs font-bold">
+                                                        <label className="cursor-pointer bg-white text-black px-3 py-1.5 rounded-full text-xs font-bold shadow-md">
                                                             Change
                                                             <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadTableImage(e.target.files[0])} />
                                                         </label>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <label className="cursor-pointer bg-black border border-dashed border-gray-700 hover:border-primary rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all group">
-                                                    <Upload size={20} className="text-gray-400 group-hover:text-primary" />
-                                                    <span className="text-xs text-gray-500 group-hover:text-primary">Upload Photo</span>
+                                                <label className="cursor-pointer bg-canvas border border-dashed border-gray-200 hover:border-black rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all group">
+                                                    <Upload size={20} className="text-gray-400 group-hover:text-black" />
+                                                    <span className="text-xs text-gray-500 group-hover:text-black">Upload Photo</span>
                                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadTableImage(e.target.files[0])} />
                                                 </label>
                                             )}
@@ -446,15 +446,15 @@ export default function AdminTableEditor() {
                                     <div className="pt-4 flex flex-col gap-3 mt-auto">
                                         <button 
                                             onClick={() => setQrModalOpen(true)} 
-                                            className="w-full bg-primary hover:bg-primary/95 text-bgDark py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                                            className="w-full bg-black text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:bg-zinc-800 shadow-md active:scale-95"
                                         >
                                             <QrCode size={18} /> QR Ordering Flyer
                                         </button>
-                                        <button onClick={handleDuplicate} className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                                        <button onClick={handleDuplicate} className="w-full bg-zinc-100 hover:bg-zinc-200 text-black py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-gray-200 active:scale-95">
                                             Copy / Duplicate
                                         </button>
-                                        <button onClick={() => handleDeleteTable(selectedTable.id)} className="w-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
-                                            <Trash2 size={20} /> Delete
+                                        <button onClick={() => handleDeleteTable(selectedTable.id)} className="w-full bg-red-50 text-red-600 hover:bg-red-100 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 active:scale-95">
+                                            <Trash2 size={20} /> Delete Table
                                         </button>
                                     </div>
                                 </div>
@@ -462,23 +462,23 @@ export default function AdminTableEditor() {
                         ) : (
                             // --- Add New Mode ---
                             <div className="space-y-6 animate-fade-in">
-                                <h2 className="text-xl font-bold mb-4 text-white flex items-center gap-2"><Plus className="text-primary" size={24} /> New Table</h2>
-                                <p className="text-xs text-secondaryText -mt-4 mb-4">Create a new table element and drag it to position.</p>
+                                <h2 className="text-xl font-bold mb-4 text-ink flex items-center gap-2"><Plus className="text-black" size={24} /> New Table</h2>
+                                <p className="text-xs text-subInk -mt-4 mb-4">Create a new table element and drag it to position.</p>
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="text-sm text-secondaryText mb-1 block font-semibold">Name (ชื่อโต๊ะ)</label>
-                                        <input type="text" placeholder="e.g. A1, VIP1" value={newTable.name} onChange={e => setNewTable({ ...newTable, name: e.target.value })} className="w-full p-3 bg-bgDark border border-gray-700 rounded-xl focus:border-primary outline-none text-white" />
+                                        <label className="text-sm text-subInk mb-1 block font-semibold">Name (ชื่อโต๊ะ)</label>
+                                        <input type="text" placeholder="e.g. A1, VIP1" value={newTable.name} onChange={e => setNewTable({ ...newTable, name: e.target.value })} className="w-full p-3 bg-canvas border border-gray-200 rounded-xl focus:border-zinc-500 outline-none text-ink" />
                                     </div>
 
                                     <div>
-                                        <label className="text-xs text-secondaryText mb-2 block font-semibold">Color (สีเริ่มต้น)</label>
+                                        <label className="text-xs text-subInk mb-2 block font-semibold">Color (สีเริ่มต้น)</label>
                                         <div className="flex gap-2">
                                             {COLOR_PRESETS.slice(0, 5).map(c => (
                                                 <button
                                                     key={c.name}
                                                     onClick={() => setNewTable({ ...newTable, color: c.value })}
-                                                    className={`w-6 h-6 rounded-full border ${newTable.color === c.value ? 'border-white scale-110' : 'border-transparent opacity-60'}`}
+                                                    className={`w-6 h-6 rounded-full border transition-all ${newTable.color === c.value ? 'border-zinc-400 scale-110 shadow-sm' : 'border-transparent opacity-60'}`}
                                                     style={{ backgroundColor: c.value }}
                                                 />
                                             ))}
@@ -487,35 +487,35 @@ export default function AdminTableEditor() {
 
                                     <div className="flex gap-4">
                                         <div className="w-1/2">
-                                            <label className="text-xs text-secondaryText mb-1 block font-semibold">Seats (คน)</label>
-                                            <input type="number" min="1" placeholder="4" value={newTable.capacity} onChange={e => setNewTable({ ...newTable, capacity: parseInt(e.target.value) || 1 })} className="w-full p-3 bg-bgDark border border-gray-700 rounded-xl focus:border-primary outline-none text-white" />
+                                            <label className="text-xs text-subInk mb-1 block font-semibold">Seats (คน)</label>
+                                            <input type="number" min="1" placeholder="4" value={newTable.capacity} onChange={e => setNewTable({ ...newTable, capacity: parseInt(e.target.value) || 1 })} className="w-full p-3 bg-canvas border border-gray-200 rounded-xl focus:border-zinc-500 outline-none text-ink" />
                                         </div>
                                         <div className="w-1/2">
-                                            <label className="text-xs text-secondaryText mb-1 block font-semibold">Shape</label>
-                                            <select value={newTable.shape} onChange={e => setNewTable({ ...newTable, shape: e.target.value })} className="w-full p-3 bg-bgDark border border-gray-700 rounded-xl focus:border-primary outline-none text-white appearance-none">
+                                            <label className="text-xs text-subInk mb-1 block font-semibold">Shape</label>
+                                            <select value={newTable.shape} onChange={e => setNewTable({ ...newTable, shape: e.target.value })} className="w-full p-3 bg-canvas border border-gray-200 rounded-xl focus:border-zinc-500 outline-none text-ink appearance-none">
                                                 <option value="rect">Rect</option>
                                                 <option value="circle">Circle</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <div className="pt-2 border-t border-gray-700/50">
-                                        <label className="text-sm text-secondaryText mb-3 block font-semibold">Initial Size (ขนาด %)</label>
+                                    <div className="pt-2 border-t border-gray-100">
+                                        <label className="text-sm text-subInk mb-3 block font-semibold">Initial Size (ขนาด %)</label>
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs text-secondaryText w-8">W %</span>
-                                                <input type="range" min="2" max="50" value={newTable.width} onChange={e => setNewTable({ ...newTable, width: parseInt(e.target.value) })} className="flex-1 accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                                                <span className="text-xs text-subInk w-8">W %</span>
+                                                <input type="range" min="2" max="50" value={newTable.width} onChange={e => setNewTable({ ...newTable, width: parseInt(e.target.value) })} className="flex-1 accent-black h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                                                 <span className="text-xs font-mono w-8 text-right">{newTable.width}%</span>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs text-secondaryText w-8">H %</span>
-                                                <input type="range" min="2" max="50" value={newTable.height} onChange={e => setNewTable({ ...newTable, height: parseInt(e.target.value) })} className="flex-1 accent-primary h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                                                <span className="text-xs text-subInk w-8">H %</span>
+                                                <input type="range" min="2" max="50" value={newTable.height} onChange={e => setNewTable({ ...newTable, height: parseInt(e.target.value) })} className="flex-1 accent-black h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
                                                 <span className="text-xs font-mono w-8 text-right">{newTable.height}%</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <button onClick={handleAddTable} className="w-full bg-gray-700 hover:bg-primary hover:text-bgDark text-white py-4 rounded-xl font-bold transition-all mt-4 shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                                    <button onClick={handleAddTable} className="w-full bg-black text-white py-4 rounded-xl font-bold transition-all mt-4 shadow-lg hover:bg-zinc-800 active:scale-95 flex items-center justify-center gap-2">
                                         <Plus size={20} /> Create Table
                                     </button>
                                 </div>
