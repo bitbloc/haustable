@@ -35,6 +35,8 @@ import SOPEditorPage from './components/admin/SOPEditorPage' // NEW: SOP
 import TrackingPage from './TrackingPage'
 import BarSOPPage from './components/sop/BarSOPPage' // NEW: SOP
 import POSDashboard from './pos/POSDashboard'
+import CustomerOrderLanding from './pos/CustomerOrderLanding'
+import CustomerOrderStatus from './pos/CustomerOrderStatus'
 
 
 function App() {
@@ -147,6 +149,8 @@ function App() {
             <Route path="/staff/login" element={<LoginPage />} />
 
             <Route path="/pos" element={<POSDashboard />} />
+            <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
+            <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
             
             {/* Staff/Kitchen Route (Protected) */}
             <Route element={<StaffAuthLayout />}>

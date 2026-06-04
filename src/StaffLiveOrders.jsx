@@ -134,8 +134,14 @@ function StaffLiveOrdersContent() {
             isDangerous,
             confirmText: 'Confirm',
             action: async () => {
+                const bookingToPrint = orders.find(o => o.id === id) || scheduleOrders.find(o => o.id === id);
                 const res = await updateStatus(id, newStatus)
-                if (res.success) toast.success("Updated")
+                if (res.success) {
+                    toast.success("Updated")
+                    if (['confirmed', 'seated'].includes(newStatus) && bookingToPrint) {
+                        setPrintModal({ isOpen: true, booking: { ...bookingToPrint, status: newStatus } })
+                    }
+                }
                 else toast.error(res.error)
                 setConfirmModal(prev => ({ ...prev, isOpen: false }))
             }

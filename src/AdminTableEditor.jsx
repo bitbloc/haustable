@@ -5,7 +5,7 @@ import PageTransition from './components/PageTransition';
 import { DndContext, useDraggable, useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { Save, Plus, Trash2, Edit, X, ZoomIn, ZoomOut, Maximize, RotateCw, Upload } from 'lucide-react';
+import { Save, Plus, Trash2, Edit, X, ZoomIn, ZoomOut, Maximize, RotateCw, Upload, QrCode, Printer } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 // Component โต๊ะที่ลากได้
@@ -90,6 +90,7 @@ export default function AdminTableEditor() {
         rotation: 0
     });
     const [snapToGrid, setSnapToGrid] = useState(true);
+    const [qrModalOpen, setQrModalOpen] = useState(false);
 
     const sensors = useSensors(
         useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
@@ -443,6 +444,12 @@ export default function AdminTableEditor() {
                                     </div>
 
                                     <div className="pt-4 flex flex-col gap-3 mt-auto">
+                                        <button 
+                                            onClick={() => setQrModalOpen(true)} 
+                                            className="w-full bg-primary hover:bg-primary/95 text-bgDark py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <QrCode size={18} /> QR Ordering Flyer
+                                        </button>
                                         <button onClick={handleDuplicate} className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
                                             Copy / Duplicate
                                         </button>
@@ -516,6 +523,147 @@ export default function AdminTableEditor() {
                         )}
                     </div>
                 </div>
+
+                {/* QR Code Flyer Modal */}
+                {qrModalOpen && selectedTable && (
+                    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => setQrModalOpen(false)}>
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="w-full flex justify-between items-center pb-2 border-b border-zinc-800">
+                                <h3 className="font-bold text-sm text-zinc-400 tracking-wider">QR ORDERING TICKET</h3>
+                                <button onClick={() => setQrModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">✕</button>
+                            </div>
+
+                            {/* Flyer Preview Card */}
+                            <div className="bg-white text-black p-8 rounded-2xl border-4 border-double border-black flex flex-col items-center w-full max-w-[280px] shadow-lg">
+                                <span className="font-black text-lg tracking-tight uppercase leading-none">IN THE HAUS</span>
+                                <span className="text-[7px] font-bold text-zinc-500 uppercase tracking-widest mt-1 block">Scan to Order / สแกนสั่งอาหาร</span>
+                                
+                                <span className="text-xs text-zinc-500 font-bold uppercase mt-6">Table</span>
+                                <span className="text-5xl font-black leading-none block mb-4 mt-1">{selectedTable.table_name}</span>
+                                
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/table/' + selectedTable.id)}`} 
+                                    alt="Table QR Code"
+                                    className="w-40 h-40 object-contain mb-4 border border-zinc-100 p-1"
+                                />
+
+                                <div className="text-[8px] font-bold text-zinc-600 leading-normal max-w-[200px]">
+                                    1. เปิดกล้องสแกน QR Code<br/>
+                                    2. กดยืนยัน GPS เพื่อเช็คอินในร้าน<br/>
+                                    3. เลือกเมนูและส่งเข้าห้องครัวได้ทันที
+                                </div>
+                            </div>
+
+                            {/* Modal Actions */}
+                            <div className="flex gap-3 w-full">
+                                <button 
+                                    onClick={() => {
+                                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(window.location.origin + '/table/' + selectedTable.id)}`;
+                                        const printWindow = window.open('', '_blank', 'width=600,height=800');
+                                        printWindow.document.write(`
+                                            <html>
+                                                <head>
+                                                    <title>Table ${selectedTable.table_name} QR Code</title>
+                                                    <style>
+                                                        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;700&family=Inter:wght@700;900&display=swap');
+                                                        body {
+                                                            font-family: 'Inter', 'IBM Plex Sans Thai', sans-serif;
+                                                            display: flex;
+                                                            flex-direction: column;
+                                                            align-items: center;
+                                                            justify-content: center;
+                                                            height: 100vh;
+                                                            margin: 0;
+                                                            text-align: center;
+                                                            background: white;
+                                                            color: black;
+                                                        }
+                                                        .container {
+                                                            border: 8px double black;
+                                                            padding: 40px;
+                                                            width: 350px;
+                                                            border-radius: 20px;
+                                                            display: flex;
+                                                            flex-direction: column;
+                                                            align-items: center;
+                                                        }
+                                                        .logo {
+                                                            font-size: 28px;
+                                                            font-weight: 900;
+                                                            letter-spacing: -1px;
+                                                            margin-bottom: 5px;
+                                                            text-transform: uppercase;
+                                                        }
+                                                        .tagline {
+                                                            font-size: 10px;
+                                                            text-transform: uppercase;
+                                                            letter-spacing: 2px;
+                                                            color: #666;
+                                                            margin-bottom: 30px;
+                                                            font-weight: bold;
+                                                        }
+                                                        .table-title {
+                                                            font-size: 14px;
+                                                            color: #555;
+                                                            font-weight: bold;
+                                                            text-transform: uppercase;
+                                                            margin-bottom: 5px;
+                                                        }
+                                                        .table-name {
+                                                            font-size: 72px;
+                                                            font-weight: 900;
+                                                            margin: 0 0 20px 0;
+                                                            line-height: 1;
+                                                        }
+                                                        .qr-code {
+                                                            width: 220px;
+                                                            height: 220px;
+                                                            margin-bottom: 30px;
+                                                        }
+                                                        .instructions {
+                                                            font-size: 11px;
+                                                            font-weight: bold;
+                                                            line-height: 1.6;
+                                                            color: #333;
+                                                            max-width: 300px;
+                                                        }
+                                                    </style>
+                                                </head>
+                                                <body>
+                                                    <div class="container">
+                                                        <div class="logo">IN THE HAUS</div>
+                                                        <div class="tagline">Scan to Order / สแกนเพื่อสั่งอาหาร</div>
+                                                        <div class="table-title">Table</div>
+                                                        <div class="table-name">${selectedTable.table_name}</div>
+                                                        <img class="qr-code" src="${qrUrl}" alt="QR Code" />
+                                                        <div class="instructions">
+                                                            1. เปิดกล้องมือถือสแกนคิวอาร์โค้ด<br/>
+                                                            2. ยืนยันพิกัด GPS เพื่อเริ่มการสั่งอาหาร<br/>
+                                                            3. ออเดอร์ของคุณจะส่งไปยังพนักงานทันที
+                                                        </div>
+                                                    </div>
+                                                    <script>
+                                                        window.onload = function() { window.print(); }
+                                                    </script>
+                                                </body>
+                                            </html>
+                                        `);
+                                        printWindow.document.close();
+                                    }}
+                                    className="flex-grow bg-white text-black py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-zinc-200 transition-colors"
+                                >
+                                    <Printer size={14} /> Print Flyer
+                                </button>
+                                <button 
+                                    onClick={() => setQrModalOpen(false)}
+                                    className="flex-grow bg-zinc-800 text-white py-3 rounded-xl font-bold text-xs hover:bg-zinc-700 transition-colors"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </PageTransition>
     );

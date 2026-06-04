@@ -1,15 +1,15 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function POSOrderPanel({ order, onUpdateQuantity, onClear, onCheckout }) {
+export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const tax = includeTax ? subtotal * 0.07 : 0;
     const total = subtotal + tax;
 
     return (
-        <aside className="w-[380px] bg-[#1A1A1A] border-l border-white/5 flex flex-col h-full shadow-2xl z-30">
+        <aside className="w-[380px] bg-[#1A1A1A] border-l border-white/5 flex flex-col h-full shadow-2xl z-30 font-sans">
             {/* Order Header */}
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
                 <div>
@@ -25,6 +25,39 @@ export default function POSOrderPanel({ order, onUpdateQuantity, onClear, onChec
                     <Trash2 size={20} />
                 </button>
             </div>
+
+            {/* Pending Order Alert */}
+            {booking && booking.status === 'pending' && (
+                <div className="mx-6 mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-yellow-500">
+                        <AlertCircle size={18} />
+                        <span className="font-bold text-sm">New Table Order</span>
+                    </div>
+                    <p className="text-xs text-gray-400">This order is waiting for staff approval and kitchen print.</p>
+                    <button 
+                        onClick={onAcceptOrder}
+                        className="w-full bg-yellow-500 text-black py-2.5 rounded-xl font-bold text-xs hover:bg-yellow-400 transition-all flex items-center justify-center gap-1.5"
+                    >
+                        <Check size={14} /> Accept & Print Slip
+                    </button>
+                </div>
+            )}
+
+            {/* Payment Slip Alert */}
+            {booking && booking.payment_slip_url && (
+                <div className="mx-6 mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-green-400 font-bold text-sm">
+                        <Receipt size={18} />
+                        <span>Payment Slip Uploaded</span>
+                    </div>
+                    <button 
+                        onClick={() => window.open(`https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`, '_blank')}
+                        className="w-full bg-green-500 text-black py-2.5 rounded-xl font-bold text-xs hover:bg-green-400 transition-all flex items-center justify-center gap-1.5"
+                    >
+                        <Receipt size={14} /> View Slip Image
+                    </button>
+                </div>
+            )}
 
             {/* Customer Lookup (CRM Hook) */}
             <div className="px-6 py-4">

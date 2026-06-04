@@ -61,7 +61,12 @@ export default function AdminSettings() {
         staff_pin_code: '',
         contact_phone: '',
         contact_map_url: '',
-        steak_corkage_price: '0'
+        steak_corkage_price: '0',
+        qr_ordering_enabled: 'true',
+        qr_gps_enabled: 'true',
+        qr_latitude: '17.40722',
+        qr_longitude: '104.78028',
+        qr_radius: '50'
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -264,6 +269,81 @@ export default function AdminSettings() {
                                     (e.g. Cost 30 / 30% = Price 100)
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* QR Customer Ordering Settings Card */}
+                    <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm space-y-6">
+                        <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                             <QrCode size={20} className="text-orange-500" /> QR Customer Ordering
+                        </h2>
+                        
+                        <div className="space-y-4">
+                            {/* Enable QR Ordering Toggle */}
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <div>
+                                    <span className="block font-bold text-sm text-ink">Enable QR Ordering</span>
+                                    <span className="text-[10px] text-subInk">Allow customers to place orders via QR code at tables</span>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.qr_ordering_enabled === 'true'}
+                                    onChange={(e) => handleSave('qr_ordering_enabled', e.target.checked ? 'true' : 'false')}
+                                    className="accent-brandDark w-4 h-4"
+                                />
+                            </label>
+
+                            {/* Enable Geofencing Toggle */}
+                            <label className="flex items-center justify-between cursor-pointer border-t border-gray-100 pt-3">
+                                <div>
+                                    <span className="block font-bold text-sm text-ink">Enable GPS Geofencing</span>
+                                    <span className="text-[10px] text-subInk">Prevent customers ordering from outside restaurant premises</span>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.qr_gps_enabled === 'true'}
+                                    onChange={(e) => handleSave('qr_gps_enabled', e.target.checked ? 'true' : 'false')}
+                                    className="accent-brandDark w-4 h-4"
+                                />
+                            </label>
+
+                            {settings.qr_gps_enabled === 'true' && (
+                                <div className="space-y-3 bg-canvas p-4 rounded-2xl border border-gray-100 animate-fade-in">
+                                    <div>
+                                        <label className="block text-[10px] text-subInk uppercase font-bold mb-1">Restaurant Latitude</label>
+                                        <input
+                                            type="text"
+                                            value={settings.qr_latitude || ''}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, qr_latitude: e.target.value }))}
+                                            onBlur={() => handleSave('qr_latitude', settings.qr_latitude)}
+                                            className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-mono text-ink outline-none focus:border-brand"
+                                            placeholder="e.g. 17.40722"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-subInk uppercase font-bold mb-1">Restaurant Longitude</label>
+                                        <input
+                                            type="text"
+                                            value={settings.qr_longitude || ''}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, qr_longitude: e.target.value }))}
+                                            onBlur={() => handleSave('qr_longitude', settings.qr_longitude)}
+                                            className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-mono text-ink outline-none focus:border-brand"
+                                            placeholder="e.g. 104.78028"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-subInk uppercase font-bold mb-1">Allowed Radius (meters)</label>
+                                        <input
+                                            type="number"
+                                            value={settings.qr_radius || ''}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, qr_radius: e.target.value }))}
+                                            onBlur={() => handleSave('qr_radius', settings.qr_radius)}
+                                            className="w-full bg-white border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-ink outline-none focus:border-brand"
+                                            placeholder="e.g. 50"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

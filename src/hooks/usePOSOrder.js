@@ -9,9 +9,9 @@ export function usePOSOrder() {
         const today = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
             .from('bookings')
-            .select('*, order_items(*)')
+            .select('*, order_items(*, menu_items(name))')
             .eq('table_id', tableId)
-            .in('status', ['confirmed', 'seated', 'ready'])
+            .in('status', ['pending', 'confirmed', 'seated', 'ready'])
             .gte('booking_time', `${today}T00:00:00`)
             .order('booking_time', { ascending: false })
             .limit(1)
@@ -86,11 +86,59 @@ export function usePOSOrder() {
         return true;
     };
 
+    const acceptOrder = async (bookingId) => {
+        setLoading(true);
+        const { error } = await supabase
+            .from('bookings')
+            .update({ status: 'seated' })
+            .eq('id', bookingId);
+        setLoading(false);
+        if (error) {
+            toast.error('Failed to accept order: ' + error.message);
+            return false;
+        }
+        toast.success('Order accepted');
+        return true;
+    };
+
+    const uploadPaymentSlip = async (bookingId, slipFile) => {
+        setLoading(true);
+        try {
+            const fileExt = slipFile.name.split('.').pop();
+            const fileName = `slip_${bookingId}_${Date.now()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+                .from('slips')
+                .upload(fileName, slipFile);
+            
+            if (uploadError) throw new Error('Upload Slip Failed: ' + uploadError.message);
+
+            const { error: updateError } = await supabase
+                .from('bookings')
+                .update({ 
+                    payment_slip_url: fileName
+                })
+                .eq('id', bookingId);
+
+            if (updateError) throw updateError;
+            
+            toast.success('Slip uploaded successfully');
+            return true;
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message);
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         loading,
         getActiveBooking,
         createWalkIn,
         submitOrderItems,
-        completeCheckout
+        completeCheckout,
+        acceptOrder,
+        uploadPaymentSlip
     };
 }

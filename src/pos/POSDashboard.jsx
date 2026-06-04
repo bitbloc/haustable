@@ -17,7 +17,7 @@ export default function POSDashboard() {
         table: null
     });
 
-    const { getActiveBooking, createWalkIn, completeCheckout, submitOrderItems } = usePOSOrder();
+    const { getActiveBooking, createWalkIn, completeCheckout, submitOrderItems, acceptOrder } = usePOSOrder();
 
     const handleSelectTable = async (table) => {
         setSelectedTable(table);
@@ -29,15 +29,16 @@ export default function POSDashboard() {
             setActiveBooking(booking);
             // Load existing items if any
             const existingItems = booking.order_items.map(oi => ({
-                id: oi.menu_item_id, // Note: this might need to map to menu_items name/data
-                name: oi.name || 'Item', // placeholder until we join correctly
+                id: oi.menu_item_id,
+                name: oi.menu_items?.name || oi.name || 'Item',
                 price: oi.price_at_time,
                 quantity: oi.quantity,
-                db_id: oi.id
+                db_id: oi.id,
+                selected_options: oi.selected_options
             }));
             setCurrentOrder({
                 items: existingItems,
-                customer: booking.customer_name,
+                customer: booking.customer_name || 'Customer',
                 table: table
             });
         } else {
@@ -146,9 +147,18 @@ export default function POSDashboard() {
                     {/* Order Panel Sidebar */}
                     <POSOrderPanel 
                         order={currentOrder} 
+                        booking={activeBooking}
                         onUpdateQuantity={handleUpdateQuantity}
                         onClear={() => setCurrentOrder({ items: [], customer: null, table: selectedTable })}
                         onCheckout={handleCheckout}
+                        onAcceptOrder={async () => {
+                            if (activeBooking) {
+                                const success = await acceptOrder(activeBooking.id);
+                                if (success) {
+                                    handleBackToTables();
+                                }
+                            }
+                        }}
                     />
                 </div>
             </POSLayout>
