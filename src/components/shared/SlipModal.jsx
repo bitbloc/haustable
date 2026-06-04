@@ -3,17 +3,35 @@ import { X, Printer, Download, Check } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 
-
-
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
     const [optionMap, setOptionMap] = useState({})
+    const [qrCodeUrl, setQrCodeUrl] = useState(null)
 
-    const isKitchen = type === 'kitchen'
-    const title = 'TICKET' // Unified Title
+    // Determine initial tab:
+    // If type === 'kitchen', default to kitchen.
+    // Else if status === 'completed', default to receipt.
+    // Else, default to billing.
+    const getInitialTab = () => {
+        if (type === 'kitchen') return 'kitchen'
+        if (booking.status === 'completed') return 'receipt'
+        return 'billing'
+    }
+    const [activeTab, setActiveTab] = useState(getInitialTab)
 
-    // Fetch Option Names
+    // Determine initial payment method:
+    // Check booking.payment_slip_url or booking.staff_remark
+    const getInitialPaymentMethod = () => {
+        if (booking.payment_slip_url) return 'qr'
+        const remark = (booking.staff_remark || '').toLowerCase()
+        if (remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'qr'
+        if (remark.includes('cash') || remark.includes('เงินสด')) return 'cash'
+        return 'cash'
+    }
+    const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod)
+
+    // Fetch Option choices names mapping
     useEffect(() => {
         const fetchOptions = async () => {
             const { data } = await supabase.from('option_choices').select('id, name')
@@ -25,11 +43,33 @@ export default function SlipModal({ booking, type, onClose }) {
         fetchOptions()
     }, [])
 
+    // Fetch QR Code from settings
+    useEffect(() => {
+        const fetchQr = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'payment_qr_url')
+                    .single()
+                if (data && data.value) {
+                    setQrCodeUrl(data.value)
+                }
+            } catch (err) {
+                console.error("Failed to load QR setting:", err)
+            }
+        }
+        fetchQr()
+    }, [])
+
+    // Helper to get option names
+    const getOptionName = (id) => optionMap[id] || id
+
     // Generate HTML for Print
     const getPrintHtml = () => {
         const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
-        const getOptionName = (id) => optionMap[id] || id
-
+        
+        // Items HTML
         const itemsHtml = booking.order_items?.map(item => {
             const name = item.menu_items?.name || 'Item'
             let optsHtml = ''
@@ -49,6 +89,19 @@ export default function SlipModal({ booking, type, onClose }) {
 
             const price = (item.price_at_time * item.quantity).toLocaleString()
 
+            // If kitchen, don't output price
+            if (activeTab === 'kitchen') {
+                return `
+                    <div class="item">
+                        <div class="row">
+                            <span class="qty">${item.quantity}x</span>
+                            <span class="name" style="font-size: 13px; font-weight: bold;">${name}</span>
+                        </div>
+                        ${optsHtml ? `<div class="opts" style="font-size: 10px; margin-left: 25px;">${optsHtml}</div>` : ''}
+                    </div>
+                `
+            }
+
             return `
                 <div class="item">
                     <div class="row">
@@ -61,32 +114,78 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }).join('') || '<div class="empty">No Items</div>'
 
-        const discountHtml = booking.discount_amount > 0 ? `
+        const discountHtml = (activeTab !== 'kitchen' && booking.discount_amount > 0) ? `
             <div class="row meta-row">
                 <span>Discount (${booking.promotion_codes?.code || 'PROMO'})</span>
                 <span>-${booking.discount_amount.toLocaleString()}</span>
             </div>
         ` : ''
 
+        const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
+        
+        const totalsHtml = activeTab !== 'kitchen' ? `
+            <div class="totals">
+                <div class="row"><span>Subtotal</span> <span>${subtotal.toLocaleString()}</span></div>
+                ${discountHtml}
+                <div class="row total-row" style="font-size: 15px; border-top: 1px dashed black; padding-top: 5px;">
+                    <span>TOTAL</span>
+                    <span>${booking.total_amount?.toLocaleString()}</span>
+                </div>
+            </div>
+        ` : ''
+
         const noteHtml = booking.customer_note ? `
-            <div class="note">
-                <div class="note-label">NOTE</div>
+            <div class="kitchen-note-box">
+                <div class="kitchen-note-label">NOTE FOR KITCHEN</div>
                 ${booking.customer_note}
             </div>
         ` : ''
 
-        // Jagged Edge CSS (Simulated with clip-path for print support varies, but SVG background is better for image gen. 
-        // For simple print HTML, we might just use border dashed or simple lines if pure CSS jagged is too complex for basic window.print implementation.
-        // But for the "Visual" preview and "Save Image", we will use the full CSS.
-        // For print, we'll keep it cleaner or try to replicate basic look.
-        
+        // Dynamic title based on activeTab
+        let docTitle = 'TICKET'
+        let docHeader = 'IN THE HAUS'
+        if (activeTab === 'kitchen') {
+            docTitle = 'KITCHEN ORDER / ใบสั่งอาหาร'
+        } else if (activeTab === 'billing') {
+            docTitle = 'BILLING SLIP / ใบแจ้งยอด'
+        } else if (activeTab === 'receipt') {
+            docTitle = 'RECEIPT / ใบเสร็จรับเงิน'
+        }
+
+        // QR Code Section HTML
+        let qrSectionHtml = ''
+        if ((activeTab === 'billing' || activeTab === 'receipt') && qrCodeUrl) {
+            const qrTitleText = activeTab === 'billing' ? 'SCAN TO PAY / สแกนชำระเงิน' : 'SHOP QR CODE / คิวอาร์โค้ดร้านค้า'
+            const qrOpacity = activeTab === 'receipt' ? 'opacity: 0.7;' : ''
+            qrSectionHtml = `
+                <div class="qr-section" style="${qrOpacity}">
+                    <div class="qr-title">${qrTitleText}</div>
+                    <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
+                </div>
+            `
+        }
+
+        // Payment Method / PAID Badge Section for Receipt
+        let paymentMethodHtml = ''
+        if (activeTab === 'receipt') {
+            const methodLabel = paymentMethod === 'cash' ? 'CASH / เงินสด' : 'QR TRANSFER / โอนเงินผ่าน QR'
+            paymentMethodHtml = `
+                <div class="payment-section">
+                    <div class="payment-method">Payment Method: ${methodLabel}</div>
+                    <div class="paid-badge">PAID / ชำระแล้ว</div>
+                </div>
+            `
+        }
+
+        const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)
+
         return `
             <html>
                 <head>
-                    <title>Ticket #${booking.tracking_token || booking.id.slice(0,4)}</title>
+                    <title>${docTitle} #${queueNo}</title>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
-                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap'); /* For HEAVY header */
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
 
                         body { 
                             font-family: 'Courier Prime', 'Courier New', monospace; 
@@ -95,84 +194,162 @@ export default function SlipModal({ booking, type, onClose }) {
                             font-size: 11px; 
                             margin: 0; 
                             padding: 20px 10px;
-                            width: 300px;
+                            width: 280px;
                         }
                         .brand { 
                             font-family: 'Inter', sans-serif; 
-                            font-size: 28px; 
+                            font-size: 24px; 
                             font-weight: 900; 
                             text-align: center; 
                             text-transform: uppercase; 
                             letter-spacing: -1px;
-                            margin-bottom: 5px;
+                            margin-bottom: 2px;
                             line-height: 1;
                         }
-                        .order-id {
+                        .tagline {
+                            font-size: 8px;
                             text-align: center;
-                            font-size: 18px;
-                            font-weight: bold;
-                            border: 2px solid black;
-                            display: inline-block;
-                            padding: 2px 8px;
-                            margin: 5px auto 15px auto;
-                            border-radius: 4px;
-                            background: black;
-                            color: white;
+                            text-transform: uppercase;
+                            letter-spacing: 2px;
+                            margin-bottom: 10px;
+                            border-bottom: 2px dashed black;
+                            padding-bottom: 5px;
                         }
-                        .center-flex { display: flex; justify-content: center; }
-
-                        .meta { border-top: 2px dashed black; border-bottom: 2px dashed black; padding: 10px 0; margin-bottom: 15px; }
+                        .ticket-title {
+                            font-size: 12px;
+                            font-weight: bold;
+                            text-align: center;
+                            margin-bottom: 10px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        .center-flex { display: flex; justify-content: center; margin-bottom: 12px; }
+                        .queue-box {
+                            border: 2px solid black;
+                            text-align: center;
+                            padding: 4px 10px;
+                            display: inline-block;
+                        }
+                        .queue-label {
+                            font-size: 8px;
+                            text-transform: uppercase;
+                            color: #555;
+                            margin-bottom: 2px;
+                            font-weight: bold;
+                        }
+                        .queue-val {
+                            font-size: 24px;
+                            font-weight: 900;
+                            line-height: 1;
+                        }
+                        .meta { border-top: 2px dashed black; border-bottom: 2px dashed black; padding: 8px 0; margin-bottom: 12px; }
                         .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
                         .label { color: #000; font-weight: bold; text-transform: uppercase; }
                         .val { font-weight: normal; text-align: right; }
                         
-                        .items { margin-bottom: 15px; }
-                        .item { margin-bottom: 10px; }
-                        .qty { width: 25px; font-weight: bold; flex-shrink: 0; font-size: 12px; }
+                        .items { margin-bottom: 12px; }
+                        .item { margin-bottom: 8px; }
+                        .qty { width: 25px; font-weight: bold; flex-shrink: 0; font-size: 11px; }
                         .name { flex-grow: 1; margin-right: 5px; font-weight: bold; text-transform: uppercase; }
                         .price { text-align: right; width: 60px; flex-shrink: 0; }
                         .opts { margin-left: 25px; margin-top: 2px; color: #555; font-size: 9px; font-style: italic; }
 
-                        .totals { border-top: 2px solid black; padding-top: 10px; margin-bottom: 15px; }
-                        .total-row { font-size: 16px; font-weight: bold; margin-top: 5px; }
+                        .totals { border-top: 2px solid black; padding-top: 8px; margin-bottom: 12px; }
+                        .total-row { font-size: 14px; font-weight: bold; margin-top: 4px; }
                         
-                        .note { border: 1px solid black; padding: 8px; margin-top: 10px; font-size: 10px; font-weight: bold; }
-                        .note-label { background: black; color: white; display: inline-block; padding: 1px 4px; margin-bottom: 4px; font-size: 9px; }
-
-                         /* Jagged edges for print are tricky, using dashed border as fallback style */
-                        .zigzag-top, .zigzag-bottom {
-                            display: none; /* Hide in basic print, rely on clean dashed lines */
+                        .kitchen-note-box { 
+                            background: black; 
+                            color: white; 
+                            padding: 8px; 
+                            margin-top: 10px; 
+                            font-size: 11px; 
+                            font-weight: bold;
+                        }
+                        .kitchen-note-label { 
+                            font-size: 8px; 
+                            border-bottom: 1px solid white; 
+                            padding-bottom: 2px; 
+                            margin-bottom: 4px; 
+                            text-transform: uppercase;
                         }
 
-                        .footer { text-align: center; margin-top: 20px; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-                        @media print { body { width: 100%; padding: 10px; } }
+                        .payment-section {
+                            border-top: 2px dashed black;
+                            padding: 8px 0;
+                            text-align: center;
+                            margin-bottom: 12px;
+                        }
+                        .payment-method {
+                            font-size: 10px;
+                            font-weight: bold;
+                            text-transform: uppercase;
+                        }
+                        .paid-badge {
+                            border: 2px solid black;
+                            display: inline-block;
+                            padding: 3px 10px;
+                            font-size: 14px;
+                            font-weight: 900;
+                            text-transform: uppercase;
+                            margin-top: 5px;
+                            letter-spacing: 1px;
+                        }
+
+                        .qr-section {
+                            text-align: center;
+                            margin: 15px 0;
+                            border-top: 1px dashed #ccc;
+                            padding-top: 10px;
+                        }
+                        .qr-title {
+                            font-size: 9px;
+                            font-weight: bold;
+                            margin-bottom: 5px;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                        }
+                        .qr-img {
+                            width: 140px;
+                            height: 140px;
+                            object-fit: contain;
+                        }
+
+                        .footer { text-align: center; margin-top: 15px; font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+                        @media print { 
+                            body { width: 100%; padding: 0; } 
+                            .qr-img { width: 140px; height: 140px; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="brand">INTHEHAUS</div>
+                    <div class="brand">${docHeader}</div>
+                    <div class="tagline">TASTE YOUR SCENT.</div>
+                    
+                    <div class="ticket-title">${docTitle}</div>
+
                     <div class="center-flex">
-                        <div class="order-id">#${(booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)}</div>
+                        <div class="queue-box">
+                            <div class="queue-label">Queue No.</div>
+                            <div class="queue-val">#${queueNo}</div>
+                        </div>
                     </div>
                     
                     <div class="meta">
                         <div class="row"><span class="label">TABLE</span> <span class="val">${booking.tables_layout?.table_name || 'PICKUP'}</span></div>
                         <div class="row"><span class="label">DATE</span> <span class="val">${dateStr}</span></div>
                         <div class="row"><span class="label">GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</span></div>
-                        <div class="row"><span class="label">PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone || '-'}</span></div>
+                        ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
                     </div>
 
                     <div class="items">
                         ${itemsHtml}
                     </div>
 
-                    <div class="totals">
-                        <div class="row"><span>Subtotal</span> <span>-</span></div>
-                        ${discountHtml}
-                        <div class="row total-row">
-                            <span>TOTAL</span>
-                            <span>${booking.total_amount?.toLocaleString()}</span>
-                        </div>
-                    </div>
+                    ${totalsHtml}
+
+                    ${paymentMethodHtml}
+
+                    ${qrSectionHtml}
 
                     ${noteHtml}
 
@@ -202,12 +379,12 @@ export default function SlipModal({ booking, type, onClose }) {
         try {
             const dataUrl = await toPng(slipRef.current, { 
                 cacheBust: true, 
-                backgroundColor: '#ffffff', // Solid White Background as requested
+                backgroundColor: '#ffffff', 
                 pixelRatio: 3 
             })
             const link = document.createElement('a')
             link.href = dataUrl
-            link.download = `ticket-${booking.id.slice(0, 8)}.png`
+            link.download = `${activeTab}-ticket-${booking.id.slice(0, 8)}.png`
             link.click()
         } catch (err) {
             console.error(err)
@@ -216,8 +393,7 @@ export default function SlipModal({ booking, type, onClose }) {
         }
     }
 
-    // --- VISUAL RENDER (Matches "Small Fry" Style) ---
-    // Using CSS Clip-path for jagged edges
+    // Jagged Edge CSS (Simulated on Screen)
     const jaggedCss = `
         .ticket-visual {
             position: relative;
@@ -246,6 +422,10 @@ export default function SlipModal({ booking, type, onClose }) {
         }
     `
 
+    const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)
+    const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
+    const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
+
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <style>{jaggedCss}</style>
@@ -257,46 +437,106 @@ export default function SlipModal({ booking, type, onClose }) {
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={18} /></button>
                 </div>
 
+                {/* Interactive Tabs */}
+                <div className="flex bg-white/5 p-1 rounded-xl mx-4 mt-4 gap-1">
+                    <button 
+                        onClick={() => setActiveTab('kitchen')} 
+                        className={`flex-1 py-2 rounded-lg font-bold text-[11px] transition-colors ${activeTab === 'kitchen' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        ใบสั่งครัว (Kitchen)
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('billing')} 
+                        className={`flex-1 py-2 rounded-lg font-bold text-[11px] transition-colors ${activeTab === 'billing' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        ใบแจ้งยอด (Bill)
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('receipt')} 
+                        className={`flex-1 py-2 rounded-lg font-bold text-[11px] transition-colors ${activeTab === 'receipt' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        ใบเสร็จ (Receipt)
+                    </button>
+                </div>
+
+                {/* Payment Method Selector (Only for Billing / Receipt tabs) */}
+                {(activeTab === 'billing' || activeTab === 'receipt') && (
+                    <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl mx-4 mt-3">
+                        <span className="text-[11px] font-bold text-gray-400">ช่องทางชำระเงิน / Payment:</span>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setPaymentMethod('cash')}
+                                className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${paymentMethod === 'cash' ? 'bg-[#DFFF00] text-black font-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                            >
+                                เงินสด (CASH)
+                            </button>
+                            <button 
+                                onClick={() => setPaymentMethod('qr')}
+                                className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${paymentMethod === 'qr' ? 'bg-[#DFFF00] text-black font-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                            >
+                                โอนเงิน (QR)
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Preview Window */}
-                <div className="flex-1 overflow-y-auto p-12 bg-[#2d5cdb] flex justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+                <div className="flex-1 overflow-y-auto p-12 bg-[#2d5cdb] flex justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mt-4">
                     <div 
                         ref={slipRef} 
                         className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top"
                         style={{ fontFamily: "'Courier Prime', 'Courier New', monospace" }}
                     >
-                        {/* BRAND HEADER */}
-                        <div className="text-center mb-6 flex flex-col items-center">
-                            {/* Logo */}
-                            <img src="/receipt-logo.png" alt="Logo" className="w-24 h-auto mb-4 object-contain contrast-125" />
-                            
-                            <p className="text-[9px] font-bold tracking-widest uppercase mb-4 border-b-2 border-dashed border-black pb-4 w-full text-center">
-                                TASTE YOUR SCENT.
-                            </p>
-                            
-                            {/* Prominent Short Order ID */}
+                        {/* BRAND HEADER (Hide for kitchen order to make it neat) */}
+                        {activeTab !== 'kitchen' ? (
+                            <div className="text-center mb-5 flex flex-col items-center">
+                                {/* Logo */}
+                                <img src="/receipt-logo.png" alt="Logo" className="w-24 h-auto mb-3 object-contain contrast-125" />
+                                
+                                <p className="text-[9px] font-bold tracking-widest uppercase mb-4 border-b border-dashed border-black pb-3 w-full text-center">
+                                    TASTE YOUR SCENT.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="text-center mb-5 bg-black text-white py-2 font-bold text-sm tracking-widest">
+                                KITCHEN ORDER / ใบสั่งอาหาร
+                            </div>
+                        )}
+
+                        {/* Prominent Queue No. */}
+                        <div className="text-center mb-5">
                             <div className="inline-block border-2 border-black rounded-md px-6 py-2">
                                 <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px] mb-1">Queue No.</span>
-                                <span className="text-4xl font-black leading-none block">
-                                    {(booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)}
+                                <span className="text-3xl font-black leading-none block">
+                                    #{queueNo}
                                 </span>
                             </div>
                         </div>
 
                         {/* Meta Grid */}
-                        <div className="grid grid-cols-2 gap-y-2 text-[10px] font-bold border-b-2 border-dashed border-black pb-5 mb-5">
+                        <div className="grid grid-cols-2 gap-y-1.5 text-[10px] font-bold border-b-2 border-dashed border-black pb-4 mb-4">
                             <div className="text-gray-500">TABLE / TYPE</div>
                             <div className="text-right uppercase">{booking.tables_layout?.table_name || 'PICKUP'}</div>
                             
                             <div className="text-gray-500">DATE</div>
-                            <div className="text-right">{new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute:'2-digit' })}</div>
+                            <div className="text-right">{dateStr}</div>
                             
                             <div className="text-gray-500">GUEST</div>
                             <div className="text-right truncate">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</div>
+
+                            {(booking.profiles?.phone_number || booking.pickup_contact_phone) && (
+                                <>
+                                    <div className="text-gray-500">PHONE</div>
+                                    <div className="text-right">{booking.profiles?.phone_number || booking.pickup_contact_phone}</div>
+                                </>
+                            )}
                         </div>
 
                         {/* Items */}
-                        <div className="space-y-4 mb-6">
-                            <div className="text-[10px] font-black uppercase tracking-widest text-right mb-2 opacity-50">01. THE ORDER</div>
+                        <div className="space-y-3 mb-5">
+                            <div className="text-[9px] font-black uppercase tracking-widest text-right mb-1 opacity-55">
+                                {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : '01. ITEMS'}
+                            </div>
                             {booking.order_items?.map((item, idx) => {
                                 let optionsList = []
                                 if (Array.isArray(item.selected_options)) {
@@ -306,15 +546,17 @@ export default function SlipModal({ booking, type, onClose }) {
                                 }
                                 
                                 return (
-                                    <div key={idx} className="text-xs group">
-                                        <div className="flex justify-between font-bold items-baseline gap-2 mb-1">
-                                            <span className="w-5 shrink-0 text-sm">{item.quantity}</span>
-                                            <span className="grow font-black uppercase text-sm tracking-tight leading-4">{item.menu_items?.name}</span>
-                                            <span className="shrink-0 font-mono font-normal">{(item.price_at_time * item.quantity).toLocaleString()}</span>
+                                    <div key={idx} className="text-xs">
+                                        <div className="flex justify-between font-bold items-baseline gap-2 mb-0.5">
+                                            <span className="w-6 shrink-0 text-sm font-black">{item.quantity}x</span>
+                                            <span className="grow font-bold uppercase text-[13px] tracking-tight leading-4">{item.menu_items?.name || 'Item'}</span>
+                                            {activeTab !== 'kitchen' && (
+                                                <span className="shrink-0 font-mono font-normal">{(item.price_at_time * item.quantity).toLocaleString()}</span>
+                                            )}
                                         </div>
                                         {optionsList.length > 0 && (
-                                            <div className="pl-5 space-y-0.5 text-[10px] text-gray-500 font-medium italic border-l-2 border-gray-200 ml-1.5 pl-2">
-                                                {optionsList.map((opt, i) => <div key={i}>{opt}</div>)}
+                                            <div className="pl-6 space-y-0.5 text-[9px] text-gray-500 font-medium italic border-l border-gray-200 ml-1 pl-2">
+                                                {optionsList.map((opt, i) => <div key={i}>+ {opt}</div>)}
                                             </div>
                                         )}
                                     </div>
@@ -322,35 +564,62 @@ export default function SlipModal({ booking, type, onClose }) {
                             })}
                         </div>
 
-                        {/* Totals */}
-                        <div className="border-t-2 border-black pt-4 mb-4">
-                             {booking.discount_amount > 0 && (
-                                <div className="flex justify-between text-xs mb-2 font-bold text-gray-500 dashed">
-                                    <span>DISCOUNT</span>
-                                    <span>-{booking.discount_amount.toLocaleString()}</span>
+                        {/* Totals (Hide for kitchen) */}
+                        {activeTab !== 'kitchen' && (
+                            <div className="border-t-2 border-black pt-3.5 mb-4">
+                                <div className="flex justify-between text-xs mb-1 font-bold text-gray-500">
+                                    <span>SUBTOTAL</span>
+                                    <span>{subtotal.toLocaleString()}</span>
                                 </div>
-                            )}
-                            <div className="flex justify-between items-end">
-                                <span className="font-black text-sm uppercase tracking-widest">TOTAL AMOUNT</span>
-                                <span className="font-black text-2xl leading-none">{booking.total_amount?.toLocaleString()}</span>
+                                 {booking.discount_amount > 0 && (
+                                    <div className="flex justify-between text-xs mb-1 font-bold text-green-600">
+                                        <span>DISCOUNT</span>
+                                        <span>-{booking.discount_amount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-end border-t border-dashed border-black/30 pt-2">
+                                    <span className="font-black text-xs uppercase tracking-wider">TOTAL AMOUNT</span>
+                                    <span className="font-black text-xl leading-none">{booking.total_amount?.toLocaleString()}</span>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Note */}
+                        {/* Payment Details Section (Only for Receipt) */}
+                        {activeTab === 'receipt' && (
+                            <div className="border-t-2 border-dashed border-black py-4 my-2 text-center flex flex-col items-center">
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                                    Payment Method: {paymentMethod === 'cash' ? 'CASH / เงินสด' : 'QR TRANSFER / โอนเงินผ่าน QR'}
+                                </div>
+                                <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
+                                    PAID / ชำระแล้ว
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PromptPay QR Code (For Billing always, and Receipt optionally as requested) */}
+                        {(activeTab === 'billing' || activeTab === 'receipt') && qrCodeUrl && (
+                            <div className={`border-t border-dashed border-black/40 pt-4 mt-4 text-center flex flex-col items-center ${activeTab === 'receipt' ? 'opacity-70' : ''}`}>
+                                <span className="text-[9px] font-black tracking-widest uppercase mb-2">
+                                    {activeTab === 'billing' ? 'SCAN TO PAY / สแกนชำระเงิน' : 'SHOP QR CODE / คิวอาร์โค้ดร้านค้า'}
+                                </span>
+                                <img src={qrCodeUrl} alt="PromptPay QR" className="w-36 h-36 object-contain rounded-xl border border-gray-100 p-2 bg-white" />
+                                <span className="text-[8px] text-gray-400 font-mono mt-1">IN THE HAUS PROMPTPAY</span>
+                            </div>
+                        )}
+
+                        {/* Note for Kitchen (Always show if present, formatted beautifully) */}
                         {booking.customer_note && (
-                            <div className="bg-black text-white p-3 font-mono text-[10px] relative mb-6">
-                                <div className="absolute -top-2 left-2 bg-black px-1 text-[8px] font-bold uppercase">Note for Kitchen</div>
+                            <div className="bg-black text-white p-3 font-mono text-[10px] relative mt-4">
+                                <div className="absolute -top-2 left-2 bg-black px-1 text-[8px] font-bold uppercase tracking-wider">Note for Kitchen</div>
                                 {booking.customer_note}
                             </div>
                         )}
                         
                         {/* Footer */}
-                        <div className="text-center mt-8 space-y-1">
-                            <div className="text-[10px] font-black tracking-[0.2em] uppercase">INTHEHAUS</div>
+                        <div className="text-center mt-6 space-y-0.5">
+                            <div className="text-[9px] font-black tracking-[0.2em] uppercase">INTHEHAUS</div>
                             <div className="text-[8px] font-mono text-gray-400">THANK YOU FOR YOUR VISIT</div>
                         </div>
-
-                        {/* Zigzag Bottom Simulated visual check */}
                     </div>
                 </div>
 
