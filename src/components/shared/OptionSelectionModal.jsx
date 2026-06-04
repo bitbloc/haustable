@@ -151,8 +151,8 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                         return (
                             <div key={group.id} className="space-y-3">
                                 <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
-                                    <h4 className="font-bold text-lg">{group.name}</h4>
-                                    <div className="text-xs text-gray-500">
+                                    <h4 className="font-bold text-lg text-zinc-900">{group.name}</h4>
+                                    <div className="text-xs text-zinc-500">
                                         {group.is_required && <span className="text-red-500 font-bold mr-1">*Required</span>}
                                         {group.selection_type === 'single' ? 'Select 1' : `Select up to ${group.max_selection}`}
                                     </div>
@@ -165,13 +165,13 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                                             <div
                                                 key={choice.id}
                                                 onClick={() => handleOptionToggle(group, choice.id)}
-                                                className={`flex justify-between items-center p-3 rounded-xl border cursor-pointer active:scale-[0.98] transition-all ${isSelected ? 'border-black bg-black text-white shadow-md' : 'border-gray-100 bg-white hover:bg-gray-50'}`}
+                                                className={`flex justify-between items-center p-3 rounded-xl border cursor-pointer active:scale-[0.98] transition-all ${isSelected ? 'border-black bg-black text-white shadow-md' : 'border-gray-100 bg-white hover:bg-gray-50 text-zinc-800'}`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-white' : 'border-gray-300'}`}>
                                                         {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
                                                     </div>
-                                                    <span className="font-medium text-sm">{choice.name}</span>
+                                                    <span className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-zinc-900'}`}>{choice.name}</span>
                                                 </div>
                                                 {Number(choice.price_modifier) > 0 && (
                                                     <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>+{Number(choice.price_modifier)}</span>
@@ -186,13 +186,13 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                 </div>
 
                 {/* Footer Controls */}
-                <div className="p-4 border-t border-gray-100 bg-white safe-area-bottom">
+                <div className="p-4 border-t border-gray-100 bg-white safe-area-bottom text-zinc-950">
                     <div className="flex items-center justify-between gap-4 mb-4">
-                        <span className="font-bold text-gray-400 text-xs uppercase">Quantity</span>
-                        <div className="flex items-center gap-4 bg-gray-100 rounded-full px-2 py-1">
-                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm disabled:opacity-50" disabled={quantity <= 1}><Minus size={16} /></button>
-                            <span className="font-bold w-4 text-center">{quantity}</span>
-                            <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm"><Plus size={16} /></button>
+                        <span className="font-bold text-zinc-400 text-xs uppercase">Quantity</span>
+                        <div className="flex items-center gap-4 bg-zinc-100 rounded-full px-2 py-1">
+                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm disabled:opacity-50 text-zinc-800 hover:bg-zinc-50" disabled={quantity <= 1}><Minus size={16} /></button>
+                            <span className="font-bold w-4 text-center text-zinc-900">{quantity}</span>
+                            <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-zinc-800 hover:bg-zinc-50"><Plus size={16} /></button>
                         </div>
                     </div>
 
