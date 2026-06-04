@@ -109,14 +109,7 @@ export default function CustomerOrderLanding() {
                 .limit(1)
                 .maybeSingle();
 
-            if (!bookingData) {
-                setGpsStatus('failed');
-                setGpsError('Table is not active. Please ask staff to open this table first.');
-                setGpsChecking(false);
-                setLoading(false);
-                return;
-            }
-            setActiveBooking(bookingData);
+            setActiveBooking(bookingData || null);
 
             // 4. Geofencing check
             if (loadedSettings.qr_gps_enabled === 'true') {
@@ -231,23 +224,61 @@ export default function CustomerOrderLanding() {
         setSubmitting(true);
 
         try {
-            // Re-verify table status before inserting
-            const today = new Date().toISOString().split('T')[0];
-            const { data: latestBooking } = await supabase
-                .from('bookings')
-                .select('*')
-                .eq('id', activeBooking.id)
-                .single();
+            let currentBooking = activeBooking;
 
-            if (!latestBooking || ['completed', 'cancelled', 'void'].includes(latestBooking.status)) {
-                toast.error('This table session has already been closed. Please consult staff.');
-                setSubmitting(false);
-                return;
+            // 1. If there is no active booking, create a new walk-in session!
+            if (!currentBooking) {
+                const trackingToken = crypto.randomUUID();
+                const newBookingPayload = {
+                    table_id: parseInt(tableId),
+                    status: 'pending', // Starts as pending to alert staff
+                    booking_type: 'walk_in',
+                    booking_time: new Date().toISOString(),
+                    pax: table?.capacity || 2,
+                    staff_remark: 'QR Walk-in Guest',
+                    tracking_token: trackingToken,
+                    total_amount: cartSubtotal
+                };
+
+                const { data: newBooking, error: createError } = await supabase
+                    .from('bookings')
+                    .insert(newBookingPayload)
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+                currentBooking = newBooking;
+            } else {
+                // Re-verify existing table status before inserting
+                const { data: latestBooking } = await supabase
+                    .from('bookings')
+                    .select('*')
+                    .eq('id', currentBooking.id)
+                    .single();
+
+                if (!latestBooking || ['completed', 'cancelled', 'void'].includes(latestBooking.status)) {
+                    toast.error('This table session has already been closed. Please consult staff.');
+                    setSubmitting(false);
+                    return;
+                }
+
+                // Update Booking status back to pending to alert staff and trigger print modal!
+                const newTotalAmount = (currentBooking.total_amount || 0) + cartSubtotal;
+                const { error: bookingUpdateError } = await supabase
+                    .from('bookings')
+                    .update({ 
+                        status: 'pending', // Triggers audio alert & dashboard flash
+                        total_amount: newTotalAmount 
+                    })
+                    .eq('id', currentBooking.id);
+
+                if (bookingUpdateError) throw bookingUpdateError;
+                currentBooking.tracking_token = latestBooking.tracking_token;
             }
 
-            // Insert new items into order_items
+            // 2. Insert new items into order_items
             const itemsToInsert = cart.map(item => ({
-                booking_id: activeBooking.id,
+                booking_id: currentBooking.id,
                 menu_item_id: item.id,
                 quantity: item.qty,
                 price_at_time: item.totalPricePerUnit,
@@ -260,25 +291,12 @@ export default function CustomerOrderLanding() {
 
             if (itemsError) throw itemsError;
 
-            // Update Booking status back to pending to alert staff and trigger print modal!
-            const newTotalAmount = (activeBooking.total_amount || 0) + cart.reduce((sum, i) => sum + (i.totalPricePerUnit * i.qty), 0);
-            
-            const { error: bookingUpdateError } = await supabase
-                .from('bookings')
-                .update({ 
-                    status: 'pending', // Triggers audio alert & dashboard flash
-                    total_amount: newTotalAmount 
-                })
-                .eq('id', activeBooking.id);
-
-            if (bookingUpdateError) throw bookingUpdateError;
-
             toast.success('ออเดอร์ถูกส่งไปยังพนักงานแล้ว!');
             setCart([]);
             setCartOpen(false);
             
             // Save active tracking token to local storage
-            localStorage.setItem(`table_${tableId}_token`, activeBooking.tracking_token);
+            localStorage.setItem(`table_${tableId}_token`, currentBooking.tracking_token);
 
             // Redirect to status page
             navigate(`/table/${tableId}/status`);
@@ -323,12 +341,23 @@ export default function CustomerOrderLanding() {
     }
 
     if (gpsStatus === 'failed') {
+        let errorTitle = 'Geofencing Locked';
+        if (gpsError) {
+            if (gpsError.toLowerCase().includes('not active') || gpsError.toLowerCase().includes('เปิดบริการ')) {
+                errorTitle = 'Table Inactive / โต๊ะยังไม่เปิดบริการ';
+            } else if (gpsError.toLowerCase().includes('closed') || gpsError.toLowerCase().includes('ปิดอยู่')) {
+                errorTitle = 'Ordering Closed / ระบบสั่งอาหารปิด';
+            } else {
+                errorTitle = 'Location Locked / พิกัดนอกร้าน';
+            }
+        }
+
         return (
             <div className="min-h-screen bg-[#0C0C0C] text-white flex flex-col items-center justify-center font-sans p-6 text-center">
                 <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center text-red-500 mb-6 animate-pulse">
                     <AlertTriangle size={36} />
                 </div>
-                <h3 className="font-bold text-2xl mb-3 text-red-400">Geofencing Locked</h3>
+                <h3 className="font-bold text-2xl mb-3 text-red-400">{errorTitle}</h3>
                 <p className="text-gray-400 text-sm max-w-sm leading-relaxed mb-8">
                     {gpsError || 'You must be physically at the restaurant to place an order.'}
                 </p>
