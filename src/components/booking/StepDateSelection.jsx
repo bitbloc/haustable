@@ -134,9 +134,6 @@ export default function StepDateSelection() {
                                 {t('largeGroupDesc')}
                             </p>
                             <div className="flex flex-col gap-2 pt-2">
-                                <a href="tel:0614232455" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
-                                    📞 {t('call')} 061-423-2455
-                                </a>
                                 <a href="tel:0985284217" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
                                     📞 {t('call')} 098-528-4217
                                 </a>

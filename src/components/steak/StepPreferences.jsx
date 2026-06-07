@@ -227,8 +227,6 @@ export default function StepPreferences({ state, dispatch, onNext }) {
                     <span>For more details call:</span>
                 </div>
                 <div className="flex gap-3 font-semibold mt-0.5">
-                    <a href="tel:0614232455" className="hover:text-gray-600 transition-colors">061-423-2455</a>
-                    <span>|</span>
                     <a href="tel:0985284217" className="hover:text-gray-600 transition-colors">098-528-4217</a>
                 </div>
             </div>

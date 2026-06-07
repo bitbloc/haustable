@@ -177,7 +177,7 @@ export default function AdsLandingPage() {
                         "longitude": "104.78028"
                     },
                     "url": "https://haustable.vercel.app/link",
-                    "telephone": ["061-423-2455", "098-528-4217"],
+                    "telephone": "098-528-4217",
                     "openingHoursSpecification": {
                         "@type": "OpeningHoursSpecification",
                         "dayOfWeek": [
@@ -219,18 +219,11 @@ export default function AdsLandingPage() {
                     {/* Phone Contact Block */}
                     <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm text-center col-span-full mt-1.5">
                         <p className="text-[10px] font-bold text-neutral-400 tracking-[0.2em] font-mono uppercase mb-2">📞 โทรสำรองที่นั่ง / ติดต่อร้าน</p>
-                        <div className="flex justify-center gap-3">
-                            <a 
-                                href="tel:0614232455" 
-                                id="cta-call-1" 
-                                className="flex-1 flex items-center justify-center gap-2 text-neutral-800 font-bold hover:text-neutral-600 px-3 py-2 bg-neutral-50 rounded-xl text-xs transition-colors border border-neutral-100"
-                            >
-                                <Phone size={13} className="text-neutral-500" /> 061-423-2455
-                            </a>
+                        <div className="flex justify-center">
                             <a 
                                 href="tel:0985284217" 
-                                id="cta-call-2" 
-                                className="flex-1 flex items-center justify-center gap-2 text-neutral-800 font-bold hover:text-neutral-600 px-3 py-2 bg-neutral-50 rounded-xl text-xs transition-colors border border-neutral-100"
+                                id="cta-call" 
+                                className="w-full max-w-[240px] flex items-center justify-center gap-2 text-neutral-800 font-bold hover:text-neutral-600 px-3 py-2 bg-neutral-50 rounded-xl text-xs transition-colors border border-neutral-100"
                             >
                                 <Phone size={13} className="text-neutral-500" /> 098-528-4217
                             </a>
