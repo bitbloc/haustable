@@ -6,6 +6,8 @@ import POSMenuGrid from './POSMenuGrid';
 import POSOrderPanel from './POSOrderPanel';
 import { usePOSOrder } from '../hooks/usePOSOrder';
 import { Toaster, toast } from 'sonner';
+import POSReportsPanel from './POSReportsPanel';
+import SlipModal from '../components/shared/SlipModal';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
@@ -16,6 +18,59 @@ export default function POSDashboard() {
         customer: null,
         table: null
     });
+    const [activeSlipBooking, setActiveSlipBooking] = useState(null);
+    const [activeSlipType, setActiveSlipType] = useState('billing');
+
+    const handleSaveAndOpenSlip = async (type) => {
+        if (currentOrder.items.length === 0 && !activeBooking) {
+            toast.error("No items in order to print");
+            return;
+        }
+
+        let bookingId = activeBooking?.id;
+        let currentBooking = activeBooking;
+
+        // 1. Create walk-in if no active booking
+        if (!bookingId) {
+            const newBooking = await createWalkIn(selectedTable);
+            if (!newBooking) return;
+            bookingId = newBooking.id;
+            currentBooking = newBooking;
+        }
+
+        // 2. Submit items
+        const newItems = currentOrder.items.filter(i => !i.db_id);
+        if (newItems.length > 0) {
+            const success = await submitOrderItems(bookingId, newItems);
+            if (!success) return;
+        }
+
+        // 3. Reload the booking to get updated order_items and references
+        const updatedBooking = await getActiveBooking(selectedTable.id);
+        if (updatedBooking) {
+            setActiveBooking(updatedBooking);
+            // Update currentOrder item db_ids so they don't get re-submitted
+            const updatedItems = updatedBooking.order_items.map(oi => ({
+                id: oi.menu_item_id,
+                name: oi.menu_items?.name || oi.name || 'Item',
+                price: oi.price_at_time,
+                quantity: oi.quantity,
+                db_id: oi.id,
+                selected_options: oi.selected_options
+            }));
+            setCurrentOrder(prev => ({
+                ...prev,
+                items: updatedItems
+            }));
+            
+            // 4. Open the Slip Modal
+            setActiveSlipBooking(updatedBooking);
+            setActiveSlipType(type);
+        } else {
+            setActiveSlipBooking(currentBooking);
+            setActiveSlipType(type);
+        }
+    };
 
     const { getActiveBooking, createWalkIn, completeCheckout, submitOrderItems, acceptOrder } = usePOSOrder();
 
@@ -125,7 +180,7 @@ export default function POSDashboard() {
     };
 
     return (
-        <div className="h-screen w-full bg-[#121212] text-white overflow-hidden flex flex-col font-sans">
+        <div className="h-screen w-full bg-[#121212] text-white overflow-hidden flex flex-col font-sans select-none">
             <Toaster position="top-right" richColors />
             
             <POSLayout 
@@ -139,29 +194,42 @@ export default function POSDashboard() {
                     <div className="flex-1 h-full overflow-hidden relative">
                         {view === 'tables' ? (
                             <POSTableGrid onSelectTable={handleSelectTable} />
-                        ) : (
+                        ) : view === 'menu' ? (
                             <POSMenuGrid onAddItem={handleAddToOrder} />
+                        ) : (
+                            <POSReportsPanel />
                         )}
                     </div>
 
                     {/* Order Panel Sidebar */}
-                    <POSOrderPanel 
-                        order={currentOrder} 
-                        booking={activeBooking}
-                        onUpdateQuantity={handleUpdateQuantity}
-                        onClear={() => setCurrentOrder({ items: [], customer: null, table: selectedTable })}
-                        onCheckout={handleCheckout}
-                        onAcceptOrder={async () => {
-                            if (activeBooking) {
-                                const success = await acceptOrder(activeBooking.id);
-                                if (success) {
-                                    handleBackToTables();
+                    {view !== 'reports' && (
+                        <POSOrderPanel 
+                            order={currentOrder} 
+                            booking={activeBooking}
+                            onUpdateQuantity={handleUpdateQuantity}
+                            onClear={() => setCurrentOrder({ items: [], customer: null, table: selectedTable })}
+                            onCheckout={handleCheckout}
+                            onAcceptOrder={async () => {
+                                if (activeBooking) {
+                                    const success = await acceptOrder(activeBooking.id);
+                                    if (success) {
+                                        handleBackToTables();
+                                    }
                                 }
-                            }
-                        }}
-                    />
+                            }}
+                            onOpenSlip={handleSaveAndOpenSlip}
+                        />
+                    )}
                 </div>
             </POSLayout>
+
+            {activeSlipBooking && (
+                <SlipModal 
+                    booking={activeSlipBooking}
+                    type={activeSlipType}
+                    onClose={() => setActiveSlipBooking(null)}
+                />
+            )}
         </div>
     );
 }

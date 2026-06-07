@@ -1,7 +1,9 @@
 import { useRef, useState, useEffect } from 'react'
-import { X, Printer, Download, Check } from 'lucide-react'
+import { X, Printer as PrinterIcon, Download, Check } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
+import { Capacitor } from '@capacitor/core'
+import { Printer } from '@capgo/capacitor-printer'
 
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
@@ -367,10 +369,50 @@ export default function SlipModal({ booking, type, onClose }) {
         `
     }
 
-    const handlePrint = () => {
+    const handlePrint = async () => {
+        const htmlContent = getPrintHtml()
+        
+        if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Printer')) {
+            try {
+                await Printer.printHtml({
+                    name: `Receipt-${booking.tracking_token || booking.id.slice(0, 4)}`,
+                    html: htmlContent
+                })
+            } catch (err) {
+                console.error("Native print failed, falling back to browser print:", err)
+                fallbackBrowserPrint(htmlContent)
+            }
+        } else {
+            fallbackBrowserPrint(htmlContent)
+        }
+    }
+
+    const fallbackBrowserPrint = (htmlContent) => {
         const printWindow = window.open('', '_blank', 'width=400,height=600')
-        printWindow.document.write(getPrintHtml())
-        printWindow.document.close()
+        if (printWindow) {
+            printWindow.document.write(htmlContent)
+            printWindow.document.close()
+        } else {
+            // Fallback for browsers that block popups
+            const iframe = document.createElement('iframe')
+            iframe.style.position = 'fixed'
+            iframe.style.right = '0'
+            iframe.style.bottom = '0'
+            iframe.style.width = '0'
+            iframe.style.height = '0'
+            iframe.style.border = '0'
+            document.body.appendChild(iframe)
+            
+            iframe.contentDocument.write(htmlContent)
+            iframe.contentDocument.close()
+            iframe.onload = () => {
+                iframe.contentWindow.focus()
+                iframe.contentWindow.print()
+                setTimeout(() => {
+                    document.body.removeChild(iframe)
+                }, 1000)
+            }
+        }
     }
 
     const handleSaveImage = async () => {
@@ -626,7 +668,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 {/* Actions */}
                 <div className="p-4 bg-[#111] flex gap-3 border-t border-white/10">
                     <button onClick={handlePrint} className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                        <Printer size={16} /> Print
+                        <PrinterIcon size={16} /> Print
                     </button>
                     <button onClick={handleSaveImage} className="flex-1 bg-white/10 text-white py-3 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2" disabled={saving}>
                         {saving ? 'Saving...' : <><Download size={16} /> Save</>}

@@ -47,7 +47,7 @@ export default function POSTableGrid({ onSelectTable }) {
 
     return (
         <div className="p-8 h-full overflow-y-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {tables.map((table) => (
                     <motion.button
                         key={table.id}

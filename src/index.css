@@ -28,6 +28,16 @@ body {
   /* Text Dark */
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none; /* Prevent elastic pull-to-refresh */
+}
+
+/* Touch and selection improvements for Tablet/POS */
+button, a, select, input, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom Scrollbar */

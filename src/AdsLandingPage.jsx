@@ -177,7 +177,7 @@ export default function AdsLandingPage() {
                         "longitude": "104.78028"
                     },
                     "url": "https://haustable.vercel.app/link",
-                    "telephone": ["061-423-2455", "096-142-4663"],
+                    "telephone": ["061-423-2455", "098-528-4217"],
                     "openingHoursSpecification": {
                         "@type": "OpeningHoursSpecification",
                         "dayOfWeek": [
@@ -228,11 +228,11 @@ export default function AdsLandingPage() {
                                 <Phone size={13} className="text-neutral-500" /> 061-423-2455
                             </a>
                             <a 
-                                href="tel:0961424663" 
+                                href="tel:0985284217" 
                                 id="cta-call-2" 
                                 className="flex-1 flex items-center justify-center gap-2 text-neutral-800 font-bold hover:text-neutral-600 px-3 py-2 bg-neutral-50 rounded-xl text-xs transition-colors border border-neutral-100"
                             >
-                                <Phone size={13} className="text-neutral-500" /> 096-142-4663
+                                <Phone size={13} className="text-neutral-500" /> 098-528-4217
                             </a>
                         </div>
                     </div>

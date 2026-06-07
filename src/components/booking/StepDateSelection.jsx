@@ -137,8 +137,8 @@ export default function StepDateSelection() {
                                 <a href="tel:0614232455" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
                                     📞 {t('call')} 061-423-2455
                                 </a>
-                                <a href="tel:0961424663" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
-                                    📞 {t('call')} 096-142-4663
+                                <a href="tel:0985284217" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                                    📞 {t('call')} 098-528-4217
                                 </a>
                                 <a href="https://www.facebook.com/inthehausth" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-2.5 rounded-xl font-bold hover:bg-[#166fe5] transition-colors flex items-center justify-center gap-1.5 text-sm">
                                     FB: ร้านในบ้าน นครพนม

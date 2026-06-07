@@ -2,7 +2,7 @@ import React from 'react';
 import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder }) {
+export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder, onOpenSlip }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const tax = includeTax ? subtotal * 0.07 : 0;
@@ -97,16 +97,16 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                                 <div className="flex items-center bg-black/40 rounded-xl p-1 gap-1">
                                     <button 
                                         onClick={() => onUpdateQuantity(item.id, -1)}
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
-                                        <Minus size={14} />
+                                        <Minus size={16} />
                                     </button>
                                     <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
                                     <button 
                                         onClick={() => onUpdateQuantity(item.id, 1)}
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
-                                        <Plus size={14} />
+                                        <Plus size={16} />
                                     </button>
                                 </div>
                             </motion.div>
@@ -146,13 +146,26 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                     <PaymentButton icon={Banknote} label="Cash" onClick={() => onCheckout('cash')} />
-                     <PaymentButton icon={CreditCard} label="Card/QR" onClick={() => onCheckout('qr')} color="bg-orange-500" />
+                     <PaymentButton icon={Banknote} label="Cash Pay" onClick={() => onCheckout('cash')} />
+                     <PaymentButton icon={CreditCard} label="QR / Card Pay" onClick={() => onCheckout('qr')} color="bg-orange-500" />
                 </div>
 
-                <button className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 py-3 rounded-2xl text-xs font-bold text-gray-400 transition-all">
-                    <ReceiptText size={16} /> Print Kitchen Slip
-                </button>
+                {(order.items.length > 0 || booking) && (
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                        <button 
+                            onClick={() => onOpenSlip && onOpenSlip('kitchen')}
+                            className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 py-3 rounded-2xl text-xs font-bold text-gray-400 transition-all"
+                        >
+                            <ReceiptText size={16} /> Kitchen Slip
+                        </button>
+                        <button 
+                            onClick={() => onOpenSlip && onOpenSlip('billing')}
+                            className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 py-3 rounded-2xl text-xs font-bold text-gray-400 transition-all"
+                        >
+                            <ReceiptText size={16} /> Billing / QR
+                        </button>
+                    </div>
+                )}
             </div>
         </aside>
     );

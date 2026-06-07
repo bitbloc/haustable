@@ -6,7 +6,8 @@ import {
     Settings, 
     LogOut,
     ChevronLeft,
-    Clock
+    Clock,
+    BarChart3
 } from 'lucide-react';
 
 export default function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
@@ -37,6 +38,12 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                         onClick={() => onViewChange('crm')} 
                         label="CRM"
                     />
+                    <NavIcon 
+                        icon={BarChart3} 
+                        active={activeView === 'reports'} 
+                        onClick={() => onViewChange('reports')} 
+                        label="Reports"
+                    />
                 </nav>
 
                 <div className="flex flex-col gap-4">
@@ -61,6 +68,7 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                         <h2 className="text-lg font-bold">
                             {activeView === 'tables' ? 'Table Management' : 
                              activeView === 'menu' ? (selectedTable ? `Ordering for ${selectedTable.table_name}` : 'Menu Catalog') : 
+                             activeView === 'reports' ? 'Reports & Shift Closing' : 
                              'Customer CRM'}
                         </h2>
                     </div>
