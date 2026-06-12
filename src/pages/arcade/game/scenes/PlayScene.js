@@ -114,10 +114,7 @@ export default class PlayScene extends Phaser.Scene {
     this.player.body.setVelocityY(-350);
 
     // Play jump sound
-    try {
-      const jumpSound = this.sound.get('jump');
-      if (jumpSound) jumpSound.play({ volume: 0.4 });
-    } catch (e) {}
+    try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
 
     // Subtle jump squish effect
     this.tweens.add({
@@ -193,10 +190,7 @@ export default class PlayScene extends Phaser.Scene {
       this.scoreText.setText(this.score.toString());
       
       // Play score sound
-      try {
-        const pointSound = this.sound.get('point');
-        if (pointSound) pointSound.play({ volume: 0.5 });
-      } catch (e) {}
+      try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
 
       // Pulse score text
       this.tweens.add({
@@ -221,10 +215,7 @@ export default class PlayScene extends Phaser.Scene {
     this.player.stop();
 
     // Play hit sound
-    try {
-      const hitSound = this.sound.get('hit');
-      if (hitSound) hitSound.play({ volume: 0.5 });
-    } catch (e) {}
+    try { this.sound.play('hit', { volume: 0.5 }); } catch (e) {}
 
     // Visual red hit tint
     this.player.setTint(0xff3333);

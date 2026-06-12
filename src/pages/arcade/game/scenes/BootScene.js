@@ -34,12 +34,12 @@ export default class BootScene extends Phaser.Scene {
       loadingText.destroy();
     });
 
-    // Preload Audio from the public path (will show warnings but won't crash if files are absent)
-    this.load.audio('jump', '/arcade/audio/jump.mp3');
-    this.load.audio('point', '/arcade/audio/point.mp3');
-    this.load.audio('hit', '/arcade/audio/hit.mp3');
-    this.load.audio('gameover', '/arcade/audio/gameover.mp3');
-    this.load.audio('bgm', '/arcade/audio/bgm.mp3');
+    // Preload Audio from the public path
+    this.load.audio('jump', '/arcade/audio/jump.wav');
+    this.load.audio('point', '/arcade/audio/point.wav');
+    this.load.audio('hit', '/arcade/audio/hit.wav');
+    this.load.audio('gameover', '/arcade/audio/gameover.wav');
+    this.load.audio('bgm', '/arcade/audio/bgm.wav');
   }
 
   create() {

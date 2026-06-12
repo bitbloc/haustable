@@ -103,21 +103,13 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     // 5. Play Background Music if available
-    try {
-      const bgm = this.sound.get('bgm');
-      if (bgm && !bgm.isPlaying) {
-        bgm.play({ loop: true, volume: 0.3 });
-      }
-    } catch (e) {
-      console.warn("BGM play failed:", e);
+    try { this.sound.play('bgm', { loop: true, volume: 0.3 }); } catch (e) {
+      console.warn('BGM play failed:', e);
     }
 
     // 6. Input Event: Click/Touch to Start
     this.input.once('pointerdown', () => {
-      try {
-        const jumpSound = this.sound.get('jump');
-        if (jumpSound) jumpSound.play({ volume: 0.5 });
-      } catch (e) {}
+      try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
       this.scene.start('PlayScene');
     });
   }
