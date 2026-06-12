@@ -15,60 +15,90 @@ export function generateGameTextures(scene) {
     
     // Define pixel color palette
     const colors = {
-      'O': '#FF8C00', // Orange (body)
-      'D': '#E05A00', // Dark Orange (shading)
-      'W': '#FFFFFF', // White (eyes/wing highlight)
-      'B': '#000000', // Black (outline/eyes)
-      'P': '#FFB6C1', // Pink (nose/ears)
-      'Y': '#DFFF00', // Neon Lemon (wing)
+      'W': '#FFFFFF', // White (body)
+      'B': '#1A1D20', // Black/dark outline
+      'P': '#FFA6B9', // Pink (ears inner)
+      'G': '#D2D7DF', // Gray shading
       '.': null      // Transparent
     };
     
-    // Frame 1: Wing Down
+    // Frame 1: Legs Extended
     const frame1 = [
-      "....BB......BB..",
-      "....BOOB....BOOB",
-      "..BOOOOBBOOOOB..",
-      "..BOOOOOOOOOOB..",
-      ".BOOOBBBOOBBBBB.",
-      ".BOOOWBOWWOBWOB.",
-      ".BOOOBBOOOBBOOB.",
-      "BOOOOOOPPOOOOOOB",
-      "BOOOOOOOOOOOOOOB",
-      "BDOOOOOOOOOBBOOB",
-      ".BDOOYBOOOOOOB..",
-      "..BOYYYYOOOOOB..",
-      "..BOOYYOOOOOOB..",
-      "...BDOOOOOOBB...",
-      "....BBBBBBB.....",
-      ".....BB..BB....."
-    ];
+      "................................",
+      "..........................BB....",
+      ".........................BWWB...",
+      "........................BWWB....",
+      ".......................BWWB.....",
+      "....B.......B.........BWWB......",
+      "...BPB.....BPB.......BWWB.......",
+      "..BPPB....BPPB......BWWB........",
+      "..BPPWBBBBWPPB.....BWWB.........",
+      ".BWWWWWWWWWWWWBBBBBWWb..........",
+      "BWWWWWWWWWWWWWWWWWWWWb..........",
+      "BWWWWWWWWWWWWWWWWWWWWWb.........",
+      "BWWWWWWWWWWWWWWWWWWWWWWb........",
+      "B.B..W.B.WWWWWWWWWWWWWWWb.......",
+      "B.B..W.B.WWWWWWWWWWWWWWWWb......",
+      "BWWWWWWWWWWWWWWWWWWWWWWWWWb.....",
+      "BWWWWWWWWWWWWWWWWWWWWWWWWWWb....",
+      ".BWWWWWWWWWWWWWWWWWWWWWWWWWWb...",
+      "..BBWWWWWWWWWWWWWWWWWWWWWWWWWb..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWWb.",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWb...",
+      "....BGGGGWWWWWWWWWWGGGGGGGGb....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGb...BGGb...BGGGGb......",
+      "....BBBBb.....BB.....BBBBb......",
+      "................................",
+      "................................",
+      "................................"
+    ].map(line => line.replaceAll('b', 'B'));
 
-    // Frame 2: Wing Up
+    // Frame 2: Legs Bent (animation state)
     const frame2 = [
-      "....BB......BB..",
-      "....BOOB....BOOB",
-      "..BOOOOBBOOOOB..",
-      "..BOOOYYYYOOOB..",
-      ".BOOOYYYYYOBBBBB",
-      ".BOOOWBOWWOBWOB.",
-      ".BOOOBBOOOBBOOB.",
-      "BOOOOOOPPOOOOOOB",
-      "BOOOOOOOOOOOOOOB",
-      "BDOOOOOOOOOBBOOB",
-      ".BDOOOOOOOOOOB..",
-      "..BOOOOOOOOOOB..",
-      "..BOOOOOOOOOOB..",
-      "...BDOOOOOOBB...",
-      "....BBBBBBB.....",
-      ".....BB..BB....."
-    ];
+      "................................",
+      ".........................BB.....",
+      "........................BWWB....",
+      ".......................BWWB.....",
+      "......................BWWB......",
+      "....B.......B........BWWB.......",
+      "...BPB.....BPB......BWWB........",
+      "..BPPB....BPPB.....BWWB.........",
+      "..BPPWBBBBWPPB....BWWB..........",
+      ".BWWWWWWWWWWWWBBBBWWB...........",
+      "BWWWWWWWWWWWWWWWWWWWB...........",
+      "BWWWWWWWWWWWWWWWWWWWWb..........",
+      "BWWWWWWWWWWWWWWWWWWWWWb.........",
+      "B.B..W.B.WWWWWWWWWWWWWWb........",
+      "B.B..W.B.WWWWWWWWWWWWWWWb.......",
+      "BWWWWWWWWWWWWWWWWWWWWWWWWb......",
+      "BWWWWWWWWWWWWWWWWWWWWWWWWWb.....",
+      ".BWWWWWWWWWWWWWWWWWWWWWWWWWb....",
+      "..BBWWWWWWWWWWWWWWWWWWWWWWWWb...",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWb...",
+      "....BGGGGWWWWWWWWWWGGGGGGGGb....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
+      "....BGGGGb...BGGb...BGGGGb......",
+      "....BBBBb.....BB.....BBBBb......",
+      "................................",
+      "................................",
+      "................................"
+    ].map(line => line.replaceAll('b', 'B'));
 
-    const pixelSize = 2; // 2x2 screen pixels per sprite pixel
+    const pixelSize = 1; // 1x1 screen pixels per sprite pixel
     
     // Draw Frame 1
-    for (let r = 0; r < 16; r++) {
-      for (let c = 0; c < 16; c++) {
+    for (let r = 0; r < 32; r++) {
+      for (let c = 0; c < 32; c++) {
         const char = frame1[r][c];
         const color = colors[char];
         if (color) {
@@ -79,8 +109,8 @@ export function generateGameTextures(scene) {
     }
 
     // Draw Frame 2
-    for (let r = 0; r < 16; r++) {
-      for (let c = 0; c < 16; c++) {
+    for (let r = 0; r < 32; r++) {
+      for (let c = 0; c < 32; c++) {
         const char = frame2[r][c];
         const color = colors[char];
         if (color) {

@@ -152,7 +152,7 @@ export default class PlayScene extends Phaser.Scene {
     topSatow.body.setVelocityX(speed);
     
     // Scale size of physics body to match graphic
-    topSatow.body.setSize(44, 380);
+    topSatow.body.setSize(44, 128);
     // Stretch graphic height to fit
     topSatow.setDisplaySize(64, gapY);
 
@@ -165,7 +165,7 @@ export default class PlayScene extends Phaser.Scene {
     bottomSatow.body.setImmovable(true);
     bottomSatow.body.setVelocityX(speed);
     
-    bottomSatow.body.setSize(44, 380);
+    bottomSatow.body.setSize(44, 128);
     bottomSatow.setDisplaySize(64, bottomHeight);
 
     // 3. Invisible score sensor zone (placed between pipes)
