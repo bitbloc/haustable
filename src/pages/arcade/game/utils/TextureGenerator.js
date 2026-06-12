@@ -93,7 +93,7 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
     
     // Define the spritesheet frame coordinates
-    scene.textures.addSpriteSheetFromTexture('cat', canvasTexture, {
+    scene.textures.addSpriteSheet('cat', canvasTexture.canvas, {
       frameWidth: 32,
       frameHeight: 32
     });
