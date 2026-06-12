@@ -147,7 +147,7 @@ export default class PlayScene extends Phaser.Scene {
     this.satowGroup.add(topSatow);
     topSatow.setOrigin(0.5, 1); // Align at bottom edge of top pipe
     topSatow.setFlipY(true);    // Point downward
-    topSatow.body.setAllowGravity(false);
+    topSatow.body.allowGravity = false;
     topSatow.body.setImmovable(true);
     topSatow.body.setVelocityX(speed);
     
@@ -161,7 +161,7 @@ export default class PlayScene extends Phaser.Scene {
     const bottomSatow = this.physics.add.sprite(spawnX, gapY + gap, 'satow_pod');
     this.satowGroup.add(bottomSatow);
     bottomSatow.setOrigin(0.5, 0); // Align at top edge of bottom pipe
-    bottomSatow.body.setAllowGravity(false);
+    bottomSatow.body.allowGravity = false;
     bottomSatow.body.setImmovable(true);
     bottomSatow.body.setVelocityX(speed);
     
@@ -171,7 +171,6 @@ export default class PlayScene extends Phaser.Scene {
     // 3. Invisible score sensor zone (placed between pipes)
     const scoreSensor = this.add.rectangle(spawnX + 32, gapY + gap / 2, 10, gap);
     this.physics.add.existing(scoreSensor, true); // static body
-    scoreSensor.body.setAllowGravity(false);
     
     // Move sensor along with pipes
     this.tweens.add({
