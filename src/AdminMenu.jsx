@@ -236,7 +236,9 @@ export default function AdminMenu() {
             let imageUrl = editingItem?.image_url || '';
             if (imageFile) {
                 const fileName = `menu_${Date.now()}.${imageFile.name.split('.').pop()}`;
-                const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, imageFile);
+                const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, imageFile, {
+                    cacheControl: '15552000'
+                });
                 if (uploadError) throw uploadError;
                 const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName);
                 imageUrl = publicUrl;

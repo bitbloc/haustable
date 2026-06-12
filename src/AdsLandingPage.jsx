@@ -292,49 +292,6 @@ export default function AdsLandingPage() {
                 </section>
             )}
 
-            {/* ─── VIDEO LOOP ─── */}
-            {videoUrl && (
-                <section className="w-full max-w-lg mx-auto px-4 pb-8">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.5 }}
-                        className="relative w-full rounded-2xl overflow-hidden shadow-md bg-black"
-                    >
-                        <video
-                            src={videoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-auto object-cover"
-                        />
-                    </motion.div>
-                </section>
-            )}
-
-            {/* ─── FOOD CONTENT VIDEO (VERTICAL) ─── */}
-            {foodVideoUrl && (
-                <section className="w-full max-w-lg mx-auto px-4 pb-8">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.5 }}
-                        className="relative w-full rounded-2xl overflow-hidden shadow-md bg-black aspect-[9/16]"
-                    >
-                        <video
-                            src={foodVideoUrl}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                        />
-                    </motion.div>
-                </section>
-            )}
 
             {/* ─── MENU GALLERY ─── */}
             {menuImages.length > 0 && (
@@ -670,3 +627,4 @@ function LinkCard({ href, icon, title, bg, wide = false, internal = false, id, t
         </Tag>
     );
 }
+

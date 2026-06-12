@@ -256,7 +256,9 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
             setLoading(true);
             const resizedFile = await resizeImage(file);
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
-            const { error: uploadError } = await supabase.storage.from('stock-images').upload(fileName, resizedFile);
+            const { error: uploadError } = await supabase.storage.from('stock-images').upload(fileName, resizedFile, {
+                cacheControl: '15552000'
+            });
             if (uploadError) throw uploadError;
             const { data: { publicUrl } } = supabase.storage.from('stock-images').getPublicUrl(fileName);
             setFormData(prev => ({ ...prev, image_url: publicUrl }));

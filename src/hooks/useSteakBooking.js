@@ -216,7 +216,9 @@ export function useSteakBooking() {
                  const fileName = `slip_steak_${Date.now()}_${Math.random().toString(36).substring(7)}`
                  const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('slips')
-                    .upload(fileName, state.slipFile)
+                    .upload(fileName, state.slipFile, {
+                        cacheControl: '15552000'
+                    })
                  if (uploadError) throw uploadError
                  const { data: { publicUrl } } = supabase.storage.from('slips').getPublicUrl(fileName)
                  slipUrl = publicUrl

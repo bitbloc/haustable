@@ -349,7 +349,9 @@ export default function AdminSteakDashboard() {
             if (newImageFile) {
                 const resizedFile = await resizeImage(newImageFile)
                 const fileName = `steak_${Date.now()}.jpg`
-                const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resizedFile)
+                const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resizedFile, {
+                    cacheControl: '15552000'
+                })
                 if (uploadError) throw uploadError
                 const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
                 imageUrl = publicUrl
@@ -415,7 +417,9 @@ export default function AdminSteakDashboard() {
                 const resized = await resizeImage(file, 400) // Small thumbnail needed
                 const fileName = `sidedish_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
                 
-                const { error } = await supabase.storage.from('public-assets').upload(fileName, resized)
+                const { error } = await supabase.storage.from('public-assets').upload(fileName, resized, {
+                    cacheControl: '15552000'
+                })
                 if (error) throw error
                 
                 const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)

@@ -348,7 +348,9 @@ export default function MenuItemList() {
             if (imageRemoved) imageUrl = ''
             if (imageFile) {
                 const fileName = `menu_${Date.now()}.jpg`
-                const { error } = await supabase.storage.from('public-assets').upload(fileName, imageFile)
+                const { error } = await supabase.storage.from('public-assets').upload(fileName, imageFile, {
+                    cacheControl: '15552000'
+                })
                 if (error) throw error
                 const { data } = supabase.storage.from('public-assets').getPublicUrl(fileName)
                 imageUrl = data.publicUrl

@@ -1040,20 +1040,20 @@ export default function AdminSettings() {
                 </h2>
                 <div className="flex items-center justify-between p-4 border border-red-100 rounded-2xl bg-red-50/50">
                     <div>
-                        <h3 className="font-bold text-ink">Clean Old Slips (&gt;30 Days)</h3>
+                        <h3 className="font-bold text-ink">Clean Old Slips (&gt;180 Days)</h3>
                         <p className="text-xs text-subInk mt-1">
-                            ลบรูปสลิปที่เก่ากว่า 30 วันออกจาก Storage เพื่อประหยัดพื้นที่ (ข้อมูลการจองยังอยู่)
+                            ลบรูปสลิปที่เก่ากว่า 180 วัน (6 เดือน) ออกจาก Storage เพื่อประหยัดพื้นที่ (ข้อมูลการจองยังอยู่)
                         </p>
                     </div>
                     <button
                         onClick={async () => {
-                            if (!window.confirm('Are you sure you want to delete slip images older than 30 days?')) return
+                            if (!window.confirm('Are you sure you want to delete slip images older than 180 days (6 months)?')) return
 
                             try {
                                 setLoading(true)
-                                // 1. Calculate Date 30 Days Ago
+                                // 1. Calculate Date 180 Days Ago
                                 const d = new Date()
-                                d.setDate(d.getDate() - 30)
+                                d.setDate(d.getDate() - 180)
                                 const cutoffDate = d.toISOString()
 
                                 // 2. Find old bookings with slips
@@ -1179,7 +1179,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             const resized = await resizeImage(file, maxWidth)
             const ext = resized.name.split('.').pop()
             const fileName = `link/${settingKey}_${Date.now()}.${ext}`
-            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resized, { upsert: true, contentType: resized.type })
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resized, { upsert: true, contentType: resized.type, cacheControl: '15552000' })
             if (uploadError) throw uploadError
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
             await handleSave(settingKey, publicUrl)
@@ -1206,7 +1206,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         setUploading(prev => ({ ...prev, link_video_url: true }))
         try {
             const fileName = `link/video_${Date.now()}.${ext}`
-            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true, contentType: ext === 'mp4' ? 'video/mp4' : 'video/quicktime' })
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true, contentType: ext === 'mp4' ? 'video/mp4' : 'video/quicktime', cacheControl: '15552000' })
             if (uploadError) throw uploadError
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
             await handleSave('link_video_url', publicUrl)
@@ -1233,7 +1233,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         setUploading(prev => ({ ...prev, link_food_video_url: true }))
         try {
             const fileName = `link/food_video_${Date.now()}.${ext}`
-            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true, contentType: ext === 'mp4' ? 'video/mp4' : 'video/quicktime' })
+            const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, file, { upsert: true, contentType: ext === 'mp4' ? 'video/mp4' : 'video/quicktime', cacheControl: '15552000' })
             if (uploadError) throw uploadError
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName)
             await handleSave('link_food_video_url', publicUrl)

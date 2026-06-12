@@ -109,7 +109,9 @@ export default function CustomerOrderStatus() {
             // Upload to Supabase Storage 'slips' bucket
             const { error: uploadError } = await supabase.storage
                 .from('slips')
-                .upload(fileName, file);
+                .upload(fileName, file, {
+                    cacheControl: '15552000'
+                });
 
             if (uploadError) throw uploadError;
 

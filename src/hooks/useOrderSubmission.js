@@ -21,7 +21,9 @@ export function useOrderSubmission() {
             if (slipFile) {
                 const fileExt = slipFile.name.split('.').pop()
                 const fileName = `slip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`
-                const { error: uploadError } = await supabase.storage.from('slips').upload(fileName, slipFile)
+                const { error: uploadError } = await supabase.storage.from('slips').upload(fileName, slipFile, {
+                    cacheControl: '15552000'
+                })
                 
                 if (uploadError) throw new Error('Upload Slip Failed: ' + uploadError.message)
                 finalSlipUrl = fileName

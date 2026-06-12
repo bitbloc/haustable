@@ -37,6 +37,10 @@ import BarSOPPage from './components/sop/BarSOPPage' // NEW: SOP
 import POSDashboard from './pos/POSDashboard'
 import CustomerOrderLanding from './pos/CustomerOrderLanding'
 import CustomerOrderStatus from './pos/CustomerOrderStatus'
+import { Suspense, lazy } from 'react'
+
+const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
+const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
 
 
 function App() {
@@ -118,6 +122,18 @@ function App() {
             <Route path="/" element={<Home session={session} />} />
             <Route path="/qa" element={<QnAPage />} />
             <Route path="/link" element={<AdsLandingPage />} />
+
+            {/* Arcade & Lobby Games */}
+            <Route path="/arcade" element={
+              <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING PLAYGROUND...</div>}>
+                <ArcadeLobby />
+              </Suspense>
+            } />
+            <Route path="/arcade/claim" element={
+              <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING CLAIM PORTAL...</div>}>
+                <ArcadeClaim />
+              </Suspense>
+            } />
 
             {/* Public Routes (Standard Layout) */}
             <Route element={<PublicLayout session={session} />}>

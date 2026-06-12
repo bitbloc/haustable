@@ -108,7 +108,9 @@ export function usePOSOrder() {
             const fileName = `slip_${bookingId}_${Date.now()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
                 .from('slips')
-                .upload(fileName, slipFile);
+                .upload(fileName, slipFile, {
+                    cacheControl: '15552000'
+                });
             
             if (uploadError) throw new Error('Upload Slip Failed: ' + uploadError.message);
 
