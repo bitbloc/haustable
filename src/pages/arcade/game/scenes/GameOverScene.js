@@ -33,7 +33,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     // 2. Play gameover audio
     try {
-      this.sound.stopByKey('bgm');
+      this.sound.stopAll();
       this.sound.play('gameover', { volume: 0.6 });
     } catch (e) {
       console.warn('Game over audio error:', e);
@@ -160,7 +160,7 @@ export default class GameOverScene extends Phaser.Scene {
     // but standard Flappy Bird touch screen to restart is best)
     this.input.on('pointerdown', () => {
       // Stop gameover sound
-      try { this.sound.stopByKey('gameover'); } catch (e) {}
+      try { this.sound.stopAll(); } catch (e) {}
 
       // Trigger callback to React if provided, to check/reload leaderboard
       const onGameOver = this.registry.get('onGameOver');

@@ -98,12 +98,12 @@ export default class PlayScene extends Phaser.Scene {
       this.hitObstacle();
     }
 
-    // Clean up offscreen obstacles
-    this.satowGroup.children.iterate((child) => {
+    // Clean up offscreen obstacles safely
+    const children = [...this.satowGroup.getChildren()];
+    children.forEach((child) => {
       if (child && child.x < -100) {
         child.destroy();
       }
-      return true;
     });
   }
 
