@@ -33,6 +33,7 @@ export default class PlayScene extends Phaser.Scene {
 
     // 3. Create Player (Cat)
     this.player = this.physics.add.sprite(100, height / 2, 'cat');
+    this.player.setFlipX(true); // Face right (direction of flight)
     this.player.setOrigin(0.5);
     this.player.setDepth(5);
     this.player.body.setGravityY(1000);
@@ -170,14 +171,13 @@ export default class PlayScene extends Phaser.Scene {
 
     // 3. Invisible score sensor zone (placed between pipes)
     const scoreSensor = this.add.rectangle(spawnX + 32, gapY + gap / 2, 10, gap);
-    this.physics.add.existing(scoreSensor, true); // static body
+    this.physics.add.existing(scoreSensor); // dynamic body
+    scoreSensor.body.allowGravity = false;
+    scoreSensor.body.setVelocityX(speed);
     
-    // Move sensor along with pipes
-    this.tweens.add({
-      targets: scoreSensor,
-      x: -100,
-      duration: 3500, // speed calculation
-      onComplete: () => {
+    // Destroy sensor after it goes offscreen (4 seconds is plenty to go from spawn to left screen edge)
+    this.time.delayedCall(4000, () => {
+      if (scoreSensor && scoreSensor.active) {
         scoreSensor.destroy();
       }
     });
