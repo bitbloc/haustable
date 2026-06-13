@@ -269,7 +269,7 @@ export function generateGameTextures(scene) {
     ctx.fill();
     
     // Draw Thai temple silhouette (เงาวัดไทยริมแม่น้ำ)
-    const templeX = 40;
+    const templeX = 20;
     const templeY = 540; // Sitting on the horizon
     const tSize = 2; // Pixel block size
     
@@ -321,7 +321,7 @@ export function generateGameTextures(scene) {
       "########################################"
     ];
     
-    ctx.fillStyle = '#0b3b24'; // Deep dark temple green silhouette
+    ctx.fillStyle = '#05180e'; // Deep dark temple charcoal-green silhouette
     const tRows = templePattern.length;
     const tCols = templePattern[0].length;
     
@@ -339,66 +339,156 @@ export function generateGameTextures(scene) {
     }
 
     // Draw Naga silhouette (พญานาคริมแม่น้ำ)
-    const nagaX = 360;
-    const nagaY = 540; // Sitting at the horizon level dipping into the river
-    const nagaSize = 2; // Pixel art block size
-    
-    const nagaPattern = [
-      ".....................###........",
-      "....................####........",
-      "...................#####........",
-      "..................######........",
-      ".................#######........",
-      "..........#.....########........",
-      ".........###...#########........",
-      "........#####.##########........",
-      "........###############.........",
-      ".........#############..........",
-      ".........###########............",
-      "........###########.............",
-      ".......############.............",
-      ".....#############..............",
-      "....#############...............",
-      "....#######..####...............",
-      "....######....###...............",
-      "....#######..####...............",
-      ".....###########................",
-      "......#########.................",
-      "......#########.................",
-      ".......########.................",
-      "........#######.................",
-      "........########................",
-      ".........########...............",
-      "..........########..............",
-      "...........########.............",
-      "............########............",
-      ".............########...........",
-      "..............########..........",
-      "...............########.........",
-      "................########........",
-      ".................#######........",
-      "..................######........",
-      "...................#####........",
-      "..................######........",
-      ".................#######........",
-      "................########........",
-      "...............#########........",
-      "##############.#########........"
+    // Detailed pixel art patterns for Head and Tail
+    const headPattern = [
+      "............###.........",
+      "...........#####........",
+      "..........#######.......",
+      "..........#######.......",
+      ".........########.......",
+      ".........########.......",
+      ".........########.......",
+      "........#########.......",
+      ".......##########.......",
+      "......###########.......",
+      ".....############.......",
+      "....#############.......",
+      "...##############.......",
+      "..###############.......",
+      ".################.......",
+      "################........",
+      "###############.........",
+      "########..#####.........",
+      "######.....####.........",
+      "####.......####.........",
+      "#####......####.........",
+      "#######...#####.........",
+      "###############.........",
+      ".......########.........",
+      ".........######.........",
+      "........#######.........",
+      "......#########.........",
+      ".....##########.........",
+      "....###########.........",
+      "....###########.........",
+      ".....##########.........",
+      "......#########........."
     ];
-    
-    ctx.fillStyle = '#0b3b24'; // Same matching deep green silhouette
-    const nRows = nagaPattern.length;
-    const nCols = nagaPattern[0].length;
-    
-    for (let r = 0; r < nRows; r++) {
-      for (let c = 0; c < nCols; c++) {
-        if (nagaPattern[r][c] === '#') {
-          ctx.fillRect(
-            nagaX + c * nagaSize, 
-            nagaY - (nRows - r) * nagaSize, 
-            nagaSize, 
-            nagaSize
-          );
+
+    const tailPattern = [
+      "........#.......",
+      ".......###......",
+      "......####......",
+      "......####......",
+      ".....#####......",
+      "....######......",
+      "....######......",
+      "....######......",
+      ".....#####......",
+      "......####......",
+      "......####......",
+      "......####......",
+      ".....#####......",
+      "....######......",
+      "...#######......",
+      "..########......",
+      ".#########......",
+      "##########......",
+      "#########.......",
+      "########........",
+      "#######.........",
+      "######..........",
+      "#####...........",
+      "####............"
+    ];
+
+    // Generate Naga winding body path (matching the double-loop, one-hump design from the user's image)
+    const path = [];
+    // 1. Left neck (vertical down)
+    for (let y = 460; y <= 510; y += 2) {
+      path.push({ x: 330, y: y });
+    }
+    // 2. Bottom-left dip (curve from 330,510 to 380,510)
+    for (let t = 0; t <= 1; t += 0.05) {
+      const x = 330 + 50 * t;
+      const y = 510 + 55 * Math.sin(t * Math.PI); // dips down to 565 (submerged in river)
+      path.push({ x: x, y: y });
+    }
+    // 3. Middle hump (from 380,510 to 430,510)
+    for (let t = 0; t <= 1; t += 0.05) {
+      const x = 380 + 50 * t;
+      const y = 510 - 50 * Math.sin(t * Math.PI); // rises up to 460
+      path.push({ x: x, y: y });
+    }
+    // 4. Bottom-right dip (from 430,510 to 480,510)
+    for (let t = 0; t <= 1; t += 0.05) {
+      const x = 430 + 50 * t;
+      const y = 510 + 55 * Math.sin(t * Math.PI); // dips down to 565 (submerged in river)
+      path.push({ x: x, y: y });
+    }
+    // 5. Right tail neck (vertical up)
+    for (let y = 510; y >= 450; y -= 2) {
+      path.push({ x: 480, y: y });
+    }
+
+    ctx.fillStyle = '#05180e'; // Same deep dark charcoal green/black for Naga
+
+    // Draw the thick serpentine body
+    path.forEach(pt => {
+      const r = 8;
+      const px = 2; // block size
+      for (let dy = -r; dy <= r; dy += px) {
+        for (let dx = -r; dx <= r; dx += px) {
+          if (dx * dx + dy * dy <= r * r) {
+            ctx.fillRect(pt.x + dx, pt.y + dy, px, px);
+          }
+        }
+      }
+    });
+
+    // Draw blocky serrated scales (ครีบ/เกล็ดพญานาค) along the outer edges of the curves
+    path.forEach((pt, idx) => {
+      if (idx % 5 === 0) {
+        // Left neck: point left-up
+        if (idx < 25) {
+          ctx.fillRect(pt.x - 12, pt.y - 2, 4, 4);
+          ctx.fillRect(pt.x - 14, pt.y - 4, 2, 2);
+        }
+        // Middle hump: point up
+        else if (idx >= 30 && idx < 70) {
+          ctx.fillRect(pt.x - 2, pt.y - 12, 4, 4);
+          ctx.fillRect(pt.x - 1, pt.y - 14, 2, 2);
+        }
+        // Right tail neck: point right-up
+        else if (idx >= 75) {
+          ctx.fillRect(pt.x + 8, pt.y - 2, 4, 4);
+          ctx.fillRect(pt.x + 10, pt.y - 4, 2, 2);
+        }
+      }
+    });
+
+    // Draw Naga Head (facing left)
+    const headX = 330 - 36;
+    const headY = 460 - 60;
+    const hRows = headPattern.length;
+    const hCols = headPattern[0].length;
+    for (let r = 0; r < hRows; r++) {
+      for (let c = 0; c < hCols; c++) {
+        if (headPattern[r][c] === '#') {
+          ctx.fillRect(headX + c * 2, headY + r * 2, 2, 2);
+        }
+      }
+    }
+
+    // Draw Naga Tail (pointing up/right)
+    const tailX = 480 - 12;
+    const tailY = 450 - 44;
+    const tailRows = tailPattern.length;
+    const tailCols = tailPattern[0].length;
+    for (let r = 0; r < tailRows; r++) {
+      for (let c = 0; c < tailCols; c++) {
+        if (tailPattern[r][c] === '#') {
+          ctx.fillRect(tailX + c * 2, tailY + r * 2, 2, 2);
         }
       }
     }
