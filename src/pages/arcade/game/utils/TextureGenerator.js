@@ -185,9 +185,9 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
   }
 
-  // 3. Generate Parallax Background Layer 1: Bright Daytime Riverside Sky
+  // 3. Generate Parallax Background Layer 1: Bright Daytime Riverside Sky (Width 512 for single pixel sun)
   if (!scene.textures.exists('bg_wall')) {
-    const width = 256;
+    const width = 512;
     const height = 700;
     const canvasTexture = scene.textures.createCanvas('bg_wall', width, height);
     const ctx = canvasTexture.context;
@@ -201,10 +201,11 @@ export function generateGameTextures(scene) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
     
-    // Draw bright summer sun (no silhouette slices, solid bright day sun)
-    const sunX = 128;
+    // Draw bright summer sun (single pixelated sun)
+    const sunX = 256;
     const sunY = 410;
     const sunR = 48;
+    const pxSize = 4; // Blocky pixel art scale
     
     // Dazzling midday yellow/white gradient
     const sunGrad = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
@@ -213,66 +214,196 @@ export function generateGameTextures(scene) {
     sunGrad.addColorStop(1, '#ffea00');    // Brilliant sun yellow
     ctx.fillStyle = sunGrad;
     
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
-    ctx.fill();
+    // Fill pixelated circle shape for the sun
+    for (let y = sunY - sunR; y <= sunY + sunR; y += pxSize) {
+      for (let x = sunX - sunR; x <= sunX + sunR; x += pxSize) {
+        const dx = x - sunX;
+        const dy = y - sunY;
+        if (dx * dx + dy * dy <= sunR * sunR) {
+          ctx.fillRect(x, y, pxSize, pxSize);
+        }
+      }
+    }
     
-    // Subtle daytime sun halo
+    // Subtle pixelated sun halo
     ctx.fillStyle = 'rgba(255, 234, 0, 0.18)';
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, sunR + 12, 0, Math.PI * 2);
-    ctx.fill();
+    const haloR = sunR + 12;
+    for (let y = sunY - haloR; y <= sunY + haloR; y += pxSize) {
+      for (let x = sunX - haloR; x <= sunX + haloR; x += pxSize) {
+        const dx = x - sunX;
+        const dy = y - sunY;
+        const distSq = dx * dx + dy * dy;
+        if (distSq <= haloR * haloR && distSq > sunR * sunR) {
+          ctx.fillRect(x, y, pxSize, pxSize);
+        }
+      }
+    }
     
-    // Draw distant mountain layer 1 (Vibrant Forest green)
+    // Draw distant mountain layer 1 (Vibrant Forest green) - stretched to 512px
     ctx.fillStyle = '#10ac84';
     ctx.beginPath();
     ctx.moveTo(0, 540);
-    ctx.lineTo(40, 505);
-    ctx.lineTo(80, 540);
-    ctx.lineTo(120, 515);
+    ctx.lineTo(80, 505);
     ctx.lineTo(160, 540);
-    ctx.lineTo(200, 500);
-    ctx.lineTo(256, 540);
-    ctx.lineTo(256, height);
+    ctx.lineTo(240, 515);
+    ctx.lineTo(320, 540);
+    ctx.lineTo(400, 500);
+    ctx.lineTo(512, 540);
+    ctx.lineTo(512, height);
     ctx.lineTo(0, height);
     ctx.closePath();
     ctx.fill();
     
-    // Draw closer mountain layer 2 (Bright Lime green)
+    // Draw closer mountain layer 2 (Bright Lime green) - stretched to 512px
     ctx.fillStyle = '#2ecc71';
     ctx.beginPath();
     ctx.moveTo(0, 540);
-    ctx.lineTo(50, 522);
-    ctx.lineTo(100, 540);
-    ctx.lineTo(150, 528);
-    ctx.lineTo(210, 540);
-    ctx.lineTo(256, 518);
-    ctx.lineTo(256, height);
+    ctx.lineTo(100, 522);
+    ctx.lineTo(200, 540);
+    ctx.lineTo(300, 528);
+    ctx.lineTo(420, 540);
+    ctx.lineTo(512, 518);
+    ctx.lineTo(512, height);
     ctx.lineTo(0, height);
     ctx.closePath();
     ctx.fill();
     
-    // Draw simple tropical palm tree silhouettes (Deep vibrant green)
-    ctx.fillStyle = '#0f5132';
-    const drawPalm = (px, py, scale) => {
-      ctx.fillRect(px - Math.round(1 * scale), py, Math.round(2 * scale), Math.round(50 * scale)); // trunk
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.quadraticCurveTo(px - Math.round(15 * scale), py + Math.round(5 * scale), px - Math.round(20 * scale), py + Math.round(15 * scale));
-      ctx.moveTo(px, py);
-      ctx.quadraticCurveTo(px + Math.round(15 * scale), py + Math.round(5 * scale), px + Math.round(20 * scale), py + Math.round(15 * scale));
-      ctx.moveTo(px, py);
-      ctx.quadraticCurveTo(px - Math.round(10 * scale), py - Math.round(5 * scale), px - Math.round(15 * scale), py + Math.round(5 * scale));
-      ctx.moveTo(px, py);
-      ctx.quadraticCurveTo(px + Math.round(10 * scale), py - Math.round(5 * scale), px + Math.round(15 * scale), py + Math.round(5 * scale));
-      ctx.lineWidth = Math.round(2 * scale);
-      ctx.strokeStyle = '#0f5132';
-      ctx.stroke();
-    };
-    drawPalm(30, 490, 0.8);
-    drawPalm(220, 480, 1.1);
+    // Draw Thai temple silhouette (เงาวัดไทยริมแม่น้ำ)
+    const templeX = 40;
+    const templeY = 540; // Sitting on the horizon
+    const tSize = 2; // Pixel block size
+    
+    const templePattern = [
+      "....................#...................",
+      "....................#...................",
+      "...................###..................",
+      "...................###..................",
+      "..................#####.................",
+      "..................#####.................",
+      "...................###..................",
+      "..................#####.................",
+      ".................#######................",
+      "................#########...............",
+      "...............###########..............",
+      "..............#############.............",
+      ".............###############............",
+      "............#################...........",
+      "...........###################..........",
+      "..........#####################.........",
+      ".........#######################........",
+      "........#########################.......",
+      "......#..#######################..#.....",
+      ".....##...#####################...##....",
+      "....###....###################....###...",
+      "....##......#################......##...",
+      ".............###############............",
+      "............#################...........",
+      "...........###################..........",
+      "..........#####################.........",
+      ".........#######################........",
+      "........#########################.......",
+      ".......###########################......",
+      "......#############################.....",
+      "....#..###########################..#...",
+      "....##..#########################..##...",
+      "....###..#######################..###...",
+      ".....##...#####################...##....",
+      "...........###################..........",
+      "..........#####################.........",
+      "..........#####################.........",
+      "..........###..###########..###.........",
+      "..........###..###########..###.........",
+      "..........###..###########..###.........",
+      "..........###..###########..###.........",
+      "..........###..###########..###.........",
+      "..........###..###########..###.........",
+      "..........#####################.........",
+      "########################################"
+    ];
+    
+    ctx.fillStyle = '#0b3b24'; // Deep dark temple green silhouette
+    const tRows = templePattern.length;
+    const tCols = templePattern[0].length;
+    
+    for (let r = 0; r < tRows; r++) {
+      for (let c = 0; c < tCols; c++) {
+        if (templePattern[r][c] === '#') {
+          ctx.fillRect(
+            templeX + c * tSize, 
+            templeY - (tRows - r) * tSize, 
+            tSize, 
+            tSize
+          );
+        }
+      }
+    }
 
-    // Draw cute pixel art clouds (adds to daytime sky atmosphere)
+    // Draw Naga silhouette (พญานาคริมแม่น้ำ)
+    const nagaX = 360;
+    const nagaY = 540; // Sitting at the horizon level dipping into the river
+    const nagaSize = 2; // Pixel art block size
+    
+    const nagaPattern = [
+      ".....................###........",
+      "....................####........",
+      "...................#####........",
+      "..................######........",
+      ".................#######........",
+      "..........#.....########........",
+      ".........###...#########........",
+      "........#####.##########........",
+      "........###############.........",
+      ".........#############..........",
+      ".........###########............",
+      "........###########.............",
+      ".......############.............",
+      ".....#############..............",
+      "....#############...............",
+      "....#######..####...............",
+      "....######....###...............",
+      "....#######..####...............",
+      ".....###########................",
+      "......#########.................",
+      "......#########.................",
+      ".......########.................",
+      "........#######.................",
+      "........########................",
+      ".........########...............",
+      "..........########..............",
+      "...........########.............",
+      "............########............",
+      ".............########...........",
+      "..............########..........",
+      "...............########.........",
+      "................########........",
+      ".................#######........",
+      "..................######........",
+      "...................#####........",
+      "..................######........",
+      ".................#######........",
+      "................########........",
+      "...............#########........",
+      "##############.#########........"
+    ];
+    
+    ctx.fillStyle = '#0b3b24'; // Same matching deep green silhouette
+    const nRows = nagaPattern.length;
+    const nCols = nagaPattern[0].length;
+    
+    for (let r = 0; r < nRows; r++) {
+      for (let c = 0; c < nCols; c++) {
+        if (nagaPattern[r][c] === '#') {
+          ctx.fillRect(
+            nagaX + c * nagaSize, 
+            nagaY - (nRows - r) * nagaSize, 
+            nagaSize, 
+            nagaSize
+          );
+        }
+      }
+    }
+
+    // Draw cute pixel art clouds (adds to daytime sky atmosphere, spaced over 512px)
     const drawPixelCloud = (cx, cy, scale = 1) => {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
       const cloudLayout = [
@@ -290,10 +421,10 @@ export function generateGameTextures(scene) {
         }
       }
     };
-    drawPixelCloud(20, 80, 1.2);
-    drawPixelCloud(150, 140, 1.0);
-    drawPixelCloud(90, 60, 0.8);
-    drawPixelCloud(200, 90, 0.7);
+    drawPixelCloud(40, 80, 1.2);
+    drawPixelCloud(300, 140, 1.0);
+    drawPixelCloud(180, 60, 0.8);
+    drawPixelCloud(420, 90, 0.7);
     
     canvasTexture.refresh();
   }
