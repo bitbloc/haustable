@@ -185,83 +185,295 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
   }
 
-  // 3. Generate Parallax Background Layer 1: Retro Neon Wall Grid
+  // 3. Generate Parallax Background Layer 1: Retro Sunset Sky (replaces neon wall grid)
   if (!scene.textures.exists('bg_wall')) {
-    const width = 128;
-    const height = 128;
+    const width = 256;
+    const height = 700;
     const canvasTexture = scene.textures.createCanvas('bg_wall', width, height);
     const ctx = canvasTexture.context;
     
-    // Neon purple grid background
-    ctx.fillStyle = '#110022';
+    // Sunset gradient background
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, '#090514');   // Deep night space purple
+    grad.addColorStop(0.35, '#2c0c30'); // Dark magenta-purple
+    grad.addColorStop(0.65, '#80183b'); // Dusk pink
+    grad.addColorStop(0.85, '#cc441b'); // Horizon orange
+    grad.addColorStop(1.0, '#ff9f43');  // Sunset yellow-orange
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
     
-    // Draw vertical and horizontal grid lines
-    ctx.strokeStyle = '#8b00ff';
-    ctx.lineWidth = 1;
+    // Draw retrowave sun
+    const sunX = 128;
+    const sunY = 500;
+    const sunR = 55;
     
-    // Draw lines
+    // Sun orange-yellow gradient
+    const sunGrad = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
+    sunGrad.addColorStop(0, '#ffbe76');
+    sunGrad.addColorStop(1, '#ff3838');
+    ctx.fillStyle = sunGrad;
+    
     ctx.beginPath();
-    for (let x = 0; x <= width; x += 32) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Retrowave horizontal scanlines cutting through the sun (using destination-out for transparency)
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000000';
+    for (let y = sunY - sunR; y <= sunY + sunR; y += 8) {
+      if (y > sunY - 20) {
+        const lineThickness = Math.max(1, Math.round(1.5 + (y - sunY) * 0.08));
+        ctx.fillRect(sunX - sunR - 10, y, (sunR + 10) * 2, lineThickness);
+      }
     }
-    for (let y = 0; y <= height; y += 32) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-    }
-    ctx.stroke();
-
-    // Add some random bright pixel stars
-    ctx.fillStyle = '#ff00ff';
-    ctx.fillRect(10, 20, 2, 2);
-    ctx.fillRect(75, 45, 2, 2);
-    ctx.fillRect(40, 90, 2, 2);
-    ctx.fillStyle = '#DFFF00';
-    ctx.fillRect(110, 15, 2, 2);
-    ctx.fillRect(20, 70, 2, 2);
+    ctx.globalCompositeOperation = 'source-over'; // restore
+    
+    // Draw distant mountains/hills silhouette
+    ctx.fillStyle = '#180824';
+    ctx.beginPath();
+    ctx.moveTo(0, 540);
+    ctx.lineTo(40, 510);
+    ctx.lineTo(80, 540);
+    ctx.lineTo(120, 520);
+    ctx.lineTo(160, 540);
+    ctx.lineTo(200, 505);
+    ctx.lineTo(256, 540);
+    ctx.lineTo(256, height);
+    ctx.lineTo(0, height);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw simple palm tree silhouettes
+    ctx.fillStyle = '#0f0518';
+    const drawPalm = (px, py, scale) => {
+      ctx.fillRect(px - Math.round(1 * scale), py, Math.round(2 * scale), Math.round(50 * scale)); // trunk
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.quadraticCurveTo(px - Math.round(15 * scale), py + Math.round(5 * scale), px - Math.round(20 * scale), py + Math.round(15 * scale));
+      ctx.moveTo(px, py);
+      ctx.quadraticCurveTo(px + Math.round(15 * scale), py + Math.round(5 * scale), px + Math.round(20 * scale), py + Math.round(15 * scale));
+      ctx.moveTo(px, py);
+      ctx.quadraticCurveTo(px - Math.round(10 * scale), py - Math.round(5 * scale), px - Math.round(15 * scale), py + Math.round(5 * scale));
+      ctx.moveTo(px, py);
+      ctx.quadraticCurveTo(px + Math.round(10 * scale), py - Math.round(5 * scale), px + Math.round(15 * scale), py + Math.round(5 * scale));
+      ctx.lineWidth = Math.round(2 * scale);
+      ctx.strokeStyle = '#0f0518';
+      ctx.stroke();
+    };
+    drawPalm(30, 490, 0.8);
+    drawPalm(220, 480, 1.1);
     
     canvasTexture.refresh();
   }
 
-  // 4. Generate Parallax Background Layer 2: Neon Checkerboard Floor (Ground)
+  // 4. Generate Parallax Background Layer 2: Scrolling River
+  if (!scene.textures.exists('bg_river')) {
+    const width = 128;
+    const height = 96;
+    const canvasTexture = scene.textures.createCanvas('bg_river', width, height);
+    const ctx = canvasTexture.context;
+    
+    ctx.fillStyle = '#0f223a'; // Dark river blue-teal
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw styled river wave lines that wrap around
+    const drawWave = (wx, wy, wlen, color) => {
+      ctx.fillStyle = color;
+      const drawSegment = (x) => {
+        ctx.fillRect(x, wy, wlen, 2);
+        ctx.fillRect(x + 2, wy + 2, wlen - 4, 1);
+      };
+      
+      drawSegment(wx);
+      if (wx + wlen > width) {
+        drawSegment(wx - width);
+      }
+    };
+    
+    // Waves pattern (cyan highlights, sunset orange reflections, dark water depths)
+    const waves = [
+      { x: 10, y: 10, len: 30, c: '#1c3d5a' },
+      { x: 70, y: 15, len: 40, c: '#1c3d5a' },
+      { x: 40, y: 25, len: 25, c: '#00d2d3' },
+      { x: 95, y: 30, len: 35, c: '#1c3d5a' },
+      { x: 5, y: 40, len: 45, c: '#ff9f43' },
+      { x: 80, y: 45, len: 20, c: '#00d2d3' },
+      { x: 30, y: 55, len: 35, c: '#1c3d5a' },
+      { x: 110, y: 60, len: 25, c: '#ff9f43' },
+      { x: 50, y: 70, len: 50, c: '#00d2d3' },
+      { x: 5, y: 80, len: 30, c: '#1c3d5a' },
+      { x: 90, y: 85, len: 30, c: '#ff9f43' }
+    ];
+    waves.forEach(w => drawWave(w.x, w.y, w.len, w.c));
+    
+    canvasTexture.refresh();
+  }
+
+  // 5. Generate Parallax Background Layer 3: Wood Pier (Ground)
   if (!scene.textures.exists('bg_ground')) {
     const width = 64;
     const height = 64;
     const canvasTexture = scene.textures.createCanvas('bg_ground', width, height);
     const ctx = canvasTexture.context;
     
-    // Checkerboard ground pattern in neon purple and yellow-green
-    ctx.fillStyle = '#39FF14'; // Neon Lime Green top border
-    ctx.fillRect(0, 0, width, 4);
+    ctx.fillStyle = '#2c1a16'; // Dark wood brown
+    ctx.fillRect(0, 0, width, height);
     
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 4, width, height - 4);
-    
-    // Draw checker lines
-    ctx.strokeStyle = '#DFFF00';
-    ctx.lineWidth = 1.5;
-    
-    // Draw perspective lines
-    ctx.beginPath();
-    ctx.moveTo(0, 4);
-    ctx.lineTo(0, height);
-    ctx.moveTo(16, 4);
-    ctx.lineTo(8, height);
-    ctx.moveTo(32, 4);
-    ctx.lineTo(32, height);
-    ctx.moveTo(48, 4);
-    ctx.lineTo(56, height);
-    ctx.moveTo(64, 4);
-    ctx.lineTo(64, height);
-    
-    // Horizontal perspective lines
-    for (let y = 4; y < height; y += 12) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+    // Horizontal borders of planks (Y = 0, 16, 32, 48, 64)
+    ctx.fillStyle = '#140c0a'; // Black outline
+    for (let y = 0; y < height; y += 16) {
+      ctx.fillRect(0, y, width, 2);
     }
-    ctx.stroke();
     
+    // Highlight edges on planks
+    ctx.fillStyle = '#422a25'; // Light brown highlight
+    for (let y = 2; y < height; y += 16) {
+      ctx.fillRect(0, y, width, 1);
+    }
+    
+    // Glowing neon yellow screw/nail heads matching brand accent
+    ctx.fillStyle = '#DFFF00';
+    for (let x = 12; x < width; x += 32) {
+      for (let y = 8; y < height; y += 16) {
+        ctx.fillRect(x, y, 2, 2);
+      }
+    }
+    
+    // Subtle vertical wood gaps (offset per row)
+    ctx.fillStyle = '#140c0a';
+    ctx.fillRect(20, 0, 2, 16);
+    ctx.fillRect(48, 16, 2, 16);
+    ctx.fillRect(10, 32, 2, 16);
+    ctx.fillRect(38, 48, 2, 16);
+    
+    canvasTexture.refresh();
+  }
+
+  // 6. Generate Kitchen Knife Sprite (32x32 canvas, centered knife to rotate without clipping)
+  if (!scene.textures.exists('kitchen_knife')) {
+    const width = 32;
+    const height = 32;
+    const canvasTexture = scene.textures.createCanvas('kitchen_knife', width, height);
+    const ctx = canvasTexture.context;
+    
+    const colors = {
+      'W': '#FFFFFF', // Blade highlights
+      'S': '#A5B1C2', // Silver blade
+      'D': '#778CA3', // Dark blade shadow
+      'B': '#1E272E', // Black outline
+      'H': '#8C5A3C', // Wooden handle
+      'K': '#5C3A21', // Dark handle shadow
+      '.': null
+    };
+
+    const knifePattern = [
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      ".............BBBBBBBBBB.........",
+      "...........BBWWWWWWWWWSB........",
+      "..........BWWWWWWWWWWWSB........",
+      "...BBBBBBBWWWWWWWWWWWDDB........",
+      "..BHHHHHHHWWWWWWWWWWWDDB........",
+      "..BKKKKKKKBBBBBBBBBBBBB.........",
+      "...BBBBBBB......................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................"
+    ];
+
+    ctx.clearRect(0, 0, width, height);
+    for (let r = 0; r < 32; r++) {
+      for (let c = 0; c < 32; c++) {
+        const char = knifePattern[r][c];
+        const color = colors[char];
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(c, r, 1, 1);
+        }
+      }
+    }
+    canvasTexture.refresh();
+  }
+
+  // 7. Generate Warning Icon Sprite (32x32 warning sign)
+  if (!scene.textures.exists('warning_icon')) {
+    const width = 32;
+    const height = 32;
+    const canvasTexture = scene.textures.createCanvas('warning_icon', width, height);
+    const ctx = canvasTexture.context;
+    
+    const colors = {
+      'Y': '#DFFF00', // Brand Lime-yellow
+      'B': '#000000', // Black text/outline
+      '.': null
+    };
+
+    const warningPattern = [
+      "...............BB...............",
+      "..............BYYB..............",
+      ".............BYYYYB.............",
+      "............BYYYYYYB............",
+      "...........BYYYBYYYYB...........",
+      "..........BYYYBBBYYYYB..........",
+      ".........BYYYBBBBYYYYB..........",
+      "........BYYYBBBBBYYYYBB.........",
+      ".......BYYYYBBBBBYYYYYBB........",
+      "......BYYYYYBBBBBYYYYYYBB.......",
+      ".....BYYYYYYBBBBBYYYYYYYBB......",
+      "....BYYYYYYYBBBBBYYYYYYYYBB.....",
+      "...BYYYYYYYYYBBYYYYYYYYYYBB....",
+      "..BYYYYYYYYYYBYYYYYYYYYYYYBB...",
+      "..BYYYYYYYYYYBYYYYYYYYYYYYBB...",
+      "..BYYYYYYYYYBBBYYYYYYYYYYYBB...",
+      "..BYYYYYYYYYBBBYYYYYYYYYYYBB...",
+      "..BYYYYYYYYYYBYYYYYYYYYYYYBB...",
+      "..BYYYYYYYYYYYYYYYYYYYYYYYBB...",
+      "...BYYYYYYYYYBBBYYYYYYYYYYBB....",
+      "....BYYYYYYYYBBBYYYYYYYYYBB.....",
+      ".....BYYYYYYYBBBYYYYYYYYBB......",
+      "......BYYYYYYBBBYYYYYYYBB.......",
+      ".......BYYYYYYYYYYYYYYBB........",
+      "........BYYYYYYYYYYYYBB.........",
+      ".........BYYYYYYYYYYBB..........",
+      "..........BYYYYYYYYBB...........",
+      "...........BYYYYYYBB............",
+      "............BYYYYBB.............",
+      ".............BYYBB..............",
+      "..............BB................",
+      "................................"
+    ];
+
+    ctx.clearRect(0, 0, width, height);
+    for (let r = 0; r < 32; r++) {
+      for (let c = 0; c < 32; c++) {
+        const char = warningPattern[r][c];
+        const color = colors[char];
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(c, r, 1, 1);
+        }
+      }
+    }
     canvasTexture.refresh();
   }
 }

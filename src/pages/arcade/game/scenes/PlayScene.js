@@ -8,20 +8,27 @@ export default class PlayScene extends Phaser.Scene {
   init() {
     this.score = 0;
     this.isGameOver = false;
+    this.baseSpeed = -230;
+    this.speedMultiplier = 1.0;
   }
 
   create() {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // 1. Scrolling background layers
-    this.bgWall = this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0);
-    this.bgGround = this.add.tileSprite(0, height - 64, width, 64, 'bg_ground').setOrigin(0, 0);
-    
-    // Set depth of ground to be above obstacles
-    this.bgGround.setDepth(10);
+    // 1. Scrolling background layers (Riverside sunset parallax)
+    this.bgWall = this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0).setDepth(0);
+    this.bgRiver = this.add.tileSprite(0, height - 160, width, 96, 'bg_river').setOrigin(0, 0).setDepth(1);
+    this.bgGround = this.add.tileSprite(0, height - 64, width, 64, 'bg_ground').setOrigin(0, 0).setDepth(10);
 
-    // 2. Score Text
+    // 2. Logo in Top Left Corner (UX/UI brand placement)
+    if (this.textures.exists('logo_pixelated')) {
+      const cornerLogo = this.add.image(20, 20, 'logo_pixelated').setOrigin(0, 0).setDepth(20);
+      cornerLogo.setScale(1.2);
+      cornerLogo.setAlpha(0.65); // Semi-transparent
+    }
+
+    // 3. Score Text
     this.scoreText = this.add.text(width / 2, 80, '0', {
       fontFamily: 'Courier New, monospace',
       fontSize: '64px',
@@ -31,16 +38,18 @@ export default class PlayScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(20);
 
-    // 3. Create Player (Cat)
+    // 4. Create Player (Cat - scaled up)
     this.player = this.physics.add.sprite(100, height / 2, 'cat');
+    this.player.setScale(1.35); // 35% larger
     this.player.setFlipX(true); // Face right (direction of flight)
     this.player.setOrigin(0.5);
     this.player.setDepth(5);
     this.player.body.setGravityY(1000);
     this.player.body.setCollideWorldBounds(false); // We handle boundary check manually
     
-    // Resize physics hitbox to fit the pixel cat body (32x32 original, let's make it slightly smaller to be forgiving)
-    this.player.body.setSize(24, 24);
+    // Forgiving collision box (local coordinates scaled)
+    this.player.body.setSize(20, 20);
+    this.player.body.setOffset(6, 6);
 
     // Cat flap animation
     if (!this.anims.exists('flap')) {
@@ -53,13 +62,13 @@ export default class PlayScene extends Phaser.Scene {
     }
     this.player.play('flap');
 
-    // 4. Obstacles (Satow Pods) Group
+    // 5. Obstacles (Satow Pods) Group
     this.satowGroup = this.physics.add.group();
     
     // Add collision between player and obstacles
     this.physics.add.collider(this.player, this.satowGroup, this.hitObstacle, null, this);
 
-    // 5. Timer to Spawn Obstacles
+    // 6. Timer to Spawn Obstacles
     this.spawnTimer = this.time.addEvent({
       delay: 1800,
       callback: this.spawnSatow,
@@ -70,7 +79,18 @@ export default class PlayScene extends Phaser.Scene {
     // Spawn first obstacle immediately after short delay
     this.time.delayedCall(500, this.spawnSatow, [], this);
 
-    // 6. Tap / Input Listener
+    // 7. Kitchen Knives Group & Hazard loop
+    this.knifeGroup = this.physics.add.group();
+    this.physics.add.collider(this.player, this.knifeGroup, this.hitObstacle, null, this);
+    
+    this.knifeTimer = this.time.addEvent({
+      delay: 2800, // Check every 2.8 seconds
+      callback: this.triggerKnifeHazard,
+      callbackScope: this,
+      loop: true
+    });
+
+    // 8. Tap / Input Listener
     this.input.on('pointerdown', this.flap, this);
   }
 
@@ -78,7 +98,8 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     // Scroll Backgrounds
-    this.bgWall.tilePositionX += 0.5;
+    this.bgWall.tilePositionX += 0.2;
+    this.bgRiver.tilePositionX += 1.0;
     this.bgGround.tilePositionX += 2.5;
 
     // Cat Rotation/Angle logic based on velocity (Flappy Bird style)
@@ -92,7 +113,7 @@ export default class PlayScene extends Phaser.Scene {
 
     // Boundary check (hit ground or fly too high)
     const groundY = this.cameras.main.height - 64;
-    if (this.player.y > groundY - 16) {
+    if (this.player.y > groundY - 18) {
       this.hitObstacle();
     }
     if (this.player.y < -30) {
@@ -106,6 +127,15 @@ export default class PlayScene extends Phaser.Scene {
         child.destroy();
       }
     });
+
+    // Clean up offscreen kitchen knives
+    if (this.knifeGroup) {
+      this.knifeGroup.getChildren().forEach((knife) => {
+        if (knife && knife.x < -50) {
+          knife.destroy();
+        }
+      });
+    }
   }
 
   flap() {
@@ -117,14 +147,20 @@ export default class PlayScene extends Phaser.Scene {
     // Play jump sound
     try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
 
-    // Subtle jump squish effect
+    // Subtle jump squish effect scaled properly
     this.tweens.add({
       targets: this.player,
-      scaleY: 0.8,
-      scaleX: 1.2,
+      scaleY: 1.0,
+      scaleX: 1.6,
       duration: 80,
       yoyo: true,
-      ease: 'Quad.easeOut'
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        if (!this.isGameOver) {
+          this.player.scaleY = 1.35;
+          this.player.scaleX = 1.35;
+        }
+      }
     });
   }
 
@@ -141,7 +177,7 @@ export default class PlayScene extends Phaser.Scene {
     const gapY = Phaser.Math.Between(minHeight, maxHeight);
 
     const spawnX = width + 64;
-    const speed = -230; // Obstacle velocity moving left
+    const speed = this.baseSpeed * this.speedMultiplier; // Obstacle velocity scales up
 
     // 1. Top Satow (hanging down)
     const topSatow = this.physics.add.sprite(spawnX, gapY, 'satow_pod');
@@ -191,6 +227,29 @@ export default class PlayScene extends Phaser.Scene {
       // Play score sound
       try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
 
+      // Increase speed difficulty recursively on score
+      this.speedMultiplier = Math.min(1.8, 1.0 + this.score * 0.05);
+      
+      // Scale spawn delay to maintain horizontal obstacle gaps
+      const newDelay = 1800 / this.speedMultiplier;
+      this.spawnTimer.delay = newDelay;
+      
+      // Instantly accelerate active obstacles
+      const currentSpeed = this.baseSpeed * this.speedMultiplier;
+      this.satowGroup.getChildren().forEach((child) => {
+        if (child.body) {
+          child.body.setVelocityX(currentSpeed);
+        }
+      });
+      
+      if (this.knifeGroup) {
+        this.knifeGroup.getChildren().forEach((knife) => {
+          if (knife.body) {
+            knife.body.setVelocityX(currentSpeed * 1.5);
+          }
+        });
+      }
+
       // Pulse score text
       this.tweens.add({
         targets: this.scoreText,
@@ -202,13 +261,69 @@ export default class PlayScene extends Phaser.Scene {
     });
   }
 
+  triggerKnifeHazard() {
+    if (this.isGameOver || this.score < 3) return;
+    
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+    
+    // Choose a random height for the knife (aligned to where the cat flies)
+    const minHeight = 80;
+    const maxHeight = height - 140;
+    const targetY = Phaser.Math.Between(minHeight, maxHeight);
+    
+    // Show Warning Icon flashing at the right edge
+    const warningX = width - 40;
+    const warningIcon = this.add.image(warningX, targetY, 'warning_icon').setDepth(20);
+    warningIcon.setScale(1.5);
+    
+    // Flashing warning sign (blinks 3 times)
+    this.tweens.add({
+      targets: warningIcon,
+      alpha: 0.1,
+      duration: 150,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => {
+        warningIcon.destroy();
+        if (!this.isGameOver) {
+          this.spawnKnife(targetY);
+        }
+      }
+    });
+  }
+
+  spawnKnife(targetY) {
+    const width = this.cameras.main.width;
+    const spawnX = width + 32;
+    const knife = this.physics.add.sprite(spawnX, targetY, 'kitchen_knife');
+    this.knifeGroup.add(knife);
+    
+    knife.body.allowGravity = false;
+    knife.body.setImmovable(true);
+    
+    // Knife is 50% faster than standard Satow obstacles
+    const knifeSpeed = this.baseSpeed * this.speedMultiplier * 1.5;
+    knife.body.setVelocityX(knifeSpeed);
+    
+    // Spin the knife!
+    knife.body.setAngularVelocity(360);
+    
+    // Setup forgiving custom hitbox
+    knife.body.setSize(18, 10);
+    knife.body.setOffset(7, 11);
+    
+    knife.setDepth(15);
+  }
+
   hitObstacle() {
     if (this.isGameOver) return;
     this.isGameOver = true;
 
-    // Pause physics
+    // Pause physics and timers
     this.physics.pause();
     this.spawnTimer.destroy();
+    if (this.knifeTimer) this.knifeTimer.destroy();
     
     // Stop flap anim
     this.player.stop();

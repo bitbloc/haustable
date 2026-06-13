@@ -40,11 +40,34 @@ export default class BootScene extends Phaser.Scene {
     this.load.audio('hit', '/arcade/audio/hit.wav');
     this.load.audio('gameover', '/arcade/audio/gameover.wav');
     this.load.audio('bgm', '/arcade/audio/bgm.wav');
+    
+    // Preload Logo image from the public path
+    this.load.image('logo', '/logo-secondary.png');
   }
 
   create() {
     // Generate fallback textures
     generateGameTextures(this);
+
+    // Generate dynamic pixelated logo texture if loaded successfully
+    if (this.textures.exists('logo') && !this.textures.exists('logo_pixelated')) {
+      try {
+        const logoSource = this.textures.get('logo').getSourceImage();
+        if (logoSource && logoSource.width > 0) {
+          const lowResWidth = 120;
+          const lowResHeight = Math.round(lowResWidth * (logoSource.height / logoSource.width));
+          
+          const canvasTexture = this.textures.createCanvas('logo_pixelated', lowResWidth, lowResHeight);
+          const ctx = canvasTexture.context;
+          
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(logoSource, 0, 0, lowResWidth, lowResHeight);
+          canvasTexture.refresh();
+        }
+      } catch (e) {
+        console.error('Failed to create pixelated logo texture:', e);
+      }
+    }
 
     // Transition to Menu Scene
     this.scene.start('MenuScene');

@@ -9,49 +9,81 @@ export default class MenuScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // 1. Scrolling background layers
-    this.bgWall = this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0);
-    this.bgGround = this.add.tileSprite(0, height - 64, width, 64, 'bg_ground').setOrigin(0, 0);
+    // 1. Scrolling background layers (Riverside sunset parallax)
+    this.bgWall = this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0).setDepth(0);
+    this.bgRiver = this.add.tileSprite(0, height - 160, width, 96, 'bg_river').setOrigin(0, 0).setDepth(1);
+    this.bgGround = this.add.tileSprite(0, height - 64, width, 64, 'bg_ground').setOrigin(0, 0).setDepth(2);
 
-    // 2. Title Text
-    this.add.text(width / 2, 100, 'HAUS ARCADE', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '22px',
-      fill: '#FF00FF',
-      stroke: '#000000',
-      strokeThickness: 5,
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    // 2. Logo / Title Section
+    if (this.textures.exists('logo_pixelated')) {
+      const logo = this.add.image(width / 2, 75, 'logo_pixelated').setOrigin(0.5).setDepth(5);
+      logo.setScale(2.2); // Chunky retro pixelated scaling
+    } else {
+      this.add.text(width / 2, 75, 'ในบ้าน', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '28px',
+        fill: '#DFFF00',
+        stroke: '#000000',
+        strokeThickness: 5,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(5);
+    }
 
-    const titleText = this.add.text(width / 2, 160, 'FLAPPY CAT', {
+    const titleText = this.add.text(width / 2, 135, 'FLAPPY CAT', {
       fontFamily: 'Courier New, monospace',
-      fontSize: '48px',
+      fontSize: '44px',
       fill: '#DFFF00',
       stroke: '#000000',
       strokeThickness: 8,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(5);
 
     // Make the title pulse
     this.tweens.add({
       targets: titleText,
-      scaleX: 1.1,
-      scaleY: 1.1,
+      scaleX: 1.08,
+      scaleY: 1.08,
       duration: 800,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
+    // Add a bouncing animated cat sprite to make menu lively
+    const menuCat = this.add.sprite(width / 2, 205, 'cat').setDepth(5);
+    menuCat.setScale(1.35);
+    menuCat.setFlipX(true);
+    
+    // Flap animation
+    if (!this.anims.exists('flap')) {
+      this.anims.create({
+        key: 'flap',
+        frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 1 }),
+        frameRate: 10,
+        repeat: -1
+      });
+    }
+    menuCat.play('flap');
+
+    // Bounce the cat up and down
+    this.tweens.add({
+      targets: menuCat,
+      y: 190,
+      duration: 650,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
     // 3. Play Button / Instruction Text
-    const startText = this.add.text(width / 2, 250, 'TAP TO FLY', {
+    const startText = this.add.text(width / 2, 260, 'TAP TO FLY', {
       fontFamily: 'Courier New, monospace',
       fontSize: '20px',
       fill: '#FFFFFF',
       stroke: '#000000',
       strokeThickness: 4,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(5);
 
     // Make instruction blink
     this.tweens.add({
@@ -70,7 +102,7 @@ export default class MenuScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 4,
       fontStyle: 'bold'
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(5);
 
     // Display Leaderboard entries
     const leaderboard = this.registry.get('initialLeaderboard') || [];
@@ -82,7 +114,7 @@ export default class MenuScene extends Phaser.Scene {
         fontSize: '16px',
         fill: '#888888',
         fontStyle: 'bold'
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setDepth(5);
     } else {
       leaderboard.slice(0, 5).forEach((entry, index) => {
         // Safe display name logic
@@ -98,7 +130,7 @@ export default class MenuScene extends Phaser.Scene {
           stroke: '#000000',
           strokeThickness: 3,
           fontStyle: 'bold'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(5);
       });
     }
 
@@ -131,7 +163,8 @@ export default class MenuScene extends Phaser.Scene {
 
   update() {
     // Parallax background scroll
-    this.bgWall.tilePositionX += 0.5;
-    this.bgGround.tilePositionX += 2;
+    this.bgWall.tilePositionX += 0.2;
+    this.bgRiver.tilePositionX += 1.0;
+    this.bgGround.tilePositionX += 2.5;
   }
 }

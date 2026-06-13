@@ -200,32 +200,32 @@ export default function ArcadeClaim() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0018] text-white flex flex-col items-center justify-center p-6 relative font-sans select-none">
-      {/* Retrowave background grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(139,0,255,0.05)_1px,transparent_1px),linear-gradient(to_right,rgba(139,0,255,0.05)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0A0A0C] text-white flex flex-col items-center justify-center p-6 relative font-sans select-none">
+      {/* Sleek Modern Dark Grid Decoration */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
       
-      <div className="w-full max-w-md bg-[#12002b]/80 border border-purple-500/30 rounded-3xl p-8 backdrop-blur-md shadow-[0_0_40px_rgba(139,0,255,0.15)] z-10 text-center relative overflow-hidden">
+      <div className="w-full max-w-md bg-neutral-900/80 border border-neutral-850 rounded-3xl p-8 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-10 text-center relative overflow-hidden">
         
-        {/* Glow effect at top */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-2 bg-[#DFFF00] rounded-full blur-sm" />
+        {/* Glow accent line at top */}
+        <div className="absolute top-0 left-0 w-full h-[3px] bg-[#DFFF00]" />
 
-        <h1 className="text-xl font-bold font-mono tracking-widest text-[#DFFF00] mb-8 drop-shadow-[0_0_8px_rgba(223,255,0,0.3)]">
+        <h1 className="text-xl font-bold font-mono tracking-widest text-[#DFFF00] mb-8">
           HAUS ARCADE CLAIM
         </h1>
 
         {/* View: Auth / Login Required */}
         {status === 'login_required' && (
           <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-[#06C755]/20 text-[#06C755] rounded-full flex items-center justify-center mb-6">
+            <div className="w-16 h-16 bg-[#06C755]/10 text-[#06C755] rounded-full flex items-center justify-center mb-6">
               <LogIn className="w-8 h-8" />
             </div>
             <h2 className="text-lg font-bold mb-2">ยินดีด้วย! คุณทำคะแนนได้ {score} แต้ม</h2>
-            <p className="text-sm text-purple-300 mb-6 leading-relaxed">
+            <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
               กรุณาเข้าสู่ระบบผ่านสมาชิก LINE เพื่อบันทึกคะแนนลงในกระดานคะแนนและใช้สิทธิ์สะสมรางวัล
             </p>
             <button
               onClick={handleLineLogin}
-              className="w-full bg-[#06C755] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all"
+              className="w-full bg-[#06C755] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer"
             >
               เข้าสู่ระบบด้วย LINE
             </button>
@@ -236,24 +236,24 @@ export default function ArcadeClaim() {
         {status === 'verifying' && (
           <div className="py-12 flex flex-col items-center">
             <RefreshCw className="w-10 h-10 text-[#DFFF00] animate-spin mb-4" />
-            <p className="text-sm text-purple-300 font-mono">กำลังตรวจสอบข้อมูลสิทธิ์คะแนน...</p>
+            <p className="text-sm text-neutral-400 font-mono">กำลังตรวจสอบข้อมูลสิทธิ์คะแนน...</p>
           </div>
         )}
 
         {/* View: GPS Request */}
         {status === 'gps_required' && (
           <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-[#DFFF00]/20 text-[#DFFF00] rounded-full flex items-center justify-center mb-6 animate-bounce">
+            <div className="w-16 h-16 bg-[#DFFF00]/10 text-[#DFFF00] rounded-full flex items-center justify-center mb-6 animate-bounce">
               <MapPin className="w-8 h-8" />
             </div>
             <h2 className="text-lg font-bold mb-2">ตรวจสอบตำแหน่งพิกัดร้าน</h2>
-            <p className="text-sm text-purple-300 mb-6 leading-relaxed">
+            <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
               กรุณาอนุญาตสิทธิ์เข้าถึงพิกัดที่ตั้ง (GPS) เพื่อยืนยันว่าคุณสแกนรับสิทธิ์ภายในเขตพื้นที่ของร้านอินเดอะเฮาส์
             </p>
             <button
               onClick={requestGpsLocation}
               disabled={gpsLoading}
-              className="w-full bg-[#DFFF00] text-black font-bold py-3.5 rounded-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
+              className="w-full bg-[#DFFF00] text-black font-extrabold py-3.5 rounded-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
             >
               {gpsLoading ? 'กำลังดึงพิกัดตำแหน่ง...' : 'ยืนยันตำแหน่ง GPS'}
             </button>
@@ -263,28 +263,28 @@ export default function ArcadeClaim() {
         {/* View: Saving DB */}
         {status === 'saving' && (
           <div className="py-12 flex flex-col items-center">
-            <RefreshCw className="w-10 h-10 text-pink-500 animate-spin mb-4" />
-            <p className="text-sm text-purple-300 font-mono">กำลังบันทึกคะแนนสมาชิกของคุณ...</p>
+            <RefreshCw className="w-10 h-10 text-[#DFFF00] animate-spin mb-4" />
+            <p className="text-sm text-neutral-400 font-mono">กำลังบันทึกคะแนนสมาชิกของคุณ...</p>
           </div>
         )}
 
         {/* View: Success */}
         {status === 'success' && (
           <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-[#39FF14]/20 text-[#39FF14] rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(57,255,20,0.2)]">
+            <div className="w-16 h-16 bg-[#39FF14]/10 text-[#39FF14] rounded-full flex items-center justify-center mb-6">
               <CheckCircle className="w-9 h-9" />
             </div>
             <h2 className="text-xl font-bold mb-1 text-[#39FF14]">สะสมคะแนนสำเร็จ!</h2>
-            <div className="bg-black/30 border border-purple-500/20 rounded-2xl py-4 px-6 w-full my-4 flex justify-between items-center">
-              <span className="text-purple-300 text-sm font-mono">คะแนนที่เคลมได้</span>
+            <div className="bg-black/40 border border-neutral-800 rounded-2xl py-4 px-6 w-full my-4 flex justify-between items-center">
+              <span className="text-neutral-400 text-sm font-mono">คะแนนที่เคลมได้</span>
               <span className="text-2xl font-bold font-mono text-[#DFFF00]">{score} แต้ม</span>
             </div>
-            <p className="text-xs text-purple-400 mb-6 font-mono leading-relaxed">
+            <p className="text-xs text-neutral-500 mb-6 font-mono leading-relaxed">
               {distance && `พิกัดได้รับการตรวจสอบเรียบร้อย (ระยะห่าง: ${(distance * 1000).toFixed(0)} เมตร)`}
             </p>
             <button
               onClick={() => navigate('/arcade')}
-              className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3.5 rounded-xl transition-all"
+              className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3.5 rounded-xl transition-all cursor-pointer"
             >
               ดูตารางอันดับ Hall of Fame
             </button>
@@ -294,7 +294,7 @@ export default function ArcadeClaim() {
         {/* View: Error / Failed */}
         {status === 'error' && (
           <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mb-6">
+            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-6">
               <ShieldAlert className="w-8 h-8" />
             </div>
             <h2 className="text-lg font-bold mb-2">เกิดข้อผิดพลาดในการเคลมสิทธิ์</h2>
@@ -304,13 +304,13 @@ export default function ArcadeClaim() {
             <div className="flex flex-col w-full gap-3">
               <button
                 onClick={validateAndProcessClaim}
-                className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3.5 rounded-xl transition-all"
+                className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3.5 rounded-xl transition-all cursor-pointer"
               >
                 ลองใหม่อีกครั้ง
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="w-full bg-black/40 border border-purple-500/20 hover:text-white text-purple-300 py-3.5 rounded-xl transition-all text-sm font-mono"
+                className="w-full bg-black/40 border border-neutral-850 hover:text-white text-neutral-400 py-3.5 rounded-xl transition-all text-sm font-mono cursor-pointer"
               >
                 กลับไปหน้าหลักของร้าน
               </button>
