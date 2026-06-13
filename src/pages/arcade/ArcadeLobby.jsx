@@ -122,7 +122,7 @@ export default function ArcadeLobby() {
         {/* Left Column: Phaser Game View */}
         <div className="flex-1 flex flex-col items-center justify-center">
           {activeTab === 'game' && (
-            <div className="w-full max-w-[600px]">
+            <div className="w-full max-w-[450px] sm:max-w-[600px] aspect-[6/7]">
               <FlappyCatGame onGameOver={handleGameOver} leaderboard={leaderboard} />
               <div className="mt-4 text-center text-xs text-neutral-500 font-mono">
                 💡 TIP: แตะหน้าจอเพื่อช่วยแมวส้มหลบสิ่งกีดขวางและมีดครัวบิน!

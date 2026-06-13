@@ -44,7 +44,7 @@ export default class PlayScene extends Phaser.Scene {
     this.player.setFlipX(true); // Face right (direction of flight)
     this.player.setOrigin(0.5);
     this.player.setDepth(5);
-    this.player.body.setGravityY(1000);
+    this.player.body.setGravityY(900); // gentler gravity for mobile
     this.player.body.setCollideWorldBounds(false); // We handle boundary check manually
     
     // Forgiving collision box (local coordinates scaled)
@@ -89,6 +89,8 @@ export default class PlayScene extends Phaser.Scene {
       callbackScope: this,
       loop: true
     });
+
+    this.activeSensors = [];
 
     // 8. Tap / Input Listener
     this.input.on('pointerdown', this.flap, this);
@@ -136,13 +138,41 @@ export default class PlayScene extends Phaser.Scene {
         }
       });
     }
+
+    // Move obstacles vertically if score is >= 15
+    this.satowGroup.getChildren().forEach((child) => {
+      if (child && child.moving) {
+        const elapsed = this.time.now - child.spawnTime;
+        const scoreFactor = Math.max(0, this.score - 15);
+        const frequency = 0.0025 + scoreFactor * 0.00015;
+        const amplitude = Math.min(65, 30 + scoreFactor * 1.5);
+        
+        const offset = Math.sin(elapsed * frequency) * amplitude;
+        child.y = child.initialY + offset;
+      }
+    });
+
+    // Move active score sensors in sync
+    if (this.activeSensors) {
+      this.activeSensors = this.activeSensors.filter(s => s && s.active);
+      this.activeSensors.forEach((sensor) => {
+        if (sensor.moving) {
+          const elapsed = this.time.now - sensor.spawnTime;
+          const scoreFactor = Math.max(0, this.score - 15);
+          const frequency = 0.0025 + scoreFactor * 0.00015;
+          const amplitude = Math.min(65, 30 + scoreFactor * 1.5);
+          const offset = Math.sin(elapsed * frequency) * amplitude;
+          sensor.y = sensor.initialY + offset;
+        }
+      });
+    }
   }
 
   flap() {
     if (this.isGameOver) return;
 
     // Set upward velocity
-    this.player.body.setVelocityY(-350);
+    this.player.body.setVelocityY(-320); // gentler jump velocity for mobile feel
 
     // Play jump sound
     try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
@@ -193,6 +223,11 @@ export default class PlayScene extends Phaser.Scene {
     // Stretch graphic height to fit
     topSatow.setDisplaySize(64, gapY);
 
+    // Set movement coordinates
+    topSatow.initialY = gapY;
+    topSatow.moving = this.score >= 15;
+    topSatow.spawnTime = this.time.now;
+
     // 2. Bottom Satow (pointing up)
     const bottomHeight = height - 64 - (gapY + gap);
     const bottomSatow = this.physics.add.sprite(spawnX, gapY + gap, 'satow_pod');
@@ -205,11 +240,24 @@ export default class PlayScene extends Phaser.Scene {
     bottomSatow.body.setSize(44, 128);
     bottomSatow.setDisplaySize(64, bottomHeight);
 
+    // Set movement coordinates
+    bottomSatow.initialY = gapY + gap;
+    bottomSatow.moving = this.score >= 15;
+    bottomSatow.spawnTime = this.time.now;
+
     // 3. Invisible score sensor zone (placed between pipes)
     const scoreSensor = this.add.rectangle(spawnX + 32, gapY + gap / 2, 10, gap);
     this.physics.add.existing(scoreSensor); // dynamic body
     scoreSensor.body.allowGravity = false;
     scoreSensor.body.setVelocityX(speed);
+    
+    // Set movement coordinates
+    scoreSensor.initialY = gapY + gap / 2;
+    scoreSensor.moving = this.score >= 15;
+    scoreSensor.spawnTime = this.time.now;
+    if (this.activeSensors) {
+      this.activeSensors.push(scoreSensor);
+    }
     
     // Destroy sensor after it goes offscreen (4 seconds is plenty to go from spawn to left screen edge)
     this.time.delayedCall(4000, () => {

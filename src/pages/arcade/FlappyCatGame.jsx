@@ -36,7 +36,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard }) {
   }, [leaderboard]);
 
   return (
-    <div className="relative flex justify-center items-center select-none overflow-hidden rounded-3xl border border-neutral-800 bg-[#0A0A0C] shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+    <div className="relative w-full h-full flex justify-center items-center select-none overflow-hidden rounded-3xl border border-neutral-800 bg-[#0A0A0C] shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
       {/* 
         Double protection for crisp retro styling:
         Phaser configuration uses pixelArt: true, and the canvas container uses CSS pixelated rendering.

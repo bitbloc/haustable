@@ -13,6 +13,10 @@ export const getGameConfig = (parentEl, onGameOver, initialLeaderboard) => {
     parent: parentEl,
     pixelArt: true, // Crucial command to make the pixelated art display crisp without blur
     antialias: false,
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     physics: {
       default: 'arcade',
       arcade: {
