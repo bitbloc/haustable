@@ -84,7 +84,7 @@ export default function ArcadeLobby() {
             }`}
           >
             <Gamepad2 className="w-4 h-4" />
-            Flappy Cat
+            ตะลุยแดนสตอ
           </button>
           
           <button

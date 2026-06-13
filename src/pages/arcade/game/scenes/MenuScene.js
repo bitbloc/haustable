@@ -29,20 +29,29 @@ export default class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(5);
     }
 
-    const titleText = this.add.text(width / 2, 135, 'FLAPPY CAT', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '44px',
+    const titleText = this.add.text(width / 2, 128, 'ตะลุยแดนสตอ', {
+      fontFamily: 'Prompt, Arial, sans-serif',
+      fontSize: '40px',
       fill: '#DFFF00',
       stroke: '#000000',
       strokeThickness: 8,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(5);
 
-    // Make the title pulse
+    const subTitleText = this.add.text(width / 2, 172, 'BY IN THE HAUS', {
+      fontFamily: 'Space Mono, Courier New, monospace',
+      fontSize: '13px',
+      fill: '#888888',
+      stroke: '#000000',
+      strokeThickness: 3,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(5);
+
+    // Make the title and subtitle pulse together
     this.tweens.add({
-      targets: titleText,
-      scaleX: 1.08,
-      scaleY: 1.08,
+      targets: [titleText, subTitleText],
+      scaleX: 1.05,
+      scaleY: 1.05,
       duration: 800,
       yoyo: true,
       repeat: -1,
@@ -50,7 +59,7 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // Add a bouncing animated cat sprite to make menu lively
-    const menuCat = this.add.sprite(width / 2, 205, 'cat').setDepth(5);
+    const menuCat = this.add.sprite(width / 2, 222, 'cat').setDepth(5);
     menuCat.setScale(1.35);
     menuCat.setFlipX(true);
     
@@ -68,7 +77,7 @@ export default class MenuScene extends Phaser.Scene {
     // Bounce the cat up and down
     this.tweens.add({
       targets: menuCat,
-      y: 190,
+      y: 207,
       duration: 650,
       yoyo: true,
       repeat: -1,
@@ -76,9 +85,9 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // 3. Play Button / Instruction Text
-    const startText = this.add.text(width / 2, 260, 'TAP TO FLY', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '20px',
+    const startText = this.add.text(width / 2, 280, 'แตะเพื่อเริ่มเล่น', {
+      fontFamily: 'Prompt, Arial, sans-serif',
+      fontSize: '18px',
       fill: '#FFFFFF',
       stroke: '#000000',
       strokeThickness: 4,
@@ -95,8 +104,8 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // 4. Leaderboard Section
-    this.add.text(width / 2, 340, '--- LEADERBOARD ---', {
-      fontFamily: 'Courier New, monospace',
+    this.add.text(width / 2, 345, '--- อันดับสูงสุด ---', {
+      fontFamily: 'Prompt, Arial, sans-serif',
       fontSize: '18px',
       fill: '#00FFFF',
       stroke: '#000000',
@@ -109,8 +118,8 @@ export default class MenuScene extends Phaser.Scene {
     const startY = 380;
     
     if (leaderboard.length === 0) {
-      this.add.text(width / 2, startY + 40, 'NO HIGH SCORES YET', {
-        fontFamily: 'Courier New, monospace',
+      this.add.text(width / 2, startY + 40, 'ยังไม่มีอันดับคะแนน', {
+        fontFamily: 'Prompt, Arial, sans-serif',
         fontSize: '16px',
         fill: '#888888',
         fontStyle: 'bold'
