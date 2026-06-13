@@ -185,66 +185,75 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
   }
 
-  // 3. Generate Parallax Background Layer 1: Retro Sunset Sky (replaces neon wall grid)
+  // 3. Generate Parallax Background Layer 1: Bright Daytime Riverside Sky
   if (!scene.textures.exists('bg_wall')) {
     const width = 256;
     const height = 700;
     const canvasTexture = scene.textures.createCanvas('bg_wall', width, height);
     const ctx = canvasTexture.context;
     
-    // Sunset gradient background
+    // Vibrant daytime sky gradient (vivid blue down to bright cyan/white horizon)
     const grad = ctx.createLinearGradient(0, 0, 0, height);
-    grad.addColorStop(0, '#090514');   // Deep night space purple
-    grad.addColorStop(0.35, '#2c0c30'); // Dark magenta-purple
-    grad.addColorStop(0.65, '#80183b'); // Dusk pink
-    grad.addColorStop(0.85, '#cc441b'); // Horizon orange
-    grad.addColorStop(1.0, '#ff9f43');  // Sunset yellow-orange
+    grad.addColorStop(0, '#0090ff');    // Vivid deep sky blue top
+    grad.addColorStop(0.4, '#33b5e5');  // Vivid clear light sky blue middle
+    grad.addColorStop(0.75, '#b3e5fc'); // Bright turquoise/cyan horizon blue
+    grad.addColorStop(1.0, '#ffffff');  // Dazzling pure white near bottom
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
     
-    // Draw retrowave sun
+    // Draw bright summer sun (no silhouette slices, solid bright day sun)
     const sunX = 128;
-    const sunY = 500;
-    const sunR = 55;
+    const sunY = 410;
+    const sunR = 48;
     
-    // Sun orange-yellow gradient
+    // Dazzling midday yellow/white gradient
     const sunGrad = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
-    sunGrad.addColorStop(0, '#ffbe76');
-    sunGrad.addColorStop(1, '#ff3838');
+    sunGrad.addColorStop(0, '#ffffff');    // Hot white center
+    sunGrad.addColorStop(0.25, '#fff7c2'); // Warm light yellow
+    sunGrad.addColorStop(1, '#ffea00');    // Brilliant sun yellow
     ctx.fillStyle = sunGrad;
     
     ctx.beginPath();
     ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
     ctx.fill();
     
-    // Retrowave horizontal scanlines cutting through the sun (using destination-out for transparency)
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = '#000000';
-    for (let y = sunY - sunR; y <= sunY + sunR; y += 8) {
-      if (y > sunY - 20) {
-        const lineThickness = Math.max(1, Math.round(1.5 + (y - sunY) * 0.08));
-        ctx.fillRect(sunX - sunR - 10, y, (sunR + 10) * 2, lineThickness);
-      }
-    }
-    ctx.globalCompositeOperation = 'source-over'; // restore
+    // Subtle daytime sun halo
+    ctx.fillStyle = 'rgba(255, 234, 0, 0.18)';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR + 12, 0, Math.PI * 2);
+    ctx.fill();
     
-    // Draw distant mountains/hills silhouette
-    ctx.fillStyle = '#180824';
+    // Draw distant mountain layer 1 (Vibrant Forest green)
+    ctx.fillStyle = '#10ac84';
     ctx.beginPath();
     ctx.moveTo(0, 540);
-    ctx.lineTo(40, 510);
+    ctx.lineTo(40, 505);
     ctx.lineTo(80, 540);
-    ctx.lineTo(120, 520);
+    ctx.lineTo(120, 515);
     ctx.lineTo(160, 540);
-    ctx.lineTo(200, 505);
+    ctx.lineTo(200, 500);
     ctx.lineTo(256, 540);
     ctx.lineTo(256, height);
     ctx.lineTo(0, height);
     ctx.closePath();
     ctx.fill();
     
-    // Draw simple palm tree silhouettes
-    ctx.fillStyle = '#0f0518';
+    // Draw closer mountain layer 2 (Bright Lime green)
+    ctx.fillStyle = '#2ecc71';
+    ctx.beginPath();
+    ctx.moveTo(0, 540);
+    ctx.lineTo(50, 522);
+    ctx.lineTo(100, 540);
+    ctx.lineTo(150, 528);
+    ctx.lineTo(210, 540);
+    ctx.lineTo(256, 518);
+    ctx.lineTo(256, height);
+    ctx.lineTo(0, height);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw simple tropical palm tree silhouettes (Deep vibrant green)
+    ctx.fillStyle = '#0f5132';
     const drawPalm = (px, py, scale) => {
       ctx.fillRect(px - Math.round(1 * scale), py, Math.round(2 * scale), Math.round(50 * scale)); // trunk
       ctx.beginPath();
@@ -257,23 +266,46 @@ export function generateGameTextures(scene) {
       ctx.moveTo(px, py);
       ctx.quadraticCurveTo(px + Math.round(10 * scale), py - Math.round(5 * scale), px + Math.round(15 * scale), py + Math.round(5 * scale));
       ctx.lineWidth = Math.round(2 * scale);
-      ctx.strokeStyle = '#0f0518';
+      ctx.strokeStyle = '#0f5132';
       ctx.stroke();
     };
     drawPalm(30, 490, 0.8);
     drawPalm(220, 480, 1.1);
+
+    // Draw cute pixel art clouds (adds to daytime sky atmosphere)
+    const drawPixelCloud = (cx, cy, scale = 1) => {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      const cloudLayout = [
+        "....######....",
+        "..##########..",
+        "##############",
+        "##############"
+      ];
+      const pxSize = Math.round(3 * scale);
+      for (let r = 0; r < cloudLayout.length; r++) {
+        for (let c = 0; c < cloudLayout[r].length; c++) {
+          if (cloudLayout[r][c] === '#') {
+            ctx.fillRect(cx + c * pxSize, cy + r * pxSize, pxSize, pxSize);
+          }
+        }
+      }
+    };
+    drawPixelCloud(20, 80, 1.2);
+    drawPixelCloud(150, 140, 1.0);
+    drawPixelCloud(90, 60, 0.8);
+    drawPixelCloud(200, 90, 0.7);
     
     canvasTexture.refresh();
   }
 
-  // 4. Generate Parallax Background Layer 2: Scrolling River
+  // 4. Generate Parallax Background Layer 2: Sparkling Daylight River
   if (!scene.textures.exists('bg_river')) {
     const width = 128;
     const height = 96;
     const canvasTexture = scene.textures.createCanvas('bg_river', width, height);
     const ctx = canvasTexture.context;
     
-    ctx.fillStyle = '#0f223a'; // Dark river blue-teal
+    ctx.fillStyle = '#3498db'; // Vibrant bright blue river water
     ctx.fillRect(0, 0, width, height);
     
     // Draw styled river wave lines that wrap around
@@ -290,57 +322,57 @@ export function generateGameTextures(scene) {
       }
     };
     
-    // Waves pattern (cyan highlights, sunset orange reflections, dark water depths)
+    // Waves pattern (vivid blue base, bright light blue water, and white sunlight shimmers)
     const waves = [
-      { x: 10, y: 10, len: 30, c: '#1c3d5a' },
-      { x: 70, y: 15, len: 40, c: '#1c3d5a' },
-      { x: 40, y: 25, len: 25, c: '#00d2d3' },
-      { x: 95, y: 30, len: 35, c: '#1c3d5a' },
-      { x: 5, y: 40, len: 45, c: '#ff9f43' },
-      { x: 80, y: 45, len: 20, c: '#00d2d3' },
-      { x: 30, y: 55, len: 35, c: '#1c3d5a' },
-      { x: 110, y: 60, len: 25, c: '#ff9f43' },
-      { x: 50, y: 70, len: 50, c: '#00d2d3' },
-      { x: 5, y: 80, len: 30, c: '#1c3d5a' },
-      { x: 90, y: 85, len: 30, c: '#ff9f43' }
+      { x: 10, y: 10, len: 30, c: '#2980b9' },
+      { x: 70, y: 15, len: 40, c: '#2980b9' },
+      { x: 40, y: 25, len: 25, c: '#ffffff' }, // Sparkling sun shimmer
+      { x: 95, y: 30, len: 35, c: '#2980b9' },
+      { x: 5, y: 40, len: 45, c: '#7ec8f8' }, // Light blue ripples
+      { x: 80, y: 45, len: 20, c: '#ffffff' },
+      { x: 30, y: 55, len: 35, c: '#2980b9' },
+      { x: 110, y: 60, len: 25, c: '#7ec8f8' },
+      { x: 50, y: 70, len: 50, c: '#ffffff' },
+      { x: 5, y: 80, len: 30, c: '#2980b9' },
+      { x: 90, y: 85, len: 30, c: '#ffffff' }
     ];
     waves.forEach(w => drawWave(w.x, w.y, w.len, w.c));
     
     canvasTexture.refresh();
   }
 
-  // 5. Generate Parallax Background Layer 3: Wood Pier (Ground)
+  // 5. Generate Parallax Background Layer 3: Warm Golden Wood Pier (Ground)
   if (!scene.textures.exists('bg_ground')) {
     const width = 64;
     const height = 64;
     const canvasTexture = scene.textures.createCanvas('bg_ground', width, height);
     const ctx = canvasTexture.context;
     
-    ctx.fillStyle = '#2c1a16'; // Dark wood brown
+    ctx.fillStyle = '#e67e22'; // Warm bright golden-orange wood planks
     ctx.fillRect(0, 0, width, height);
     
     // Horizontal borders of planks (Y = 0, 16, 32, 48, 64)
-    ctx.fillStyle = '#140c0a'; // Black outline
+    ctx.fillStyle = '#78281f'; // Rich dark brown outline
     for (let y = 0; y < height; y += 16) {
       ctx.fillRect(0, y, width, 2);
     }
     
     // Highlight edges on planks
-    ctx.fillStyle = '#422a25'; // Light brown highlight
+    ctx.fillStyle = '#f1c40f'; // Shiny bright yellow highlight
     for (let y = 2; y < height; y += 16) {
       ctx.fillRect(0, y, width, 1);
     }
     
-    // Glowing neon yellow screw/nail heads matching brand accent
-    ctx.fillStyle = '#DFFF00';
+    // Shiny gold screw/nail heads (reflective white in sunlight)
+    ctx.fillStyle = '#ffffff';
     for (let x = 12; x < width; x += 32) {
       for (let y = 8; y < height; y += 16) {
         ctx.fillRect(x, y, 2, 2);
       }
     }
     
-    // Subtle vertical wood gaps (offset per row)
-    ctx.fillStyle = '#140c0a';
+    // Subtle vertical gaps in golden wood
+    ctx.fillStyle = '#78281f';
     ctx.fillRect(20, 0, 2, 16);
     ctx.fillRect(48, 16, 2, 16);
     ctx.fillRect(10, 32, 2, 16);
