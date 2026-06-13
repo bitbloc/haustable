@@ -18,6 +18,7 @@ export default class PlayScene extends Phaser.Scene {
     
     // Custom particle storage
     this.flameParticles = [];
+    this.fxParticles = [];
   }
 
   create() {
@@ -87,6 +88,9 @@ export default class PlayScene extends Phaser.Scene {
     this.beanGroup = this.physics.add.group();
     this.physics.add.overlap(this.player, this.beanGroup, this.collectBean, null, this);
 
+    // Overlap handlers for dash effects when passing through obstacles/knives
+    this.physics.add.overlap(this.player, this.satowGroup, this.dashOverlapObstacle, null, this);
+
     // 6. Timer to Spawn Obstacles
     this.spawnTimer = this.time.addEvent({
       delay: 1800,
@@ -107,6 +111,7 @@ export default class PlayScene extends Phaser.Scene {
       () => { return !this.isDashing && !this.isInvincible; },
       this
     );
+    this.physics.add.overlap(this.player, this.knifeGroup, this.dashOverlapKnife, null, this);
     
     this.knifeTimer = this.time.addEvent({
       delay: 2800, // Check every 2.8 seconds
@@ -139,8 +144,8 @@ export default class PlayScene extends Phaser.Scene {
       this.player.angle = Math.min(70, this.player.angle + 2.5);
     }
 
-    // Boundary check (hit ground or fly too high)
-    const groundY = this.cameras.main.height - 64;
+    // Boundary check (hit ground/river or fly too high)
+    const groundY = this.cameras.main.height - 160; // top of the river
     if (this.player.y > groundY - 18) {
       if (this.isDashing) {
         this.player.y = groundY - 18;
@@ -273,6 +278,30 @@ export default class PlayScene extends Phaser.Scene {
         }
       });
       this.flameParticles = this.flameParticles.filter(p => p !== null);
+    }
+
+    // Update FX particles (exploding debris from dash hits)
+    if (this.fxParticles && delta) {
+      const dt = delta / 1000;
+      this.fxParticles.forEach((p, idx) => {
+        p.rect.x += p.vx * dt;
+        p.rect.y += p.vy * dt;
+        
+        // Add gravity to FX particles so they fall down naturally
+        p.vy += 400 * dt;
+        
+        p.alpha -= 2.0 * dt;
+        p.scale -= 1.5 * dt;
+        
+        if (p.alpha <= 0 || p.scale <= 0) {
+          p.rect.destroy();
+          this.fxParticles[idx] = null;
+        } else {
+          p.rect.setAlpha(p.alpha);
+          p.rect.setScale(p.scale);
+        }
+      });
+      this.fxParticles = this.fxParticles.filter(p => p !== null);
     }
   }
 
@@ -526,6 +555,12 @@ export default class PlayScene extends Phaser.Scene {
       });
       this.flameParticles = [];
     }
+    if (this.fxParticles) {
+      this.fxParticles.forEach(p => {
+        if (p && p.rect) p.rect.destroy();
+      });
+      this.fxParticles = [];
+    }
 
     // Play hit sound
     try { this.sound.play('hit', { volume: 0.5 }); } catch (e) {}
@@ -647,5 +682,80 @@ export default class PlayScene extends Phaser.Scene {
         this.isInvincible = false;
       }
     });
+  }
+
+  dashOverlapObstacle(player, obstacle) {
+    if (this.isGameOver) return;
+    if (this.isDashing || this.isInvincible) {
+      if (!obstacle.fxTriggered) {
+        obstacle.fxTriggered = true;
+        
+        // Visual impact screen shake
+        this.cameras.main.shake(100, 0.005);
+        
+        // Spawn 15 pixel debris particles (green, yellow, white)
+        const fxX = player.x + 32;
+        const fxY = player.y;
+        for (let i = 0; i < 15; i++) {
+          const size = Phaser.Math.Between(4, 8);
+          const rect = this.add.rectangle(fxX, fxY, size, size);
+          rect.setDepth(15); // front
+          
+          const colors = [0x39FF14, 0x006400, 0xFFD700, 0xffffff];
+          const color = Phaser.Utils.Array.GetRandom(colors);
+          rect.setFillStyle(color, 1.0);
+          
+          const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+          const speed = Phaser.Math.Between(100, 300);
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+          
+          this.fxParticles.push({
+            rect: rect,
+            vx: vx,
+            vy: vy,
+            alpha: 1.0,
+            scale: 1.0
+          });
+        }
+      }
+    }
+  }
+
+  dashOverlapKnife(player, knife) {
+    if (this.isGameOver) return;
+    if (this.isDashing || this.isInvincible) {
+      if (!knife.fxTriggered) {
+        knife.fxTriggered = true;
+        
+        this.cameras.main.shake(100, 0.005);
+        
+        // Spawn 10 steel spark particles (white, silver, light-blue)
+        const fxX = player.x + 32;
+        const fxY = player.y;
+        for (let i = 0; i < 10; i++) {
+          const size = Phaser.Math.Between(3, 6);
+          const rect = this.add.rectangle(fxX, fxY, size, size);
+          rect.setDepth(15);
+          
+          const colors = [0xffffff, 0xa5b1c2, 0x778ca3, 0xffea00];
+          const color = Phaser.Utils.Array.GetRandom(colors);
+          rect.setFillStyle(color, 1.0);
+          
+          const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+          const speed = Phaser.Math.Between(120, 350);
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+          
+          this.fxParticles.push({
+            rect: rect,
+            vx: vx,
+            vy: vy,
+            alpha: 1.0,
+            scale: 1.0
+          });
+        }
+      }
+    }
   }
 }
