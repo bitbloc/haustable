@@ -10,6 +10,14 @@ export default class PlayScene extends Phaser.Scene {
     this.isGameOver = false;
     this.baseSpeed = -230;
     this.speedMultiplier = 1.0;
+    
+    // Dash & Invincibility State
+    this.isDashing = false;
+    this.isInvincible = false;
+    this.dashTimer = null;
+    
+    // Custom particle storage
+    this.flameParticles = [];
   }
 
   create() {
@@ -69,6 +77,10 @@ export default class PlayScene extends Phaser.Scene {
     // Add collision between player and obstacles
     this.physics.add.collider(this.player, this.satowGroup, this.hitObstacle, null, this);
 
+    // Satow Bean Group & overlap handler
+    this.beanGroup = this.physics.add.group();
+    this.physics.add.overlap(this.player, this.beanGroup, this.collectBean, null, this);
+
     // 6. Timer to Spawn Obstacles
     this.spawnTimer = this.time.addEvent({
       delay: 1800,
@@ -97,13 +109,14 @@ export default class PlayScene extends Phaser.Scene {
     this.input.on('pointerdown', this.flap, this);
   }
 
-  update() {
+  update(time, delta) {
     if (this.isGameOver) return;
 
-    // Scroll Backgrounds
-    this.bgWall.tilePositionX += 0.2;
-    this.bgRiver.tilePositionX += 1.0;
-    this.bgGround.tilePositionX += 2.5;
+    // Scroll Backgrounds (faster when dashing)
+    const scrollMultiplier = this.isDashing ? 2.5 : 1.0;
+    this.bgWall.tilePositionX += 0.2 * scrollMultiplier;
+    this.bgRiver.tilePositionX += 1.0 * scrollMultiplier;
+    this.bgGround.tilePositionX += 2.5 * scrollMultiplier;
 
     // Cat Rotation/Angle logic based on velocity (Flappy Bird style)
     if (this.player.body.velocity.y < 0) {
@@ -117,10 +130,20 @@ export default class PlayScene extends Phaser.Scene {
     // Boundary check (hit ground or fly too high)
     const groundY = this.cameras.main.height - 64;
     if (this.player.y > groundY - 18) {
-      this.hitObstacle();
+      if (this.isDashing) {
+        this.player.y = groundY - 18;
+        this.player.body.setVelocityY(-150); // bounce up slightly
+      } else {
+        this.hitObstacle();
+      }
     }
     if (this.player.y < -30) {
-      this.hitObstacle();
+      if (this.isDashing) {
+        this.player.y = -30;
+        this.player.body.setVelocityY(150); // bounce down
+      } else {
+        this.hitObstacle();
+      }
     }
 
     // Clean up offscreen obstacles safely
@@ -136,6 +159,15 @@ export default class PlayScene extends Phaser.Scene {
       this.knifeGroup.getChildren().forEach((knife) => {
         if (knife && knife.x < -50) {
           knife.destroy();
+        }
+      });
+    }
+
+    // Clean up offscreen beans
+    if (this.beanGroup) {
+      this.beanGroup.getChildren().forEach((bean) => {
+        if (bean && bean.x < -100) {
+          bean.destroy();
         }
       });
     }
@@ -167,6 +199,69 @@ export default class PlayScene extends Phaser.Scene {
         }
       });
     }
+
+    // Move active beans vertically if score is >= 15
+    if (this.beanGroup) {
+      this.beanGroup.getChildren().forEach((bean) => {
+        if (bean && bean.moving) {
+          const elapsed = this.time.now - bean.spawnTime;
+          const scoreFactor = Math.max(0, this.score - 15);
+          const frequency = 0.0025 + scoreFactor * 0.00015;
+          const amplitude = Math.min(65, 30 + scoreFactor * 1.5);
+          const offset = Math.sin(elapsed * frequency) * amplitude;
+          bean.y = bean.initialY + offset;
+        }
+      });
+    }
+
+    // Spawn and update Jetpack Flame Particles
+    if (this.isDashing) {
+      // Spawn 3 flame particles per frame
+      for (let i = 0; i < 3; i++) {
+        const pX = this.player.x - (16 * this.player.scaleX) + Phaser.Math.Between(-4, 4);
+        const pY = this.player.y + (2 * this.player.scaleY) + Phaser.Math.Between(-8, 8);
+        const size = Phaser.Math.Between(4, 10) * (this.player.scaleX / 1.35);
+        
+        const rect = this.add.rectangle(pX, pY, size, size);
+        rect.setDepth(4); // behind cat
+        
+        const colors = [0xff3333, 0xff9f00, 0xffea00, 0xffffff];
+        const color = Phaser.Utils.Array.GetRandom(colors);
+        rect.setFillStyle(color, 1.0);
+        
+        const vx = -Phaser.Math.Between(200, 500);
+        const vy = Phaser.Math.Between(-50, 50);
+        
+        this.flameParticles.push({
+          rect: rect,
+          vx: vx,
+          vy: vy,
+          alpha: 1.0,
+          scale: 1.0
+        });
+      }
+    }
+
+    // Update flame particles positions & shrink
+    if (this.flameParticles && delta) {
+      const dt = delta / 1000;
+      this.flameParticles.forEach((p, idx) => {
+        p.rect.x += p.vx * dt;
+        p.rect.y += p.vy * dt;
+        
+        p.alpha -= 3.0 * dt;
+        p.scale -= 2.0 * dt;
+        
+        if (p.alpha <= 0 || p.scale <= 0) {
+          p.rect.destroy();
+          this.flameParticles[idx] = null;
+        } else {
+          p.rect.setAlpha(p.alpha);
+          p.rect.setScale(p.scale);
+        }
+      });
+      this.flameParticles = this.flameParticles.filter(p => p !== null);
+    }
   }
 
   flap() {
@@ -179,17 +274,22 @@ export default class PlayScene extends Phaser.Scene {
     try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
 
     // Subtle jump squish effect scaled properly
+    const targetScale = this.isDashing ? 2.7 : 1.35;
+    const squishScaleY = targetScale * 0.74;
+    const squishScaleX = targetScale * 1.18;
+
     this.tweens.add({
       targets: this.player,
-      scaleY: 1.0,
-      scaleX: 1.6,
+      scaleY: squishScaleY,
+      scaleX: squishScaleX,
       duration: 80,
       yoyo: true,
       ease: 'Quad.easeOut',
       onComplete: () => {
         if (!this.isGameOver) {
-          this.player.scaleY = 1.35;
-          this.player.scaleX = 1.35;
+          const resetScale = this.isDashing ? 2.7 : 1.35;
+          this.player.scaleY = resetScale;
+          this.player.scaleX = resetScale;
         }
       }
     });
@@ -203,7 +303,7 @@ export default class PlayScene extends Phaser.Scene {
     
     // Spawning parameters
     const gap = 170; // gap height for player to fly through
-    const minHeight = 80;
+    const minHeight = 40; // Random heights go significantly higher/lower
     const maxHeight = height - 64 - gap - minHeight;
     const gapY = Phaser.Math.Between(minHeight, maxHeight);
 
@@ -267,6 +367,21 @@ export default class PlayScene extends Phaser.Scene {
       }
     });
 
+    // 4. Spawning a Satow Bean with 35% probability in the middle of the gap
+    if (Phaser.Math.Between(1, 100) <= 35) {
+      const bean = this.physics.add.sprite(spawnX, gapY + gap / 2, 'satow_bean');
+      this.beanGroup.add(bean);
+      bean.body.allowGravity = false;
+      bean.body.setImmovable(true);
+      bean.body.setVelocityX(speed);
+      
+      bean.initialY = gapY + gap / 2;
+      bean.moving = this.score >= 15;
+      bean.spawnTime = this.time.now;
+      
+      bean.setScale(1.5);
+    }
+
     // Score trigger on overlap
     this.physics.add.overlap(this.player, scoreSensor, () => {
       scoreSensor.destroy();
@@ -276,8 +391,10 @@ export default class PlayScene extends Phaser.Scene {
       // Play score sound
       try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
 
-      // Increase speed difficulty recursively on score
-      this.speedMultiplier = Math.min(1.8, 1.0 + this.score * 0.05);
+      // Increase speed difficulty recursively on score if not dashing
+      if (!this.isDashing) {
+        this.speedMultiplier = Math.min(1.8, 1.0 + this.score * 0.05);
+      }
       
       // Scale spawn delay to maintain horizontal obstacle gaps
       const newDelay = 1800 / this.speedMultiplier;
@@ -290,6 +407,14 @@ export default class PlayScene extends Phaser.Scene {
           child.body.setVelocityX(currentSpeed);
         }
       });
+      
+      if (this.beanGroup) {
+        this.beanGroup.getChildren().forEach((bean) => {
+          if (bean.body) {
+            bean.body.setVelocityX(currentSpeed);
+          }
+        });
+      }
       
       if (this.knifeGroup) {
         this.knifeGroup.getChildren().forEach((knife) => {
@@ -366,7 +491,7 @@ export default class PlayScene extends Phaser.Scene {
   }
 
   hitObstacle() {
-    if (this.isGameOver) return;
+    if (this.isGameOver || this.isDashing || this.isInvincible) return;
     this.isGameOver = true;
 
     // Pause physics and timers
@@ -376,6 +501,14 @@ export default class PlayScene extends Phaser.Scene {
     
     // Stop flap anim
     this.player.stop();
+
+    // Clean up remaining particles
+    if (this.flameParticles) {
+      this.flameParticles.forEach(p => {
+        if (p && p.rect) p.rect.destroy();
+      });
+      this.flameParticles = [];
+    }
 
     // Play hit sound
     try { this.sound.play('hit', { volume: 0.5 }); } catch (e) {}
@@ -389,6 +522,113 @@ export default class PlayScene extends Phaser.Scene {
     // Delay 1.2s before going to Game Over Scene
     this.time.delayedCall(1200, () => {
       this.scene.start('GameOverScene', { score: this.score });
+    });
+  }
+
+  collectBean(player, bean) {
+    if (this.isGameOver) return;
+    
+    // Destroy the bean
+    bean.destroy();
+    
+    // Play point/collect sound
+    try { this.sound.play('point', { volume: 0.6 }); } catch (e) {}
+    
+    // Set dash state
+    this.isDashing = true;
+    
+    // Giant scale animation
+    this.tweens.add({
+      targets: this.player,
+      scaleX: 2.7,
+      scaleY: 2.7,
+      duration: 200,
+      ease: 'Quad.easeOut'
+    });
+    
+    // Boost speed multiplier
+    this.speedMultiplier = 2.5;
+    
+    // Accelerate everything
+    const currentSpeed = this.baseSpeed * this.speedMultiplier;
+    this.satowGroup.getChildren().forEach((child) => {
+      if (child.body) {
+        child.body.setVelocityX(currentSpeed);
+      }
+    });
+    if (this.beanGroup) {
+      this.beanGroup.getChildren().forEach((b) => {
+        if (b.body) {
+          b.body.setVelocityX(currentSpeed);
+        }
+      });
+    }
+    if (this.knifeGroup) {
+      this.knifeGroup.getChildren().forEach((knife) => {
+        if (knife.body) {
+          knife.body.setVelocityX(currentSpeed * 1.5);
+        }
+      });
+    }
+    
+    // Set timer to end dash after 2 seconds (2000 ms)
+    if (this.dashTimer) {
+      this.dashTimer.destroy();
+    }
+    this.dashTimer = this.time.delayedCall(2000, this.endDash, [], this);
+  }
+
+  endDash() {
+    if (this.isGameOver) return;
+    
+    this.isDashing = false;
+    
+    // Shrink scale animation
+    this.tweens.add({
+      targets: this.player,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      duration: 300,
+      ease: 'Quad.easeOut'
+    });
+    
+    // Revert speed multiplier based on current score
+    this.speedMultiplier = Math.min(1.8, 1.0 + this.score * 0.05);
+    
+    // Revert speed of active elements
+    const currentSpeed = this.baseSpeed * this.speedMultiplier;
+    this.satowGroup.getChildren().forEach((child) => {
+      if (child.body) {
+        child.body.setVelocityX(currentSpeed);
+      }
+    });
+    if (this.beanGroup) {
+      this.beanGroup.getChildren().forEach((b) => {
+        if (b.body) {
+          b.body.setVelocityX(currentSpeed);
+        }
+      });
+    }
+    if (this.knifeGroup) {
+      this.knifeGroup.getChildren().forEach((knife) => {
+        if (knife.body) {
+          knife.body.setVelocityX(currentSpeed * 1.5);
+        }
+      });
+    }
+    
+    // Safety invincibility blink (0.5 seconds)
+    this.isInvincible = true;
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.3,
+      duration: 100,
+      yoyo: true,
+      repeat: 4,
+      onComplete: () => {
+        this.player.alpha = 1.0;
+        this.isInvincible = false;
+      }
     });
   }
 }

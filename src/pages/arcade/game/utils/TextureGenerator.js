@@ -13,12 +13,13 @@ export function generateGameTextures(scene) {
     const canvasTexture = scene.textures.createCanvas('cat_sheet', width, height);
     const ctx = canvasTexture.context;
     
-    // Define pixel color palette
+    // Define pixel color palette (Vibrant Orange Cat with Bold Black outline)
     const colors = {
-      'W': '#FFFFFF', // White (body)
-      'B': '#1A1D20', // Black/dark outline
+      'W': '#ff9f43', // Orange (body)
+      'B': '#000000', // Solid black outline
       'P': '#FFA6B9', // Pink (ears inner)
-      'G': '#D2D7DF', // Gray shading
+      'G': '#d35400', // Dark orange shading
+      'E': '#FFFFFF', // White eye highlight
       '.': null      // Transparent
     };
     
@@ -32,13 +33,13 @@ export function generateGameTextures(scene) {
       "....B.......B.........BWWB......",
       "...BPB.....BPB.......BWWB.......",
       "..BPPB....BPPB......BWWB........",
-      "..BPPWBBBBWPPB.....BWWB.........",
+      "..BPPBBBBBBPPB.....BWWB.........",
       ".BWWWWWWWWWWWWBBBBBWWb..........",
       "BWWWWWWWWWWWWWWWWWWWWb..........",
       "BWWWWWWWWWWWWWWWWWWWWWb.........",
       "BWWWWWWWWWWWWWWWWWWWWWWb........",
-      "B.B..W.B.WWWWWWWWWWWWWWWb.......",
-      "B.B..W.B.WWWWWWWWWWWWWWWWb......",
+      "BWBEEBWBWWWWWWWWWWWWWWWWb.......",
+      "BWBEEBWBWWWWWWWWWWWWWWWWWb......",
       "BWWWWWWWWWWWWWWWWWWWWWWWWWb.....",
       "BWWWWWWWWWWWWWWWWWWWWWWWWWWb....",
       ".BWWWWWWWWWWWWWWWWWWWWWWWWWWb...",
@@ -46,7 +47,7 @@ export function generateGameTextures(scene) {
       "....BWWWWWWWWWWWWWWWWWWWWWWWWWb.",
       "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
       "....BWWWWWWWWWWWWWWWWWWWWWWWb...",
-      "....BGGGGWWWWWWWWWWGGGGGGGGb....",
+      "....BGGGGWWWBWWWWWBGGGGGGGGb....",
       "....BGGGGWb.BGGGWb.BGGGGGGb.....",
       "....BGGGGWb.BGGGWb.BGGGGGGb.....",
       "....BGGGGWb.BGGGWb.BGGGGGGb.....",
@@ -68,13 +69,13 @@ export function generateGameTextures(scene) {
       "....B.......B........BWWB.......",
       "...BPB.....BPB......BWWB........",
       "..BPPB....BPPB.....BWWB.........",
-      "..BPPWBBBBWPPB....BWWB..........",
+      "..BPPBBBBBBPPB....BWWB..........",
       ".BWWWWWWWWWWWWBBBBWWB...........",
       "BWWWWWWWWWWWWWWWWWWWB...........",
       "BWWWWWWWWWWWWWWWWWWWWb..........",
       "BWWWWWWWWWWWWWWWWWWWWWb.........",
-      "B.B..W.B.WWWWWWWWWWWWWWb........",
-      "B.B..W.B.WWWWWWWWWWWWWWWb.......",
+      "BWBEEBWBWWWWWWWWWWWWWWWb........",
+      "BWBEEBWBWWWWWWWWWWWWWWWWb.......",
       "BWWWWWWWWWWWWWWWWWWWWWWWWb......",
       "BWWWWWWWWWWWWWWWWWWWWWWWWWb.....",
       ".BWWWWWWWWWWWWWWWWWWWWWWWWWb....",
@@ -82,7 +83,7 @@ export function generateGameTextures(scene) {
       "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
       "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
       "....BWWWWWWWWWWWWWWWWWWWWWWWb...",
-      "....BGGGGWWWWWWWWWWGGGGGGGGb....",
+      "....BGGGGWWWBWWWWWBGGGGGGGGb....",
       "....BGGGGWb.BGGGWb.BGGGGGGb.....",
       "....BGGGGWb.BGGGWb.BGGGGGGb.....",
       "....BGGGGWb.BGGGWb.BGGGGGGb.....",
@@ -719,6 +720,53 @@ export function generateGameTextures(scene) {
     for (let r = 0; r < 32; r++) {
       for (let c = 0; c < 32; c++) {
         const char = warningPattern[r][c];
+        const color = colors[char];
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(c, r, 1, 1);
+        }
+      }
+    }
+    canvasTexture.refresh();
+  }
+
+  // 8. Generate Satow Bean Item Sprite (16x16 pixel art bean)
+  if (!scene.textures.exists('satow_bean')) {
+    const width = 16;
+    const height = 16;
+    const canvasTexture = scene.textures.createCanvas('satow_bean', width, height);
+    const ctx = canvasTexture.context;
+    
+    const colors = {
+      'Y': '#FFD700', // Bright gold/yellow bean
+      'O': '#FF8C00', // Orange shading
+      'B': '#000000', // Black outline
+      '.': null
+    };
+
+    const pattern = [
+      "......BB........",
+      "....BBYYBB......",
+      "...BYYYYYYBB....",
+      "..BYYYYYYYYYB...",
+      ".BYYYYYYYYYYOB..",
+      ".BYYYYYYYYYOOB..",
+      "BYYYYYYYYYOOOB.",
+      "BYYYYYYYYYOOOB.",
+      "BYYYYYYYYOOOOB.",
+      ".BYYYYYOOOOOB...",
+      ".BYYYOOOOOOB....",
+      "..BYOOOOOOB.....",
+      "...BBOOOOB......",
+      ".....BBBB.......",
+      "................",
+      "................"
+    ];
+
+    ctx.clearRect(0, 0, width, height);
+    for (let r = 0; r < 16; r++) {
+      for (let c = 0; c < 16; c++) {
+        const char = pattern[r][c];
         const color = colors[char];
         if (color) {
           ctx.fillStyle = color;
