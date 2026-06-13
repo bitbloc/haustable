@@ -63,13 +63,18 @@ export default function ArcadeLobby() {
 
       {/* Modern Minimalist Header */}
       <header className="w-full py-6 px-8 z-10 border-b border-neutral-800/80 bg-neutral-950/40 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Gamepad2 className="w-8 h-8 text-[#DFFF00]" />
-          <div>
-            <h1 className="text-xl font-bold font-mono tracking-widest text-[#DFFF00]">
-              HAUS PLAYGROUND
+        <div className="flex items-center gap-4">
+          <img 
+            src="/logo-secondary.png" 
+            alt="ในบ้าน" 
+            className="h-10 w-auto object-contain" 
+            style={{ filter: 'brightness(0) invert(1)' }} 
+          />
+          <div className="border-l border-neutral-800 pl-4">
+            <h1 className="text-sm font-bold font-mono tracking-widest text-neutral-400">
+              PLAYGROUND
             </h1>
-            <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">In-store iPad Console</p>
+            <p className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">In-store Console</p>
           </div>
         </div>
 
