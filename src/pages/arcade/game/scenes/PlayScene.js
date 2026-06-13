@@ -74,8 +74,14 @@ export default class PlayScene extends Phaser.Scene {
     // 5. Obstacles (Satow Pods) Group
     this.satowGroup = this.physics.add.group();
     
-    // Add collision between player and obstacles
-    this.physics.add.collider(this.player, this.satowGroup, this.hitObstacle, null, this);
+    // Add collision between player and obstacles (disable physical resolution when dashing/invincible)
+    this.physics.add.collider(
+      this.player,
+      this.satowGroup,
+      this.hitObstacle,
+      () => { return !this.isDashing && !this.isInvincible; },
+      this
+    );
 
     // Satow Bean Group & overlap handler
     this.beanGroup = this.physics.add.group();
@@ -94,7 +100,13 @@ export default class PlayScene extends Phaser.Scene {
 
     // 7. Kitchen Knives Group & Hazard loop
     this.knifeGroup = this.physics.add.group();
-    this.physics.add.collider(this.player, this.knifeGroup, this.hitObstacle, null, this);
+    this.physics.add.collider(
+      this.player,
+      this.knifeGroup,
+      this.hitObstacle,
+      () => { return !this.isDashing && !this.isInvincible; },
+      this
+    );
     
     this.knifeTimer = this.time.addEvent({
       delay: 2800, // Check every 2.8 seconds
@@ -301,8 +313,8 @@ export default class PlayScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     
-    // Spawning parameters
-    const gap = 170; // gap height for player to fly through
+    // Spawning parameters - Narrows gap progressively based on score (starts at 170px, shrinks to 125px)
+    const gap = Math.max(125, 170 - this.score * 2.5);
     const minHeight = 40; // Random heights go significantly higher/lower
     const maxHeight = height - 64 - gap - minHeight;
     const gapY = Phaser.Math.Between(minHeight, maxHeight);
@@ -367,8 +379,8 @@ export default class PlayScene extends Phaser.Scene {
       }
     });
 
-    // 4. Spawning a Satow Bean with 35% probability in the middle of the gap
-    if (Phaser.Math.Between(1, 100) <= 35) {
+    // 4. Spawning a Satow Bean with 10% probability in the middle of the gap (rare item)
+    if (Phaser.Math.Between(1, 100) <= 10) {
       const bean = this.physics.add.sprite(spawnX, gapY + gap / 2, 'satow_bean');
       this.beanGroup.add(bean);
       bean.body.allowGravity = false;
@@ -399,6 +411,11 @@ export default class PlayScene extends Phaser.Scene {
       // Scale spawn delay to maintain horizontal obstacle gaps
       const newDelay = 1800 / this.speedMultiplier;
       this.spawnTimer.delay = newDelay;
+      
+      // Dynamically shorten knife spawn delay (make hazards more frequent as score goes up)
+      if (this.knifeTimer) {
+        this.knifeTimer.delay = Math.max(1200, 2800 - this.score * 120);
+      }
       
       // Instantly accelerate active obstacles
       const currentSpeed = this.baseSpeed * this.speedMultiplier;
