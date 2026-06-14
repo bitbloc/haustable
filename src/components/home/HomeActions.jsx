@@ -31,6 +31,15 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                        <span className="font-bold text-md uppercase">{t('orderPickup')}</span>
                 </Link>
              </div>
+
+             {/* Spotify Song Request Button */}
+             <div className="w-full mt-1">
+                 <Link to="/songs"
+                     className="relative group overflow-hidden w-full py-4 rounded-xl border border-green-500/20 bg-green-500/10 hover:bg-green-500/20 text-green-400 flex flex-col items-center justify-center gap-1 transition-all duration-300">
+                       <span className="text-xs font-bold opacity-75 flex items-center gap-1">🎵 SPOTIFY QUEUE</span> 
+                       <span className="font-bold text-md uppercase">ขอเพลง 100 บาท</span>
+                </Link>
+             </div>
         </>
     )
 }

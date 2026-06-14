@@ -37,6 +37,8 @@ import BarSOPPage from './components/sop/BarSOPPage' // NEW: SOP
 import POSDashboard from './pos/POSDashboard'
 import CustomerOrderLanding from './pos/CustomerOrderLanding'
 import CustomerOrderStatus from './pos/CustomerOrderStatus'
+import SongRequestPage from './pages/SongRequestPage'
+import AdminSongRequests from './pages/AdminSongRequests'
 import { Suspense, lazy } from 'react'
 
 const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
@@ -122,6 +124,7 @@ function App() {
             <Route path="/" element={<Home session={session} />} />
             <Route path="/qa" element={<QnAPage />} />
             <Route path="/link" element={<AdsLandingPage />} />
+            <Route path="/songs" element={<SongRequestPage />} />
 
             {/* Arcade & Lobby Games */}
             <Route path="/arcade" element={
@@ -158,6 +161,7 @@ function App() {
               <Route path="editor" element={<AdminTableEditor />} />
               <Route path="sop" element={<SOPEditorPage />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="songs" element={<AdminSongRequests />} />
             </Route>
 
             {/* Login Route */}

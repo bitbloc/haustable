@@ -66,7 +66,9 @@ export default function AdminSettings() {
         qr_gps_enabled: 'true',
         qr_latitude: '17.40722',
         qr_longitude: '104.78028',
-        qr_radius: '50'
+        qr_radius: '50',
+        spotify_client_id: '',
+        spotify_client_secret: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -344,6 +346,41 @@ export default function AdminSettings() {
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Spotify Song Request System Settings */}
+                    <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm space-y-6">
+                        <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                             <span className="text-lg">🎵</span> Spotify Song Requests
+                        </h2>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] text-subInk uppercase font-bold mb-1">Spotify Client ID</label>
+                                <input
+                                    type="text"
+                                    value={settings.spotify_client_id || ''}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, spotify_client_id: e.target.value }))}
+                                    onBlur={() => handleSave('spotify_client_id', settings.spotify_client_id)}
+                                    className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-xs font-mono text-ink outline-none focus:border-brand"
+                                    placeholder="Enter Spotify Client ID"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] text-subInk uppercase font-bold mb-1">Spotify Client Secret</label>
+                                <input
+                                    type="password"
+                                    value={settings.spotify_client_secret || ''}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, spotify_client_secret: e.target.value }))}
+                                    onBlur={() => handleSave('spotify_client_secret', settings.spotify_client_secret)}
+                                    className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-xs font-mono text-ink outline-none focus:border-brand"
+                                    placeholder="Enter Spotify Client Secret"
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-400 leading-relaxed">
+                                Get these credentials from <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline font-bold">Spotify Developer Dashboard</a> by creating a Web API application.
+                            </p>
                         </div>
                     </div>
 

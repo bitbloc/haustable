@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar, Tag, LayoutGrid, ChefHat, Calculator, FlaskConical, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar, Tag, LayoutGrid, ChefHat, Calculator, FlaskConical, BookOpen, Music } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BookingMonitor from './admin/BookingMonitor';
 
@@ -63,6 +63,7 @@ export default function AdminLayout({ children }) {
         { path: '/admin/tables', icon: LayoutGrid, label: 'Tables' },
         { path: '/admin/promotions', icon: Tag, label: 'Promotions' }, // NEW
         { path: '/admin/editor', icon: Move, label: 'Floor Plan' },
+        { path: '/admin/songs', icon: Music, label: 'Song Requests' },
         { path: '/admin/settings', icon: Settings, label: 'Settings' },
     ];
 
