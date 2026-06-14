@@ -93,9 +93,8 @@ export default function SongRequestPage() {
     setSearching(true)
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('spotify-search', {
-          method: 'GET',
-          queryParams: { q: val }
+        const { data, error } = await supabase.functions.invoke(`spotify-search?q=${encodeURIComponent(val)}`, {
+          method: 'GET'
         })
 
         if (error) throw error
@@ -351,10 +350,7 @@ export default function SongRequestPage() {
         <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-purple-600 rounded-full blur-[120px] opacity-10 pointer-events-none" />
 
         <div className="flex items-center gap-2 mb-2 scale-95 md:scale-100">
-          <div className="w-8 h-8 rounded-full bg-[#1DB954] flex items-center justify-center text-black">
-            <Music size={16} fill="black" />
-          </div>
-          <span className="text-[10px] font-extrabold tracking-[0.3em] uppercase text-gray-400">IN THE HAUS</span>
+          <img src="/logo.png" alt="In The Haus" className="h-10 w-auto object-contain filter invert brightness-200" />
         </div>
         <h1 className="text-3xl font-black tracking-tight text-center bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">Spotify Song Requests</h1>
         <p className="text-xs text-gray-400 mt-2 text-center max-w-xs leading-relaxed">
