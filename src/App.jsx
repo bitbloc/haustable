@@ -125,6 +125,7 @@ function App() {
             <Route path="/qa" element={<QnAPage />} />
             <Route path="/link" element={<AdsLandingPage />} />
             <Route path="/songs" element={<SongRequestPage />} />
+            <Route path="/song" element={<SongRequestPage />} />
 
             {/* Arcade & Lobby Games */}
             <Route path="/arcade" element={

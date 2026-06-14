@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import FlappyCatGame from './FlappyCatGame';
 import { Gamepad2, Music, Tag, Trophy, Award, X, MapPin, CheckCircle, ShieldAlert, RefreshCw, LogIn } from 'lucide-react';
@@ -257,19 +258,13 @@ export default function ArcadeLobby() {
             ตะลุยแดนสตอ
           </button>
           
-          <button
-            onClick={() => setActiveTab('music')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 relative ${
-              activeTab === 'music' 
-                ? 'bg-[#DFFF00] text-black' 
-                : 'text-neutral-600 cursor-not-allowed opacity-50'
-            }`}
-            disabled={activeTab !== 'music'}
+          <Link
+            to="/song"
+            className="flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 text-neutral-400 hover:text-white"
           >
             <Music className="w-4 h-4" />
             Request Song
-            <span className="absolute -top-2 -right-2 bg-neutral-800 border border-neutral-700 text-[8px] text-neutral-400 px-1.5 py-0.5 rounded font-mono normal-case tracking-normal">SOON</span>
-          </button>
+          </Link>
 
           <button
             onClick={() => setActiveTab('promo')}
