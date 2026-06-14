@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import { getGameConfig } from './game/FlappyCatConfig';
 
-export default function FlappyCatGame({ onGameOver, leaderboard }) {
+export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
 
@@ -10,7 +10,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard }) {
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
 
-    const config = getGameConfig(containerRef.current, onGameOver, leaderboard);
+    const config = getGameConfig(containerRef.current, onGameOver, leaderboard, onClaimScore);
     const game = new Phaser.Game(config);
     gameRef.current = game;
 

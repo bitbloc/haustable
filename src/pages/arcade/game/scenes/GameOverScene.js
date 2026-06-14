@@ -76,24 +76,40 @@ export default class GameOverScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(5);
 
-    // 6. QR Code Claim Generation (only if score > 0)
+    // 6. Direct Score Claim Button (only if score > 0)
     if (this.finalScore > 0) {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const hash = generateScoreHash(this.finalScore, timestamp);
-      
-      // Build secure url: /arcade/claim?score=X&ts=Y&hash=Z
-      const claimUrl = `${window.location.origin}/arcade/claim?score=${this.finalScore}&ts=${timestamp}&hash=${hash}`;
-      
-      this.add.text(width / 2, 230, 'SCAN TO CLAIM SCORE', {
+      const claimBtn = this.add.text(width / 2, 280, 'SAVE SCORE / บันทึกแต้ม', {
         fontFamily: 'Courier New, monospace',
-        fontSize: '18px',
-        fill: '#00FFFF',
+        fontSize: '24px',
+        fill: '#DFFF00',
         stroke: '#000000',
-        strokeThickness: 4,
+        strokeThickness: 6,
         fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
+      }).setOrigin(0.5).setInteractive();
 
-      this.add.text(width / 2, 255, 'สแกนเพื่อสะสมแต้ม LINE', {
+      // Pulse the claim button
+      this.tweens.add({
+        targets: claimBtn,
+        scaleX: 1.05,
+        scaleY: 1.05,
+        duration: 600,
+        yoyo: true,
+        repeat: -1
+      });
+
+      // Handle button click
+      claimBtn.on('pointerdown', (pointer) => {
+        // Prevent event propagation so it doesn't trigger restart
+        pointer.event.stopPropagation();
+        
+        // Trigger React claim modal
+        const onClaimScore = this.registry.get('onClaimScore');
+        if (onClaimScore) {
+          onClaimScore(this.finalScore);
+        }
+      });
+      
+      this.add.text(width / 2, 330, 'บันทึกแต้มลงบอร์ดจัดอันดับ', {
         fontFamily: 'Courier New, monospace',
         fontSize: '14px',
         fill: '#FFFFFF',
@@ -101,49 +117,9 @@ export default class GameOverScene extends Phaser.Scene {
         strokeThickness: 3,
         fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(5);
-
-      // Create a temporary canvas element to render QR code
-      const qrCanvas = document.createElement('canvas');
-      QRCode.toCanvas(qrCanvas, claimUrl, {
-        width: 170,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        }
-      }, (err) => {
-        if (err) {
-          console.error('QR code generation error:', err);
-          this.add.text(width / 2, 360, 'QR Code Load Failed', {
-            fontFamily: 'Courier New, monospace',
-            fontSize: '16px',
-            fill: '#FF0000'
-          }).setOrigin(0.5).setDepth(5);
-        } else {
-          // Add canvas to Phaser texture manager with a unique name
-          const textureKey = `qr_${Date.now()}`;
-          this.textures.addCanvas(textureKey, qrCanvas);
-          
-          // Render QR Code image sprite
-          const qrSprite = this.add.image(width / 2, 365, textureKey).setOrigin(0.5).setDepth(5);
-          
-          // Draw a retro glowing outline around the QR code
-          const border = this.add.graphics();
-          border.lineStyle(4, 0xDFFF00, 1);
-          border.strokeRect(qrSprite.x - 87, qrSprite.y - 87, 174, 174);
-          border.setDepth(6);
-        }
-      });
-      
-      this.add.text(width / 2, 485, 'Expires in 5 minutes', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: '12px',
-        fill: '#888888',
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
     } else {
       // If score is 0, encourage them to try harder
-      this.add.text(width / 2, 340, 'TRY TO GET AT LEAST 1 POINT\nTO CLAIM REWARDS!', {
+      this.add.text(width / 2, 300, 'TRY TO GET AT LEAST 1 POINT\nTO CLAIM REWARDS!', {
         fontFamily: 'Courier New, monospace',
         fontSize: '18px',
         fill: '#FFFFFF',

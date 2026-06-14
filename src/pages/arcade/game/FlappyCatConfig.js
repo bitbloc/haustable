@@ -4,7 +4,7 @@ import MenuScene from './scenes/MenuScene';
 import PlayScene from './scenes/PlayScene';
 import GameOverScene from './scenes/GameOverScene';
 
-export const getGameConfig = (parentEl, onGameOver, initialLeaderboard) => {
+export const getGameConfig = (parentEl, onGameOver, initialLeaderboard, onClaimScore) => {
   return {
     type: Phaser.AUTO,
     // Size suitable for iPad / Mobile viewport display
@@ -30,6 +30,7 @@ export const getGameConfig = (parentEl, onGameOver, initialLeaderboard) => {
         // Share references from React down into Phaser's global registry
         game.registry.set('onGameOver', onGameOver);
         game.registry.set('initialLeaderboard', initialLeaderboard);
+        game.registry.set('onClaimScore', onClaimScore);
       }
     }
   };
