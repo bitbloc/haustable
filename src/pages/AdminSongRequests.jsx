@@ -12,6 +12,16 @@ export default function AdminSongRequests() {
   // Slip Viewer Modal
   const [viewingSlipUrl, setViewingSlipUrl] = useState(null)
 
+  // Test Request Modal States
+  const [showTestModal, setShowTestModal] = useState(false)
+  const [submittingTest, setSubmittingTest] = useState(false)
+  const [testForm, setTestForm] = useState({
+    trackName: '',
+    artistName: '',
+    requesterName: 'Admin Test',
+    message: ''
+  })
+
   useEffect(() => {
     fetchRequests()
 
@@ -92,6 +102,166 @@ export default function AdminSongRequests() {
     }
   }
 
+  const handleSubmitTestRequest = async (e) => {
+    e.preventDefault()
+    if (!testForm.trackName.trim() || !testForm.artistName.trim()) {
+      return toast.error('กรุณาระบุชื่อเพลงและศิลปิน')
+    }
+    
+    setSubmittingTest(true)
+    try {
+      const mockTrackId = 'test_' + Date.now()
+      const requestData = {
+        track_id: mockTrackId,
+        track_name: testForm.trackName,
+        artist_name: testForm.artistName,
+        album_image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop',
+        track_duration_ms: 180000,
+        requester_name: testForm.requesterName || 'Admin Test',
+        message: testForm.message,
+        slip_url: null, // Nullable
+        status: 'pending'
+      }
+
+      const { error: dbError } = await supabase
+        .from('song_requests')
+        .insert(requestData)
+
+      if (dbError) throw dbError
+
+      // Send to LINE Notify
+      const lineMessage = `🧪 [TEST] ขอเพลงใหม่: ${testForm.trackName} - ${testForm.artistName}\nผู้ขอ: ${testForm.requesterName}\nข้อความ: ${testForm.message || '-'}`
+      
+      const flexPayload = {
+        type: "flex",
+        altText: `🧪 [TEST] ขอเพลง: ${testForm.trackName} - ${testForm.artistName}`,
+        contents: {
+          type: "bubble",
+          size: "mega",
+          header: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: "🧪 [TEST] SONG REQUEST",
+                weight: "bold",
+                size: "sm",
+                color: "#FF3366",
+                letterSpacing: "0.1em"
+              }
+            ],
+            backgroundColor: "#121212",
+            paddingAll: "16px"
+          },
+          hero: {
+            type: "image",
+            url: requestData.album_image,
+            size: "full",
+            aspectRatio: "1:1",
+            aspectMode: "cover"
+          },
+          body: {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#181818",
+            contents: [
+              {
+                type: "text",
+                text: testForm.trackName,
+                weight: "bold",
+                size: "lg",
+                color: "#FFFFFF",
+                wrap: true
+              },
+              {
+                type: "text",
+                text: `${testForm.artistName} · (3:00)`,
+                size: "sm",
+                color: "#B3B3B3",
+                margin: "xs",
+                wrap: true
+              },
+              {
+                type: "separator",
+                margin: "lg",
+                color: "#282828"
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                margin: "lg",
+                spacing: "sm",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "ผู้ขอ",
+                        color: "#B3B3B3",
+                        size: "xs",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: testForm.requesterName || 'Admin Test',
+                        weight: "bold",
+                        size: "sm",
+                        color: "#FFFFFF",
+                        flex: 4,
+                        wrap: true
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "ข้อความ",
+                        color: "#B3B3B3",
+                        size: "xs",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: testForm.message || "-",
+                        size: "sm",
+                        color: "#FFFFFF",
+                        flex: 4,
+                        wrap: true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            paddingAll: "20px"
+          }
+        }
+      }
+
+      const { error: lineError } = await supabase.functions.invoke('send-line-notify', {
+        body: { message: lineMessage, flexPayload }
+      })
+
+      if (lineError) console.error('LINE notification failed:', lineError)
+
+      toast.success('สร้างคิวทดลองขอเพลงและส่ง LINE เรียบร้อย')
+      setShowTestModal(false)
+      setTestForm({ trackName: '', artistName: '', requesterName: 'Admin Test', message: '' })
+      fetchRequests(true)
+    } catch (err) {
+      console.error(err)
+      toast.error('สร้างคิวทดลองล้มเหลว: ' + err.message)
+    } finally {
+      setSubmittingTest(false)
+    }
+  }
+
   // Statistics
   const pendingCount = requests.filter(r => r.status === 'pending').length
   const playingCount = requests.filter(r => r.status === 'playing').length
@@ -119,12 +289,20 @@ export default function AdminSongRequests() {
             จัดการคิวเพลงที่ลูกค้าขอพร้อมเงินบริจาค 100 บาทต่อเพลง
           </p>
         </div>
-        <button 
-          onClick={() => fetchRequests()} 
-          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-bold rounded-xl transition-all"
-        >
-          รีเฟรชคิวเพลง
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowTestModal(true)} 
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 active:scale-95 text-xs font-bold text-white rounded-xl transition-all shadow-md shadow-orange-500/10"
+          >
+            สร้างคิวทดสอบ (Test Request)
+          </button>
+          <button 
+            onClick={() => fetchRequests()} 
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-bold rounded-xl transition-all"
+          >
+            รีเฟรชคิวเพลง
+          </button>
+        </div>
       </div>
 
       {/* Metrics Grid */}
@@ -207,7 +385,7 @@ export default function AdminSongRequests() {
             {filteredRequests.map((req) => {
               const durationMin = Math.floor(req.track_duration_ms / 60000)
               const durationSec = ((req.track_duration_ms % 60000) / 1000).toFixed(0).padStart(2, '0')
-              const slipUrl = supabase.storage.from('slips').getPublicUrl(req.slip_url).data.publicUrl
+              const slipUrl = req.slip_url ? supabase.storage.from('slips').getPublicUrl(req.slip_url).data.publicUrl : null
 
               return (
                 <div key={req.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:bg-gray-50/50 transition-colors">
@@ -251,15 +429,21 @@ export default function AdminSongRequests() {
                     {/* Payment Slip Thumbnail */}
                     <div className="text-center">
                       <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Payment Slip</span>
-                      <button 
-                        onClick={() => setViewingSlipUrl(slipUrl)}
-                        className="w-14 h-20 bg-gray-100 hover:bg-gray-200 rounded-xl overflow-hidden border border-gray-200 relative group transition-all"
-                      >
-                        <img src={slipUrl} alt="Slip" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-opacity">
-                          View
+                      {slipUrl ? (
+                        <button 
+                          onClick={() => setViewingSlipUrl(slipUrl)}
+                          className="w-14 h-20 bg-gray-100 hover:bg-gray-200 rounded-xl overflow-hidden border border-gray-200 relative group transition-all"
+                        >
+                          <img src={slipUrl} alt="Slip" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-opacity">
+                            View
+                          </div>
+                        </button>
+                      ) : (
+                        <div className="w-14 h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center text-gray-300 text-[10px] font-bold">
+                          No Slip
                         </div>
-                      </button>
+                      )}
                     </div>
 
                     {/* Action Buttons */}
@@ -331,6 +515,89 @@ export default function AdminSongRequests() {
               <div className="flex-1 overflow-y-auto rounded-2xl border border-gray-100">
                 <img src={viewingSlipUrl} alt="Transfer Slip" className="w-full h-auto object-contain" />
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Test Request Creator Modal */}
+      <AnimatePresence>
+        {showTestModal && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0" onClick={() => setShowTestModal(false)} />
+            
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full relative z-10 shadow-2xl flex flex-col"
+            >
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-black rounded-full transition-colors"
+              >
+                <X size={16} />
+              </button>
+
+              <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+                🧪 สร้างคิวเพลงทดสอบ
+              </h3>
+
+              <form onSubmit={handleSubmitTestRequest} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ชื่อเพลง / Song Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="เช่น Cruel Summer"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors"
+                    value={testForm.trackName}
+                    onChange={(e) => setTestForm({ ...testForm, trackName: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ชื่อศิลปิน / Artist Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="เช่น Taylor Swift"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors"
+                    value={testForm.artistName}
+                    onChange={(e) => setTestForm({ ...testForm, artistName: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ชื่อผู้ขอ / Requester Name</label>
+                  <input
+                    type="text"
+                    placeholder="เช่น Admin Test"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors"
+                    value={testForm.requesterName}
+                    onChange={(e) => setTestForm({ ...testForm, requesterName: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ข้อความ / Dedication Message</label>
+                  <textarea
+                    rows={2}
+                    placeholder="ข้อความเพิ่มเติม..."
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors resize-none"
+                    value={testForm.message}
+                    onChange={(e) => setTestForm({ ...testForm, message: e.target.value })}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingTest}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4.5 rounded-2xl text-xs transition-all duration-300 transform active:scale-95 disabled:opacity-50"
+                >
+                  {submittingTest ? 'กำลังส่งคำขอทดสอบ...' : 'ส่งคำขอเพลงทดสอบ (Submit Test)'}
+                </button>
+              </form>
             </motion.div>
           </div>
         )}
