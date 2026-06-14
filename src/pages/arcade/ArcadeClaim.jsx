@@ -148,16 +148,43 @@ export default function ArcadeClaim() {
 
       const nameToDisplay = profile.nickname || profile.display_name || 'MEMBER';
 
-      // Insert score to leaderboard
-      const { error: insertError } = await supabase
+      // Check if there is an existing score for this user
+      const { data: existingLeaderboard, error: selectError } = await supabase
         .from('leaderboard')
-        .insert({
-          profile_id: session.user.id,
-          display_name: nameToDisplay,
-          score: parseInt(score)
-        });
+        .select('id, score')
+        .eq('profile_id', session.user.id)
+        .maybeSingle();
 
-      if (insertError) throw insertError;
+      if (selectError) throw selectError;
+
+      const newScore = parseInt(score);
+
+      if (existingLeaderboard) {
+        // Only update if the new score is higher than the existing high score
+        if (newScore > existingLeaderboard.score) {
+          const { error: updateError } = await supabase
+            .from('leaderboard')
+            .update({
+              score: newScore,
+              display_name: nameToDisplay,
+              created_at: new Date().toISOString()
+            })
+            .eq('id', existingLeaderboard.id);
+
+          if (updateError) throw updateError;
+        }
+      } else {
+        // Insert new score if none exists
+        const { error: insertError } = await supabase
+          .from('leaderboard')
+          .insert({
+            profile_id: session.user.id,
+            display_name: nameToDisplay,
+            score: newScore
+          });
+
+        if (insertError) throw insertError;
+      }
 
       // Lock token locally
       localStorage.setItem(`claimed_${hash}`, 'true');

@@ -193,15 +193,41 @@ export default function ArcadeLobby() {
 
       const nameToDisplay = profile.nickname || profile.display_name || 'MEMBER';
 
-      const { error: insertError } = await supabase
+      // Check if there is an existing score for this user
+      const { data: existingLeaderboard, error: selectError } = await supabase
         .from('leaderboard')
-        .insert({
-          profile_id: session.user.id,
-          display_name: nameToDisplay,
-          score: claimScore
-        });
+        .select('id, score')
+        .eq('profile_id', session.user.id)
+        .maybeSingle();
 
-      if (insertError) throw insertError;
+      if (selectError) throw selectError;
+
+      if (existingLeaderboard) {
+        // Only update if the new score is higher than the existing high score
+        if (claimScore > existingLeaderboard.score) {
+          const { error: updateError } = await supabase
+            .from('leaderboard')
+            .update({
+              score: claimScore,
+              display_name: nameToDisplay,
+              created_at: new Date().toISOString()
+            })
+            .eq('id', existingLeaderboard.id);
+
+          if (updateError) throw updateError;
+        }
+      } else {
+        // Insert new score if none exists
+        const { error: insertError } = await supabase
+          .from('leaderboard')
+          .insert({
+            profile_id: session.user.id,
+            display_name: nameToDisplay,
+            score: claimScore
+          });
+
+        if (insertError) throw insertError;
+      }
 
       // Confetti celebration
       confetti({
