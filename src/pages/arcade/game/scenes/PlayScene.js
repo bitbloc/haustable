@@ -35,7 +35,6 @@ export default class PlayScene extends Phaser.Scene {
       const cornerLogo = this.add.image(20, 20, 'logo_pixelated').setOrigin(0, 0).setDepth(20);
       cornerLogo.setScale(1.2);
       cornerLogo.setAlpha(0.65); // Semi-transparent
-      cornerLogo.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL); // Force pure white
     }
 
     // 3. Score Text

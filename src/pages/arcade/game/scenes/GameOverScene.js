@@ -44,7 +44,6 @@ export default class GameOverScene extends Phaser.Scene {
     if (this.textures.exists('logo_pixelated')) {
       const logo = this.add.image(width / 2, 55, 'logo_pixelated').setOrigin(0.5).setDepth(5);
       logo.setScale(1.8);
-      logo.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL); // Force pure white
     } else {
       this.add.text(width / 2, 55, 'ในบ้าน', {
         fontFamily: 'Courier New, monospace',

@@ -18,7 +18,6 @@ export default class MenuScene extends Phaser.Scene {
     if (this.textures.exists('logo_pixelated')) {
       const logo = this.add.image(width / 2, 75, 'logo_pixelated').setOrigin(0.5).setDepth(5);
       logo.setScale(2.2); // Chunky retro pixelated scaling
-      logo.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL); // Force pure white
     } else {
       this.add.text(width / 2, 75, 'ในบ้าน', {
         fontFamily: 'Courier New, monospace',

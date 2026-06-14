@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -7,27 +7,23 @@ import { Toaster, toast } from 'sonner'
 
 export default function SongRequestPage() {
   const [activeTab, setActiveTab] = useState('request') // 'request' | 'queue'
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState([])
-  const [searching, setSearching] = useState(false)
   
-  // Requests Queue
-  const [queue, setQueue] = useState([])
-  const [loadingQueue, setLoadingQueue] = useState(true)
-
-  // Request Modal State
-  const [selectedTrack, setSelectedTrack] = useState(null)
+  // Form States
+  const [spotifyLink, setSpotifyLink] = useState('')
+  const [trackName, setTrackName] = useState('')
+  const [artistName, setArtistName] = useState('')
   const [requesterName, setRequesterName] = useState('')
   const [dedicationMessage, setDedicationMessage] = useState('')
   const [slipFile, setSlipFile] = useState(null)
+  
+  // Queue & Settings States
+  const [queue, setQueue] = useState([])
+  const [loadingQueue, setLoadingQueue] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [paymentQrUrl, setPaymentQrUrl] = useState(null)
 
   // Success Overlay
   const [showSuccess, setShowSuccess] = useState(false)
-
-  // Spotify Search Debounce Timer
-  const searchTimeoutRef = useRef(null)
 
   // Load Initial Data & Settings
   useEffect(() => {
@@ -78,40 +74,21 @@ export default function SongRequestPage() {
     }
   }
 
-  // Handle Search Input Change
-  const handleSearchChange = (e) => {
-    const val = e.target.value
-    setSearchQuery(val)
-
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
-
-    if (!val.trim()) {
-      setSearchResults([])
-      return
-    }
-
-    setSearching(true)
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke(`spotify-search?q=${encodeURIComponent(val)}`, {
-          method: 'GET'
-        })
-
-        if (error) throw error
-        setSearchResults(data.tracks || [])
-      } catch (err) {
-        console.error('Search failed:', err)
-        toast.error('ค้นหาเพลงล้มเหลว กรุณาลองใหม่อีกครั้ง')
-      } finally {
-        setSearching(false)
-      }
-    }, 500)
-  }
+  // Parse Spotify Track ID from Link/URI
+  const extractTrackId = (input) => {
+    if (!input) return '';
+    const match = input.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+    if (match) return match[1];
+    const uriMatch = input.match(/spotify:track:([a-zA-Z0-9]+)/);
+    if (uriMatch) return uriMatch[1];
+    return input.trim();
+  };
 
   // Handle Submit Song Request
   const handleSubmitRequest = async (e) => {
     e.preventDefault()
-    if (!selectedTrack) return
+    if (!trackName.trim()) return toast.error('กรุณาระบุชื่อเพลง')
+    if (!artistName.trim()) return toast.error('กรุณาระบุชื่อศิลปิน')
     if (!requesterName.trim()) return toast.error('กรุณาระบุชื่อผู้ขอเพลง')
     if (!slipFile) return toast.error('กรุณาอัปโหลดสลิปโอนเงิน 100 บาท')
 
@@ -130,36 +107,35 @@ export default function SongRequestPage() {
       if (uploadError) throw uploadError
 
       const slipPublicUrl = supabase.storage.from('slips').getPublicUrl(fileName).data.publicUrl
+      const parsedTrackId = extractTrackId(spotifyLink) || `manual_${Date.now()}`;
 
       // 2. Insert into song_requests Table
       const requestData = {
-        track_id: selectedTrack.id,
-        track_name: selectedTrack.name,
-        artist_name: selectedTrack.artists,
-        album_image: selectedTrack.albumImage,
-        track_duration_ms: selectedTrack.duration_ms,
+        track_id: parsedTrackId,
+        track_name: trackName,
+        artist_name: artistName,
+        album_image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop', // Default vinyl/cover placeholder
+        track_duration_ms: 180000, // Default 3 minutes
         requester_name: requesterName,
         message: dedicationMessage,
         slip_url: fileName, // Save relative path
         status: 'pending'
       }
 
-      const { data: insertedData, error: dbError } = await supabase
+      const { error: dbError } = await supabase
         .from('song_requests')
         .insert(requestData)
-        .select()
-        .single()
 
       if (dbError) throw dbError
 
       // 3. Construct and Trigger LINE Flex Message via send-line-notify
-      const lineMessage = `🎵 ขอเพลงใหม่: ${selectedTrack.name} - ${selectedTrack.artists}\nผู้ขอ: ${requesterName}\nข้อความ: ${dedicationMessage || '-'}`
-      const durationMin = Math.floor(selectedTrack.duration_ms / 60000)
-      const durationSec = ((selectedTrack.duration_ms % 60000) / 1000).toFixed(0).padStart(2, '0')
+      const lineMessage = `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}\nผู้ขอ: ${requesterName}\nข้อความ: ${dedicationMessage || '-'}`
+      const durationMin = 3
+      const durationSec = '00'
 
       const flexPayload = {
         type: "flex",
-        altText: `🎵 ขอเพลงใหม่: ${selectedTrack.name} - ${selectedTrack.artists}`,
+        altText: `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}`,
         contents: {
           type: "bubble",
           size: "mega",
@@ -181,7 +157,7 @@ export default function SongRequestPage() {
           },
           hero: {
             type: "image",
-            url: selectedTrack.albumImage || "https://placehold.co/300",
+            url: requestData.album_image,
             size: "full",
             aspectRatio: "1:1",
             aspectMode: "cover"
@@ -193,7 +169,7 @@ export default function SongRequestPage() {
             contents: [
               {
                 type: "text",
-                text: selectedTrack.name,
+                text: trackName,
                 weight: "bold",
                 size: "lg",
                 color: "#FFFFFF",
@@ -201,7 +177,7 @@ export default function SongRequestPage() {
               },
               {
                 type: "text",
-                text: `${selectedTrack.artists} · ${durationMin}:${durationSec}`,
+                text: `${artistName} · ${durationMin}:${durationSec}`,
                 size: "sm",
                 color: "#B3B3B3",
                 margin: "xs",
@@ -257,35 +233,36 @@ export default function SongRequestPage() {
                         size: "sm",
                         color: "#FFFFFF",
                         flex: 4,
-                        wrap: true
+                        wrap: true,
+                        style: "italic"
                       }
                     ]
                   }
                 ]
               }
-            ],
-            paddingAll: "20px"
+            ]
           },
           footer: {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#181818",
             spacing: "sm",
+            backgroundColor: "#121212",
             contents: [
               {
                 type: "button",
                 style: "primary",
                 color: "#1DB954",
+                height: "sm",
                 action: {
                   type: "uri",
                   label: "Open Spotify 🎧",
-                  uri: `https://open.spotify.com/track/${selectedTrack.id}`
+                  uri: spotifyLink.startsWith('http') ? spotifyLink : `https://open.spotify.com/track/${parsedTrackId}`
                 }
               },
               {
                 type: "button",
                 style: "secondary",
-                color: "#282828",
+                height: "sm",
                 action: {
                   type: "uri",
                   label: "View Slip 🧾",
@@ -306,9 +283,11 @@ export default function SongRequestPage() {
 
       // Clean form & show success
       toast.dismiss(toastId)
+      setSpotifyLink('')
+      setTrackName('')
+      setArtistName('')
       setSlipFile(null)
       setDedicationMessage('')
-      setSelectedTrack(null)
       setShowSuccess(true)
       
       // Explosion!
@@ -365,7 +344,7 @@ export default function SongRequestPage() {
               activeTab === 'request' ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
-            <Search size={14} /> ขอเพลงใหม่
+            <Music size={14} /> ขอเพลงใหม่
           </button>
           <button
             onClick={() => {
@@ -389,68 +368,136 @@ export default function SongRequestPage() {
       {/* Main Content Body */}
       <main className="w-full max-w-md px-6 py-6 flex-1 flex flex-col pb-24">
         {activeTab === 'request' ? (
-          <div className="flex-1 flex flex-col">
-            {/* Search Input */}
-            <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+          <form onSubmit={handleSubmitRequest} className="space-y-5 flex-1 flex flex-col">
+            {/* Spotify Link Field */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ลิงก์เพลง Spotify / Spotify Track Link (ถ้ามี)</label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="วางลิงก์ เช่น https://open.spotify.com/track/..."
+                  className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
+                  value={spotifyLink}
+                  onChange={(e) => setSpotifyLink(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Song Title & Artist Group */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อเพลง / Song Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ชื่อเพลง..."
+                  className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
+                  value={trackName}
+                  onChange={(e) => setTrackName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ศิลปิน / Artist *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ชื่อศิลปิน..."
+                  className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
+                  value={artistName}
+                  onChange={(e) => setArtistName(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Requester Name */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อของคุณ / Your Name *</label>
               <input
                 type="text"
-                placeholder="ค้นหา ชื่อเพลง / ศิลปิน ใน Spotify..."
-                className="w-full bg-[#161616] border border-white/5 rounded-2xl py-4 pl-12 pr-4 font-bold text-sm focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
-                value={searchQuery}
-                onChange={handleSearchChange}
+                required
+                placeholder="พิมพ์ชื่อของคุณ..."
+                className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
+                value={requesterName}
+                onChange={(e) => setRequesterName(e.target.value)}
               />
-              {searching && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin" />
+            </div>
+
+            {/* Dedication Message */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ฝากข้อความถึงดีเจ / Message to DJ (ไม่บังคับ)</label>
+              <textarea
+                rows={2}
+                placeholder="เช่น ขอมอบเพลงนี้ให้เพื่อนร่วมโต๊ะ..."
+                className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors resize-none placeholder:text-gray-600"
+                value={dedicationMessage}
+                onChange={(e) => setDedicationMessage(e.target.value)}
+              />
+            </div>
+
+            {/* PromptPay QR Code */}
+            <div className="bg-[#161616] border border-white/5 rounded-2xl p-4 flex flex-col items-center">
+              <span className="text-[9px] font-black tracking-widest text-[#1DB954] mb-3 uppercase">SCAN PROMPTPAY TO DONATE</span>
+              {paymentQrUrl ? (
+                <div className="bg-white p-2 rounded-xl mb-3 shadow-md">
+                  <img src={paymentQrUrl} alt="PromptPay" className="w-32 h-32 object-contain" />
+                </div>
+              ) : (
+                <div className="w-32 h-32 bg-black/30 text-gray-600 rounded-xl flex items-center justify-center text-xs mb-3">
+                  ไม่มีรูปภาพ QR ในระบบ
+                </div>
+              )}
+              <p className="text-[10px] text-gray-400 text-center leading-relaxed max-w-[240px]">
+                สแกน QR Code ด้านบนเพื่อโอนเงินจำนวน <span className="text-white font-extrabold">100 บาท</span> จากนั้นแนบหลักฐานการโอน
+              </p>
+            </div>
+
+            {/* Upload Slip */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">สลิปโอนเงิน / Slip Transfer (100 THB) *</label>
+              {slipFile ? (
+                <div className="bg-[#1DB954]/10 border border-[#1DB954]/20 p-3.5 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 bg-[#1DB954]/20 text-[#1DB954] rounded-lg flex items-center justify-center shrink-0">
+                      <CheckCircle2 size={16} />
+                    </div>
+                    <p className="text-xs font-bold text-white truncate flex-1">{slipFile.name}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSlipFile(null)}
+                    className="text-gray-500 hover:text-white p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <label className="border border-dashed border-white/10 hover:border-[#1DB954]/50 cursor-pointer bg-[#161616] p-5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all text-center">
+                  <Upload size={18} className="text-gray-500 group-hover:text-[#1DB954] transition-colors" />
+                  <span className="text-[11px] font-bold text-gray-400 group-hover:text-white">
+                    คลิกเพื่ออัปโหลดรูปภาพสลิป
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setSlipFile(e.target.files?.[0] || null)}
+                  />
+                </label>
               )}
             </div>
 
-            {/* Search Results */}
-            <div className="space-y-3 flex-1">
-              {searchResults.map((track) => (
-                <motion.div
-                  key={track.id}
-                  onClick={() => setSelectedTrack(track)}
-                  whileTap={{ scale: 0.98 }}
-                  className="bg-[#121212] border border-white/5 hover:border-white/10 p-3 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-white/5 transition-all"
-                >
-                  <div className="w-14 h-14 bg-zinc-800 rounded-xl overflow-hidden shrink-0 shadow-md">
-                    {track.albumImage ? (
-                      <img src={track.albumImage} alt={track.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-600">
-                        <Music size={20} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-extrabold text-sm text-white truncate">{track.name}</h3>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">{track.artists}</p>
-                    <p className="text-[10px] text-gray-600 truncate mt-1">{track.albumName}</p>
-                  </div>
-                  <ChevronRightIcon className="text-gray-700 w-5 h-5 shrink-0" />
-                </motion.div>
-              ))}
-
-              {!searchQuery && (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-600 text-center">
-                  <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                    <Search size={22} className="text-gray-500" />
-                  </div>
-                  <p className="text-xs font-bold">ค้นหาเพลงที่คุณชื่นชอบ</p>
-                  <p className="text-[10px] text-gray-600 max-w-[200px] mt-1">
-                    พิมพ์ชื่อเพลงหรือศิลปินเพื่อค้นหาคลังเพลงของ Spotify
-                  </p>
-                </div>
-              )}
-
-              {searchQuery && searchResults.length === 0 && !searching && (
-                <div className="text-center py-20 text-gray-500 text-xs">
-                  ไม่พบเพลงที่ค้นหา ลองเปลี่ยนคำค้นหาดูนะคะ
-                </div>
-              )}
+            {/* Submit Button */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={uploading}
+                className="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-black py-4 rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 transform active:scale-95 shadow-lg shadow-[#1DB954]/10 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Send size={14} fill="black" /> {uploading ? 'กำลังส่งคำขอเพลง...' : 'ส่งคำขอเพลง (Submit Request)'}
+              </button>
             </div>
-          </div>
+          </form>
         ) : (
           /* Live Queue View */
           <div className="space-y-4">
@@ -530,132 +577,6 @@ export default function SongRequestPage() {
         )}
       </main>
 
-      {/* Dynamic Request Drawer/Modal */}
-      <AnimatePresence>
-        {selectedTrack && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-end justify-center p-0 md:p-4">
-            {/* Click outside to close */}
-            <div className="absolute inset-0" onClick={() => setSelectedTrack(null)} />
-            
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="bg-[#121212] w-full max-w-md rounded-t-3xl md:rounded-3xl border-t md:border border-white/10 p-6 z-10 max-h-[92vh] overflow-y-auto relative shadow-2xl flex flex-col"
-            >
-              <button
-                onClick={() => setSelectedTrack(null)}
-                className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full text-gray-500 hover:text-white transition-colors"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="text-center mb-5 flex flex-col items-center">
-                <span className="text-[10px] bg-[#1DB954]/10 text-[#1DB954] border border-[#1DB954]/20 font-black px-4 py-1.5 rounded-full uppercase tracking-wider mb-4">
-                  ยืนยันการขอเพลง (100 THB)
-                </span>
-                
-                {/* Track Details */}
-                <div className="w-24 h-24 bg-zinc-800 rounded-2xl overflow-hidden shadow-lg border border-white/10 mb-3">
-                  <img src={selectedTrack.albumImage} alt="" className="w-full h-full object-cover" />
-                </div>
-                <h3 className="font-black text-lg text-white max-w-[280px] truncate">{selectedTrack.name}</h3>
-                <p className="text-xs text-gray-400 font-bold truncate mt-0.5 max-w-[280px]">{selectedTrack.artists}</p>
-              </div>
-
-              <form onSubmit={handleSubmitRequest} className="space-y-4">
-                {/* Step 1: PromptPay QR Code */}
-                <div className="bg-[#161616] border border-white/5 rounded-2xl p-4 flex flex-col items-center">
-                  <span className="text-[9px] font-black tracking-widest text-[#1DB954] mb-3 uppercase">SCAN PROMPTPAY TO DONATE</span>
-                  {paymentQrUrl ? (
-                    <div className="bg-white p-2 rounded-xl mb-3 shadow-md">
-                      <img src={paymentQrUrl} alt="PromptPay" className="w-32 h-32 object-contain" />
-                    </div>
-                  ) : (
-                    <div className="w-32 h-32 bg-black/30 text-gray-600 rounded-xl flex items-center justify-center text-xs mb-3">
-                      ไม่มีรูปภาพ QR ในระบบ
-                    </div>
-                  )}
-                  <p className="text-[10px] text-gray-400 text-center leading-relaxed max-w-[240px]">
-                    สแกน QR Code ด้านบนเพื่อโอนเงินจำนวน <span className="text-white font-extrabold">100 บาท</span> จากนั้นแนบหลักฐานการโอน
-                  </p>
-                </div>
-
-                {/* Step 2: Upload Slip */}
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">สลิปโอนเงิน / Slip Transfer (100 THB)</label>
-                  {slipFile ? (
-                    <div className="bg-[#1DB954]/10 border border-[#1DB954]/20 p-3.5 rounded-xl flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 bg-[#1DB954]/20 text-[#1DB954] rounded-lg flex items-center justify-center shrink-0">
-                          <CheckCircle2 size={16} />
-                        </div>
-                        <p className="text-xs font-bold text-white truncate flex-1">{slipFile.name}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSlipFile(null)}
-                        className="text-gray-500 hover:text-white p-1"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="border border-dashed border-white/10 hover:border-[#1DB954]/50 cursor-pointer bg-black/30 p-4 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all text-center">
-                      <Upload size={18} className="text-gray-500 group-hover:text-[#1DB954] transition-colors" />
-                      <span className="text-[11px] font-bold text-gray-400 group-hover:text-white">
-                        คลิกเพื่ออัปโหลดรูปภาพสลิป
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => setSlipFile(e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {/* Step 3: Requester Name */}
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อของคุณ / Requester Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="พิมพ์ชื่อของคุณ..."
-                    className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                    value={requesterName}
-                    onChange={(e) => setRequesterName(e.target.value)}
-                  />
-                </div>
-
-                {/* Step 4: Message */}
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ฝากข้อความถึงดีเจ / Message to DJ (Optional)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="เช่น มอบเพลงนี้ให้กับโต๊ะข้างๆ หรืออยากพูดอะไร..."
-                    className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors resize-none placeholder:text-gray-600"
-                    value={dedicationMessage}
-                    onChange={(e) => setDedicationMessage(e.target.value)}
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-black py-4 rounded-2xl text-sm transition-all duration-300 transform active:scale-95 shadow-lg shadow-[#1DB954]/10 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
-                >
-                  <Send size={14} fill="black" /> {uploading ? 'กำลังส่งคำขอเพลง...' : 'ส่งคำขอเพลง (Submit Request)'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* Request Success Screen Overlay */}
       <AnimatePresence>
         {showSuccess && (
@@ -697,25 +618,5 @@ export default function SongRequestPage() {
         )}
       </AnimatePresence>
     </div>
-  )
-}
-
-// Simple Helper Component to clean up code
-function ChevronRightIcon(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
   )
 }

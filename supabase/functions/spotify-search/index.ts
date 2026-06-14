@@ -79,8 +79,21 @@ Deno.serve(async (req) => {
     if (!searchResp.ok) {
       const errBody = await searchResp.text()
       console.error('Spotify Search Failed:', errBody)
-      return new Response(JSON.stringify({ error: 'Spotify search request failed.' }), {
-        status: 502,
+      
+      let clientErrorMessage = 'Spotify search request failed.'
+      try {
+        const errJson = JSON.parse(errBody)
+        if (errJson.error?.message === 'Invalid limit' || errJson.error?.status === 400) {
+          clientErrorMessage = 'Spotify API Error: บัญชี Spotify Developer App ของคุณอยู่ใน Development Mode และไม่ได้รับอนุญาตให้ใช้ API ค้นหาเพลงภายนอก (Catalog Search) กรุณากดขอ Extended Quota หรือเปิดใช้งาน Production Mode ในหน้าหน้าแดชบอร์ด Spotify Developer App ของคุณ'
+        } else {
+          clientErrorMessage = `Spotify API Error: ${errJson.error?.message || 'Unknown error'}`
+        }
+      } catch (_) {
+        // Fallback
+      }
+
+      return new Response(JSON.stringify({ error: clientErrorMessage }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }

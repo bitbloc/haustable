@@ -398,7 +398,9 @@ export default function AdminSongRequests() {
                           {durationMin}:{durationSec}
                         </span>
                         <a 
-                          href={`spotify:track:${req.track_id}`} 
+                          href={req.track_id.startsWith('http') ? req.track_id : `spotify:track:${req.track_id}`} 
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="text-[10px] bg-green-50 hover:bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
                         >
                           Spotify <ExternalLink size={10} />
