@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock } from 'lucide-react'
+import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Toaster, toast } from 'sonner'
@@ -22,12 +22,20 @@ export default function SongRequestPage() {
   const [uploading, setUploading] = useState(false)
   const [paymentQrUrl, setPaymentQrUrl] = useState(null)
 
+  // GPS Settings
+  const [gpsConfig, setGpsConfig] = useState({
+    enabled: true,
+    latitude: 17.39008981227407,
+    longitude: 104.79292770946343,
+    radius: 1000 // meters (1 km)
+  })
+
   // Success Overlay
   const [showSuccess, setShowSuccess] = useState(false)
 
   // Load Initial Data & Settings
   useEffect(() => {
-    fetchPaymentQr()
+    fetchSettings()
     fetchQueue()
 
     // Setup Realtime Database Subscription for Queue updates
@@ -52,9 +60,28 @@ export default function SongRequestPage() {
     })
   }, [])
 
-  const fetchPaymentQr = async () => {
-    const { data } = await supabase.from('app_settings').select('value').eq('key', 'payment_qr_url').maybeSingle()
-    if (data?.value) setPaymentQrUrl(data.value)
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase.from('app_settings').select('key, value')
+      if (error) throw error
+      
+      const qr = data.find(item => item.key === 'payment_qr_url')?.value
+      if (qr) setPaymentQrUrl(qr)
+      
+      const gpsEnabled = data.find(item => item.key === 'qr_gps_enabled')?.value
+      const lat = data.find(item => item.key === 'qr_latitude')?.value
+      const lng = data.find(item => item.key === 'qr_longitude')?.value
+      const rad = data.find(item => item.key === 'qr_radius')?.value
+      
+      setGpsConfig({
+        enabled: gpsEnabled !== 'false',
+        latitude: lat ? parseFloat(lat) : 17.39008981227407,
+        longitude: lng ? parseFloat(lng) : 104.79292770946343,
+        radius: rad ? parseFloat(rad) : 1000
+      })
+    } catch (err) {
+      console.error('Failed to load settings:', err)
+    }
   }
 
   const fetchQueue = async (silent = false) => {
@@ -72,6 +99,21 @@ export default function SongRequestPage() {
     } finally {
       if (!silent) setLoadingQueue(false)
     }
+  }
+
+  // Calculate distance in meters
+  const getDistanceInMeters = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3 // Earth radius in meters
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
   }
 
   // Parse Spotify Track ID from Link/URI
@@ -93,10 +135,62 @@ export default function SongRequestPage() {
     if (!slipFile) return toast.error('กรุณาอัปโหลดสลิปโอนเงิน 100 บาท')
 
     setUploading(true)
-    const toastId = toast.loading('กำลังประมวลผลคำขอเพลงและสลิป...')
+    const toastId = toast.loading('กำลังตรวจสอบสิทธิ์พื้นที่ (GPS)...')
+
+    // Helper for GPS check
+    const verifyLocation = () => {
+      return new Promise((resolve, reject) => {
+        if (!gpsConfig.enabled) {
+          return resolve(null);
+        }
+        
+        if (!navigator.geolocation) {
+          return reject(new Error('เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง GPS'));
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const dist = getDistanceInMeters(
+              position.coords.latitude,
+              position.coords.longitude,
+              gpsConfig.latitude,
+              gpsConfig.longitude
+            );
+            
+            if (dist > gpsConfig.radius) {
+              reject(new Error(`คุณอยู่นอกพื้นที่ร้าน ไม่สามารถขอเพลงได้ (ระยะห่างจากร้าน: ${dist.toFixed(0)} เมตร)`));
+            } else {
+              resolve(dist);
+            }
+          },
+          (err) => {
+            let errorMsg = 'ไม่สามารถระบุพิกัด GPS ได้';
+            if (err.code === err.PERMISSION_DENIED) {
+              errorMsg = 'กรุณาเปิดสิทธิ์การเข้าถึงตำแหน่งพิกัด (GPS) ในการตั้งค่าเบราว์เซอร์เพื่อยืนยันว่าคุณอยู่ในร้าน';
+            } else if (err.code === err.TIMEOUT) {
+              errorMsg = 'การค้นหาพิกัด GPS หมดเวลา กรุณาลองใหม่อีกครั้ง';
+            }
+            reject(new Error(errorMsg));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      });
+    };
 
     try {
+      // 0. Verify GPS Location
+      let currentDistance = null;
+      if (gpsConfig.enabled) {
+        try {
+          const dist = await verifyLocation();
+          currentDistance = dist;
+        } catch (gpsError) {
+          throw gpsError;
+        }
+      }
+
       // 1. Upload Slip Image to Slips bucket
+      toast.loading('กำลังอัปโหลดสลิปโอนเงิน...', { id: toastId });
       const fileExt = slipFile.name.split('.').pop()
       const fileName = `song_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
       
@@ -110,6 +204,7 @@ export default function SongRequestPage() {
       const parsedTrackId = extractTrackId(spotifyLink) || `manual_${Date.now()}`;
 
       // 2. Insert into song_requests Table
+      toast.loading('กำลังส่งข้อมูลคำขอเพลง...', { id: toastId });
       const requestData = {
         track_id: parsedTrackId,
         track_name: trackName,
@@ -132,6 +227,7 @@ export default function SongRequestPage() {
       const lineMessage = `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}\nผู้ขอ: ${requesterName}\nข้อความ: ${dedicationMessage || '-'}`
       const durationMin = 3
       const durationSec = '00'
+      const gpsNote = currentDistance !== null ? `📍 ตรวจสอบ GPS แล้ว (ห่างจากร้าน ${currentDistance.toFixed(0)} เมตร)` : '📍 ข้ามการตรวจสอบตำแหน่งพิกัด';
 
       const flexPayload = {
         type: "flex",
@@ -222,6 +318,27 @@ export default function SongRequestPage() {
                     contents: [
                       {
                         type: "text",
+                        text: "ตำแหน่ง",
+                        color: "#B3B3B3",
+                        size: "xs",
+                        flex: 1
+                      },
+                      {
+                        type: "text",
+                        text: gpsNote,
+                        size: "xs",
+                        color: "#FFFFFF",
+                        flex: 4,
+                        wrap: true
+                      }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "baseline",
+                    contents: [
+                      {
+                        type: "text",
                         text: "ข้อความ",
                         color: "#B3B3B3",
                         size: "xs",
@@ -300,7 +417,7 @@ export default function SongRequestPage() {
     } catch (err) {
       console.error(err)
       toast.dismiss(toastId)
-      toast.error('ส่งขอเพลงล้มเหลว: ' + err.message)
+      toast.error(err.message || 'ส่งขอเพลงล้มเหลว')
     } finally {
       setUploading(false)
     }
@@ -369,6 +486,15 @@ export default function SongRequestPage() {
       <main className="w-full max-w-md px-6 py-6 flex-1 flex flex-col pb-24">
         {activeTab === 'request' ? (
           <form onSubmit={handleSubmitRequest} className="space-y-5 flex-1 flex flex-col">
+            
+            {/* GPS verification note */}
+            {gpsConfig.enabled && (
+              <div className="flex items-center gap-2.5 text-[10px] text-gray-400 bg-white/5 border border-white/5 p-3 rounded-2xl">
+                <MapPin className="w-4 h-4 text-[#1DB954] shrink-0" />
+                <span className="leading-normal">ตรวจสอบ GPS: ระบบจะตรวจสอบตำแหน่งของคุณว่าอยู่ในรัศมีร้าน (ไม่เกิน {(gpsConfig.radius / 1000).toFixed(1)} กม.) ขณะกดส่งเพลง</span>
+              </div>
+            )}
+
             {/* Spotify Link Field */}
             <div>
               <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ลิงก์เพลง Spotify / Spotify Track Link (ถ้ามี)</label>
