@@ -237,20 +237,15 @@ export default function AdsLandingPage() {
             {/* ─── SOCIAL LINKS ─── */}
             <section className="w-full max-w-lg mx-auto px-5 pb-6">
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Primary Actions: LINE and PHONE (Prominent & High Contrast) */}
+                    {/* View Menu Action (Anchor link to Menu Booklet) - Replaces the static line/call buttons */}
                     <LinkCard 
-                        href="https://lin.ee/EuzwG7c" 
-                        icon={<MessageCircle size={18} />} 
-                        title="ทักแชต LINE" 
-                        bg="bg-[#06C755] hover:bg-[#05b04b] shadow-md border-b-4 border-[#04943f]" 
-                        id="cta-line" 
-                    />
-                    <LinkCard 
-                        href="tel:0985284217" 
-                        icon={<Phone size={18} />} 
-                        title="📞 โทรสั่งอาหาร / จองโต๊ะ" 
-                        bg="bg-[#FF453A] hover:bg-[#ff3b30] shadow-md border-b-4 border-[#e03126]" 
-                        id="cta-call" 
+                        href="#menu-section" 
+                        icon={<Utensils size={18} />} 
+                        title="📖 ดูเมนูอาหาร & โปรโมชั่น" 
+                        bg="bg-neutral-900 hover:bg-neutral-800 text-white shadow-md border-b-4 border-neutral-950" 
+                        wide 
+                        internal
+                        id="cta-menu-anchor" 
                     />
 
                     {/* Secondary Action: Map (Full Width) */}
@@ -344,7 +339,7 @@ export default function AdsLandingPage() {
 
             {/* ─── MENU GALLERY ─── */}
             {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
-                <section className="w-full bg-white py-10 border-t border-neutral-100 pb-20">
+                <section id="menu-section" className="w-full bg-white py-10 border-t border-neutral-100 pb-20">
                     <div className="max-w-md mx-auto px-4">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="h-px bg-neutral-200 flex-1" />
