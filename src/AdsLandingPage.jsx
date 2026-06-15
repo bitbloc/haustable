@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
+const optimizeImageUrl = (url, width = 850) => {
+    if (!url) return '';
+    if (url.includes('supabase.co/storage/v1/object/public/')) {
+        return `${url}?width=${width}&quality=80`;
+    }
+    return url;
+};
+
 export default function AdsLandingPage() {
     const [settings, setSettings] = useState({});
     const [menuImages, setMenuImages] = useState([]);
+    const [promoMenuImages, setPromoMenuImages] = useState([]);
+    const [regularMenuImages, setRegularMenuImages] = useState([]);
+    const [activeTab, setActiveTab] = useState('regular'); // 'regular' or 'promo'
     const [atmImages, setAtmImages] = useState([]);
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -27,13 +38,41 @@ export default function AdsLandingPage() {
 
                 const menus = [];
                 for (let i = 1; i <= 10; i++) {
-                    if (map[`link_menu_${i}`]) menus.push(map[`link_menu_${i}`]);
+                    if (map[`link_menu_${i}`]) {
+                        menus.push({
+                            key: `link_menu_${i}`,
+                            url: map[`link_menu_${i}`]
+                        });
+                    }
                 }
-                setMenuImages(menus);
+                setMenuImages(menus.map(m => m.url));
 
+                // Group menus into Promo (link_menu_5) vs Regular (the rest)
+                const promoKeys = ['link_menu_5'];
+                const promoUrls = menus.filter(m => promoKeys.includes(m.key)).map(m => m.url);
+                const regularUrls = menus.filter(m => !promoKeys.includes(m.key)).map(m => m.url);
+                
+                setPromoMenuImages(promoUrls);
+                setRegularMenuImages(regularUrls);
+                
+                if (regularUrls.length === 0 && promoUrls.length > 0) {
+                    setActiveTab('promo');
+                } else {
+                    setActiveTab('regular');
+                }
+
+                // Rearrange atmosphere images: put link_hero_url first
                 const atms = [];
+                if (map.link_hero_url) {
+                    atms.push(map.link_hero_url);
+                }
                 for (let i = 1; i <= 10; i++) {
-                    if (map[`link_atm_${i}`]) atms.push(map[`link_atm_${i}`]);
+                    if (map[`link_atm_${i}`]) {
+                        // Prevent duplicating the hero image if it was already in atm list
+                        if (map[`link_atm_${i}`] !== map.link_hero_url) {
+                            atms.push(map[`link_atm_${i}`]);
+                        }
+                    }
                 }
                 setAtmImages(atms);
 
@@ -69,7 +108,7 @@ export default function AdsLandingPage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-neutral-600 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -88,7 +127,7 @@ export default function AdsLandingPage() {
                     {/* Logo */}
                     {logoUrl ? (
                         <img
-                            src={logoUrl}
+                            src={optimizeImageUrl(logoUrl, 160)}
                             alt="Logo"
                             className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-lg flex-shrink-0"
                             fetchPriority="high"
@@ -103,9 +142,9 @@ export default function AdsLandingPage() {
                         <h1 className="text-xl font-bold text-neutral-900 leading-tight tracking-tight truncate">
                             {shopName}
                         </h1>
-                        <p className="text-neutral-500 text-sm mt-0.5">{shopNameTh}</p>
-                        <div className="flex items-center gap-1.5 mt-1 text-neutral-400 text-xs">
-                            <Clock size={11} />
+                        <p className="text-neutral-700 font-semibold text-sm mt-0.5">{shopNameTh}</p>
+                        <div className="flex items-center gap-1.5 mt-1 text-neutral-700 text-xs font-medium">
+                            <Clock size={11} className="text-neutral-600" />
                             <span>{hours}</span>
                         </div>
                     </div>
@@ -116,7 +155,7 @@ export default function AdsLandingPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="text-xs text-neutral-400 mt-4 tracking-wide font-mono"
+                    className="text-xs text-neutral-855 mt-4 tracking-wide font-mono font-medium leading-relaxed"
                 >
                     {subtitle}
                 </motion.p>
@@ -128,9 +167,9 @@ export default function AdsLandingPage() {
                     <div className="px-5 mb-3 flex items-end justify-between">
                         <div>
                             <h2 className="text-neutral-800 text-lg font-bold tracking-tight">สัมผัสบรรยากาศในบ้าน</h2>
-                            <p className="text-neutral-400 text-[10px] font-mono tracking-wider uppercase mt-0.5">Experience the Vibe</p>
+                            <p className="text-neutral-600 text-[10px] font-mono tracking-wider uppercase mt-0.5 font-bold">Experience the Vibe</p>
                         </div>
-                        <span className="text-[10px] text-neutral-300 animate-pulse">Swipe ➔</span>
+                        <span className="text-[10px] text-neutral-600 font-bold animate-pulse">Swipe ➔</span>
                     </div>
                     
                     <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-5 pb-4 no-scrollbar">
@@ -144,7 +183,7 @@ export default function AdsLandingPage() {
                                 className="flex-none w-[75%] max-w-[260px] snap-center rounded-2xl overflow-hidden shadow-sm border border-neutral-100 aspect-square cursor-pointer"
                             >
                                 <img 
-                                    src={url} 
+                                    src={optimizeImageUrl(url, 600)} 
                                     alt={`Atmosphere ${i + 1}`} 
                                     className="w-full h-full object-cover" 
                                     loading={i === 0 ? undefined : "lazy"}
@@ -197,57 +236,68 @@ export default function AdsLandingPage() {
 
             {/* ─── SOCIAL LINKS ─── */}
             <section className="w-full max-w-lg mx-auto px-5 pb-6">
-                <div className="grid grid-cols-2 gap-2.5">
-                    {/* Primary Call to Action: Book Online - commented out for now as not ready to open online
+                <div className="grid grid-cols-2 gap-3">
+                    {/* Primary Actions: LINE and PHONE (Prominent & High Contrast) */}
                     <LinkCard 
-                        href="/booking" 
-                        icon={<Utensils size={18} />} 
-                        title="จองโต๊ะออนไลน์ (Book Online)" 
-                        bg="bg-[#DFFF00] hover:bg-[#cde600] border border-[#DFFF00]" 
-                        textColor="text-neutral-900"
-                        wide 
-                        internal 
-                        id="cta-booking"
+                        href="https://lin.ee/EuzwG7c" 
+                        icon={<MessageCircle size={18} />} 
+                        title="ทักแชต LINE" 
+                        bg="bg-[#06C755] hover:bg-[#05b04b] shadow-md border-b-4 border-[#04943f]" 
+                        id="cta-line" 
                     />
-                    */}
+                    <LinkCard 
+                        href="tel:0985284217" 
+                        icon={<Phone size={18} />} 
+                        title="📞 โทรสั่งอาหาร / จองโต๊ะ" 
+                        bg="bg-[#FF453A] hover:bg-[#ff3b30] shadow-md border-b-4 border-[#e03126]" 
+                        id="cta-call" 
+                    />
 
-                    <LinkCard href="https://lin.ee/EuzwG7c" icon={<MessageCircle size={18} />} title="Line Official" bg="bg-[#00C300]" id="cta-line" />
-                    <LinkCard href="https://www.facebook.com/inthehausth" icon={<ExternalLink size={18} />} title="Facebook" bg="bg-[#1877F2]" id="cta-facebook" />
-                    <LinkCard href="https://instagram.com/inthehausth" icon={<ExternalLink size={18} />} title="Instagram" bg="bg-[#E1306C]" id="cta-instagram" />
-                    <LinkCard href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic" icon={<MapPin size={18} />} title="Google Maps" bg="bg-[#4A4A4A]" id="cta-maps" />
+                    {/* Secondary Action: Map (Full Width) */}
+                    <LinkCard 
+                        href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic" 
+                        icon={<MapPin size={18} />} 
+                        title="แผนที่นำทางมาร้าน (Google Maps)" 
+                        bg="bg-[#4A4A4A] hover:bg-[#3A3A3A] transition-colors" 
+                        wide 
+                        id="cta-maps" 
+                    />
 
-                    {/* Phone Contact Block */}
-                    <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm text-center col-span-full mt-1.5">
-                        <p className="text-[10px] font-bold text-neutral-400 tracking-[0.2em] font-mono uppercase mb-2">📞 โทรสำรองที่นั่ง / ติดต่อร้าน</p>
-                        <div className="flex justify-center">
-                            <a 
-                                href="tel:0985284217" 
-                                id="cta-call" 
-                                className="w-full max-w-[240px] flex items-center justify-center gap-2 text-neutral-800 font-bold hover:text-neutral-600 px-3 py-2 bg-neutral-50 rounded-xl text-xs transition-colors border border-neutral-100"
-                            >
-                                <Phone size={13} className="text-neutral-500" /> 098-528-4217
-                            </a>
-                        </div>
-                    </div>
+                    {/* Tertiary Actions: FB & IG (Shrunk & Secondary Style) */}
+                    <LinkCard 
+                        href="https://www.facebook.com/inthehausth" 
+                        icon={<ExternalLink size={14} className="text-neutral-500" />} 
+                        title="Facebook" 
+                        bg="bg-white hover:bg-neutral-50 border border-neutral-200" 
+                        textColor="text-neutral-700"
+                        id="cta-facebook" 
+                    />
+                    <LinkCard 
+                        href="https://instagram.com/inthehausth" 
+                        icon={<ExternalLink size={14} className="text-neutral-500" />} 
+                        title="Instagram" 
+                        bg="bg-white hover:bg-neutral-50 border border-neutral-200" 
+                        textColor="text-neutral-700"
+                        id="cta-instagram" 
+                    />
                 </div>
 
                 {/* Delivery */}
                 <div className="flex items-center gap-3 my-5">
                     <div className="h-px bg-neutral-200 flex-1" />
-                    <span className="text-neutral-300 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Delivery</span>
+                    <span className="text-neutral-600 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Delivery</span>
                     <div className="h-px bg-neutral-200 flex-1" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5">
-                    <LinkCard href="https://lin.ee/8uqmIzZ" icon={<Utensils size={18} />} title="Lineman" bg="bg-[#00B14F]" wide id="cta-lineman" />
+                    <LinkCard href="https://lin.ee/8uqmIzZ" icon={<Utensils size={18} />} title="สั่งอาหารเดลิเวอรี Lineman" bg="bg-[#00B14F] hover:bg-[#009c45] transition-colors" wide id="cta-lineman" />
                 </div>
 
                 {/* Q&A */}
                 <div className="mt-5">
-                    <LinkCard href="/qa" icon={<HelpCircle size={18} />} title="Q&A ถาม-ตอบ" bg="bg-[#636AA0]" wide internal id="cta-qa" />
+                    <LinkCard href="/qa" icon={<HelpCircle size={18} />} title="Q&A ถาม-ตอบ ข้อมูลร้าน" bg="bg-[#636AA0] hover:bg-[#535987] transition-colors" wide internal id="cta-qa" />
                 </div>
             </section>
-
             {/* ─── FIND US ─── */}
             <section className="w-full max-w-lg mx-auto px-5 pb-8">
                 <motion.div
@@ -259,9 +309,9 @@ export default function AdsLandingPage() {
                 >
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[10px] font-bold text-neutral-400 tracking-[0.2em] font-mono uppercase mb-2">Find Us</p>
-                            <p className="text-neutral-800 font-semibold text-sm">{locationText}</p>
-                            <p className="text-neutral-400 text-xs mt-1">{hours}</p>
+                            <p className="text-[10px] font-bold text-neutral-600 tracking-[0.2em] font-mono uppercase mb-2">Find Us</p>
+                            <p className="text-neutral-900 font-bold text-sm">{locationText}</p>
+                            <p className="text-neutral-700 text-xs font-medium mt-1">{hours}</p>
                         </div>
                         <a
                             href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic"
@@ -280,7 +330,7 @@ export default function AdsLandingPage() {
                 <section className="w-full max-w-lg mx-auto px-5 pb-10">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="h-px bg-neutral-200 flex-1" />
-                        <span className="text-neutral-400 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Signature</span>
+                        <span className="text-neutral-600 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Signature</span>
                         <div className="h-px bg-neutral-200 flex-1" />
                     </div>
 
@@ -292,99 +342,183 @@ export default function AdsLandingPage() {
                 </section>
             )}
 
-
             {/* ─── MENU GALLERY ─── */}
-            {menuImages.length > 0 && (
-                <section className="w-full bg-white py-10 border-t border-neutral-100">
-                    <div className="max-w-md mx-auto px-5">
+            {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
+                <section className="w-full bg-white py-10 border-t border-neutral-100 pb-20">
+                    <div className="max-w-md mx-auto px-4">
                         <div className="flex items-center gap-3 mb-6">
                             <div className="h-px bg-neutral-200 flex-1" />
-                            <h2 className="text-neutral-700 text-sm font-bold tracking-[0.2em] font-mono uppercase">Menu</h2>
+                            <h2 className="text-neutral-800 text-sm font-bold tracking-[0.2em] font-mono uppercase">Menu Booklet</h2>
                             <div className="h-px bg-neutral-200 flex-1" />
                         </div>
 
-                        {/* Compact Menu Viewer */}
-                        <div className="bg-neutral-50 rounded-3xl border border-neutral-100 p-4 shadow-sm flex flex-col items-center">
-                            
-                            {/* Preview Container */}
-                            <div 
-                                onClick={() => setSelectedLightbox({ type: 'menu', index: activeMenuIndex })}
-                                className="relative w-full max-w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-md border border-neutral-100 bg-neutral-200 cursor-pointer group"
-                            >
-                                {/* Skeleton Loader */}
-                                {menuImageLoading && (
-                                    <div className="absolute inset-0 bg-neutral-200 animate-pulse flex items-center justify-center">
-                                        <div className="w-8 h-8 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin" />
-                                    </div>
-                                )}
-
-                                <img
-                                    src={menuImages[activeMenuIndex]}
-                                    alt={`Menu Page ${activeMenuIndex + 1}`}
-                                    loading="lazy"
-                                    decoding="async"
-                                    onLoad={() => setMenuImageLoading(false)}
-                                    className={`w-full h-full object-contain bg-white transition-opacity duration-300 ${menuImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                                />
-
-                                {/* Hover Overlay */}
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-2 backdrop-blur-[2px]">
-                                    <Maximize2 size={20} />
-                                    <span>แตะเพื่อขยาย & ซูมดูแบบชัดเจน</span>
-                                </div>
-                            </div>
-
-                            {/* Pagination Controls */}
-                            <div className="flex items-center justify-between w-full mt-4 px-2">
+                        {/* Category Tabs Switcher */}
+                        <div className="flex gap-2 p-1.5 bg-neutral-100 rounded-2xl mb-5 text-xs font-bold font-['IBM_Plex_Sans_Thai'] shadow-inner">
+                            {regularMenuImages.length > 0 && (
                                 <button
-                                    disabled={activeMenuIndex === 0}
                                     onClick={() => {
-                                        setActiveMenuIndex(prev => Math.max(0, prev - 1));
+                                        setActiveTab('regular');
+                                        setActiveMenuIndex(0);
                                         setMenuImageLoading(true);
                                     }}
-                                    className="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all"
+                                    className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer font-bold ${activeTab === 'regular' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
                                 >
-                                    <ChevronLeft size={20} />
+                                    📖 เมนูอาหาร & เครื่องดื่ม
                                 </button>
-                                
-                                <span className="text-xs font-bold text-neutral-600 font-mono">
-                                    หน้า {activeMenuIndex + 1} / {menuImages.length}
-                                </span>
-
+                            )}
+                            {promoMenuImages.length > 0 && (
                                 <button
-                                    disabled={activeMenuIndex === menuImages.length - 1}
                                     onClick={() => {
-                                        setActiveMenuIndex(prev => Math.min(menuImages.length - 1, prev + 1));
+                                        setActiveTab('promo');
+                                        setActiveMenuIndex(0);
                                         setMenuImageLoading(true);
                                     }}
-                                    className="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all"
+                                    className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer font-bold ${activeTab === 'promo' ? 'bg-[#FF453A]/10 text-[#FF453A]' : 'text-neutral-500 hover:text-neutral-900'}`}
                                 >
-                                    <ChevronRight size={20} />
+                                    🔥 โปรโมชั่นพิเศษ
                                 </button>
-                            </div>
-
-                            {/* Horizontal Scrollable Thumbnails Strip */}
-                            <div className="flex gap-2 overflow-x-auto w-full mt-4 px-1 py-1 no-scrollbar scroll-smooth">
-                                {menuImages.map((url, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => {
-                                            setActiveMenuIndex(i);
-                                            setMenuImageLoading(true);
-                                        }}
-                                        className={`flex-shrink-0 w-12 h-16 rounded-lg overflow-hidden border-2 transition-all ${activeMenuIndex === i ? 'border-neutral-900 scale-105 shadow-sm' : 'border-neutral-200 opacity-60 hover:opacity-100'}`}
-                                    >
-                                        <img
-                                            src={url}
-                                            alt={`Thumb ${i + 1}`}
-                                            loading="lazy"
-                                            decoding="async"
-                                            className="w-full h-full object-cover bg-white"
-                                        />
-                                    </button>
-                                ))}
-                            </div>
+                            )}
                         </div>
+
+                        {/* Interactive Menu Viewer */}
+                        {(() => {
+                            const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
+                            if (currentImages.length === 0) return null;
+                            const activeUrl = currentImages[activeMenuIndex];
+
+                            return (
+                                <div className="bg-neutral-50 rounded-3xl border border-neutral-200 p-4 shadow-sm flex flex-col items-center">
+                                    
+                                    {/* Inline Interactive Transform Wrapper */}
+                                    <TransformWrapper
+                                        key={`${activeTab}-${activeMenuIndex}-${activeUrl}`} // Re-initializes on tab/page changes
+                                        initialScale={1}
+                                        minScale={1}
+                                        maxScale={4}
+                                        centerOnInit={true}
+                                    >
+                                        {({ zoomIn, zoomOut, resetTransform }) => (
+                                            <div className="w-full flex flex-col items-center">
+                                                
+                                                {/* Toolbar with Zoom Controls */}
+                                                <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-neutral-100 p-2 rounded-xl border border-neutral-200/60 shadow-sm">
+                                                    <div className="flex items-center gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => zoomIn()} 
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer border border-transparent hover:border-neutral-200"
+                                                            title="ซูมเข้า"
+                                                        >
+                                                            <ZoomIn size={16} />
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => zoomOut()} 
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer border border-transparent hover:border-neutral-200"
+                                                            title="ซูมออก"
+                                                        >
+                                                            <ZoomOut size={16} />
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => resetTransform()} 
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer border border-transparent hover:border-neutral-200"
+                                                            title="รีเซ็ต"
+                                                        >
+                                                            <RefreshCw size={14} />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setSelectedLightbox({ type: 'menu', index: menuImages.indexOf(activeUrl) })}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-neutral-800 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-lg shadow-sm active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        <Maximize2 size={12} />
+                                                        <span>ขยายเต็มจอ</span>
+                                                    </button>
+                                                </div>
+
+                                                {/* Zoomable Image Container */}
+                                                <div 
+                                                    className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-sm border border-neutral-200 bg-white cursor-grab active:cursor-grabbing"
+                                                >
+                                                    {menuImageLoading && (
+                                                        <div className="absolute inset-0 bg-neutral-150 animate-pulse flex items-center justify-center">
+                                                            <div className="w-8 h-8 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                                                        </div>
+                                                    )}
+
+                                                    <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full flex items-center justify-center">
+                                                        <img
+                                                            src={optimizeImageUrl(activeUrl, 900)}
+                                                            alt={`Menu Page ${activeMenuIndex + 1}`}
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                            onLoad={() => setMenuImageLoading(false)}
+                                                            className={`w-full h-full object-contain transition-opacity duration-300 ${menuImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                                                        />
+                                                    </TransformComponent>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </TransformWrapper>
+
+                                    {/* Pagination Controls */}
+                                    <div className="flex items-center justify-between w-full mt-4 px-2">
+                                        <button
+                                            disabled={activeMenuIndex === 0}
+                                            onClick={() => {
+                                                setActiveMenuIndex(prev => Math.max(0, prev - 1));
+                                                setMenuImageLoading(true);
+                                            }}
+                                            className="w-10 h-10 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all"
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        
+                                        <span className="text-xs font-bold text-neutral-700 font-mono">
+                                            หน้า {activeMenuIndex + 1} / {currentImages.length}
+                                        </span>
+
+                                        <button
+                                            disabled={activeMenuIndex === currentImages.length - 1}
+                                            onClick={() => {
+                                                setActiveMenuIndex(prev => Math.min(currentImages.length - 1, prev + 1));
+                                                setMenuImageLoading(true);
+                                            }}
+                                            className="w-10 h-10 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all"
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
+
+                                    {/* Thumbnails Strip */}
+                                    {currentImages.length > 1 && (
+                                        <div className="flex gap-2 overflow-x-auto w-full mt-4 px-1 py-1 no-scrollbar scroll-smooth">
+                                            {currentImages.map((url, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        setActiveMenuIndex(i);
+                                                        setMenuImageLoading(true);
+                                                    }}
+                                                    className={`flex-shrink-0 w-12 h-16 rounded-lg overflow-hidden border-2 transition-all ${activeMenuIndex === i ? 'border-neutral-900 scale-105 shadow-sm' : 'border-neutral-200 opacity-60 hover:opacity-100'}`}
+                                                >
+                                                    <img
+                                                        src={optimizeImageUrl(url, 150)}
+                                                        alt={`Thumb ${i + 1}`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className="w-full h-full object-cover bg-white"
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </section>
             )}
@@ -393,7 +527,7 @@ export default function AdsLandingPage() {
             <section className="w-full max-w-lg mx-auto px-5 py-8">
                 <div className="flex flex-wrap justify-center gap-2">
                     {tags.map(tag => (
-                        <span key={tag} className="px-3 py-1 bg-neutral-100 text-neutral-400 rounded-full text-[10px] font-bold font-mono tracking-wide">
+                        <span key={tag} className="px-3 py-1 bg-neutral-200 text-neutral-600 rounded-full text-[10px] font-bold font-mono tracking-wide">
                             {tag}
                         </span>
                     ))}
@@ -401,9 +535,27 @@ export default function AdsLandingPage() {
             </section>
 
             {/* ─── FOOTER ─── */}
-            <footer className="bg-neutral-900 text-neutral-500 py-6 text-center text-[10px] font-mono tracking-widest">
+            <footer className="bg-neutral-900 text-neutral-400 py-6 text-center text-[10px] font-mono tracking-widest pb-24">
                 <p>© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
             </footer>
+
+            {/* ─── STICKY FLOATING CONTACT BAR (Mobile Only) ─── */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 max-w-lg mx-auto px-4 py-3 bg-white/95 backdrop-blur-md border-t border-neutral-100 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] flex gap-3 pb-safe">
+                <a 
+                    href="https://lin.ee/EuzwG7c" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-[#06C755] text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-xs font-bold shadow-sm active:scale-97 transition-all cursor-pointer border-b-2 border-[#04943f]"
+                >
+                    <MessageCircle size={15} /> ทักแชต LINE
+                </a>
+                <a 
+                    href="tel:0985284217" 
+                    className="flex-1 bg-[#FF453A] text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-xs font-bold shadow-sm active:scale-97 transition-all cursor-pointer border-b-2 border-[#e03126]"
+                >
+                    <Phone size={15} /> โทรสั่งอาหาร / จองโต๊ะ
+                </a>
+            </div>
 
             {/* ─── LIGHTBOX ─── */}
             <AnimatePresence>
@@ -475,7 +627,7 @@ function ZoomableLightbox({ type, images, initialIndex, onClose }) {
                             
                             <TransformComponent wrapperClass="w-full h-full flex items-center justify-center" contentClass="w-full h-full flex items-center justify-center">
                                 <img
-                                    src={activeUrl}
+                                    src={optimizeImageUrl(activeUrl, 1200)}
                                     alt="Zoomed view"
                                     className="max-w-full max-h-[75vh] object-contain rounded-lg p-2"
                                 />
@@ -484,7 +636,7 @@ function ZoomableLightbox({ type, images, initialIndex, onClose }) {
                             {/* Preload Next Page in Background */}
                             {currentIndex + 1 < images.length && (
                                 <img
-                                    src={images[currentIndex + 1]}
+                                    src={optimizeImageUrl(images[currentIndex + 1], 1200)}
                                     style={{ display: 'none' }}
                                     alt="Preloading next page"
                                 />
@@ -591,7 +743,7 @@ function SignatureDishCard({ dish, index }) {
                     </div>
                 )}
                 <img
-                    src={dish.img}
+                    src={optimizeImageUrl(dish.img, 400)}
                     alt={dish.name}
                     loading="eager"
                     fetchPriority="high"

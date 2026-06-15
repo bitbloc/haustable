@@ -244,8 +244,7 @@ export default function SongRequestPage() {
                 text: "🎵 SONG REQUEST · 100 THB",
                 weight: "bold",
                 size: "sm",
-                color: "#1DB954",
-                letterSpacing: "0.1em"
+                color: "#1DB954"
               }
             ],
             backgroundColor: "#121212",

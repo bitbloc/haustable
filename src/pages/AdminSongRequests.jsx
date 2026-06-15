@@ -147,8 +147,7 @@ export default function AdminSongRequests() {
                 text: "🧪 [TEST] SONG REQUEST",
                 weight: "bold",
                 size: "sm",
-                color: "#FF3366",
-                letterSpacing: "0.1em"
+                color: "#FF3366"
               }
             ],
             backgroundColor: "#121212",
