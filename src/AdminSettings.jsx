@@ -1507,68 +1507,150 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             <div className="space-y-3 border-t border-gray-100 pt-6">
                 <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-brandDark uppercase">✨ บรรยากาศร้าน (Atmosphere Images)</label>
-                    <span className="text-[10px] text-subInk">{atmUrls.length}/10 รูป</span>
+                    <span className="text-subInk text-[10px]">ระบุตำแหน่งรูปบรรยากาศที่จะแสดงในแกลเลอรี (รูปที่ 1 จะแสดงเป็นรูปแรกสุด)</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    {atmUrls.map(({ slot, url }) => (
-                        <div key={slot} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-video">
-                            <img src={`${url}?t=${timestamp}`} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                <button onClick={() => handleDeleteAtm(slot)}
-                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity">
-                                    <Trash2 size={14} className="inline mr-1" /> ลบ
-                                </button>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(slot => {
+                        const url = settings[`link_atm_${slot}`];
+                        const isFirst = slot === 1;
+                        return (
+                            <div key={slot} className={`bg-canvas p-2 rounded-xl border flex flex-col justify-between ${isFirst ? 'border-brand ring-1 ring-brand bg-brand/5' : 'border-gray-200'}`}>
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className={`text-[9px] font-bold ${isFirst ? 'text-ink' : 'text-subInk'}`}>
+                                            รูปที่ #{slot} {isFirst ? '(หน้าปก)' : ''}
+                                        </span>
+                                    </div>
+
+                                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-150 border border-gray-200 flex items-center justify-center">
+                                        {url ? (
+                                            <img src={`${url}?t=${timestamp}`} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="text-center text-gray-300 text-xs font-bold font-mono">Empty</div>
+                                        )}
+                                        {uploading[`link_atm_${slot}`] && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mt-2 flex flex-col gap-1">
+                                    <label className="w-full cursor-pointer">
+                                        <div className="bg-white border border-gray-200 hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 rounded-md py-1 text-[9px] font-bold text-center transition-all cursor-pointer">
+                                            {url ? '🔄 เปลี่ยนรูป' : '📸 อัปโหลด'}
+                                        </div>
+                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadImage(e.target.files[0], `link_atm_${slot}`)} />
+                                    </label>
+                                    {url && (
+                                        <div className="flex gap-1 w-full">
+                                            <button
+                                                onClick={() => handleSave(`link_atm_${slot}`, '')}
+                                                className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
+                                                title="ลบเฉพาะช่องนี้"
+                                            >
+                                                ลบรูป
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteAtm(slot)}
+                                                className="flex-1 bg-neutral-100 hover:bg-neutral-250 text-neutral-600 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
+                                                title="ลบและเลื่อนคิวภาพถัดไปมาแทนที่"
+                                            >
+                                                ลบ & เลื่อน
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">#{slot}</div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
-                {atmUrls.length < 10 && (
+                <div className="mt-3">
                     <label className="block w-full cursor-pointer group">
-                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
-                            <Upload size={24} className="mx-auto mb-2 text-subInk group-hover:text-brandDark transition-colors" />
-                            <span className="text-subInk text-sm group-hover:text-ink block">เพิ่มรูปบรรยากาศ (เลือกได้หลายรูป)</span>
-                            <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: Landscape (16:9) หรือ Square, JPG/PNG</span>
+                        <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-3 text-center group-hover:border-brand transition-colors">
+                            <span className="text-subInk text-xs group-hover:text-ink block">⚡ อัปโหลดเพิ่มหลายรูปพร้อมกัน (จะสุ่มเข้าช่องว่างถัดไปโดยอัตโนมัติ)</span>
                         </div>
                         <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleAtmUpload(e.target.files)} />
                     </label>
-                )}
+                </div>
             </div>
 
             {/* Menu Images Manager */}
             <div className="space-y-3 border-t border-gray-100 pt-6">
                 <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-brandDark uppercase">📖 เมนู (Menu Images)</label>
-                    <span className="text-[10px] text-subInk">{menuUrls.length}/10 รูป</span>
+                    <span className="text-subInk text-[10px]">ระบุตำแหน่งตามหน้าที่แสดงบนเว็บ (หน้า 5 คือโปรโมชั่นพิเศษ)</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    {menuUrls.map(({ slot, url }) => (
-                        <div key={slot} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                            <img src={`${url}?t=${timestamp}`} alt={`Menu ${slot}`} className="w-full h-auto object-contain" />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                <button onClick={() => handleDeleteMenu(slot)}
-                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity">
-                                    <Trash2 size={14} className="inline mr-1" /> ลบ
-                                </button>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(slot => {
+                        const url = settings[`link_menu_${slot}`];
+                        const isPromo = slot === 5;
+                        return (
+                            <div key={slot} className={`bg-canvas p-2 rounded-xl border flex flex-col justify-between ${isPromo ? 'border-red-200 ring-1 ring-red-100 bg-red-50/20' : 'border-gray-200'}`}>
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className={`text-[9px] font-bold ${isPromo ? 'text-red-500' : 'text-subInk'}`}>
+                                            หน้า #{slot} {isPromo ? '(โปรโมชั่น)' : '(เมนูหลัก)'}
+                                        </span>
+                                    </div>
+
+                                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-gray-150 border border-gray-205 flex items-center justify-center">
+                                        {url ? (
+                                            <img src={`${url}?t=${timestamp}`} alt={`Menu ${slot}`} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="text-center text-gray-300 text-xs font-bold font-mono">Empty</div>
+                                        )}
+                                        {uploading[`link_menu_${slot}`] && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mt-2 flex flex-col gap-1">
+                                    <label className="w-full cursor-pointer">
+                                        <div className="bg-white border border-gray-200 hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 rounded-md py-1 text-[9px] font-bold text-center transition-all cursor-pointer">
+                                            {url ? '🔄 เปลี่ยนรูป' : '📸 อัปโหลด'}
+                                        </div>
+                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadImage(e.target.files[0], `link_menu_${slot}`)} />
+                                    </label>
+                                    {url && (
+                                        <div className="flex gap-1 w-full">
+                                            <button
+                                                onClick={() => handleSave(`link_menu_${slot}`, '')}
+                                                className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
+                                                title="ลบเฉพาะช่องนี้"
+                                            >
+                                                ลบรูป
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteMenu(slot)}
+                                                className="flex-1 bg-neutral-100 hover:bg-neutral-250 text-neutral-600 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
+                                                title="ลบและเลื่อนคิวภาพถัดไปมาแทนที่"
+                                            >
+                                                ลบ & เลื่อน
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">#{slot}</div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
-                {menuUrls.length < 10 && (
+                <div className="mt-3">
                     <label className="block w-full cursor-pointer group">
-                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
-                            <Upload size={24} className="mx-auto mb-2 text-subInk group-hover:text-brandDark transition-colors" />
-                            <span className="text-subInk text-sm group-hover:text-ink block">เพิ่มรูปเมนู (เลือกได้หลายรูป)</span>
-                            <span className="text-[10px] text-gray-400 mt-1 block">แนะนำ: Portrait (9:16), JPG/PNG, สูงสุด 10 รูป</span>
+                        <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-3 text-center group-hover:border-brand transition-colors">
+                            <span className="text-subInk text-xs group-hover:text-ink block">⚡ อัปโหลดเพิ่มหลายรูปพร้อมกัน (จะสุ่มเข้าช่องว่างถัดไปโดยอัตโนมัติ)</span>
                         </div>
                         <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleMenuUpload(e.target.files)} />
                     </label>
-                )}
+                </div>
             </div>
         </div>
     )
