@@ -52,7 +52,14 @@ export default function SongRequestPage() {
       if (error) throw error
       if (data?.error) {
         setPlaylistError(data.error)
-        setIsSpotifyActive(false)
+        // If playlist is not set, we can still enable Spotify mode (direct catalog search)
+        if (data.error.includes('Playlist') || data.error.includes('playlist') || data.error.includes('not configured')) {
+          setPlaylistTracks([])
+          setIsSpotifyActive(true)
+          setSearchMode('catalog')
+        } else {
+          setIsSpotifyActive(false)
+        }
       } else if (data?.tracks && data.tracks.length > 0) {
         setPlaylistTracks(data.tracks)
         setIsSpotifyActive(true)
@@ -626,32 +633,34 @@ export default function SongRequestPage() {
                     </div>
 
                     {/* Mode Tabs */}
-                    <div className="flex bg-[#121212] p-1 rounded-xl border border-white/5 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchMode('playlist')
-                          setSearchQuery('')
-                        }}
-                        className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
-                          searchMode === 'playlist' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        เพลงแนะนำของร้าน
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchMode('catalog')
-                          setSearchQuery('')
-                        }}
-                        className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
-                          searchMode === 'catalog' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        ค้นหาทั่วไป (Spotify)
-                      </button>
-                    </div>
+                    {playlistTracks.length > 0 && (
+                      <div className="flex bg-[#121212] p-1 rounded-xl border border-white/5 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchMode('playlist')
+                            setSearchQuery('')
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
+                            searchMode === 'playlist' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          เพลงแนะนำของร้าน
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchMode('catalog')
+                            setSearchQuery('')
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
+                            searchMode === 'catalog' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          ค้นหาทั่วไป (Spotify)
+                        </button>
+                      </div>
+                    )}
 
                     {/* List Tracks container */}
                     <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
