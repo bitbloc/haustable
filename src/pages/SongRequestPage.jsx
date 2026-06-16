@@ -20,6 +20,7 @@ export default function SongRequestPage() {
   const [playlistTracks, setPlaylistTracks] = useState([])
   const [loadingPlaylist, setLoadingPlaylist] = useState(false)
   const [playlistError, setPlaylistError] = useState(null)
+  const [spotifyApiError, setSpotifyApiError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -109,17 +110,21 @@ export default function SongRequestPage() {
       return
     }
     setSearching(true)
+    setSpotifyApiError(null)
     try {
       const { data, error } = await supabase.functions.invoke(`spotify-search?q=${encodeURIComponent(queryStr)}`)
       if (error) throw error
       if (data?.error) {
-        toast.error(data.error)
+        setSpotifyApiError(data.error)
+        setSearchResults([])
       } else {
         setSearchResults(data?.tracks || [])
+        setSpotifyApiError(null)
       }
     } catch (err) {
       console.error('Search failed:', err)
-      toast.error('ค้นหาเพลงล้มเหลว: ' + err.message)
+      setSpotifyApiError(err.message || 'Spotify search failed')
+      setSearchResults([])
     } finally {
       setSearching(false)
     }
@@ -631,6 +636,20 @@ export default function SongRequestPage() {
                         </button>
                       )}
                     </div>
+
+                    {spotifyApiError && (
+                      <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3.5 rounded-xl text-[10px] leading-relaxed space-y-1 animate-fade-in">
+                        <p className="font-bold">⚠️ ค้นหาเพลงอัตโนมัติไม่สำเร็จ</p>
+                        <p className="opacity-80">{spotifyApiError}</p>
+                        <button
+                          type="button"
+                          onClick={() => setIsSpotifyActive(false)}
+                          className="text-[#1DB954] font-black underline mt-1.5 block hover:text-[#1ed760] cursor-pointer"
+                        >
+                          สลับไปกรอกข้อมูลเพลงด้วยตัวเอง (พิมพ์มือ)
+                        </button>
+                      </div>
+                    )}
 
                     {/* Mode Tabs */}
                     {playlistTracks.length > 0 && (
