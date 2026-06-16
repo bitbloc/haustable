@@ -1,0 +1,199 @@
+﻿commit 01561c871b461333865a86e22de30597761c829d
+Author: bitbloc <rithawat@gmail.com>
+Date:   Mon Jun 15 11:33:55 2026 +0700
+
+    admin
+
+diff --git a/src/AdminSettings.jsx b/src/AdminSettings.jsx
+index 319953c..55c97a1 100644
+--- a/src/AdminSettings.jsx
++++ b/src/AdminSettings.jsx
+@@ -1507,68 +1507,150 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
+             <div className="space-y-3 border-t border-gray-100 pt-6">
+                 <div className="flex items-center justify-between">
+                     <label className="block text-xs font-bold text-brandDark uppercase">โจ เธเธฃเธฃเธขเธฒเธเธฒเธจเธฃเนเธฒเธ (Atmosphere Images)</label>
+-                    <span className="text-[10px] text-subInk">{atmUrls.length}/10 เธฃเธนเธ</span>
++                    <span className="text-subInk text-[10px]">เธฃเธฐเธเธธเธ•เธณเนเธซเธเนเธเธฃเธนเธเธเธฃเธฃเธขเธฒเธเธฒเธจเธ—เธตเนเธเธฐเนเธชเธ”เธเนเธเนเธเธฅเน€เธฅเธญเธฃเธต (เธฃเธนเธเธ—เธตเน 1 เธเธฐเนเธชเธ”เธเน€เธเนเธเธฃเธนเธเนเธฃเธเธชเธธเธ”)</span>
+                 </div>
+ 
+-                <div className="grid grid-cols-2 gap-3">
+-                    {atmUrls.map(({ slot, url }) => (
+-                        <div key={slot} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-video">
+-                            <img src={`${url}?t=${timestamp}`} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
+-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+-                                <button onClick={() => handleDeleteAtm(slot)}
+-                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity">
+-                                    <Trash2 size={14} className="inline mr-1" /> เธฅเธ
+-                                </button>
++                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
++                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(slot => {
++                        const url = settings[`link_atm_${slot}`];
++                        const isFirst = slot === 1;
++                        return (
++                            <div key={slot} className={`bg-canvas p-2 rounded-xl border flex flex-col justify-between ${isFirst ? 'border-brand ring-1 ring-brand bg-brand/5' : 'border-gray-200'}`}>
++                                <div>
++                                    <div className="flex justify-between items-center mb-1">
++                                        <span className={`text-[9px] font-bold ${isFirst ? 'text-ink' : 'text-subInk'}`}>
++                                            เธฃเธนเธเธ—เธตเน #{slot} {isFirst ? '(เธซเธเนเธฒเธเธ)' : ''}
++                                        </span>
++                                    </div>
++
++                                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-150 border border-gray-200 flex items-center justify-center">
++                                        {url ? (
++                                            <img src={`${url}?t=${timestamp}`} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
++                                        ) : (
++                                            <div className="text-center text-gray-300 text-xs font-bold font-mono">Empty</div>
++                                        )}
++                                        {uploading[`link_atm_${slot}`] && (
++                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
++                                                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin" />
++                                            </div>
++                                        )}
++                                    </div>
++                                </div>
++
++                                <div className="mt-2 flex flex-col gap-1">
++                                    <label className="w-full cursor-pointer">
++                                        <div className="bg-white border border-gray-200 hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 rounded-md py-1 text-[9px] font-bold text-center transition-all cursor-pointer">
++                                            {url ? '๐” เน€เธเธฅเธตเนเธขเธเธฃเธนเธ' : '๐“ธ เธญเธฑเธเนเธซเธฅเธ”'}
++                                        </div>
++                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadImage(e.target.files[0], `link_atm_${slot}`)} />
++                                    </label>
++                                    {url && (
++                                        <div className="flex gap-1 w-full">
++                                            <button
++                                                onClick={() => handleSave(`link_atm_${slot}`, '')}
++                                                className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
++                                                title="เธฅเธเน€เธเธเธฒเธฐเธเนเธญเธเธเธตเน"
++                                            >
++                                                เธฅเธเธฃเธนเธ
++                                            </button>
++                                            <button
++                                                onClick={() => handleDeleteAtm(slot)}
++                                                className="flex-1 bg-neutral-100 hover:bg-neutral-250 text-neutral-600 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
++                                                title="เธฅเธเนเธฅเธฐเน€เธฅเธทเนเธญเธเธเธดเธงเธ เธฒเธเธ–เธฑเธ”เนเธเธกเธฒเนเธ—เธเธ—เธตเน"
++                                            >
++                                                เธฅเธ & เน€เธฅเธทเนเธญเธ
++                                            </button>
++                                        </div>
++                                    )}
++                                </div>
+                             </div>
+-                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">#{slot}</div>
+-                        </div>
+-                    ))}
++                        );
++                    })}
+                 </div>
+ 
+-                {atmUrls.length < 10 && (
++                <div className="mt-3">
+                     <label className="block w-full cursor-pointer group">
+-                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
+-                            <Upload size={24} className="mx-auto mb-2 text-subInk group-hover:text-brandDark transition-colors" />
+-                            <span className="text-subInk text-sm group-hover:text-ink block">เน€เธเธดเนเธกเธฃเธนเธเธเธฃเธฃเธขเธฒเธเธฒเธจ (เน€เธฅเธทเธญเธเนเธ”เนเธซเธฅเธฒเธขเธฃเธนเธ)</span>
+-                            <span className="text-[10px] text-gray-400 mt-1 block">เนเธเธฐเธเธณ: Landscape (16:9) เธซเธฃเธทเธญ Square, JPG/PNG</span>
++                        <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-3 text-center group-hover:border-brand transition-colors">
++                            <span className="text-subInk text-xs group-hover:text-ink block">โก เธญเธฑเธเนเธซเธฅเธ”เน€เธเธดเนเธกเธซเธฅเธฒเธขเธฃเธนเธเธเธฃเนเธญเธกเธเธฑเธ (เธเธฐเธชเธธเนเธกเน€เธเนเธฒเธเนเธญเธเธงเนเธฒเธเธ–เธฑเธ”เนเธเนเธ”เธขเธญเธฑเธ•เนเธเธกเธฑเธ•เธด)</span>
+                         </div>
+                         <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleAtmUpload(e.target.files)} />
+                     </label>
+-                )}
++                </div>
+             </div>
+ 
+             {/* Menu Images Manager */}
+             <div className="space-y-3 border-t border-gray-100 pt-6">
+                 <div className="flex items-center justify-between">
+                     <label className="block text-xs font-bold text-brandDark uppercase">๐“– เน€เธกเธเธน (Menu Images)</label>
+-                    <span className="text-[10px] text-subInk">{menuUrls.length}/10 เธฃเธนเธ</span>
++                    <span className="text-subInk text-[10px]">เธฃเธฐเธเธธเธ•เธณเนเธซเธเนเธเธ•เธฒเธกเธซเธเนเธฒเธ—เธตเนเนเธชเธ”เธเธเธเน€เธงเนเธ (เธซเธเนเธฒ 5 เธเธทเธญเนเธเธฃเนเธกเธเธฑเนเธเธเธดเน€เธจเธฉ)</span>
+                 </div>
+ 
+-                <div className="grid grid-cols-2 gap-3">
+-                    {menuUrls.map(({ slot, url }) => (
+-                        <div key={slot} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+-                            <img src={`${url}?t=${timestamp}`} alt={`Menu ${slot}`} className="w-full h-auto object-contain" />
+-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+-                                <button onClick={() => handleDeleteMenu(slot)}
+-                                    className="opacity-0 group-hover:opacity-100 bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity">
+-                                    <Trash2 size={14} className="inline mr-1" /> เธฅเธ
+-                                </button>
++                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
++                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(slot => {
++                        const url = settings[`link_menu_${slot}`];
++                        const isPromo = slot === 5;
++                        return (
++                            <div key={slot} className={`bg-canvas p-2 rounded-xl border flex flex-col justify-between ${isPromo ? 'border-red-200 ring-1 ring-red-100 bg-red-50/20' : 'border-gray-200'}`}>
++                                <div>
++                                    <div className="flex justify-between items-center mb-1">
++                                        <span className={`text-[9px] font-bold ${isPromo ? 'text-red-500' : 'text-subInk'}`}>
++                                            เธซเธเนเธฒ #{slot} {isPromo ? '(เนเธเธฃเนเธกเธเธฑเนเธ)' : '(เน€เธกเธเธนเธซเธฅเธฑเธ)'}
++                                        </span>
++                                    </div>
++
++                                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-gray-150 border border-gray-205 flex items-center justify-center">
++                                        {url ? (
++                                            <img src={`${url}?t=${timestamp}`} alt={`Menu ${slot}`} className="w-full h-full object-cover" />
++                                        ) : (
++                                            <div className="text-center text-gray-300 text-xs font-bold font-mono">Empty</div>
++                                        )}
++                                        {uploading[`link_menu_${slot}`] && (
++                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
++                                                <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin" />
++                                            </div>
++                                        )}
++                                    </div>
++                                </div>
++
++                                <div className="mt-2 flex flex-col gap-1">
++                                    <label className="w-full cursor-pointer">
++                                        <div className="bg-white border border-gray-200 hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 rounded-md py-1 text-[9px] font-bold text-center transition-all cursor-pointer">
++                                            {url ? '๐” เน€เธเธฅเธตเนเธขเธเธฃเธนเธ' : '๐“ธ เธญเธฑเธเนเธซเธฅเธ”'}
++                                        </div>
++                                        <input type="file" className="hidden" accept="image/*" onChange={(e) => uploadImage(e.target.files[0], `link_menu_${slot}`)} />
++                                    </label>
++                                    {url && (
++                                        <div className="flex gap-1 w-full">
++                                            <button
++                                                onClick={() => handleSave(`link_menu_${slot}`, '')}
++                                                className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
++                                                title="เธฅเธเน€เธเธเธฒเธฐเธเนเธญเธเธเธตเน"
++                                            >
++                                                เธฅเธเธฃเธนเธ
++                                            </button>
++                                            <button
++                                                onClick={() => handleDeleteMenu(slot)}
++                                                className="flex-1 bg-neutral-100 hover:bg-neutral-250 text-neutral-600 rounded-md py-0.5 text-[8px] font-bold transition-all text-center"
++                                                title="เธฅเธเนเธฅเธฐเน€เธฅเธทเนเธญเธเธเธดเธงเธ เธฒเธเธ–เธฑเธ”เนเธเธกเธฒเนเธ—เธเธ—เธตเน"
++                                            >
++                                                เธฅเธ & เน€เธฅเธทเนเธญเธ
++                                            </button>
++                                        </div>
++                                    )}
++                                </div>
+                             </div>
+-                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full font-mono">#{slot}</div>
+-                        </div>
+-                    ))}
++                        );
++                    })}
+                 </div>
+ 
+-                {menuUrls.length < 10 && (
++                <div className="mt-3">
+                     <label className="block w-full cursor-pointer group">
+-                        <div className="bg-canvas border-2 border-dashed border-gray-300 rounded-xl p-6 text-center group-hover:border-brand transition-colors">
+-                            <Upload size={24} className="mx-auto mb-2 text-subInk group-hover:text-brandDark transition-colors" />
+-                            <span className="text-subInk text-sm group-hover:text-ink block">เน€เธเธดเนเธกเธฃเธนเธเน€เธกเธเธน (เน€เธฅเธทเธญเธเนเธ”เนเธซเธฅเธฒเธขเธฃเธนเธ)</span>
+-                            <span className="text-[10px] text-gray-400 mt-1 block">เนเธเธฐเธเธณ: Portrait (9:16), JPG/PNG, เธชเธนเธเธชเธธเธ” 10 เธฃเธนเธ</span>
++                        <div className="bg-canvas border border-dashed border-gray-300 rounded-xl p-3 text-center group-hover:border-brand transition-colors">
++                            <span className="text-subInk text-xs group-hover:text-ink block">โก เธญเธฑเธเนเธซเธฅเธ”เน€เธเธดเนเธกเธซเธฅเธฒเธขเธฃเธนเธเธเธฃเนเธญเธกเธเธฑเธ (เธเธฐเธชเธธเนเธกเน€เธเนเธฒเธเนเธญเธเธงเนเธฒเธเธ–เธฑเธ”เนเธเนเธ”เธขเธญเธฑเธ•เนเธเธกเธฑเธ•เธด)</span>
+                         </div>
+                         <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => handleMenuUpload(e.target.files)} />
+                     </label>
+-                )}
++                </div>
+             </div>
+         </div>
+     )

@@ -47,8 +47,10 @@ export default function AdsLandingPage() {
                 }
                 setMenuImages(menus.map(m => m.url));
 
-                // Group menus into Promo (link_menu_5) vs Regular (the rest)
-                const promoKeys = ['link_menu_5'];
+                // Group menus into Promo vs Regular based on link_menu_promo_slots setting
+                const promoSlotString = map.link_menu_promo_slots || '5';
+                const promoSlotNumbers = promoSlotString.split(',').map(s => s.trim()).filter(Boolean);
+                const promoKeys = promoSlotNumbers.map(num => `link_menu_${num}`);
                 const promoUrls = menus.filter(m => promoKeys.includes(m.key)).map(m => m.url);
                 const regularUrls = menus.filter(m => !promoKeys.includes(m.key)).map(m => m.url);
                 
@@ -102,8 +104,6 @@ export default function AdsLandingPage() {
     const hours = settings.link_hours || 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)';
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
-    const videoUrl = settings.link_video_url || '';
-    const foodVideoUrl = settings.link_food_video_url || '';
 
     if (loading) {
         return (
@@ -161,41 +161,6 @@ export default function AdsLandingPage() {
                 </motion.p>
             </header>
 
-            {/* ─── ATMOSPHERE GALLERY (Replacing Hero) ─── */}
-            {atmImages.length > 0 && (
-                <section className="w-full max-w-lg mx-auto mb-8">
-                    <div className="px-5 mb-3 flex items-end justify-between">
-                        <div>
-                            <h2 className="text-neutral-800 text-lg font-bold tracking-tight">สัมผัสบรรยากาศในบ้าน</h2>
-                            <p className="text-neutral-600 text-[10px] font-mono tracking-wider uppercase mt-0.5 font-bold">Experience the Vibe</p>
-                        </div>
-                        <span className="text-[10px] text-neutral-600 font-bold animate-pulse">Swipe ➔</span>
-                    </div>
-                    
-                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-5 pb-4 no-scrollbar">
-                        {atmImages.map((url, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.4, delay: i * 0.1 }}
-                                onClick={() => setSelectedLightbox({ type: 'atm', index: i })}
-                                className="flex-none w-[75%] max-w-[260px] snap-center rounded-2xl overflow-hidden shadow-sm border border-neutral-100 aspect-square cursor-pointer"
-                            >
-                                <img 
-                                    src={optimizeImageUrl(url, 600)} 
-                                    alt={`Atmosphere ${i + 1}`} 
-                                    className="w-full h-full object-cover" 
-                                    loading={i === 0 ? undefined : "lazy"}
-                                    fetchPriority={i === 0 ? "high" : undefined}
-                                    decoding={i === 0 ? undefined : "async"}
-                                />
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
             <script type="application/ld+json">
                 {JSON.stringify({
@@ -234,109 +199,6 @@ export default function AdsLandingPage() {
                 })}
             </script>
 
-            {/* ─── SOCIAL LINKS ─── */}
-            <section className="w-full max-w-lg mx-auto px-5 pb-6">
-                <div className="grid grid-cols-2 gap-3">
-                    {/* View Menu Action (Anchor link to Menu Booklet) - Replaces the static line/call buttons */}
-                    <LinkCard 
-                        href="#menu-section" 
-                        icon={<Utensils size={18} />} 
-                        title="📖 ดูเมนูอาหาร & โปรโมชั่น" 
-                        bg="bg-neutral-900 hover:bg-neutral-800 text-white shadow-md border-b-4 border-neutral-950" 
-                        wide 
-                        internal
-                        id="cta-menu-anchor" 
-                    />
-
-                    {/* Secondary Action: Map (Full Width) */}
-                    <LinkCard 
-                        href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic" 
-                        icon={<MapPin size={18} />} 
-                        title="แผนที่นำทางมาร้าน (Google Maps)" 
-                        bg="bg-[#4A4A4A] hover:bg-[#3A3A3A] transition-colors" 
-                        wide 
-                        id="cta-maps" 
-                    />
-
-                    {/* Tertiary Actions: FB & IG (Shrunk & Secondary Style) */}
-                    <LinkCard 
-                        href="https://www.facebook.com/inthehausth" 
-                        icon={<ExternalLink size={14} className="text-neutral-500" />} 
-                        title="Facebook" 
-                        bg="bg-white hover:bg-neutral-50 border border-neutral-200" 
-                        textColor="text-neutral-700"
-                        id="cta-facebook" 
-                    />
-                    <LinkCard 
-                        href="https://instagram.com/inthehausth" 
-                        icon={<ExternalLink size={14} className="text-neutral-500" />} 
-                        title="Instagram" 
-                        bg="bg-white hover:bg-neutral-50 border border-neutral-200" 
-                        textColor="text-neutral-700"
-                        id="cta-instagram" 
-                    />
-                </div>
-
-                {/* Delivery */}
-                <div className="flex items-center gap-3 my-5">
-                    <div className="h-px bg-neutral-200 flex-1" />
-                    <span className="text-neutral-600 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Delivery</span>
-                    <div className="h-px bg-neutral-200 flex-1" />
-                </div>
-
-                <div className="grid grid-cols-1 gap-2.5">
-                    <LinkCard href="https://lin.ee/8uqmIzZ" icon={<Utensils size={18} />} title="สั่งอาหารเดลิเวอรี Lineman" bg="bg-[#00B14F] hover:bg-[#009c45] transition-colors" wide id="cta-lineman" />
-                </div>
-
-                {/* Q&A */}
-                <div className="mt-5">
-                    <LinkCard href="/qa" icon={<HelpCircle size={18} />} title="Q&A ถาม-ตอบ ข้อมูลร้าน" bg="bg-[#636AA0] hover:bg-[#535987] transition-colors" wide internal id="cta-qa" />
-                </div>
-            </section>
-            {/* ─── FIND US ─── */}
-            <section className="w-full max-w-lg mx-auto px-5 pb-8">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5 }}
-                    className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm"
-                >
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-[10px] font-bold text-neutral-600 tracking-[0.2em] font-mono uppercase mb-2">Find Us</p>
-                            <p className="text-neutral-900 font-bold text-sm">{locationText}</p>
-                            <p className="text-neutral-700 text-xs font-medium mt-1">{hours}</p>
-                        </div>
-                        <a
-                            href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-shrink-0 w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-white hover:bg-neutral-700 transition-colors"
-                        >
-                            <Navigation size={16} />
-                        </a>
-                    </div>
-                </motion.div>
-            </section>
-
-            {/* ─── SIGNATURE DISHES (optional) ─── */}
-            {signatures.length > 0 && (
-                <section className="w-full max-w-lg mx-auto px-5 pb-10">
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="h-px bg-neutral-200 flex-1" />
-                        <span className="text-neutral-600 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Signature</span>
-                        <div className="h-px bg-neutral-200 flex-1" />
-                    </div>
-
-                    <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                        {signatures.map((dish, i) => (
-                            <SignatureDishCard key={i} dish={dish} index={i} />
-                        ))}
-                    </div>
-                </section>
-            )}
-
             {/* ─── MENU GALLERY ─── */}
             {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
                 <section id="menu-section" className="w-full bg-white py-10 border-t border-neutral-100 pb-20">
@@ -346,6 +208,14 @@ export default function AdsLandingPage() {
                             <h2 className="text-neutral-800 text-sm font-bold tracking-[0.2em] font-mono uppercase">Menu Booklet</h2>
                             <div className="h-px bg-neutral-200 flex-1" />
                         </div>
+
+                        {/* pulsing promo banner if promotions exist */}
+                        {promoMenuImages.length > 0 && (
+                            <div className="mb-4 bg-red-50 border border-red-100 text-red-600 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold font-['IBM_Plex_Sans_Thai',sans-serif] animate-pulse">
+                                <span>🔥</span>
+                                <span>มีโปรโมชั่นพิเศษสุดคุ้ม! กดดูที่แท็บโปรโมชั่นด้านล่างได้เลย</span>
+                            </div>
+                        )}
 
                         {/* Category Tabs Switcher */}
                         <div className="flex gap-2 p-1.5 bg-neutral-100 rounded-2xl mb-5 text-xs font-bold font-['IBM_Plex_Sans_Thai'] shadow-inner">
@@ -517,6 +387,145 @@ export default function AdsLandingPage() {
                     </div>
                 </section>
             )}
+
+            {/* ─── SIGNATURE DISHES (optional) ─── */}
+            {signatures.length > 0 && (
+                <section className="w-full max-w-lg mx-auto px-5 pb-10">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="h-px bg-neutral-200 flex-1" />
+                        <span className="text-neutral-600 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Signature</span>
+                        <div className="h-px bg-neutral-200 flex-1" />
+                    </div>
+
+                    <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                        {signatures.map((dish, i) => (
+                            <SignatureDishCard key={i} dish={dish} index={i} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* ─── ATMOSPHERE GALLERY (Replacing Hero) ─── */}
+            {atmImages.length > 0 && (
+                <section className="w-full max-w-lg mx-auto mb-8">
+                    <div className="px-5 mb-3 flex items-end justify-between">
+                        <div>
+                            <h2 className="text-neutral-800 text-lg font-bold tracking-tight">สัมผัสบรรยากาศในบ้าน</h2>
+                            <p className="text-neutral-600 text-[10px] font-mono tracking-wider uppercase mt-0.5 font-bold">Experience the Vibe</p>
+                        </div>
+                        <span className="text-[10px] text-neutral-600 font-bold animate-pulse">Swipe ➔</span>
+                    </div>
+                    
+                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-5 pb-4 no-scrollbar">
+                        {atmImages.map((url, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.4, delay: i * 0.1 }}
+                                onClick={() => setSelectedLightbox({ type: 'atm', index: i })}
+                                className="flex-none w-[75%] max-w-[260px] snap-center rounded-2xl overflow-hidden shadow-sm border border-neutral-100 aspect-square cursor-pointer"
+                            >
+                                <img 
+                                    src={optimizeImageUrl(url, 600)} 
+                                    alt={`Atmosphere ${i + 1}`} 
+                                    className="w-full h-full object-cover" 
+                                    loading={i === 0 ? undefined : "lazy"}
+                                    fetchPriority={i === 0 ? "high" : undefined}
+                                    decoding={i === 0 ? undefined : "async"}
+                                />
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* ─── SOCIAL LINKS ─── */}
+            <section className="w-full max-w-lg mx-auto px-5 pb-6">
+                <div className="grid grid-cols-2 gap-3">
+                    {/* View Menu Action (Anchor link to Menu Booklet) - Replaces the static line/call buttons */}
+                    <LinkCard 
+                        href="#menu-section" 
+                        icon={<Utensils size={18} />} 
+                        title="📖 ดูเมนูอาหาร & โปรโมชั่น" 
+                        bg="bg-neutral-900 hover:bg-neutral-800 text-white shadow-md border-b-4 border-neutral-950" 
+                        wide 
+                        internal
+                        id="cta-menu-anchor" 
+                    />
+
+                    {/* Secondary Action: Map (Full Width) */}
+                    <LinkCard 
+                        href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic" 
+                        icon={<MapPin size={18} />} 
+                        title="แผนที่นำทางมาร้าน (Google Maps)" 
+                        bg="bg-[#4A4A4A] hover:bg-[#3A3A3A] transition-colors" 
+                        wide 
+                        id="cta-maps" 
+                    />
+
+                    {/* Tertiary Actions: FB & IG (Shrunk & Secondary Style) */}
+                    <LinkCard 
+                        href="https://www.facebook.com/inthehausth" 
+                        icon={<ExternalLink size={14} className="text-neutral-500" />} 
+                        title="Facebook" 
+                        bg="bg-white hover:bg-neutral-50 border border-neutral-200" 
+                        textColor="text-neutral-700"
+                        id="cta-facebook" 
+                    />
+                    <LinkCard 
+                        href="https://instagram.com/inthehausth" 
+                        icon={<ExternalLink size={14} className="text-neutral-500" />} 
+                        title="Instagram" 
+                        bg="bg-white hover:bg-neutral-50 border border-neutral-200" 
+                        textColor="text-neutral-700"
+                        id="cta-instagram" 
+                    />
+                </div>
+
+                {/* Delivery */}
+                <div className="flex items-center gap-3 my-5">
+                    <div className="h-px bg-neutral-200 flex-1" />
+                    <span className="text-neutral-600 text-[9px] font-bold tracking-[0.3em] font-mono uppercase">Delivery</span>
+                    <div className="h-px bg-neutral-200 flex-1" />
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                    <LinkCard href="https://lin.ee/8uqmIzZ" icon={<Utensils size={18} />} title="สั่งอาหารเดลิเวอรี Lineman" bg="bg-[#00B14F] hover:bg-[#009c45] transition-colors" wide id="cta-lineman" />
+                </div>
+
+                {/* Q&A */}
+                <div className="mt-5">
+                    <LinkCard href="/qa" icon={<HelpCircle size={18} />} title="Q&A ถาม-ตอบ ข้อมูลร้าน" bg="bg-[#636AA0] hover:bg-[#535987] transition-colors" wide internal id="cta-qa" />
+                </div>
+            </section>
+
+            {/* ─── FIND US ─── */}
+            <section className="w-full max-w-lg mx-auto px-5 pb-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-white rounded-2xl border border-neutral-100 p-5 shadow-sm"
+                >
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-[10px] font-bold text-neutral-600 tracking-[0.2em] font-mono uppercase mb-2">Find Us</p>
+                            <p className="text-neutral-900 font-bold text-sm">{locationText}</p>
+                            <p className="text-neutral-700 text-xs font-medium mt-1">{hours}</p>
+                        </div>
+                        <a
+                            href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-white hover:bg-neutral-700 transition-colors"
+                        >
+                            <Navigation size={16} />
+                        </a>
+                    </div>
+                </motion.div>
+            </section>
 
             {/* ─── TAGS ─── */}
             <section className="w-full max-w-lg mx-auto px-5 py-8">
