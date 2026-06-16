@@ -4,6 +4,17 @@ import { Play, Check, X, ExternalLink, Calendar, DollarSign, Music, CheckCircle,
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'sonner'
 
+const parseDonationAmount = (message) => {
+  if (!message) return 100
+  const match = message.match(/^\[Donation:\s*(\d+)\s*THB\]/)
+  return match ? parseInt(match[1], 10) : 100
+}
+
+const cleanMessage = (message) => {
+  if (!message) return ''
+  return message.replace(/^\[Donation:\s*\d+\s*THB\]\s*/, '')
+}
+
 export default function AdminSongRequests() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -259,8 +270,10 @@ export default function AdminSongRequests() {
   const playingCount = requests.filter(r => r.status === 'playing').length
   const completedCount = requests.filter(r => r.status === 'completed').length
   
-  // Earnings: count requests that are not rejected (pending, playing, completed) * 100 THB
-  const totalEarnings = requests.filter(r => r.status !== 'rejected').length * 100
+  // Earnings: sum donation amount of requests that are not rejected
+  const totalEarnings = requests
+    .filter(r => r.status !== 'rejected')
+    .reduce((sum, r) => sum + parseDonationAmount(r.message), 0)
 
   const filteredRequests = requests.filter(req => {
     if (filter === 'all') return true
@@ -278,7 +291,7 @@ export default function AdminSongRequests() {
             <Music className="text-orange-500" /> Song Requests Queue
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            จัดการคิวเพลงที่ลูกค้าขอพร้อมเงินบริจาค 100 บาทต่อเพลง
+            จัดการคิวเพลงที่ลูกค้าขอพร้อมเงินบริจาคสนับสนุนตามความสมัครใจ
           </p>
         </div>
         <div className="flex gap-2">
@@ -408,10 +421,13 @@ export default function AdminSongRequests() {
                       <div className="mt-3 bg-gray-50 border border-gray-100 rounded-2xl p-3 inline-block max-w-md">
                         <p className="text-xs text-gray-500">
                           ผู้ขอ: <span className="font-bold text-gray-800">{req.requester_name}</span>
+                          <span className="ml-2 px-2 py-0.5 bg-green-50 text-green-700 rounded-full font-bold text-[10px]">
+                            บริจาค: ฿{parseDonationAmount(req.message)}
+                          </span>
                         </p>
-                        {req.message && (
+                        {cleanMessage(req.message) && (
                           <p className="text-xs text-gray-600 mt-1 italic font-medium">
-                            "{req.message}"
+                            "{cleanMessage(req.message)}"
                           </p>
                         )}
                       </div>

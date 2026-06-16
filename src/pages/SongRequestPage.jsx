@@ -15,6 +15,7 @@ export default function SongRequestPage() {
   const [requesterName, setRequesterName] = useState('')
   const [dedicationMessage, setDedicationMessage] = useState('')
   const [slipFile, setSlipFile] = useState(null)
+  const [donationAmount, setDonationAmount] = useState('100')
   
   // Spotify Integration States
   const [playlistTracks, setPlaylistTracks] = useState([])
@@ -234,7 +235,8 @@ export default function SongRequestPage() {
     if (!trackName.trim()) return toast.error('กรุณาระบุชื่อเพลง')
     if (!artistName.trim()) return toast.error('กรุณาระบุชื่อศิลปิน')
     if (!requesterName.trim()) return toast.error('กรุณาระบุชื่อผู้ขอเพลง')
-    if (!slipFile) return toast.error('กรุณาอัปโหลดสลิปโอนเงิน 100 บาท')
+    if (!donationAmount || parseFloat(donationAmount) <= 0) return toast.error('กรุณาระบุจำนวนเงินบริจาค')
+    if (!slipFile) return toast.error('กรุณาอัปโหลดสลิปโอนเงิน')
 
     setUploading(true)
     const toastId = toast.loading('กำลังตรวจสอบสิทธิ์พื้นที่ (GPS)...')
@@ -304,55 +306,55 @@ export default function SongRequestPage() {
 
       const slipPublicUrl = supabase.storage.from('slips').getPublicUrl(fileName).data.publicUrl
       const parsedTrackId = extractTrackId(spotifyLink) || `manual_${Date.now()}`;
-
-      // 2. Insert into song_requests Table
-      toast.loading('กำลังส่งข้อมูลคำขอเพลง...', { id: toastId });
-      const requestData = {
-        track_id: parsedTrackId,
-        track_name: trackName,
-        artist_name: artistName,
-        album_image: selectedTrack?.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop', // Default vinyl/cover placeholder
-        track_duration_ms: selectedTrack?.duration_ms || 180000, // Default 3 minutes
-        requester_name: requesterName,
-        message: dedicationMessage,
-        slip_url: fileName, // Save relative path
-        status: 'pending'
-      }
-
-      const { error: dbError } = await supabase
-        .from('song_requests')
-        .insert(requestData)
-
-      if (dbError) throw dbError
-
-      // 3. Construct and Trigger LINE Flex Message via send-line-notify
-      const lineMessage = `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}\nผู้ขอ: ${requesterName}\nข้อความ: ${dedicationMessage || '-'}`
-      const durationMs = selectedTrack?.duration_ms || 180000
-      const durationMin = Math.floor(durationMs / 60000)
-      const durationSec = Math.floor((durationMs % 60000) / 1000).toString().padStart(2, '0')
-      const gpsNote = currentDistance !== null ? `📍 ตรวจสอบ GPS แล้ว (ห่างจากร้าน ${currentDistance.toFixed(0)} เมตร)` : '📍 ข้ามการตรวจสอบตำแหน่งพิกัด';
-
-      const flexPayload = {
-        type: "flex",
-        altText: `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}`,
-        contents: {
-          type: "bubble",
-          size: "mega",
-          header: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "text",
-                text: "🎵 SONG REQUEST · 100 THB",
-                weight: "bold",
-                size: "sm",
-                color: "#1DB954"
-              }
-            ],
-            backgroundColor: "#121212",
-            paddingAll: "16px"
-          },
+ 
+       // 2. Insert into song_requests Table
+       toast.loading('กำลังส่งข้อมูลคำขอเพลง...', { id: toastId });
+       const requestData = {
+         track_id: parsedTrackId,
+         track_name: trackName,
+         artist_name: artistName,
+         album_image: selectedTrack?.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop', // Default vinyl/cover placeholder
+         track_duration_ms: selectedTrack?.duration_ms || 180000, // Default 3 minutes
+         requester_name: requesterName,
+         message: `[Donation: ${donationAmount} THB]${dedicationMessage ? ' ' + dedicationMessage : ''}`,
+         slip_url: fileName, // Save relative path
+         status: 'pending'
+       }
+ 
+       const { error: dbError } = await supabase
+         .from('song_requests')
+         .insert(requestData)
+ 
+       if (dbError) throw dbError
+ 
+       // 3. Construct and Trigger LINE Flex Message via send-line-notify
+       const lineMessage = `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}\nผู้ขอ: ${requesterName}\nผู้สนับสนุน: ${donationAmount} THB\nข้อความ: ${dedicationMessage || '-'}`
+       const durationMs = selectedTrack?.duration_ms || 180000
+       const durationMin = Math.floor(durationMs / 60000)
+       const durationSec = Math.floor((durationMs % 60000) / 1000).toString().padStart(2, '0')
+       const gpsNote = currentDistance !== null ? `📍 ตรวจสอบ GPS แล้ว (ห่างจากร้าน ${currentDistance.toFixed(0)} เมตร)` : '📍 ข้ามการตรวจสอบตำแหน่งพิกัด';
+ 
+       const flexPayload = {
+         type: "flex",
+         altText: `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}`,
+         contents: {
+           type: "bubble",
+           size: "mega",
+           header: {
+             type: "box",
+             layout: "vertical",
+             contents: [
+               {
+                 type: "text",
+                 text: `🎵 SONG REQUEST · ${donationAmount} THB`,
+                 weight: "bold",
+                 size: "sm",
+                 color: "#1DB954"
+               }
+             ],
+             backgroundColor: "#121212",
+             paddingAll: "16px"
+           },
           body: {
             type: "box",
             layout: "vertical",
@@ -501,6 +503,7 @@ export default function SongRequestPage() {
       setSelectedTrack(null)
       setSlipFile(null)
       setDedicationMessage('')
+      setDonationAmount('100')
       setShowSuccess(true)
       
       // Explosion!
@@ -546,7 +549,7 @@ export default function SongRequestPage() {
         </div>
         <h1 className="text-3xl font-black tracking-tight text-center bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">Spotify Song Requests</h1>
         <p className="text-xs text-gray-400 mt-2 text-center max-w-xs leading-relaxed">
-          ขอเพลงโปรดของคุณเข้ามาในร้าน เพียงบริจาค <span className="text-[#1DB954] font-black">100 บาท</span> ต่อเพลง
+          ขอเพลงโปรดของคุณเข้ามาในร้าน ร่วมบริจาคสนับสนุนร้านได้ตามความสมัครใจ 💚
         </p>
 
         {/* Tab Selector */}
@@ -888,6 +891,20 @@ export default function SongRequestPage() {
               />
             </div>
 
+            {/* Donation Amount */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">จำนวนเงินบริจาค / Donation Amount (THB) *</label>
+              <input
+                type="number"
+                required
+                min="1"
+                placeholder="ระบุจำนวนเงินที่บริจาค..."
+                className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
+                value={donationAmount}
+                onChange={(e) => setDonationAmount(e.target.value)}
+              />
+            </div>
+
             {/* Dedication Message */}
             <div>
               <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ฝากข้อความถึงดีเจ / Message to DJ (ไม่บังคับ)</label>
@@ -913,13 +930,13 @@ export default function SongRequestPage() {
                 </div>
               )}
               <p className="text-[10px] text-gray-400 text-center leading-relaxed max-w-[240px]">
-                สแกน QR Code ด้านบนเพื่อโอนเงินจำนวน <span className="text-white font-extrabold">100 บาท</span> จากนั้นแนบหลักฐานการโอน
+                สแกน QR Code ด้านบนเพื่อโอนเงินร่วมสนับสนุนตามความสมัครใจ จากนั้นแนบหลักฐานการโอน
               </p>
             </div>
 
             {/* Upload Slip */}
             <div>
-              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">สลิปโอนเงิน / Slip Transfer (100 THB) *</label>
+              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">สลิปโอนเงิน / Slip Transfer *</label>
               {slipFile ? (
                 <div className="bg-[#1DB954]/10 border border-[#1DB954]/20 p-3.5 rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">

@@ -11,26 +11,97 @@ import { THAI_UNITS } from '../../utils/unitUtils';
 // ── Step Editor Row ──
 function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients }) {
     return (
-        <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-xl group border border-transparent hover:border-purple-100 transition-colors">
-            <div className="flex flex-col gap-0.5 pt-2">
-                <button onClick={() => onMove(index, -1)} disabled={index === 0} className="text-gray-300 hover:text-purple-600 text-[10px] leading-none disabled:opacity-20">▲</button>
-                <button onClick={() => onMove(index, 1)} disabled={isLast} className="text-gray-300 hover:text-purple-600 text-[10px] leading-none disabled:opacity-20">▼</button>
+        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-purple-100 transition-colors flex flex-col gap-3 relative sm:flex-row sm:items-start sm:gap-2 sm:p-3">
+            {/* Step Header: Step Number, Move Buttons, Delete Button (Mobile) */}
+            <div className="flex items-center justify-between border-b pb-2 sm:border-b-0 sm:pb-0 sm:flex-col sm:gap-1.5 sm:pt-2 sm:w-auto">
+                <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {index + 1}
+                    </div>
+                    <div className="flex sm:flex-col gap-1">
+                        <button 
+                            onClick={() => onMove(index, -1)} 
+                            disabled={index === 0} 
+                            className="w-8 h-8 sm:w-6 sm:h-6 bg-white border border-gray-200 rounded-lg text-gray-500 flex items-center justify-center text-xs font-bold disabled:opacity-20 hover:text-purple-600 hover:border-purple-200 transition-colors cursor-pointer"
+                            title="ย้ายขึ้น"
+                        >
+                            ▲
+                        </button>
+                        <button 
+                            onClick={() => onMove(index, 1)} 
+                            disabled={isLast} 
+                            className="w-8 h-8 sm:w-6 sm:h-6 bg-white border border-gray-200 rounded-lg text-gray-500 flex items-center justify-center text-xs font-bold disabled:opacity-20 hover:text-purple-600 hover:border-purple-200 transition-colors cursor-pointer"
+                            title="ย้ายลง"
+                        >
+                            ▼
+                        </button>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={() => onDelete(index)} 
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg sm:hidden flex-shrink-0 transition-colors"
+                    title="ลบขั้นตอน"
+                >
+                    <Trash2 size={18} />
+                </button>
             </div>
-            <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1">{index + 1}</div>
-            <select
-                value={step.action || 'pour'}
-                onChange={e => onUpdate(index, { ...step, action: e.target.value })}
-                className="w-24 p-2 border border-gray-200 rounded-lg text-sm bg-white flex-shrink-0 focus:border-purple-400 outline-none"
-            >
-                {SOP_ACTIONS.map(a => (
-                    <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
-                ))}
-            </select>
-            <div className="flex-1 flex flex-col gap-1.5">
-                <input value={step.title || ''} onChange={e => onUpdate(index, { ...step, title: e.target.value })} placeholder="ชื่อขั้นตอน (เช่น เตรียมน้ำมะพร้าว)" className="w-full p-2 border border-gray-200 rounded-lg text-sm font-bold focus:border-purple-400 outline-none" />
-                <textarea value={step.instruction || ''} onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} placeholder="รายละเอียดขั้นตอน (เช่น ร่อนผงลงในถ้วย)" className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none resize-none" rows={2} />
-                <input value={step.key_points || ''} onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" className="w-full p-2 border border-yellow-200 bg-yellow-50 rounded-lg text-sm focus:border-yellow-400 outline-none" />
-                <input value={step.reason || ''} onChange={e => onUpdate(index, { ...step, reason: e.target.value })} placeholder="เหตุผล (เช่น ลดการจับตัวเป็นก้อน)" className="w-full p-2 border border-gray-200 bg-gray-50 rounded-lg text-xs italic focus:border-purple-400 outline-none" />
+
+            {/* Action Selector */}
+            <div className="w-full sm:w-28 flex-shrink-0">
+                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">ประเภทการทำ</label>
+                <select
+                    value={step.action || 'pour'}
+                    onChange={e => onUpdate(index, { ...step, action: e.target.value })}
+                    className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm bg-white focus:border-purple-400 outline-none"
+                >
+                    {SOP_ACTIONS.map(a => (
+                        <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Inputs Details */}
+            <div className="flex-1 flex flex-col gap-2">
+                <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">ชื่อขั้นตอน</label>
+                    <input 
+                        value={step.title || ''} 
+                        onChange={e => onUpdate(index, { ...step, title: e.target.value })} 
+                        placeholder="ชื่อขั้นตอน (เช่น เตรียมน้ำมะพร้าว)" 
+                        className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm font-bold focus:border-purple-400 outline-none" 
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">รายละเอียดขั้นตอน</label>
+                    <textarea 
+                        value={step.instruction || ''} 
+                        onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} 
+                        placeholder="รายละเอียดขั้นตอน (เช่น ร่อนผงลงในถ้วย)" 
+                        className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none resize-none" 
+                        rows={2} 
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold text-yellow-600 uppercase block mb-1 sm:hidden">จุดสำคัญ (Key Point)</label>
+                    <input 
+                        value={step.key_points || ''} 
+                        onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} 
+                        placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" 
+                        className="w-full p-2.5 sm:p-2 border border-yellow-200 bg-yellow-50 rounded-lg text-sm focus:border-yellow-400 outline-none" 
+                    />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">เหตุผล (Reason)</label>
+                    <input 
+                        value={step.reason || ''} 
+                        onChange={e => onUpdate(index, { ...step, reason: e.target.value })} 
+                        placeholder="เหตุผล (เช่น ลดการจับตัวเป็นก้อน)" 
+                        className="w-full p-2.5 sm:p-2 border border-gray-200 bg-gray-50 rounded-lg text-xs italic focus:border-purple-400 outline-none" 
+                    />
+                </div>
+
+                {/* Attached ingredients */}
                 <div className="flex flex-col gap-1.5 mt-1 border-t pt-2 border-gray-100">
                     <div className="text-[10px] text-gray-500 font-bold">แนบปริมาณวัตถุดิบ (อ้างอิงสูตร)</div>
                     {(() => {
@@ -39,7 +110,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                         return (
                             <div className="flex flex-wrap gap-1 mb-1">
                                 {refs.map((ref, idx) => (
-                                    <span key={idx} className="inline-flex items-center gap-1 bg-purple-50 border border-purple-100 text-purple-700 px-2 py-0.5 rounded text-[11px]">
+                                    <span key={idx} className="inline-flex items-center gap-1 bg-purple-50 border border-purple-100 text-purple-700 px-2.5 py-1 rounded text-xs sm:text-[11px]">
                                         {ref}
                                         <button 
                                             onClick={() => {
@@ -50,9 +121,9 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                                                     ingredient_ref: newRefs.length > 0 ? newRefs[0] : null 
                                                 });
                                             }} 
-                                            className="hover:text-red-500 hover:bg-purple-100 rounded p-0.5 transition-colors"
+                                            className="hover:text-red-500 hover:bg-purple-100 rounded p-1 sm:p-0.5 transition-colors cursor-pointer"
                                         >
-                                            <X size={10} />
+                                            <X size={12} />
                                         </button>
                                     </span>
                                 ))}
@@ -77,7 +148,7 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                                         });
                                     }
                                 }}
-                                className="w-full p-1 border border-gray-200 rounded-md text-[11px] text-gray-500 bg-white focus:border-purple-400 outline-none"
+                                className="w-full p-2.5 sm:p-1 border border-gray-200 rounded-md text-sm sm:text-[11px] text-gray-500 bg-white focus:border-purple-400 outline-none"
                             >
                                 <option value="">+ แนบปริมาณวัตถุดิบเพิ่ม...</option>
                                 {available.map(name => (
@@ -88,15 +159,30 @@ function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIng
                     })()}
                 </div>
             </div>
-            <input
-                type="number"
-                value={step.duration_sec || ''}
-                onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value) : null })}
-                placeholder="เวลา(วิ)"
-                className="w-16 p-2 border border-gray-200 rounded-lg text-sm text-center flex-shrink-0 focus:border-purple-400 outline-none"
-                title="เวลา (วินาที)"
-            />
-            <button onClick={() => onDelete(index)} className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
+
+            {/* Duration (Seconds) */}
+            <div className="w-full sm:w-20 flex-shrink-0 flex items-center gap-2 sm:flex-col sm:items-stretch sm:justify-start">
+                <span className="text-xs text-gray-400 sm:hidden w-20 flex-shrink-0">เวลาดำเนินการ:</span>
+                <div className="flex-1 flex items-center gap-1.5">
+                    <input
+                        type="number"
+                        value={step.duration_sec || ''}
+                        onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value) : null })}
+                        placeholder="เวลา(วิ)"
+                        className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm text-center focus:border-purple-400 outline-none"
+                        title="เวลา (วินาที)"
+                    />
+                    <span className="text-xs text-gray-400 sm:hidden">วิ</span>
+                </div>
+                <span className="text-xs text-gray-400 sm:text-center sm:block hidden">วินาที</span>
+            </div>
+
+            {/* Desktop Delete */}
+            <button 
+                onClick={() => onDelete(index)} 
+                className="hidden sm:inline-flex p-2 text-gray-300 hover:text-red-500 transition-colors mt-0.5 cursor-pointer"
+                title="ลบขั้นตอน"
+            >
                 <Trash2 size={16} />
             </button>
         </div>
@@ -109,31 +195,82 @@ function IngredientRow({ ing, index, onUpdate, onDelete }) {
     const showWarning = ing.unit && !isStandard;
 
     return (
-        <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg group flex-wrap">
-            <input value={ing.name || ''} onChange={e => onUpdate(index, { ...ing, name: e.target.value })} placeholder="ชื่อวัตถุดิบ" className="w-1/3 p-2 border rounded-lg text-sm min-w-[120px]" />
-            <input type="number" value={ing.qty || ''} onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })} className="w-16 p-2 border rounded-lg text-sm text-center" placeholder="จำนวน" />
-            <div className="flex items-center gap-1">
+        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-3 relative sm:flex-row sm:items-center sm:gap-2 sm:p-2">
+            {/* Top row (Name & Delete) on mobile, inline on desktop */}
+            <div className="flex gap-2 w-full sm:w-auto sm:flex-1">
                 <input 
-                    value={ing.unit || ''} 
-                    onChange={e => onUpdate(index, { ...ing, unit: e.target.value })} 
-                    list="sop-units"
-                    className={`w-16 p-2 border rounded-lg text-sm text-center ${showWarning ? 'border-orange-400 bg-orange-50 focus:border-orange-500 focus:ring-orange-200' : ''}`} 
-                    placeholder="หน่วย" 
+                    value={ing.name || ''} 
+                    onChange={e => onUpdate(index, { ...ing, name: e.target.value })} 
+                    placeholder="ชื่อวัตถุดิบ" 
+                    className="flex-1 p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm font-semibold focus:border-purple-400 outline-none" 
                 />
-                {showWarning && (
-                    <span className="text-orange-500 cursor-help" title="หน่วยวัดนี้ไม่ได้เป็นมาตรฐานในการคำนวณต้นทุนคลังสินค้า">⚠️</span>
-                )}
+                <button 
+                    onClick={() => onDelete(index)} 
+                    className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg sm:hidden flex-shrink-0 transition-colors"
+                    title="ลบวัตถุดิบ"
+                >
+                    <Trash2 size={18} />
+                </button>
             </div>
-            <input value={ing.remark || ''} onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} className="flex-1 p-2 border rounded-lg text-xs min-w-[150px]" placeholder="หมายเหตุ (เช่น ร่อนก่อนใช้)" />
-            <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer flex-shrink-0">
-                <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded" />
-                Scale แก้ว
-            </label>
-            <label className="flex items-center gap-1 text-xs text-amber-600 font-bold cursor-pointer flex-shrink-0">
-                <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded text-amber-500 focus:ring-amber-400" />
-                🍬 สารหวาน (Sweetener)
-            </label>
-            <button onClick={() => onDelete(index)} className="p-1.5 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+            
+            {/* Qty, Unit and Warning */}
+            <div className="flex gap-2 items-center w-full sm:w-auto">
+                <div className="flex-1 sm:w-20 flex items-center gap-1">
+                    <span className="text-xs text-gray-400 sm:hidden w-12 flex-shrink-0">จำนวน:</span>
+                    <input 
+                        type="number" 
+                        value={ing.qty || ''} 
+                        onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })} 
+                        className="w-full sm:w-20 p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm text-center focus:border-purple-400 outline-none" 
+                        placeholder="จำนวน" 
+                    />
+                </div>
+                <div className="flex-1 sm:w-20 flex items-center gap-1">
+                    <span className="text-xs text-gray-400 sm:hidden w-12 flex-shrink-0">หน่วย:</span>
+                    <input 
+                        value={ing.unit || ''} 
+                        onChange={e => onUpdate(index, { ...ing, unit: e.target.value })} 
+                        list="sop-units"
+                        className={`w-full sm:w-20 p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm text-center outline-none ${showWarning ? 'border-orange-400 bg-orange-50 focus:border-orange-500' : 'focus:border-purple-400'}`} 
+                        placeholder="หน่วย" 
+                    />
+                    {showWarning && (
+                        <span className="text-orange-500 cursor-help flex-shrink-0" title="หน่วยวัดนี้ไม่ได้เป็นมาตรฐานในการคำนวณต้นทุนคลังสินค้า">⚠️</span>
+                    )}
+                </div>
+            </div>
+
+            {/* Remark */}
+            <div className="w-full sm:flex-1">
+                <input 
+                    value={ing.remark || ''} 
+                    onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} 
+                    className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-xs focus:border-purple-400 outline-none" 
+                    placeholder="หมายเหตุ (เช่น ร่อนก่อนใช้)" 
+                />
+            </div>
+
+            {/* Checkboxes and Desktop Delete */}
+            <div className="flex items-center justify-between w-full sm:w-auto gap-3 border-t pt-2 sm:border-t-0 sm:pt-0 border-gray-100">
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded w-4 h-4 text-purple-600 focus:ring-purple-400" />
+                        <span>Scale แก้ว</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-amber-600 font-bold cursor-pointer">
+                        <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded text-amber-500 focus:ring-amber-400 w-4 h-4" />
+                        <span>🍬 สารหวาน</span>
+                    </label>
+                </div>
+                
+                <button 
+                    onClick={() => onDelete(index)} 
+                    className="hidden sm:inline-flex p-2 text-gray-300 hover:text-red-500 transition-colors"
+                    title="ลบวัตถุดิบ"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
         </div>
     );
 }
@@ -359,14 +496,20 @@ export default function SOPEditorPage() {
                                 <p className="text-xs text-gray-500">จัดการสูตรเครื่องดื่มสำหรับพนักงาน</p>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5 sm:gap-2">
                             <button onClick={() => setShowCategoryManager(true)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500" title="จัดการหมวดหมู่"><Settings size={20} /></button>
                             <button onClick={refresh} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
-                            <button onClick={handleNew} className="bg-purple-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-purple-700 shadow-lg text-sm"><Plus size={16} /> New SOP</button>
+                            <button onClick={handleNew} className="bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 hover:bg-purple-700 shadow-lg text-sm">
+                                <Plus size={16} /> 
+                                <span className="hidden sm:inline">New SOP</span>
+                            </button>
                         </div>
                     </div>
                     {/* Category Tabs */}
-                    <div className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-100 max-w-5xl mx-auto">
+                    <div 
+                        className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-100 max-w-5xl mx-auto no-scrollbar scroll-smooth"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
                         <button onClick={() => setActiveCategory(null)} className={`pb-3 pt-3 whitespace-nowrap font-bold text-sm border-b-[3px] ${!activeCategory ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400'}`}>ทั้งหมด</button>
                         {categories.map(cat => (
                             <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`pb-3 pt-3 whitespace-nowrap font-bold text-sm border-b-[3px] ${activeCategory === cat.id ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
@@ -453,19 +596,22 @@ export default function SOPEditorPage() {
                         <h1 className="text-lg font-bold">{editing.id ? 'แก้ไข SOP' : 'สร้าง SOP ใหม่'}</h1>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => setShowPreview(!showPreview)} className={`p-2 rounded-full ${showPreview ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-500'}`}>
+                        <button onClick={() => setShowPreview(!showPreview)} className={`p-2 rounded-full ${showPreview ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-500'} hidden sm:block`}>
                             {showPreview ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
-                        <button onClick={handleSave} disabled={saving} className="bg-purple-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-purple-700 disabled:opacity-50 text-sm">
+                        <button onClick={handleSave} disabled={saving} className="bg-purple-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-purple-700 disabled:opacity-50 text-sm hidden sm:flex">
                             <Save size={16} /> {saving ? 'Saving...' : 'Save'}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto p-4 space-y-6 pb-20">
+            <div className="max-w-3xl mx-auto p-4 space-y-6 pb-28 sm:pb-20">
                 {/* Tab Navigation */}
-                <div className="flex overflow-x-auto gap-2 p-2 bg-gray-100 rounded-xl mb-4 no-scrollbar">
+                <div 
+                    className="flex overflow-x-auto gap-2 p-2 bg-gray-100 rounded-xl mb-4 no-scrollbar scroll-smooth"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
                     {['basic', 'ingredients', 'steps', 'pro'].map(tab => (
                         <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                             {tab === 'basic' && '1. ข้อมูลพื้นฐาน'}
@@ -951,6 +1097,33 @@ export default function SOPEditorPage() {
                     <option key={u.value} value={u.value}>{u.label}</option>
                 ))}
             </datalist>
+
+            {/* Sticky Bottom Action Bar for Mobile */}
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex justify-between gap-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+                <button 
+                    onClick={() => setEditing(null)} 
+                    className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                    ย้อนกลับ
+                </button>
+                <button 
+                    onClick={() => setShowPreview(!showPreview)} 
+                    className={`py-3 px-4 font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                        showPreview ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
+                    }`}
+                >
+                    {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+                    <span>{showPreview ? 'ปิดพรีวิว' : 'พรีวิว'}</span>
+                </button>
+                <button 
+                    onClick={handleSave} 
+                    disabled={saving} 
+                    className="flex-[1.5] py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-md cursor-pointer"
+                >
+                    <Save size={16} />
+                    <span>{saving ? 'บันทึก...' : 'บันทึก SOP'}</span>
+                </button>
+            </div>
         </div>
     );
 }

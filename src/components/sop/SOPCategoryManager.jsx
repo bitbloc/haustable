@@ -108,21 +108,23 @@ export default function SOPCategoryManager({
                     {items.map((item, index) => (
                         <div key={item.id} className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl group">
                             {/* Reorder */}
-                            <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1 mr-1">
                                 <button 
                                     onClick={() => moveItem(index, -1)}
-                                    className="text-gray-300 hover:text-gray-600 text-xs leading-none"
+                                    className="w-8 h-8 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-purple-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold transition-colors"
                                     disabled={index === 0}
+                                    title="ย้ายขึ้น"
                                 >▲</button>
                                 <button 
                                     onClick={() => moveItem(index, 1)}
-                                    className="text-gray-300 hover:text-gray-600 text-xs leading-none"
+                                    className="w-8 h-8 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-purple-600 disabled:opacity-20 flex items-center justify-center text-xs font-bold transition-colors"
                                     disabled={index === items.length - 1}
+                                    title="ย้ายลง"
                                 >▼</button>
                             </div>
 
                             {/* Icon */}
-                            <div className="text-2xl select-none flex-shrink-0 flex items-center justify-center min-w-[3rem]">
+                            <div className="text-2xl select-none flex-shrink-0 flex items-center justify-center min-w-[2.5rem]">
                                 {item.icon}
                             </div>
 
@@ -172,21 +174,21 @@ export default function SOPCategoryManager({
                                 </div>
                             ) : (
                                 <>
-                                    <div className="flex-1">
-                                        <span className="font-bold text-sm text-gray-800">{item.label}</span>
-                                        <span className="text-[10px] text-gray-400 ml-2">{item.id}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="font-bold text-sm text-gray-800 block truncate">{item.label}</span>
+                                        <span className="text-[10px] text-gray-400 block truncate">{item.id}</span>
                                     </div>
                                     <button
                                         onClick={() => { setEditingId(item.id); setEditLabel(item.label); setEditIcon(item.icon); }}
-                                        className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="p-2 text-gray-400 hover:text-blue-600 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                     >
-                                        <Edit2 size={14} />
+                                        <Edit2 size={15} />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(item.id)}
-                                        className="p-2 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="p-2 text-gray-400 hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={15} />
                                     </button>
                                 </>
                             )}
