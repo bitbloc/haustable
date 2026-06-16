@@ -23,22 +23,25 @@ async function run() {
       body: 'grant_type=client_credentials'
     });
 
-    const { access_token } = await tokenResp.json();
+    console.log('Token response status:', tokenResp.status, tokenResp.statusText);
+    const tokenData = await tokenResp.json();
+    const access_token = tokenData.access_token;
+    console.log('Access token:', access_token ? 'SUCCESS' : 'FAILED', tokenData);
 
-    // Blinding Lights by The Weeknd
-    const trackId = '4Li2WHPv7gaIPnZyaIInJ9';
-    const trackUrl = `https://api.spotify.com/v1/tracks/${trackId}`;
-    console.log('Sending track details request to:', trackUrl);
+    // Playlist tracks request
+    const playlistId = '37i9dQZF1DXcBWIGg3m31s';
+    const playlistTracksUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`;
+    console.log('Sending playlist tracks request to:', playlistTracksUrl);
 
-    const trackResp = await fetch(trackUrl, {
+    const trackResp = await fetch(playlistTracksUrl, {
       headers: {
         'Authorization': `Bearer ${access_token}`
       }
     });
 
-    console.log('Track status:', trackResp.status, trackResp.statusText);
+    console.log('Search status:', trackResp.status, trackResp.statusText);
     const trackBody = await trackResp.text();
-    console.log('Track body:', trackBody.substring(0, 1000));
+    console.log('Search body:', trackBody.substring(0, 1000));
 
   } catch (err) {
     console.error('Error:', err);

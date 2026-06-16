@@ -21,6 +21,7 @@ export default function SongRequestPage() {
   const [loadingPlaylist, setLoadingPlaylist] = useState(false)
   const [playlistError, setPlaylistError] = useState(null)
   const [spotifyApiError, setSpotifyApiError] = useState(null)
+  const [songGuidelines, setSongGuidelines] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -112,18 +113,34 @@ export default function SongRequestPage() {
     setSearching(true)
     setSpotifyApiError(null)
     try {
-      const { data, error } = await supabase.functions.invoke(`spotify-search?q=${encodeURIComponent(queryStr)}`)
-      if (error) throw error
-      if (data?.error) {
-        setSpotifyApiError(data.error)
-        setSearchResults([])
-      } else {
-        setSearchResults(data?.tracks || [])
-        setSpotifyApiError(null)
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(queryStr)}&entity=song&limit=15&country=TH`
+      const resp = await fetch(url)
+      if (!resp.ok) {
+        throw new Error(`iTunes API returned status ${resp.status}`)
       }
+      const data = await resp.json()
+      
+      const tracks = (data.results || []).map((item) => {
+        // Get high-res cover artwork
+        const albumImage = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg') : ''
+        
+        return {
+          id: String(item.trackId),
+          name: item.trackName,
+          artists: item.artistName,
+          albumName: item.collectionName || '',
+          albumImage: albumImage || item.artworkUrl100 || '',
+          duration_ms: item.trackTimeMillis || 180000,
+          uri: `https://open.spotify.com/search/${encodeURIComponent(item.trackName + ' ' + item.artistName)}`, // Spotify Search prefilled URL
+          previewUrl: item.previewUrl || ''
+        }
+      })
+      
+      setSearchResults(tracks)
+      setSpotifyApiError(null)
     } catch (err) {
-      console.error('Search failed:', err)
-      setSpotifyApiError(err.message || 'Spotify search failed')
+      console.error('iTunes Search failed:', err)
+      setSpotifyApiError('ระบบค้นหาขัดข้องชั่วคราว คุณสามารถพิมพ์ขอเพลงด้วยตนเองได้')
       setSearchResults([])
     } finally {
       setSearching(false)
@@ -149,6 +166,9 @@ export default function SongRequestPage() {
       
       const qr = data.find(item => item.key === 'payment_qr_url')?.value
       if (qr) setPaymentQrUrl(qr)
+      
+      const guidelines = data.find(item => item.key === 'song_request_guidelines')?.value
+      if (guidelines) setSongGuidelines(guidelines)
       
       const gpsEnabled = data.find(item => item.key === 'qr_gps_enabled')?.value
       const lat = data.find(item => item.key === 'qr_latitude')?.value
@@ -563,6 +583,20 @@ export default function SongRequestPage() {
         {activeTab === 'request' ? (
           <form onSubmit={handleSubmitRequest} className="space-y-5 flex-1 flex flex-col">
             
+            {/* Music Guidelines Banner */}
+            {songGuidelines && (
+              <div className="bg-[#1DB954]/5 border border-[#1DB954]/20 p-4.5 rounded-2xl flex flex-col gap-2 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-[#1DB954]/5 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex items-center gap-2 text-[#1DB954] font-black text-xs uppercase tracking-wider">
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <span>กติกาการขอเพลง (Music Guidelines)</span>
+                </div>
+                <p className="text-[11px] text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  {songGuidelines}
+                </p>
+              </div>
+            )}
+            
             {/* GPS verification note */}
             {gpsConfig.enabled && (
               <div className="flex items-center gap-2.5 text-[10px] text-gray-400 bg-white/5 border border-white/5 p-3 rounded-2xl">
@@ -761,7 +795,7 @@ export default function SongRequestPage() {
                                 setSelectedTrack(track)
                                 setTrackName(track.name)
                                 setArtistName(track.artists)
-                                setSpotifyLink(`https://open.spotify.com/track/${track.id}`)
+                                setSpotifyLink(track.uri || `https://open.spotify.com/track/${track.id}`)
                               }}
                               className="bg-[#161616] border border-white/5 p-2 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
                             >

@@ -1112,6 +1112,17 @@ export default function AdminSettings() {
                                         placeholder="e.g. 37i9dQZF1DXcBWIGg3m31s or full Spotify playlist URL"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-[10px] text-subInk uppercase font-bold mb-1">กฎและแนวเพลงคุมโทน (Music Guidelines)</label>
+                                    <textarea
+                                        rows={3}
+                                        value={settings.song_request_guidelines || ''}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, song_request_guidelines: e.target.value }))}
+                                        onBlur={() => handleSave('song_request_guidelines', settings.song_request_guidelines)}
+                                        className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-xs font-bold text-ink outline-none focus:border-brand resize-none"
+                                        placeholder="แนะนำแนว Pop/Jazz ชิลๆ งดรับเพลงแนวเมทัล/ลูกทุ่งแดนซ์"
+                                    />
+                                </div>
                                 <p className="text-[10px] text-gray-400 leading-relaxed">
                                     Get these credentials from <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline font-bold">Spotify Developer Dashboard</a> by creating a Web API application.
                                 </p>
