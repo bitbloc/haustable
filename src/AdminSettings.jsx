@@ -1101,6 +1101,17 @@ export default function AdminSettings() {
                                         placeholder="Enter Spotify Client Secret"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-[10px] text-subInk uppercase font-bold mb-1">Spotify Playlist URL or ID</label>
+                                    <input
+                                        type="text"
+                                        value={settings.spotify_playlist_id || ''}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, spotify_playlist_id: e.target.value }))}
+                                        onBlur={() => handleSave('spotify_playlist_id', settings.spotify_playlist_id)}
+                                        className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-xs font-mono text-ink outline-none focus:border-brand"
+                                        placeholder="e.g. 37i9dQZF1DXcBWIGg3m31s or full Spotify playlist URL"
+                                    />
+                                </div>
                                 <p className="text-[10px] text-gray-400 leading-relaxed">
                                     Get these credentials from <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline font-bold">Spotify Developer Dashboard</a> by creating a Web API application.
                                 </p>

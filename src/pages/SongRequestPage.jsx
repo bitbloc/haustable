@@ -16,6 +16,17 @@ export default function SongRequestPage() {
   const [dedicationMessage, setDedicationMessage] = useState('')
   const [slipFile, setSlipFile] = useState(null)
   
+  // Spotify Integration States
+  const [playlistTracks, setPlaylistTracks] = useState([])
+  const [loadingPlaylist, setLoadingPlaylist] = useState(false)
+  const [playlistError, setPlaylistError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [selectedTrack, setSelectedTrack] = useState(null)
+  const [searchMode, setSearchMode] = useState('playlist') // 'playlist' | 'catalog'
+  const [isSpotifyActive, setIsSpotifyActive] = useState(false)
+
   // Queue & Settings States
   const [queue, setQueue] = useState([])
   const [loadingQueue, setLoadingQueue] = useState(true)
@@ -33,10 +44,35 @@ export default function SongRequestPage() {
   // Success Overlay
   const [showSuccess, setShowSuccess] = useState(false)
 
+  const fetchPlaylistTracks = async () => {
+    setLoadingPlaylist(true)
+    setPlaylistError(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('spotify-search?playlist=true')
+      if (error) throw error
+      if (data?.error) {
+        setPlaylistError(data.error)
+        setIsSpotifyActive(false)
+      } else if (data?.tracks && data.tracks.length > 0) {
+        setPlaylistTracks(data.tracks)
+        setIsSpotifyActive(true)
+      } else {
+        setIsSpotifyActive(false)
+      }
+    } catch (err) {
+      console.error('Failed to load playlist:', err)
+      setPlaylistError(err.message || 'Failed to load playlist')
+      setIsSpotifyActive(false)
+    } finally {
+      setLoadingPlaylist(false)
+    }
+  }
+
   // Load Initial Data & Settings
   useEffect(() => {
     fetchSettings()
     fetchQueue()
+    fetchPlaylistTracks()
 
     // Setup Realtime Database Subscription for Queue updates
     const subscription = supabase
@@ -59,6 +95,40 @@ export default function SongRequestPage() {
       }
     })
   }, [])
+
+  const handleCatalogSearch = async (queryStr) => {
+    if (!queryStr.trim()) {
+      setSearchResults([])
+      return
+    }
+    setSearching(true)
+    try {
+      const { data, error } = await supabase.functions.invoke(`spotify-search?q=${encodeURIComponent(queryStr)}`)
+      if (error) throw error
+      if (data?.error) {
+        toast.error(data.error)
+      } else {
+        setSearchResults(data?.tracks || [])
+      }
+    } catch (err) {
+      console.error('Search failed:', err)
+      toast.error('ค้นหาเพลงล้มเหลว: ' + err.message)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // Handle Debounced Catalog Search
+  useEffect(() => {
+    if (searchMode === 'catalog' && searchQuery.trim().length > 1) {
+      const delayDebounceFn = setTimeout(() => {
+        handleCatalogSearch(searchQuery)
+      }, 500)
+      return () => clearTimeout(delayDebounceFn)
+    } else {
+      setSearchResults([])
+    }
+  }, [searchQuery, searchMode])
 
   const fetchSettings = async () => {
     try {
@@ -209,8 +279,8 @@ export default function SongRequestPage() {
         track_id: parsedTrackId,
         track_name: trackName,
         artist_name: artistName,
-        album_image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop', // Default vinyl/cover placeholder
-        track_duration_ms: 180000, // Default 3 minutes
+        album_image: selectedTrack?.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop', // Default vinyl/cover placeholder
+        track_duration_ms: selectedTrack?.duration_ms || 180000, // Default 3 minutes
         requester_name: requesterName,
         message: dedicationMessage,
         slip_url: fileName, // Save relative path
@@ -225,8 +295,9 @@ export default function SongRequestPage() {
 
       // 3. Construct and Trigger LINE Flex Message via send-line-notify
       const lineMessage = `🎵 ขอเพลงใหม่: ${trackName} - ${artistName}\nผู้ขอ: ${requesterName}\nข้อความ: ${dedicationMessage || '-'}`
-      const durationMin = 3
-      const durationSec = '00'
+      const durationMs = selectedTrack?.duration_ms || 180000
+      const durationMin = Math.floor(durationMs / 60000)
+      const durationSec = Math.floor((durationMs % 60000) / 1000).toString().padStart(2, '0')
       const gpsNote = currentDistance !== null ? `📍 ตรวจสอบ GPS แล้ว (ห่างจากร้าน ${currentDistance.toFixed(0)} เมตร)` : '📍 ข้ามการตรวจสอบตำแหน่งพิกัด';
 
       const flexPayload = {
@@ -249,13 +320,6 @@ export default function SongRequestPage() {
             ],
             backgroundColor: "#121212",
             paddingAll: "16px"
-          },
-          hero: {
-            type: "image",
-            url: requestData.album_image,
-            size: "full",
-            aspectRatio: "1:1",
-            aspectMode: "cover"
           },
           body: {
             type: "box",
@@ -402,6 +466,7 @@ export default function SongRequestPage() {
       setSpotifyLink('')
       setTrackName('')
       setArtistName('')
+      setSelectedTrack(null)
       setSlipFile(null)
       setDedicationMessage('')
       setShowSuccess(true)
@@ -494,46 +559,259 @@ export default function SongRequestPage() {
               </div>
             )}
 
-            {/* Spotify Link Field */}
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ลิงก์เพลง Spotify / Spotify Track Link (ถ้ามี)</label>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="วางลิงก์ เช่น https://open.spotify.com/track/..."
-                  className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
-                  value={spotifyLink}
-                  onChange={(e) => setSpotifyLink(e.target.value)}
-                />
-              </div>
-            </div>
+            {/* Spotify Song Selector */}
+            {isSpotifyActive ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider">เลือกเพลง / Select Song *</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsSpotifyActive(false)}
+                    className="text-[10px] text-gray-400 hover:text-white transition-colors underline font-bold"
+                  >
+                    กรอกข้อมูลเพลงด้วยตัวเอง (Manual Input)
+                  </button>
+                </div>
 
-            {/* Song Title & Artist Group */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อเพลง / Song Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="ชื่อเพลง..."
-                  className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                  value={trackName}
-                  onChange={(e) => setTrackName(e.target.value)}
-                />
+                {selectedTrack ? (
+                  /* Selected Song Card */
+                  <div className="bg-[#1DB954]/10 border border-[#1DB954]/25 p-4 rounded-2xl flex items-center justify-between shadow-lg relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#1DB954]/10 rounded-full blur-2xl pointer-events-none" />
+                    <div className="flex items-center gap-3.5 min-w-0 z-10">
+                      <div className="w-14 h-14 bg-zinc-800 rounded-xl overflow-hidden shrink-0 shadow-md border border-white/10">
+                        <img src={selectedTrack.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-extrabold text-sm text-white truncate leading-snug">{selectedTrack.name}</h4>
+                        <p className="text-xs text-[#1DB954] font-bold truncate mt-0.5">{selectedTrack.artists}</p>
+                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 mt-1">
+                          <Music size={8} className="text-[#1DB954]" /> Selected Song
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTrack(null)
+                        setTrackName('')
+                        setArtistName('')
+                        setSpotifyLink('')
+                      }}
+                      className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all z-10 cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  /* Search & List Selector */
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder={searchMode === 'playlist' ? "ค้นหาเพลงในเพลย์ลิสต์ร้าน..." : "ค้นหาเพลงบน Spotify..."}
+                        className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Mode Tabs */}
+                    <div className="flex bg-[#121212] p-1 rounded-xl border border-white/5 gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchMode('playlist')
+                          setSearchQuery('')
+                        }}
+                        className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
+                          searchMode === 'playlist' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        เพลงแนะนำของร้าน
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchMode('catalog')
+                          setSearchQuery('')
+                        }}
+                        className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
+                          searchMode === 'catalog' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        ค้นหาทั่วไป (Spotify)
+                      </button>
+                    </div>
+
+                    {/* List Tracks container */}
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {loadingPlaylist || searching ? (
+                        <div className="flex items-center justify-center py-8 text-gray-500 text-[11px] gap-2">
+                          <div className="w-4 h-4 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin" />
+                          กำลังโหลดรายชื่อเพลง...
+                        </div>
+                      ) : searchMode === 'playlist' ? (
+                        /* Render Playlist Tracks */
+                        (() => {
+                          const filtered = playlistTracks.filter(track =>
+                            track.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            track.artists.toLowerCase().includes(searchQuery.toLowerCase())
+                          )
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-gray-500 text-[11px]">
+                                ไม่พบเพลงในเพลย์ลิสต์ร้าน <br/>
+                                <button
+                                  type="button"
+                                  onClick={() => setSearchMode('catalog')}
+                                  className="text-[#1DB954] font-bold underline mt-1 block w-full text-center"
+                                >
+                                  ลองค้นหาทั่วไปบน Spotify
+                                </button>
+                              </div>
+                            )
+                          }
+
+                          return filtered.map(track => (
+                            <div
+                              key={track.id}
+                              onClick={() => {
+                                setSelectedTrack(track)
+                                setTrackName(track.name)
+                                setArtistName(track.artists)
+                                setSpotifyLink(`https://open.spotify.com/track/${track.id}`)
+                              }}
+                              className="bg-[#161616] border border-white/5 p-2 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img src={track.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                <div className="min-w-0">
+                                  <h5 className="font-bold text-xs text-white truncate group-hover:text-[#1DB954] transition-colors">{track.name}</h5>
+                                  <p className="text-[10px] text-gray-500 truncate mt-0.5">{track.artists}</p>
+                                </div>
+                              </div>
+                              <span className="text-[9px] bg-white/5 border border-white/5 text-gray-400 group-hover:bg-[#1DB954] group-hover:text-black group-hover:border-transparent font-bold px-2 py-1 rounded-lg transition-all shrink-0">
+                                เลือก
+                              </span>
+                            </div>
+                          ))
+                        })()
+                      ) : (
+                        /* Render Catalog Search Results */
+                        (() => {
+                          if (!searchQuery.trim()) {
+                            return (
+                              <div className="text-center py-8 text-gray-500 text-[11px]">
+                                พิมพ์ชื่อเพลงหรือศิลปินเพื่อค้นหา...
+                              </div>
+                            )
+                          }
+
+                          if (searchResults.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-gray-500 text-[11px]">
+                                ไม่พบผลลัพธ์การค้นหา
+                              </div>
+                            )
+                          }
+
+                          return searchResults.map(track => (
+                            <div
+                              key={track.id}
+                              onClick={() => {
+                                setSelectedTrack(track)
+                                setTrackName(track.name)
+                                setArtistName(track.artists)
+                                setSpotifyLink(`https://open.spotify.com/track/${track.id}`)
+                              }}
+                              className="bg-[#161616] border border-white/5 p-2 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img src={track.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                <div className="min-w-0">
+                                  <h5 className="font-bold text-xs text-white truncate group-hover:text-[#1DB954] transition-colors">{track.name}</h5>
+                                  <p className="text-[10px] text-gray-500 truncate mt-0.5">{track.artists}</p>
+                                </div>
+                              </div>
+                              <span className="text-[9px] bg-white/5 border border-white/5 text-gray-400 group-hover:bg-[#1DB954] group-hover:text-black group-hover:border-transparent font-bold px-2 py-1 rounded-lg transition-all shrink-0">
+                                เลือก
+                              </span>
+                            </div>
+                          ))
+                        })()
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ศิลปิน / Artist *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="ชื่อศิลปิน..."
-                  className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                  value={artistName}
-                  onChange={(e) => setArtistName(e.target.value)}
-                />
+            ) : (
+              /* Fallback Manual Fields */
+              <div className="space-y-4 animate-fade-in">
+                {playlistTracks.length > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsSpotifyActive(true)}
+                      className="text-[10px] text-[#1DB954] hover:text-[#1ed760] font-bold underline transition-colors cursor-pointer"
+                    >
+                      กลับไปเลือกจากเพลย์ลิสต์ร้าน
+                    </button>
+                  </div>
+                )}
+
+                {/* Spotify Link Field */}
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ลิงก์เพลง Spotify / Spotify Track Link (ถ้ามี)</label>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="วางลิงก์ เช่น https://open.spotify.com/track/..."
+                      className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
+                      value={spotifyLink}
+                      onChange={(e) => setSpotifyLink(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Song Title & Artist Group */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อเพลง / Song Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="ชื่อเพลง..."
+                      className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
+                      value={trackName}
+                      onChange={(e) => setTrackName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ศิลปิน / Artist *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="ชื่อศิลปิน..."
+                      className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
+                      value={artistName}
+                      onChange={(e) => setArtistName(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Requester Name */}
             <div>

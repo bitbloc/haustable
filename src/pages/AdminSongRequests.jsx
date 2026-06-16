@@ -153,13 +153,6 @@ export default function AdminSongRequests() {
             backgroundColor: "#121212",
             paddingAll: "16px"
           },
-          hero: {
-            type: "image",
-            url: requestData.album_image,
-            size: "full",
-            aspectRatio: "1:1",
-            aspectMode: "cover"
-          },
           body: {
             type: "box",
             layout: "vertical",

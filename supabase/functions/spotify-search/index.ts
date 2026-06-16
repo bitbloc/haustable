@@ -5,6 +5,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function extractPlaylistId(input: string): string {
+  if (!input) return ''
+  const match = input.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/)
+  if (match) return match[1]
+  const uriMatch = input.match(/spotify:playlist:([a-zA-Z0-9]+)/)
+  if (uriMatch) return uriMatch[1]
+  return input.trim()
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -15,8 +24,9 @@ Deno.serve(async (req) => {
     // 1. Parse Query Parameters
     const url = new URL(req.url)
     const query = url.searchParams.get('q')
+    const isPlaylist = url.searchParams.get('playlist') === 'true'
 
-    if (!query) {
+    if (!query && !isPlaylist) {
       return new Response(JSON.stringify({ tracks: [] }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -68,8 +78,70 @@ Deno.serve(async (req) => {
 
     const { access_token } = await tokenResp.json()
 
-    // 5. Search Tracks on Spotify
-    const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=12`
+    // 5. Handle Playlist Fetch vs General Search
+    if (isPlaylist) {
+      const { data: playlistDataSetting } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'spotify_playlist_id').maybeSingle()
+      const spotifyPlaylistIdRaw = playlistDataSetting?.value
+
+      if (!spotifyPlaylistIdRaw) {
+        return new Response(JSON.stringify({ tracks: [], error: 'Spotify Playlist ID/URL is not configured in app_settings.' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      const playlistId = extractPlaylistId(spotifyPlaylistIdRaw)
+      if (!playlistId) {
+        return new Response(JSON.stringify({ tracks: [], error: 'Invalid Spotify Playlist ID/URL configuration.' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // Fetch tracks from Spotify playlist API (limit to 100 tracks)
+      const playlistTracksUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`
+      const tracksResp = await fetch(playlistTracksUrl, {
+        headers: {
+          'Authorization': `Bearer ${access_token}`
+        }
+      })
+
+      if (!tracksResp.ok) {
+        const errBody = await tracksResp.text()
+        console.error('Spotify Playlist Fetch Failed:', errBody)
+        return new Response(JSON.stringify({ error: `Spotify Playlist Fetch Failed: ${errBody}` }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      const playlistTracksData = await tracksResp.json()
+      const tracks = (playlistTracksData.items || []).map((item: any) => {
+        const track = item.track
+        if (!track) return null
+        const images = track.album?.images || []
+        const albumImage = images[1]?.url || images[0]?.url || ''
+
+        return {
+          id: track.id,
+          name: track.name,
+          artists: (track.artists || []).map((a: any) => a.name).join(', '),
+          albumName: track.album?.name || '',
+          albumImage,
+          duration_ms: track.duration_ms,
+          uri: track.uri,
+          previewUrl: track.preview_url || ''
+        }
+      }).filter(Boolean)
+
+      return new Response(JSON.stringify({ tracks }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // 6. Search Tracks on Spotify (standard search)
+    const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query!)}&type=track&limit=12`
     const searchResp = await fetch(searchUrl, {
       headers: {
         'Authorization': `Bearer ${access_token}`
@@ -100,7 +172,6 @@ Deno.serve(async (req) => {
 
     const searchData = await searchResp.json()
     const tracks = (searchData.tracks?.items || []).map((item: any) => {
-      // Find the medium image (typically index 1) or fallback to smallest/largest
       const images = item.album?.images || []
       const albumImage = images[1]?.url || images[0]?.url || ''
 
