@@ -254,20 +254,20 @@ export default function AdsLandingPage() {
             </div>
 
             {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
-            {/* Desktop-only floating plates in margins */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 380px)" size="w-32 lg:w-40" delay={0} hasLeaves />
-            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 390px)" size="w-36 lg:w-44" delay={1.5} hasSteam />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 410px)" size="w-32 lg:w-36" delay={0.8} hasSteam />
-            <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 380px)" size="w-32 lg:w-40" delay={2.2} />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 400px)" size="w-36 lg:w-44" delay={1.2} hasSteam />
-            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="76%" right="calc(50% - 420px)" size="w-40 lg:w-48" delay={0.4} />
-            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 390px)" size="w-36 lg:w-40" delay={2.8} />
+            {/* Desktop-only floating plates in margins (Larger size with closer horizontal offsets for organic overlap) */}
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 310px)" size="w-44 lg:w-56" delay={0} hasLeaves />
+            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.5} hasSteam />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam />
+            <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} />
+            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam />
+            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="76%" right="calc(50% - 330px)" size="w-52 lg:w-64" delay={0.4} />
+            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} />
 
-            {/* Mobile-only floating plates (Optimized opacity and steam effects) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-2.5rem" size="w-24" delay={0} isMobile opacity={0.75} hasLeaves />
-            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-3rem" size="w-28" delay={1.5} isMobile opacity={0.75} hasSteam />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-2.5rem" size="w-24" delay={0.8} isMobile opacity={0.75} hasSteam />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="68%" left="-2rem" size="w-28" delay={2.2} isMobile opacity={0.75} hasSteam />
+            {/* Mobile-only floating plates (Slightly larger, tucked behind content cards for depth) */}
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.75} hasLeaves />
+            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-5rem" size="w-40" delay={1.5} isMobile opacity={0.75} hasSteam />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.75} hasSteam />
+            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.75} hasSteam />
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
             <script type="application/ld+json">
