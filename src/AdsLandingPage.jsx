@@ -256,7 +256,7 @@ export default function AdsLandingPage() {
             {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
             {/* Desktop-only floating plates in margins */}
             <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 380px)" size="w-32 lg:w-40" delay={0} hasLeaves />
-            <FloatingPlate src="/assets/food-beef-curry-2.webp" alt="แกงเนื้อเผ็ดโคขุน" top="24%" right="calc(50% - 390px)" size="w-36 lg:w-44" delay={1.5} hasSteam />
+            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 390px)" size="w-36 lg:w-44" delay={1.5} hasSteam />
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 410px)" size="w-32 lg:w-36" delay={0.8} hasSteam />
             <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 380px)" size="w-32 lg:w-40" delay={2.2} />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 400px)" size="w-36 lg:w-44" delay={1.2} hasSteam />
@@ -348,53 +348,6 @@ export default function AdsLandingPage() {
                         {subtitle}
                     </motion.p>
                 </header>
-
-                {/* ─── MINIMAL HERO CENTERPIECE ─── */}
-                <div className="w-full flex flex-col items-center justify-center my-6 py-4 relative">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.8, type: 'spring', bounce: 0.3 }}
-                        className="relative w-48 h-48 md:w-56 md:h-56 z-20"
-                    >
-                        <div className="relative w-full h-full animate-float">
-                            <img
-                                src="/assets/food-beef-curry-1.webp"
-                                alt="แกงเผ็ดเนื้อสไลด์"
-                                className="w-full h-full object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.22)] hover:scale-105 transition-transform duration-500"
-                            />
-                            
-                            {/* Hot steam particles */}
-                            <div className="steam-container">
-                                <div className="steam-particle-1" />
-                                <div className="steam-particle-2" />
-                                <div className="steam-particle-3" />
-                            </div>
-
-                            {/* Floating Basil Leaves around the dish */}
-                            <div className="absolute inset-0 pointer-events-none">
-                                <LeafSVG className="absolute w-5 h-5 text-green-700/80 -top-1 -left-1 leaf-sway" style={{ animationDelay: '0.1s' }} />
-                                <LeafSVG className="absolute w-4 h-4 text-green-800/70 bottom-3 -right-1 leaf-sway" style={{ animationDelay: '0.9s' }} />
-                                <LeafSVG className="absolute w-4 h-4 text-green-600/60 top-12 -right-3 leaf-sway" style={{ animationDelay: '1.7s' }} />
-                            </div>
-                        </div>
-                    </motion.div>
-                    
-                    {/* Brand Statement below the plate */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4, duration: 0.6 }}
-                        className="text-center mt-4 z-20"
-                    >
-                        <span className="bg-[#DFFF00] text-neutral-900 text-[10px] font-black tracking-[0.3em] uppercase px-3.5 py-1.5 rounded-full inline-block shadow-sm">
-                            SIGNATURE DISH
-                        </span>
-                        <h3 className="text-sm font-black text-neutral-800 mt-2 font-mono uppercase tracking-wider">
-                            แกงเผ็ดเนื้อโคขุนสไลด์
-                        </h3>
-                    </motion.div>
-                </div>
 
                 {/* ─── MENU BOOKLET SECTION (Original Images + Switching) ─── */}
                 {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
