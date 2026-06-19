@@ -256,7 +256,7 @@ export default function AdsLandingPage() {
             {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
             {/* Desktop-only floating plates in margins */}
             <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 380px)" size="w-32 lg:w-40" delay={0} hasLeaves />
-            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 390px)" size="w-36 lg:w-44" delay={1.5} hasSteam />
+            <FloatingPlate src="/assets/food-beef-curry-2.webp" alt="แกงเนื้อเผ็ดโคขุน" top="24%" right="calc(50% - 390px)" size="w-36 lg:w-44" delay={1.5} hasSteam />
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 410px)" size="w-32 lg:w-36" delay={0.8} hasSteam />
             <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 380px)" size="w-32 lg:w-40" delay={2.2} />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 400px)" size="w-36 lg:w-44" delay={1.2} hasSteam />
@@ -359,8 +359,8 @@ export default function AdsLandingPage() {
                     >
                         <div className="relative w-full h-full animate-float">
                             <img
-                                src="/assets/food-tai-pla-curry.webp"
-                                alt="แกงไตปลาสุดแซ่บ"
+                                src="/assets/food-beef-curry-1.webp"
+                                alt="แกงเผ็ดเนื้อสไลด์"
                                 className="w-full h-full object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.22)] hover:scale-105 transition-transform duration-500"
                             />
                             
@@ -391,7 +391,7 @@ export default function AdsLandingPage() {
                             SIGNATURE DISH
                         </span>
                         <h3 className="text-sm font-black text-neutral-800 mt-2 font-mono uppercase tracking-wider">
-                            แกงไตปลาปักษ์ใต้แท้
+                            แกงเผ็ดเนื้อโคขุนสไลด์
                         </h3>
                     </motion.div>
                 </div>
