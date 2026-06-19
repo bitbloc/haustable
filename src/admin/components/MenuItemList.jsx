@@ -185,6 +185,7 @@ export default function MenuItemList() {
     // --- Actions ---
 
     const handleCreate = () => {
+        setEditingItem(null)
         setSelectedOptionGroups([])
         setImageFile(null)
         setPreviewUrl(null)

@@ -6,17 +6,17 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function checkSettings() {
-    console.log('Fetching app_settings...');
-    const { data, error } = await supabase
+    const { data: settings, error } = await supabase
         .from('app_settings')
-        .select('*');
+        .select('*')
+        .like('key', 'link_%');
 
     if (error) {
-        console.error('Error:', error);
+        console.error('Settings error:', error);
     } else {
-        console.log('Settings found:', data.length);
-        data.forEach(row => {
-            console.log(`- ${row.key}: ${row.value}`);
+        console.log(`Found ${settings.length} settings:`);
+        settings.forEach(s => {
+            console.log(`${s.key}: ${s.value}`);
         });
     }
 }
