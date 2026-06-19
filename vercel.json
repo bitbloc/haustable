@@ -10,6 +10,10 @@
             "destination": "/api/link"
         },
         {
+            "source": "/link/",
+            "destination": "/api/link"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

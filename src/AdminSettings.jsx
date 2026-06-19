@@ -1244,7 +1244,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
     }, [settings])
 
     // Auto-resize image before upload (max 1200px width, converts to WebP with JPEG fallback, 0.8 quality)
-    const resizeImage = (file, maxWidth = 1200) => {
+    const resizeImage = (file, maxWidth = 1200, forceJpeg = false) => {
         return new Promise((resolve) => {
             const reader = new FileReader()
             reader.onload = (e) => {
@@ -1260,15 +1260,20 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                     // Detect webp support via canvas
                     let type = 'image/webp'
                     let ext = '.webp'
-                    try {
-                        const testData = canvas.toDataURL('image/webp')
-                        if (!testData.startsWith('data:image/webp')) {
+                    if (forceJpeg) {
+                        type = 'image/jpeg'
+                        ext = '.jpg'
+                    } else {
+                        try {
+                            const testData = canvas.toDataURL('image/webp')
+                            if (!testData.startsWith('data:image/webp')) {
+                                type = 'image/jpeg'
+                                ext = '.jpg'
+                            }
+                        } catch (err) {
                             type = 'image/jpeg'
                             ext = '.jpg'
                         }
-                    } catch (err) {
-                        type = 'image/jpeg'
-                        ext = '.jpg'
                     }
 
                     canvas.toBlob((blob) => {
@@ -1286,7 +1291,8 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
         setUploading(prev => ({ ...prev, [settingKey]: true }))
         try {
             const maxWidth = settingKey.startsWith('link_sig_img_') ? 600 : 1200
-            const resized = await resizeImage(file, maxWidth)
+            const forceJpeg = settingKey === 'link_og_image_url'
+            const resized = await resizeImage(file, maxWidth, forceJpeg)
             const ext = resized.name.split('.').pop()
             const fileName = `link/${settingKey}_${Date.now()}.${ext}`
             const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, resized, { upsert: true, contentType: resized.type, cacheControl: '15552000' })
