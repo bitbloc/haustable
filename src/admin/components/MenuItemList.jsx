@@ -336,6 +336,69 @@ export default function MenuItemList() {
         setIsModalOpen(false); // Close if open
     }
 
+    const handleDuplicate = async (item) => {
+        if (!confirm(`คุณต้องการคัดลอกเมนู "${item.name}" ใช่หรือไม่?`)) return
+        
+        try {
+            const newName = `${item.name} (คัดลอก)`
+            const maxSort = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.sort_order || 0)) : 0
+
+            const selectedCat = categories.find(c => c.id === item.category_id)
+            const selectedCatName = selectedCat ? selectedCat.name : (item.category || 'Uncategorized')
+
+            const payload = {
+                name: newName,
+                price: item.price,
+                category_id: item.category_id || null,
+                category: selectedCatName,
+                description: item.description || '',
+                is_available: item.is_available,
+                is_recommended: item.is_recommended,
+                is_pickup_available: item.is_pickup_available !== false,
+                image_url: item.image_url || '',
+                sort_order: maxSort + 1
+            }
+
+            // Insert new menu item
+            const { data: newInserted, error: insertError } = await supabase
+                .from('menu_items')
+                .insert(payload)
+                .select()
+                .single()
+
+            if (insertError) throw insertError
+
+            // Duplicate linked option groups
+            if (newInserted && newInserted.id) {
+                const { data: options, error: optionsFetchError } = await supabase
+                    .from('menu_item_options')
+                    .select('option_group_id, display_order')
+                    .eq('menu_item_id', item.id)
+
+                if (optionsFetchError) throw optionsFetchError
+
+                if (options && options.length > 0) {
+                    const links = options.map(o => ({
+                        menu_item_id: newInserted.id,
+                        option_group_id: o.option_group_id,
+                        display_order: o.display_order
+                    }))
+                    const { error: optionInsertError } = await supabase
+                        .from('menu_item_options')
+                        .insert(links)
+                    
+                    if (optionInsertError) throw optionInsertError
+                }
+            }
+
+            // Refresh menu items list
+            await fetchData()
+            setIsModalOpen(false)
+        } catch (error) {
+            alert('คัดลอกเมนูไม่สำเร็จ: ' + error.message)
+        }
+    }
+
     const handleSubmit = async (e) => {
         if (e && e.preventDefault) e.preventDefault()
         
@@ -761,7 +824,12 @@ export default function MenuItemList() {
                                 </div>
                                 <div className="p-4 border-t border-gray-200 bg-gray-50 z-10">
                                     <button onClick={handleSubmit} className="w-full bg-brand text-ink font-bold py-3 rounded-xl hover:bg-brandDark shadow-lg shadow-brand/20 transition-all transform active:scale-[0.98]">บันทึกเมนู</button>
-                                    {editingItem && <button onClick={() => handleDelete(editingItem.id)} className="w-full mt-2 text-red-500 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition-colors">ลบเมนูนี้</button>}
+                                    {editingItem && (
+                                        <div className="flex gap-2 mt-2">
+                                            <button onClick={() => handleDuplicate(editingItem)} className="flex-1 bg-white text-ink border border-gray-200 text-xs font-bold py-2 hover:bg-gray-50 rounded-lg transition-all active:scale-[0.98]">คัดลอกเมนูนี้</button>
+                                            <button onClick={() => handleDelete(editingItem.id)} className="flex-1 text-red-500 border border-red-100 text-xs font-bold py-2 hover:bg-red-50 rounded-lg transition-colors">ลบเมนูนี้</button>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         </div>
