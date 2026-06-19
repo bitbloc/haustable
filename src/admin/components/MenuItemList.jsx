@@ -44,7 +44,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
     // Overlay Render (Dragging Preview)
     if (isOverlay) {
          return (
-            <div className={`bg-paper border-brand ring-2 ring-brand rounded-xl p-3 flex gap-4 shadow-xl cursor-grabbing select-none z-50 scale-105`}>
+            <div className="bg-paper border-brand ring-2 ring-brand rounded-xl p-3 flex gap-4 shadow-xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px]">
                  <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative border border-gray-100">
                     {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
                 </div>
@@ -618,16 +618,19 @@ export default function MenuItemList() {
                     )}
                 </div>
 
-                <DragOverlay>
-                    {activeDragItem ? (
-                        <SortableMenuItem 
-                            item={activeDragItem} 
-                            handleEdit={()=>{}}
-                            handleTogglePickup={()=>{}}
-                            isOverlay 
-                        />
-                    ) : null}
-                </DragOverlay>
+                {createPortal(
+                    <DragOverlay>
+                        {activeDragItem ? (
+                            <SortableMenuItem 
+                                item={activeDragItem} 
+                                handleEdit={()=>{}}
+                                handleTogglePickup={()=>{}}
+                                isOverlay 
+                            />
+                        ) : null}
+                    </DragOverlay>,
+                    document.body
+                )}
             </DndContext>
 
             {/* Edit/Create Modal */}
