@@ -68,7 +68,8 @@ export default function AdminSettings() {
         qr_longitude: '104.78028',
         qr_radius: '50',
         spotify_client_id: '',
-        spotify_client_secret: ''
+        spotify_client_secret: '',
+        link_og_image_url: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -1416,9 +1417,14 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             </div>
             <p className="text-xs text-subInk -mt-4">จัดการรูปภาพ, เมนู และข้อความสำหรับ Landing Page (/link)</p>
 
-            {/* Logo */}
-            <div className="max-w-xs">
-                <ImageUploadBlock settingKey="link_logo_url" label="Logo (โลโก้)" aspect="aspect-square" placeholder="ยังไม่มีโลโก้" />
+            {/* Logo & Open Graph Image */}
+            <div className="grid md:grid-cols-2 gap-6">
+                <div className="max-w-xs">
+                    <ImageUploadBlock settingKey="link_logo_url" label="Logo (โลโก้)" aspect="aspect-square" placeholder="ยังไม่มีโลโก้" />
+                </div>
+                <div>
+                    <ImageUploadBlock settingKey="link_og_image_url" label="ภาพพรีวิวสำหรับแชร์โซเชียล (Open Graph Share Image - เน้นอาหาร)" aspect="aspect-video" placeholder="ยังไม่มีรูปพรีวิวแชร์โซเชียล (ระบบจะดึงรูปพรีวิวอาหารทั่วไป/ร้าน เป็นค่าเริ่มต้น)" />
+                </div>
             </div>
 
             {/* Text Fields */}

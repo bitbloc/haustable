@@ -1,5 +1,14 @@
 {
+    "functions": {
+        "api/link.js": {
+            "includeFiles": "dist/index.html"
+        }
+    },
     "rewrites": [
+        {
+            "source": "/link",
+            "destination": "/api/link"
+        },
         {
             "source": "/(.*)",
             "destination": "/index.html"
