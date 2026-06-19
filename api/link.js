@@ -18,10 +18,12 @@ export default async function handler(req, res) {
         const description = "อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · ร้านเท่สไตล์ Thai Twist · กินอาหารใต้กินได้ทุกที่ · มีที่จอดรถสะดวก..."
         
         // 3. Resolve OG Image URL:
-        // Use link_og_image_url if present, fallback to link_hero_url, fallback to link_sig_img_1, fallback to generated local file URL
-        let imageUrl = settings.link_og_image_url || settings.link_hero_url || settings.link_sig_img_1
+        // Prioritize settings.link_og_image_url (guaranteed compressed by back-office uploader).
+        // Fallback directly to the optimized local og-food-preview.png (~875KB).
+        // Avoid falling back to uncompressed database settings (like link_hero_url which is 22.6MB)
+        // because Facebook crawlers will time out on large image sizes, showing a blank preview.
+        let imageUrl = settings.link_og_image_url
         
-        // If not found or empty, default to our high-quality generated preview
         if (!imageUrl) {
             imageUrl = "https://haustable.vercel.app/og-food-preview.png"
         }
