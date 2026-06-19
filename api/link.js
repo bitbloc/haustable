@@ -62,7 +62,7 @@ export default async function handler(req, res) {
 
         // Send response
         res.setHeader('Content-Type', 'text/html')
-        res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate')
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
         return res.status(200).send(html)
 
     } catch (err) {
