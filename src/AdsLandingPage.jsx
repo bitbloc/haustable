@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, Copy, Check } from 'lucide-react';
+import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon } from 'lucide-react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
-import { toast } from 'sonner';
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
@@ -16,31 +16,60 @@ const optimizeImageUrl = (url, width = 850) => {
 
 export default function AdsLandingPage() {
     const [settings, setSettings] = useState({});
+    const [menuImages, setMenuImages] = useState([]);
+    const [promoMenuImages, setPromoMenuImages] = useState([]);
+    const [regularMenuImages, setRegularMenuImages] = useState([]);
+    const [activeTab, setActiveTab] = useState('regular'); // 'regular' or 'promo'
     const [menuItems, setMenuItems] = useState([]);
     const [menuCategories, setMenuCategories] = useState([]);
-    const [promoCodes, setPromoCodes] = useState([]);
-    const [activeTab, setActiveTab] = useState('menu'); // 'menu' or 'promo'
-    const [showAllMenu, setShowAllMenu] = useState(false);
     const [atmImages, setAtmImages] = useState([]);
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedLightbox, setSelectedLightbox] = useState(null);
-    const [copiedCode, setCopiedCode] = useState(null);
+    const [activeMenuIndex, setActiveMenuIndex] = useState(0);
+    const [menuImageLoading, setMenuImageLoading] = useState(true);
 
     useEffect(() => { fetchData(); }, []);
 
     const fetchData = async () => {
         try {
-            const [settingsRes, itemsRes, catsRes, promosRes] = await Promise.all([
+            const [settingsRes, itemsRes, catsRes] = await Promise.all([
                 supabase.from('app_settings').select('*').like('key', 'link_%'),
                 supabase.from('menu_items').select('*').eq('is_available', true),
-                supabase.from('menu_categories').select('*').order('display_order'),
-                supabase.from('promotion_codes').select('*').eq('is_active', true)
+                supabase.from('menu_categories').select('*').order('display_order')
             ]);
 
             if (settingsRes.data) {
                 const map = settingsRes.data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                 setSettings(map);
+
+                // Load Menu Images (Booklet)
+                const menus = [];
+                for (let i = 1; i <= 10; i++) {
+                    if (map[`link_menu_${i}`]) {
+                        menus.push({
+                            key: `link_menu_${i}`,
+                            url: map[`link_menu_${i}`]
+                        });
+                    }
+                }
+                setMenuImages(menus.map(m => m.url));
+
+                // Group menus into Promo vs Regular based on link_menu_promo_slots setting
+                const promoSlotString = map.link_menu_promo_slots || '5';
+                const promoSlotNumbers = promoSlotString.split(',').map(s => s.trim()).filter(Boolean);
+                const promoKeys = promoSlotNumbers.map(num => `link_menu_${num}`);
+                const promoUrls = menus.filter(m => promoKeys.includes(m.key)).map(m => m.url);
+                const regularUrls = menus.filter(m => !promoKeys.includes(m.key)).map(m => m.url);
+                
+                setPromoMenuImages(promoUrls);
+                setRegularMenuImages(regularUrls);
+
+                if (regularUrls.length === 0 && promoUrls.length > 0) {
+                    setActiveTab('promo');
+                } else {
+                    setActiveTab('regular');
+                }
 
                 // Extract signatures
                 const sigs = [];
@@ -90,22 +119,11 @@ export default function AdsLandingPage() {
                 setMenuCategories(catsRes.data);
             }
 
-            if (promosRes.data) {
-                setPromoCodes(promosRes.data);
-            }
-
         } catch (err) {
             console.error('Failed to load link data:', err);
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleCopyCode = (code) => {
-        navigator.clipboard.writeText(code);
-        setCopiedCode(code);
-        toast.success(`คัดลอกโค้ดส่วนลด "${code}" เรียบร้อยแล้ว!`);
-        setTimeout(() => setCopiedCode(null), 2000);
     };
 
     const logoUrl = settings.link_logo_url || '';
@@ -116,16 +134,8 @@ export default function AdsLandingPage() {
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
 
-    // Filter recommended items (limit to 12 items for clean design)
-    const recommendedMenuItems = menuItems.filter(item => item.is_recommended).slice(0, 12);
-    // If no recommended items, take first 12 items
-    const displaySignatures = recommendedMenuItems.length > 0 ? recommendedMenuItems : menuItems.slice(0, 12);
-
-    // Group items by category for the full menu
-    const activeCategories = menuCategories.filter(cat => {
-        const catItems = menuItems.filter(item => item.category_id === cat.id);
-        return catItems.length > 0;
-    });
+    // Limit featured items to exactly 9 items as requested
+    const featuredMenuItems = menuItems.slice(0, 9);
 
     if (loading) {
         return (
@@ -149,13 +159,64 @@ export default function AdsLandingPage() {
                     animation: float 6s ease-in-out infinite;
                 }
                 @keyframes steam-rise {
-                    0% { transform: translateY(0) scale(0.8); opacity: 0; }
-                    10% { opacity: 0.35; }
-                    50% { transform: translateY(-30px) scale(1.1); opacity: 0.18; }
-                    100% { transform: translateY(-60px) scale(1.3); opacity: 0; }
+                    0% {
+                        transform: translateY(0) scale(0.6) rotate(0deg);
+                        opacity: 0;
+                        filter: blur(3px);
+                    }
+                    20% {
+                        opacity: 0.5;
+                        filter: blur(4px);
+                    }
+                    50% {
+                        transform: translateY(-40px) scale(1.1) rotate(5deg);
+                        opacity: 0.3;
+                        filter: blur(6px);
+                    }
+                    80% {
+                        opacity: 0.1;
+                        filter: blur(8px);
+                    }
+                    100% {
+                        transform: translateY(-80px) scale(1.4) rotate(-5deg);
+                        opacity: 0;
+                        filter: blur(10px);
+                    }
                 }
-                .steam-particle {
-                    animation: steam-rise 3s infinite ease-out;
+                .steam-container {
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    top: -24px;
+                    display: flex;
+                    justify-content: center;
+                    gap: 8px;
+                    pointer-events: none;
+                    z-index: 20;
+                }
+                .steam-particle-1 {
+                    width: 6px;
+                    height: 30px;
+                    background: rgba(140, 140, 140, 0.4);
+                    border-radius: 9999px;
+                    animation: steam-rise 3s infinite ease-in-out;
+                    animation-delay: 0s;
+                }
+                .steam-particle-2 {
+                    width: 8px;
+                    height: 40px;
+                    background: rgba(120, 120, 120, 0.3);
+                    border-radius: 9999px;
+                    animation: steam-rise 3.4s infinite ease-in-out;
+                    animation-delay: 0.7s;
+                }
+                .steam-particle-3 {
+                    width: 5px;
+                    height: 25px;
+                    background: rgba(130, 130, 130, 0.35);
+                    border-radius: 9999px;
+                    animation: steam-rise 2.8s infinite ease-in-out;
+                    animation-delay: 1.4s;
                 }
                 @keyframes leaf-sway {
                     0% { transform: translate(0, 0) rotate(0deg); }
@@ -192,7 +253,7 @@ export default function AdsLandingPage() {
                 </div>
             </div>
 
-            {/* ─── FLOATING FOOD PLATES (Responsive & Layered) ─── */}
+            {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
             {/* Desktop-only floating plates in margins */}
             <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 380px)" size="w-32 lg:w-40" delay={0} hasLeaves />
             <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 390px)" size="w-36 lg:w-44" delay={1.5} hasSteam />
@@ -202,44 +263,11 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="76%" right="calc(50% - 420px)" size="w-40 lg:w-48" delay={0.4} />
             <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 390px)" size="w-36 lg:w-40" delay={2.8} />
 
-            {/* Mobile-only safe floating plates (Lower opacity, smaller, positioned to never cover text) */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 md:hidden">
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    whileInView={{ opacity: 0.12 }} 
-                    viewport={{ once: true }}
-                    className="absolute top-[8%] -right-10 w-24 animate-float"
-                >
-                    <img src="/assets/food-green-curry.webp" alt="" />
-                </motion.div>
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    whileInView={{ opacity: 0.14 }} 
-                    viewport={{ once: true }}
-                    className="absolute top-[28%] -left-12 w-28 animate-float"
-                    style={{ animationDelay: '1.5s' }}
-                >
-                    <img src="/assets/food-pouring-curry.webp" alt="" />
-                </motion.div>
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    whileInView={{ opacity: 0.12 }} 
-                    viewport={{ once: true }}
-                    className="absolute top-[48%] -right-10 w-24 animate-float"
-                    style={{ animationDelay: '0.8s' }}
-                >
-                    <img src="/assets/food-pork-belly.webp" alt="" />
-                </motion.div>
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    whileInView={{ opacity: 0.15 }} 
-                    viewport={{ once: true }}
-                    className="absolute top-[68%] -left-8 w-28 animate-float"
-                    style={{ animationDelay: '2.2s' }}
-                >
-                    <img src="/assets/food-tai-pla-curry.webp" alt="" />
-                </motion.div>
-            </div>
+            {/* Mobile-only floating plates (Optimized opacity and steam effects) */}
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-2.5rem" size="w-24" delay={0} isMobile opacity={0.75} hasLeaves />
+            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-3rem" size="w-28" delay={1.5} isMobile opacity={0.75} hasSteam />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-2.5rem" size="w-24" delay={0.8} isMobile opacity={0.75} hasSteam />
+            <FloatingPlate src="/assets/food-tai-pla-curry.webp" alt="แกงไตปลา" top="68%" left="-2rem" size="w-28" delay={2.2} isMobile opacity={0.75} hasSteam />
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
             <script type="application/ld+json">
@@ -321,164 +349,216 @@ export default function AdsLandingPage() {
                     </motion.p>
                 </header>
 
-                {/* ─── MAIN ZONE (TABS) ─── */}
-                <main className="mt-6">
-                    
-                    {/* Tab Switcher */}
-                    <div className="flex gap-2 p-1.5 bg-neutral-200/40 backdrop-blur-sm rounded-2xl mb-6 text-xs font-black shadow-inner border border-neutral-200/20">
-                        <button
-                            onClick={() => setActiveTab('menu')}
-                            className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer ${activeTab === 'menu' ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
-                        >
-                            📖 เมนูยอดฮิต & ซิกเนเจอร์
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('promo')}
-                            className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer ${activeTab === 'promo' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100/50' : 'text-neutral-500 hover:text-red-600'}`}
-                        >
-                            🔥 คูปอง & โปรโมชั่นพิเศษ
-                        </button>
-                    </div>
+                {/* ─── MENU BOOKLET SECTION (Original Images + Switching) ─── */}
+                {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
+                    <section id="menu-section" className="w-full mt-6 bg-white rounded-3xl p-5 border border-neutral-100 shadow-soft">
+                        <div className="text-center mb-5 pb-2 border-b border-neutral-100">
+                            <span className="bg-[#DFFF00] text-neutral-900 text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block">
+                                เมนูแนะนำ & เล่มเมนู
+                            </span>
+                        </div>
 
-                    {/* TAB CONTENT: NATIVE MENU */}
-                    {activeTab === 'menu' && (
-                        <motion.section
-                            key="menu-tab"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-white rounded-3xl p-5 border border-neutral-100 shadow-soft"
-                        >
-                            {/* Copywriting Tagline */}
-                            <div className="text-center mb-6 py-2 border-b-2 border-dashed border-neutral-100">
-                                <span className="bg-[#DFFF00] text-neutral-900 text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block shadow-sm">
-                                    จริตจัด รสชัดเจน
-                                </span>
-                                <h2 className="text-neutral-800 text-[11px] font-bold tracking-[0.2em] font-mono uppercase mt-3">Signature Recommended</h2>
-                            </div>
-
-                            {/* Signatures List (Curated 10-15 dishes) */}
-                            <div className="space-y-4">
-                                {displaySignatures.map((item, idx) => (
-                                    <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
-                                ))}
-                            </div>
-
-                            {/* Accordion Menu Toggle */}
-                            <div className="mt-8 pt-4 border-t border-neutral-100 flex flex-col items-center">
+                        {/* Category Tabs Switcher (Regular vs Promo Booklet) */}
+                        <div className="flex gap-2 p-1 bg-neutral-100 rounded-2xl mb-5 text-xs font-bold shadow-inner border border-neutral-200/40">
+                            {regularMenuImages.length > 0 && (
                                 <button
-                                    onClick={() => setShowAllMenu(!showAllMenu)}
-                                    className="bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl py-3.5 px-6 flex items-center justify-center gap-2 text-xs font-black shadow-md active:scale-97 transition-all cursor-pointer"
+                                    onClick={() => {
+                                        setActiveTab('regular');
+                                        setActiveMenuIndex(0);
+                                        setMenuImageLoading(true);
+                                    }}
+                                    className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'regular' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
                                 >
-                                    <Utensils size={14} className="text-[#DFFF00]" />
-                                    <span>{showAllMenu ? "ซ่อนเมนูทั้งหมด" : "ดูเมนูเต็มทั้งหมด (80+ รายการ)"}</span>
+                                    📖 เมนูอาหาร & เครื่องดื่ม
                                 </button>
+                            )}
+                            {promoMenuImages.length > 0 && (
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('promo');
+                                        setActiveMenuIndex(0);
+                                        setMenuImageLoading(true);
+                                    }}
+                                    className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'promo' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100/50' : 'text-neutral-500 hover:text-red-600'}`}
+                                >
+                                    🔥 โปรโมชั่นพิเศษ
+                                </button>
+                            )}
+                        </div>
 
-                                <AnimatePresence>
-                                    {showAllMenu && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: "auto", opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.4, ease: "easeInOut" }}
-                                            className="w-full overflow-hidden mt-6 space-y-8"
-                                        >
-                                            {activeCategories.map((cat) => {
-                                                const catItems = menuItems.filter(item => item.category_id === cat.id);
-                                                return (
-                                                    <div key={cat.id} className="space-y-3">
-                                                        <h3 className="text-sm font-black text-neutral-800 bg-neutral-50 px-3 py-2 rounded-xl border-l-4 border-neutral-900 tracking-wider">
-                                                            {cat.name}
-                                                        </h3>
-                                                        <div className="space-y-3 px-1">
-                                                            {catItems.map((item, itemIdx) => (
-                                                                <MenuListItem key={item.id} item={item} index={itemIdx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
-                                                            ))}
-                                                        </div>
+                        {/* Booklet Viewer */}
+                        {(() => {
+                            const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
+                            if (currentImages.length === 0) return null;
+                            const activeUrl = currentImages[activeMenuIndex];
+
+                            return (
+                                <div className="bg-neutral-50 rounded-2xl border border-neutral-200/60 p-3 shadow-sm flex flex-col items-center">
+                                    
+                                    {/* Inline Zoom Controls Toolbar */}
+                                    <TransformWrapper
+                                        key={`${activeTab}-${activeMenuIndex}-${activeUrl}`}
+                                        initialScale={1}
+                                        minScale={1}
+                                        maxScale={4}
+                                        centerOnInit={true}
+                                    >
+                                        {({ zoomIn, zoomOut, resetTransform }) => (
+                                            <div className="w-full flex flex-col items-center">
+                                                
+                                                <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-neutral-100/80 p-1.5 rounded-xl border border-neutral-200/50 shadow-sm">
+                                                    <div className="flex items-center gap-1">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => zoomIn()} 
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer"
+                                                            title="ซูมเข้า"
+                                                        >
+                                                            <ZoomIn size={16} />
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => zoomOut()} 
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer"
+                                                            title="ซูมออก"
+                                                        >
+                                                            <ZoomOut size={16} />
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => resetTransform()} 
+                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer"
+                                                            title="รีเซ็ต"
+                                                        >
+                                                            <RefreshCw size={13} />
+                                                        </button>
                                                     </div>
-                                                );
-                                            })}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        </motion.section>
-                    )}
+                                                    
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setSelectedLightbox({ type: 'booklet', url: activeUrl })}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-neutral-800 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-lg shadow-sm active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        <Maximize2 size={11} />
+                                                        <span>ขยายเต็มจอ</span>
+                                                    </button>
+                                                </div>
 
-                    {/* TAB CONTENT: PROMOTIONS */}
-                    {activeTab === 'promo' && (
-                        <motion.section
-                            key="promo-tab"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-4"
-                        >
-                            {/* Promo coupon codes */}
-                            {promoCodes.length > 0 ? (
-                                <div className="space-y-4">
-                                    <h2 className="text-neutral-700 text-xs font-black tracking-widest uppercase font-mono pl-1">Active Coupon Vouchers</h2>
-                                    {promoCodes.map((code) => (
-                                        <div 
-                                            key={code.id}
-                                            className="bg-white border border-dashed border-red-200 rounded-3xl p-5 shadow-soft relative overflow-hidden flex flex-col gap-3"
+                                                {/* Zoomable Image Container */}
+                                                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden shadow-sm border border-neutral-200 bg-white cursor-grab active:cursor-grabbing">
+                                                    {menuImageLoading && (
+                                                        <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
+                                                            <div className="w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                                                        </div>
+                                                    )}
+
+                                                    <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full flex items-center justify-center">
+                                                        <img
+                                                            src={optimizeImageUrl(activeUrl, 900)}
+                                                            alt={`Menu Page ${activeMenuIndex + 1}`}
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                            onLoad={() => setMenuImageLoading(false)}
+                                                            className={`w-full h-full object-contain transition-opacity duration-300 ${menuImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                                                        />
+                                                    </TransformComponent>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </TransformWrapper>
+
+                                    {/* Pagination Controls */}
+                                    <div className="flex items-center justify-between w-full mt-3 px-2">
+                                        <button
+                                            disabled={activeMenuIndex === 0}
+                                            onClick={() => {
+                                                setActiveMenuIndex(prev => Math.max(0, prev - 1));
+                                                setMenuImageLoading(true);
+                                            }}
+                                            className="w-9 h-9 rounded-full border border-neutral-250 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
                                         >
-                                            {/* Punch holes styling */}
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-6 bg-[#FAFAF7] rounded-r-full border-r border-y border-red-200/50" />
-                                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-6 bg-[#FAFAF7] rounded-l-full border-l border-y border-red-200/50" />
-                                            
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider">
-                                                        {code.applicable_to === 'both' ? 'ทุกบริการ' : code.applicable_to === 'booking' ? 'จองโต๊ะ' : 'สั่งอาหาร'}
-                                                    </span>
-                                                    <h3 className="font-mono text-lg font-black text-neutral-900 tracking-wider mt-2 flex items-center gap-1.5">
-                                                        {code.code}
-                                                    </h3>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-red-500 font-black text-2xl">
-                                                        {code.discount_type === 'percent' ? `${code.discount_value}%` : `฿${code.discount_value}`}
-                                                    </span>
-                                                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wide">Discount</p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="border-t border-dashed border-neutral-100 pt-3 mt-1 flex justify-between items-center text-[11px] text-neutral-500 font-bold">
-                                                <span>ขั้นต่ำ ฿{code.min_spend || 0} · หมดเขต {new Date(code.end_date).toLocaleDateString('th-TH')}</span>
-                                                <button
-                                                    onClick={() => handleCopyCode(code.code)}
-                                                    className="bg-neutral-900 hover:bg-neutral-800 text-[#DFFF00] px-3.5 py-1.5 rounded-xl font-black transition-all text-[11px] active:scale-95 cursor-pointer flex items-center gap-1 shadow-sm"
-                                                >
-                                                    {copiedCode === code.code ? <Check size={12} /> : <Copy size={12} />}
-                                                    <span>{copiedCode === code.code ? "คัดลอกแล้ว" : "คัดลอก"}</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="bg-white rounded-3xl p-8 border border-neutral-100 text-center shadow-soft">
-                                    <span className="text-2xl">🎟️</span>
-                                    <p className="text-neutral-500 text-xs font-bold mt-2">ยังไม่มีโค้ดส่วนลดที่เปิดใช้งานในขณะนี้</p>
-                                </div>
-                            )}
+                                            <ChevronLeft size={18} />
+                                        </button>
+                                        
+                                        <span className="text-[11px] font-black text-neutral-600 font-mono">
+                                            หน้า {activeMenuIndex + 1} / {currentImages.length}
+                                        </span>
 
-                            {/* Curated Signatures Showcase */}
-                            {signatures.length > 0 && (
-                                <div className="space-y-4 pt-4">
-                                    <h2 className="text-neutral-700 text-xs font-black tracking-widest uppercase font-mono pl-1">Featured Signature Dishes</h2>
-                                    <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                                        {signatures.map((dish, i) => (
-                                            <SignatureDishCard key={i} dish={dish} index={i} />
-                                        ))}
+                                        <button
+                                            disabled={activeMenuIndex === currentImages.length - 1}
+                                            onClick={() => {
+                                                setActiveMenuIndex(prev => Math.min(currentImages.length - 1, prev + 1));
+                                                setMenuImageLoading(true);
+                                            }}
+                                            className="w-9 h-9 rounded-full border border-neutral-250 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            <ChevronRight size={18} />
+                                        </button>
                                     </div>
-                                </div>
-                            )}
-                        </motion.section>
-                    )}
 
-                </main>
+                                    {/* Thumbnails Strip */}
+                                    {currentImages.length > 1 && (
+                                        <div className="flex gap-2 overflow-x-auto w-full mt-3 px-1 py-1 no-scrollbar scroll-smooth">
+                                            {currentImages.map((url, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => {
+                                                        setActiveMenuIndex(i);
+                                                        setMenuImageLoading(true);
+                                                    }}
+                                                    className={`flex-shrink-0 w-10 h-14 rounded-lg overflow-hidden border-2 transition-all ${activeMenuIndex === i ? 'border-neutral-800 scale-105 shadow-sm' : 'border-neutral-200 opacity-60 hover:opacity-100'}`}
+                                                >
+                                                    <img
+                                                        src={optimizeImageUrl(url, 150)}
+                                                        alt={`Thumb ${i + 1}`}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        className="w-full h-full object-cover bg-white"
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </section>
+                )}
+
+                {/* ─── NATIVE FEATURED DISHES (Strictly 9 items) ─── */}
+                {featuredMenuItems.length > 0 && (
+                    <section className="w-full mt-6 bg-white rounded-3xl p-5 border border-neutral-100 shadow-soft">
+                        <div className="text-center mb-6 py-1.5 border-b border-dashed border-neutral-100">
+                            <span className="bg-neutral-900 text-[#DFFF00] text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block shadow-sm">
+                                จริตจัด รสชัดเจน
+                            </span>
+                            <h2 className="text-neutral-600 text-[10px] font-black tracking-[0.2em] font-mono uppercase mt-3">Featured Specialties</h2>
+                        </div>
+
+                        <div className="space-y-4">
+                            {featuredMenuItems.map((item, idx) => (
+                                <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* ─── FEATURED SIGNATURE DISHES (Classic display) ─── */}
+                {signatures.length > 0 && (
+                    <section className="mt-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="h-px bg-neutral-200 flex-1" />
+                            <span className="text-neutral-500 text-[9px] font-black tracking-[0.3em] font-mono uppercase">Signature Dish</span>
+                            <div className="h-px bg-neutral-200 flex-1" />
+                        </div>
+
+                        <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                            {signatures.map((dish, i) => (
+                                <SignatureDishCard key={i} dish={dish} index={i} />
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* ─── ATMOSPHERE VIBES ─── */}
                 {atmImages.length > 0 && (
@@ -642,7 +722,7 @@ export default function AdsLandingPage() {
                             animate={{ scale: 1 }}
                             exit={{ scale: 0.9 }}
                             src={optimizeImageUrl(selectedLightbox.url, 1200)}
-                            alt="Lightbox Zoomed"
+                            alt="Zoomed View"
                             className="max-w-full max-h-[85vh] object-contain rounded-2xl"
                             onClick={(e) => e.stopPropagation()}
                         />
@@ -656,30 +736,30 @@ export default function AdsLandingPage() {
 
 // ─── HELPER SUB-COMPONENTS ───
 
-// Floating Plate Component for Margins
-function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, hasLeaves = false }) {
+// Floating Plate Component for Margins (with customized visible dark steam particles)
+function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, hasLeaves = false, isMobile = false, opacity = 1 }) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            whileInView={{ opacity: opacity, scale: 1 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.8, delay }}
             style={{ top, left, right }}
-            className={`absolute pointer-events-none select-none z-10 ${size} hidden md:block`}
+            className={`absolute pointer-events-none select-none z-0 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'}`}
         >
             <div className="relative animate-float" style={{ animationDelay: `${delay}s` }}>
                 <img
                     src={src}
                     alt={alt}
-                    className="w-full h-auto drop-shadow-[0_15px_30px_rgba(0,0,0,0.18)] hover:scale-105 transition-transform duration-500"
+                    className="w-full h-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.12)] hover:scale-105 transition-transform duration-500"
                 />
                 
-                {/* Simulated steam */}
+                {/* Simulated hot steam particles (Using visible dark neutral gray with blur for light background) */}
                 {hasSteam && (
-                    <div className="absolute inset-x-0 -top-8 flex justify-center gap-1.5 pointer-events-none">
-                        <div className="steam-particle w-1.5 h-6 bg-white/25 rounded-full blur-[2px]" style={{ animationDelay: '0s' }} />
-                        <div className="steam-particle w-2.5 h-8 bg-white/20 rounded-full blur-[3px]" style={{ animationDelay: '0.8s' }} />
-                        <div className="steam-particle w-1.5 h-5 bg-white/25 rounded-full blur-[2px]" style={{ animationDelay: '1.6s' }} />
+                    <div className="steam-container">
+                        <div className="steam-particle-1" />
+                        <div className="steam-particle-2" />
+                        <div className="steam-particle-3" />
                     </div>
                 )}
 
@@ -705,7 +785,6 @@ function LeafSVG({ className, style }) {
             fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
         >
-            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" className="hidden" />
             <path d="M17 8C15 5.5 12 4 9 4C5 4 2 7 2 11C2 15 5 18 9 18C12 18 15 16.5 17 14C19 14.8 21 14 22 13C20.5 12.5 19.5 11 19 9.5C18.5 8 18 8 17 8ZM9 16C6.8 16 5 14.2 5 12C5 9.8 6.8 8 9 8C11.2 8 13 9.8 13 12C13 14.2 11.2 16 9 16Z"/>
         </svg>
     );
@@ -755,7 +834,7 @@ function MenuListItem({ item, index, onImageClick }) {
                             loading="lazy"
                         />
                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <ZoomIn size={12} className="text-white" />
+                            <ZoomInIcon size={12} className="text-white" />
                         </div>
                     </div>
                 )}
@@ -764,7 +843,7 @@ function MenuListItem({ item, index, onImageClick }) {
     );
 }
 
-// Signature Dish Card for Promotions Tab
+// Signature Dish Card
 function SignatureDishCard({ dish, index }) {
     const [isLoaded, setIsLoaded] = useState(false);
     return (
