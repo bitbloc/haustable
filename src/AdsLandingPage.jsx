@@ -255,7 +255,7 @@ export default function AdsLandingPage() {
 
             {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
             {/* Desktop-only floating plates in margins (Larger size with closer horizontal offsets for organic overlap) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 310px)" size="w-44 lg:w-56" delay={0} hasLeaves />
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 310px)" size="w-44 lg:w-56" delay={0} />
             <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.5} hasSteam />
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam />
             <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} />
@@ -264,7 +264,7 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} />
 
             {/* Mobile-only floating plates (Slightly larger, tucked behind content cards for depth) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.75} hasLeaves />
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.75} />
             <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-5rem" size="w-40" delay={1.5} isMobile opacity={0.75} hasSteam />
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.75} hasSteam />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.75} hasSteam />
@@ -737,7 +737,7 @@ export default function AdsLandingPage() {
 // ─── HELPER SUB-COMPONENTS ───
 
 // Floating Plate Component for Margins (with customized visible dark steam particles)
-function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, hasLeaves = false, isMobile = false, opacity = 1 }) {
+function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, isMobile = false, opacity = 1 }) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -762,31 +762,8 @@ function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, h
                         <div className="steam-particle-3" />
                     </div>
                 )}
-
-                {/* Sweet basil leaves sway */}
-                {hasLeaves && (
-                    <div className="absolute inset-0 pointer-events-none">
-                        <LeafSVG className="absolute w-5 h-5 text-green-700/80 -top-2 -left-2 leaf-sway" style={{ animationDelay: '0.2s' }} />
-                        <LeafSVG className="absolute w-4 h-4 text-green-800/70 bottom-4 -right-2 leaf-sway" style={{ animationDelay: '1.2s' }} />
-                    </div>
-                )}
             </div>
         </motion.div>
-    );
-}
-
-// Leaf SVG Component
-function LeafSVG({ className, style }) {
-    return (
-        <svg
-            className={className}
-            style={style}
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <path d="M17 8C15 5.5 12 4 9 4C5 4 2 7 2 11C2 15 5 18 9 18C12 18 15 16.5 17 14C19 14.8 21 14 22 13C20.5 12.5 19.5 11 19 9.5C18.5 8 18 8 17 8ZM9 16C6.8 16 5 14.2 5 12C5 9.8 6.8 8 9 8C11.2 8 13 9.8 13 12C13 14.2 11.2 16 9 16Z"/>
-        </svg>
     );
 }
 
