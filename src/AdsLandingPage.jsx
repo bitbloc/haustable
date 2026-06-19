@@ -287,60 +287,80 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam zIndex="z-0" />
             <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} zIndex="z-20" />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam zIndex="z-0" />
-            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} zIndex="z-20" />
+            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="78%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} zIndex="z-0" />
 
             {/* Mobile-only floating plates (Slightly larger, overlapping content cards for depth) */}
             <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} className="mobile-plate-right" zIndex="z-0" />
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" zIndex="z-20" />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" zIndex="z-0" />
 
-            {/* ─── BRAND DECORATIVE ELEMENTS (Desktop only — floating in margins) ─── */}
+            {/* ─── BRAND DECORATIVE ELEMENTS (Desktop: margins / Mobile: edges with fade transition) ─── */}
             {/* Brand Star — yellow-green asterisk */}
             <motion.div
                 initial={{ opacity: 0, rotate: -30, scale: 0.7 }}
-                whileInView={{ opacity: 0.15, rotate: 0, scale: 1 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 1, delay: 0.5 }}
-                style={{ top: '18%', right: 'calc(50% - 380px)' }}
-                className="absolute pointer-events-none select-none z-0 hidden lg:block"
+                whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+                viewport={{ once: false, amount: 0.3 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                style={{ top: '18%' }}
+                className="absolute pointer-events-none select-none z-0 right-[-1rem] md:right-auto lg:right-auto"
             >
-                <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-20 lg:w-28 animate-float" style={{ animationDelay: '2s' }} />
+                <div className="lg:hidden">
+                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-12 opacity-[0.12] animate-float" style={{ animationDelay: '2s' }} />
+                </div>
+                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 380px)' }}>
+                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-28 opacity-[0.15] animate-float" style={{ animationDelay: '2s' }} />
+                </div>
             </motion.div>
 
             {/* Brand Thai Text — "ในบ้าน" red typography */}
             <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 0.08, x: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 1.2, delay: 1 }}
-                style={{ top: '42%', left: 'calc(50% - 420px)' }}
-                className="absolute pointer-events-none select-none z-0 hidden lg:block"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: false, amount: 0.3 }}
+                transition={{ duration: 1, delay: 0.5 }}
+                style={{ top: '35%' }}
+                className="absolute pointer-events-none select-none z-0 left-[-2rem] md:left-auto lg:left-auto"
             >
-                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-40 lg:w-52" />
+                <div className="lg:hidden">
+                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-24 opacity-[0.06]" />
+                </div>
+                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 420px)' }}>
+                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-52 opacity-[0.08]" />
+                </div>
             </motion.div>
 
             {/* Brand Crescent — red circles arc */}
             <motion.div
                 initial={{ opacity: 0, rotate: 15, scale: 0.8 }}
-                whileInView={{ opacity: 0.1, rotate: 0, scale: 1 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 1, delay: 1.5 }}
-                style={{ top: '58%', right: 'calc(50% - 400px)' }}
-                className="absolute pointer-events-none select-none z-0 hidden lg:block"
+                whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+                viewport={{ once: false, amount: 0.3 }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+                style={{ top: '55%' }}
+                className="absolute pointer-events-none select-none z-0 right-[-1.5rem] md:right-auto lg:right-auto"
             >
-                <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-24 lg:w-32 animate-float" style={{ animationDelay: '3s' }} />
+                <div className="lg:hidden">
+                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-14 opacity-[0.08] animate-float" style={{ animationDelay: '3s' }} />
+                </div>
+                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 400px)' }}>
+                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-32 opacity-[0.1] animate-float" style={{ animationDelay: '3s' }} />
+                </div>
             </motion.div>
 
             {/* Brand Mascot — character illustration */}
             <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                whileInView={{ opacity: 0.12, y: 0, scale: 1 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 1, delay: 0.8 }}
-                style={{ top: '78%', left: 'calc(50% - 380px)' }}
-                className="absolute pointer-events-none select-none z-0 hidden lg:block"
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: false, amount: 0.3 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                style={{ top: '72%' }}
+                className="absolute pointer-events-none select-none z-0 left-[-1.5rem] md:left-auto lg:left-auto"
             >
-                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-28 lg:w-36 animate-float" style={{ animationDelay: '1s' }} />
+                <div className="lg:hidden">
+                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-16 opacity-[0.1] animate-float" style={{ animationDelay: '1s' }} />
+                </div>
+                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 380px)' }}>
+                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-36 opacity-[0.12] animate-float" style={{ animationDelay: '1s' }} />
+                </div>
             </motion.div>
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
