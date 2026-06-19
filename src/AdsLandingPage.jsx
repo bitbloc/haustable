@@ -66,7 +66,7 @@ export default function AdsLandingPage() {
                 setPromoMenuImages(promoUrls);
                 setRegularMenuImages(regularUrls);
 
-                if (regularUrls.length === 0 && promoUrls.length > 0) {
+                if (promoUrls.length > 0) {
                     setActiveTab('promo');
                 } else {
                     setActiveTab('regular');
@@ -234,6 +234,16 @@ export default function AdsLandingPage() {
                 .animate-marquee {
                     animation: marquee 45s linear infinite;
                 }
+                @media (max-width: 420px) {
+                    .mobile-plate-right {
+                        right: -5.5rem !important;
+                        width: 8rem !important;
+                    }
+                    .mobile-plate-left {
+                        left: -5.5rem !important;
+                        width: 8rem !important;
+                    }
+                }
             `}</style>
 
             {/* ─── KINETIC TYPOGRAPHY (Background Layer) ─── */}
@@ -261,14 +271,12 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam />
             <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam />
-            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="76%" right="calc(50% - 330px)" size="w-52 lg:w-64" delay={0.4} />
             <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} />
 
             {/* Mobile-only floating plates (Slightly larger, overlapping content cards for depth) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} />
-            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-5rem" size="w-40" delay={1.5} isMobile opacity={0.85} hasSteam />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam />
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} className="mobile-plate-right" />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" />
+            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" />
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
             <script type="application/ld+json">
@@ -561,24 +569,6 @@ export default function AdsLandingPage() {
                     </div>
                 )}
 
-                {/* ─── ORIGINAL BOOKLET LINK (Minimalist Text Link) ─── */}
-                {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
-                    <div className="mt-8 text-center">
-                        <button
-                            onClick={() => {
-                                setSelectedLightbox({
-                                    type: 'booklet_slider',
-                                    urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
-                                });
-                            }}
-                            className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-neutral-950 font-black text-xs cursor-pointer group"
-                        >
-                            <span>ดูรูปเล่มเมนูฉบับดั้งเดิม (PDF)</span>
-                            <span className="group-hover:translate-x-1 transition-transform">➔</span>
-                        </button>
-                    </div>
-                )}
-
                 {/* ─── TAGS ─── */}
                 <section className="my-8">
                     <div className="flex flex-wrap justify-center gap-2">
@@ -699,7 +689,7 @@ export default function AdsLandingPage() {
                                                             </span>
                                                         </div>
 
-                                                        <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden shadow-inner border border-neutral-200 bg-neutral-50 cursor-grab active:cursor-grabbing">
+                                                        <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-inner border border-neutral-200 bg-neutral-50 cursor-grab active:cursor-grabbing">
                                                             {menuImageLoading && (
                                                                 <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
                                                                     <div className="w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
@@ -781,7 +771,7 @@ export default function AdsLandingPage() {
 // ─── HELPER SUB-COMPONENTS ───
 
 // Floating Plate Component for Margins (with customized visible dark steam particles)
-function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, isMobile = false, opacity = 1 }) {
+function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, isMobile = false, opacity = 1, className = "" }) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -789,7 +779,7 @@ function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, h
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.8, delay }}
             style={{ top, left, right }}
-            className={`absolute pointer-events-none select-none z-20 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'}`}
+            className={`absolute pointer-events-none select-none z-20 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'} ${className}`}
         >
             <div className="relative animate-float" style={{ animationDelay: `${delay}s` }}>
                 <img
