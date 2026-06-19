@@ -28,6 +28,7 @@ export default function AdsLandingPage() {
     const [selectedLightbox, setSelectedLightbox] = useState(null);
     const [activeMenuIndex, setActiveMenuIndex] = useState(0);
     const [menuImageLoading, setMenuImageLoading] = useState(true);
+    const [showAllMenu, setShowAllMenu] = useState(false);
 
     useEffect(() => { fetchData(); }, []);
 
@@ -134,8 +135,8 @@ export default function AdsLandingPage() {
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
 
-    // Limit featured items to exactly 9 items as requested
-    const featuredMenuItems = menuItems.slice(0, 9);
+    // Filter only recommended items for the initial presentation (10-15 items)
+    const featuredMenuItems = menuItems.filter(item => item.is_recommended).slice(0, 15);
 
     if (loading) {
         return (
@@ -263,11 +264,11 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="76%" right="calc(50% - 330px)" size="w-52 lg:w-64" delay={0.4} />
             <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} />
 
-            {/* Mobile-only floating plates (Slightly larger, tucked behind content cards for depth) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.75} />
-            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-5rem" size="w-40" delay={1.5} isMobile opacity={0.75} hasSteam />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.75} hasSteam />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.75} hasSteam />
+            {/* Mobile-only floating plates (Slightly larger, overlapping content cards for depth) */}
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} />
+            <FloatingPlate src="/assets/food-pouring-curry.webp" alt="ราดแกงเขียวหวาน" top="28%" left="-5rem" size="w-40" delay={1.5} isMobile opacity={0.85} hasSteam />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam />
+            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam />
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
             <script type="application/ld+json">
@@ -349,190 +350,34 @@ export default function AdsLandingPage() {
                     </motion.p>
                 </header>
 
-                {/* ─── MENU BOOKLET SECTION (Original Images + Switching) ─── */}
-                {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
-                    <section id="menu-section" className="w-full mt-6 bg-white rounded-3xl p-5 border border-neutral-100 shadow-soft">
-                        <div className="text-center mb-5 pb-2 border-b border-neutral-100">
-                            <span className="bg-[#DFFF00] text-neutral-900 text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block">
-                                เมนูแนะนำ & เล่มเมนู
+                {/* ─── FEATURED SIGNATURE DISHES (Pop-Culture Style at Top) ─── */}
+                {signatures.length > 0 && (
+                    <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
+                        <div className="text-center mb-6 py-1.5 border-b-2 border-neutral-900 relative">
+                            {/* Sticker style tag for signature dishes */}
+                            <span className="bg-[#FF453A] text-white text-xs font-black tracking-wide px-4 py-2 border-2 border-neutral-900 inline-block shadow-[3px_3px_0px_#111111] transform -rotate-2 select-none rounded-md">
+                                ★ เมนูแนะนำเด็ดห้ามพลาด ★
                             </span>
+                            <h2 className="text-neutral-950 text-[11px] font-black tracking-[0.2em] font-mono uppercase mt-4">Signature Dishes</h2>
                         </div>
 
-                        {/* Category Tabs Switcher (Regular vs Promo Booklet) */}
-                        <div className="flex gap-2 p-1 bg-neutral-100 rounded-2xl mb-5 text-xs font-bold shadow-inner border border-neutral-200/40">
-                            {regularMenuImages.length > 0 && (
-                                <button
-                                    onClick={() => {
-                                        setActiveTab('regular');
-                                        setActiveMenuIndex(0);
-                                        setMenuImageLoading(true);
-                                    }}
-                                    className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'regular' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
-                                >
-                                    📖 เมนูอาหาร & เครื่องดื่ม
-                                </button>
-                            )}
-                            {promoMenuImages.length > 0 && (
-                                <button
-                                    onClick={() => {
-                                        setActiveTab('promo');
-                                        setActiveMenuIndex(0);
-                                        setMenuImageLoading(true);
-                                    }}
-                                    className={`flex-1 py-3 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'promo' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100/50' : 'text-neutral-500 hover:text-red-600'}`}
-                                >
-                                    🔥 โปรโมชั่นพิเศษ
-                                </button>
-                            )}
+                        <div className={`grid gap-4 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                            {signatures.map((dish, i) => (
+                                <SignatureDishCard key={i} dish={dish} index={i} />
+                            ))}
                         </div>
-
-                        {/* Booklet Viewer */}
-                        {(() => {
-                            const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
-                            if (currentImages.length === 0) return null;
-                            const activeUrl = currentImages[activeMenuIndex];
-
-                            return (
-                                <div className="bg-neutral-50 rounded-2xl border border-neutral-200/60 p-3 shadow-sm flex flex-col items-center">
-                                    
-                                    {/* Inline Zoom Controls Toolbar */}
-                                    <TransformWrapper
-                                        key={`${activeTab}-${activeMenuIndex}-${activeUrl}`}
-                                        initialScale={1}
-                                        minScale={1}
-                                        maxScale={4}
-                                        centerOnInit={true}
-                                    >
-                                        {({ zoomIn, zoomOut, resetTransform }) => (
-                                            <div className="w-full flex flex-col items-center">
-                                                
-                                                <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-neutral-100/80 p-1.5 rounded-xl border border-neutral-200/50 shadow-sm">
-                                                    <div className="flex items-center gap-1">
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => zoomIn()} 
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer"
-                                                            title="ซูมเข้า"
-                                                        >
-                                                            <ZoomIn size={16} />
-                                                        </button>
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => zoomOut()} 
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer"
-                                                            title="ซูมออก"
-                                                        >
-                                                            <ZoomOut size={16} />
-                                                        </button>
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => resetTransform()} 
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-neutral-950 active:scale-95 transition-all cursor-pointer"
-                                                            title="รีเซ็ต"
-                                                        >
-                                                            <RefreshCw size={13} />
-                                                        </button>
-                                                    </div>
-                                                    
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => setSelectedLightbox({ type: 'booklet', url: activeUrl })}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-neutral-800 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-lg shadow-sm active:scale-95 transition-all cursor-pointer"
-                                                    >
-                                                        <Maximize2 size={11} />
-                                                        <span>ขยายเต็มจอ</span>
-                                                    </button>
-                                                </div>
-
-                                                {/* Zoomable Image Container */}
-                                                <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden shadow-sm border border-neutral-200 bg-white cursor-grab active:cursor-grabbing">
-                                                    {menuImageLoading && (
-                                                        <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
-                                                            <div className="w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
-                                                        </div>
-                                                    )}
-
-                                                    <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full flex items-center justify-center">
-                                                        <img
-                                                            src={optimizeImageUrl(activeUrl, 900)}
-                                                            alt={`Menu Page ${activeMenuIndex + 1}`}
-                                                            loading="lazy"
-                                                            decoding="async"
-                                                            onLoad={() => setMenuImageLoading(false)}
-                                                            className={`w-full h-full object-contain transition-opacity duration-300 ${menuImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                                                        />
-                                                    </TransformComponent>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </TransformWrapper>
-
-                                    {/* Pagination Controls */}
-                                    <div className="flex items-center justify-between w-full mt-3 px-2">
-                                        <button
-                                            disabled={activeMenuIndex === 0}
-                                            onClick={() => {
-                                                setActiveMenuIndex(prev => Math.max(0, prev - 1));
-                                                setMenuImageLoading(true);
-                                            }}
-                                            className="w-9 h-9 rounded-full border border-neutral-250 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
-                                        >
-                                            <ChevronLeft size={18} />
-                                        </button>
-                                        
-                                        <span className="text-[11px] font-black text-neutral-600 font-mono">
-                                            หน้า {activeMenuIndex + 1} / {currentImages.length}
-                                        </span>
-
-                                        <button
-                                            disabled={activeMenuIndex === currentImages.length - 1}
-                                            onClick={() => {
-                                                setActiveMenuIndex(prev => Math.min(currentImages.length - 1, prev + 1));
-                                                setMenuImageLoading(true);
-                                            }}
-                                            className="w-9 h-9 rounded-full border border-neutral-250 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
-                                        >
-                                            <ChevronRight size={18} />
-                                        </button>
-                                    </div>
-
-                                    {/* Thumbnails Strip */}
-                                    {currentImages.length > 1 && (
-                                        <div className="flex gap-2 overflow-x-auto w-full mt-3 px-1 py-1 no-scrollbar scroll-smooth">
-                                            {currentImages.map((url, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => {
-                                                        setActiveMenuIndex(i);
-                                                        setMenuImageLoading(true);
-                                                    }}
-                                                    className={`flex-shrink-0 w-10 h-14 rounded-lg overflow-hidden border-2 transition-all ${activeMenuIndex === i ? 'border-neutral-800 scale-105 shadow-sm' : 'border-neutral-200 opacity-60 hover:opacity-100'}`}
-                                                >
-                                                    <img
-                                                        src={optimizeImageUrl(url, 150)}
-                                                        alt={`Thumb ${i + 1}`}
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        className="w-full h-full object-cover bg-white"
-                                                    />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
                     </section>
                 )}
 
-                {/* ─── NATIVE FEATURED DISHES (Strictly 9 items) ─── */}
+                {/* ─── NATIVE FEATURED DISHES (10-15 Recommended Items) ─── */}
                 {featuredMenuItems.length > 0 && (
-                    <section className="w-full mt-6 bg-white rounded-3xl p-5 border border-neutral-100 shadow-soft">
-                        <div className="text-center mb-6 py-1.5 border-b border-dashed border-neutral-100">
-                            <span className="bg-neutral-900 text-[#DFFF00] text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block shadow-sm">
-                                จริตจัด รสชัดเจน
+                    <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
+                        <div className="text-center mb-6 py-1.5 border-b-2 border-neutral-900 relative">
+                            {/* Yellow Category Tag styled as sticker */}
+                            <span className="bg-[#DFFF00] text-neutral-900 text-xs font-black tracking-wide px-4.5 py-2 border-2 border-neutral-900 inline-block shadow-[4px_4px_0px_#111111] transform -rotate-3 select-none rounded-md hover:rotate-0 transition-transform">
+                                ✦ เมนูยอดฮิตจริตจัด รสชัดเจน ✦
                             </span>
-                            <h2 className="text-neutral-600 text-[10px] font-black tracking-[0.2em] font-mono uppercase mt-3">Featured Specialties</h2>
+                            <h2 className="text-neutral-950 text-[11px] font-black tracking-[0.2em] font-mono uppercase mt-4">Featured Specialties</h2>
                         </div>
 
                         <div className="space-y-4">
@@ -540,25 +385,58 @@ export default function AdsLandingPage() {
                                 <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
                             ))}
                         </div>
-                    </section>
-                )}
 
-                {/* ─── FEATURED SIGNATURE DISHES (Classic display) ─── */}
-                {signatures.length > 0 && (
-                    <section className="mt-8">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="h-px bg-neutral-200 flex-1" />
-                            <span className="text-neutral-500 text-[9px] font-black tracking-[0.3em] font-mono uppercase">Signature Dish</span>
-                            <div className="h-px bg-neutral-200 flex-1" />
-                        </div>
-
-                        <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                            {signatures.map((dish, i) => (
-                                <SignatureDishCard key={i} dish={dish} index={i} />
-                            ))}
+                        {/* Accordion CTA Button */}
+                        <div className="mt-6 text-center pt-4 border-t-2 border-dashed border-neutral-200">
+                            <button
+                                onClick={() => setShowAllMenu(!showAllMenu)}
+                                className="inline-flex items-center gap-2 px-6 py-3.5 bg-neutral-900 text-white rounded-2xl hover:bg-neutral-800 border-2 border-neutral-900 shadow-[4px_4px_0px_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-xs font-black cursor-pointer"
+                            >
+                                <span>{showAllMenu ? "▲ ปิดเมนูทั้งหมด" : "▼ ดูเมนูทั้งหมด (80+ รายการ)"}</span>
+                            </button>
                         </div>
                     </section>
                 )}
+
+                {/* ─── FULL MENU ACCORDION CONTENT ─── */}
+                <AnimatePresence>
+                    {showAllMenu && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.4, ease: 'easeInOut' }}
+                            className="w-full mt-4 space-y-6 overflow-hidden relative z-10"
+                        >
+                            {menuCategories.map((category) => {
+                                // Get items in this category
+                                const categoryItems = menuItems.filter(item => item.category_id === category.id);
+                                if (categoryItems.length === 0) return null;
+
+                                return (
+                                    <div key={category.id} className="bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111]">
+                                        <div className="mb-4 pb-2 border-b-2 border-neutral-900 flex justify-between items-center relative">
+                                            {/* Sticker Badge style category tag */}
+                                            <span className="bg-[#DFFF00] text-neutral-900 text-xs font-black tracking-wide px-3.5 py-2 border-2 border-neutral-900 inline-block transform -rotate-2 select-none shadow-[3px_3px_0px_#111111] rounded-md">
+                                                ★ {category.name}
+                                            </span>
+                                            <span className="text-[10px] font-black text-neutral-500 font-mono">
+                                                {categoryItems.length} รายการ
+                                            </span>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {categoryItems.map((item, idx) => (
+                                                <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+
 
                 {/* ─── ATMOSPHERE VIBES ─── */}
                 {atmImages.length > 0 && (
@@ -665,6 +543,42 @@ export default function AdsLandingPage() {
                     </motion.div>
                 </section>
 
+                {/* ─── ORIGINAL BOOKLET LINK (Minimalist Text Link) ─── */}
+                {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
+                    <div className="mt-8 text-center">
+                        <button
+                            onClick={() => {
+                                setSelectedLightbox({
+                                    type: 'booklet_slider',
+                                    urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
+                                });
+                            }}
+                            className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-neutral-950 font-black text-xs cursor-pointer group"
+                        >
+                            <span>ดูรูปเล่มเมนูฉบับดั้งเดิม (PDF)</span>
+                            <span className="group-hover:translate-x-1 transition-transform">➔</span>
+                        </button>
+                    </div>
+                )}
+
+                {/* ─── ORIGINAL BOOKLET LINK (Minimalist Text Link) ─── */}
+                {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
+                    <div className="mt-8 text-center">
+                        <button
+                            onClick={() => {
+                                setSelectedLightbox({
+                                    type: 'booklet_slider',
+                                    urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
+                                });
+                            }}
+                            className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-neutral-950 font-black text-xs cursor-pointer group"
+                        >
+                            <span>ดูรูปเล่มเมนูฉบับดั้งเดิม (PDF)</span>
+                            <span className="group-hover:translate-x-1 transition-transform">➔</span>
+                        </button>
+                    </div>
+                )}
+
                 {/* ─── TAGS ─── */}
                 <section className="my-8">
                     <div className="flex flex-wrap justify-center gap-2">
@@ -708,24 +622,154 @@ export default function AdsLandingPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 cursor-pointer select-none"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 cursor-pointer select-none overflow-y-auto"
                         onClick={() => setSelectedLightbox(null)}
                     >
                         <button
                             onClick={() => setSelectedLightbox(null)}
-                            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 transition-colors rounded-full flex items-center justify-center text-white backdrop-blur-md cursor-pointer text-lg font-bold"
+                            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 transition-colors rounded-full flex items-center justify-center text-white backdrop-blur-md cursor-pointer text-lg font-bold z-50 animate-pulse"
                         >
                             ✕
                         </button>
-                        <motion.img
-                            initial={{ scale: 0.9 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0.9 }}
-                            src={optimizeImageUrl(selectedLightbox.url, 1200)}
-                            alt="Zoomed View"
-                            className="max-w-full max-h-[85vh] object-contain rounded-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
+
+                        {selectedLightbox.type === 'booklet_slider' ? (
+                            <div 
+                                className="w-full max-w-lg bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-2xl flex flex-col items-center z-40 relative my-8" 
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="text-center mb-4 pb-2 border-b-2 border-neutral-900 w-full">
+                                    <span className="bg-[#DFFF00] text-neutral-900 text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block border-2 border-neutral-900">
+                                        เล่มเมนูดั้งเดิม
+                                    </span>
+                                </div>
+
+                                {/* Tab Switcher inside Modal */}
+                                <div className="flex gap-2 p-1 bg-neutral-100 rounded-2xl mb-4 w-full text-xs font-bold border border-neutral-200/40">
+                                    {regularMenuImages.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab('regular');
+                                                setActiveMenuIndex(0);
+                                                setMenuImageLoading(true);
+                                            }}
+                                            className={`flex-1 py-2.5 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'regular' ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200' : 'text-neutral-500 hover:text-neutral-900'}`}
+                                        >
+                                            📖 เมนูหลัก
+                                        </button>
+                                    )}
+                                    {promoMenuImages.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                setActiveTab('promo');
+                                                setActiveMenuIndex(0);
+                                                setMenuImageLoading(true);
+                                            }}
+                                            className={`flex-1 py-2.5 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'promo' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100/50' : 'text-neutral-500 hover:text-red-600'}`}
+                                        >
+                                            🔥 โปรโมชั่น
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Slider Component */}
+                                {(() => {
+                                    const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
+                                    if (currentImages.length === 0) return null;
+                                    const activeUrl = currentImages[activeMenuIndex];
+
+                                    return (
+                                        <div className="w-full flex flex-col items-center">
+                                            <TransformWrapper
+                                                key={`${activeTab}-${activeMenuIndex}-${activeUrl}`}
+                                                initialScale={1}
+                                                minScale={1}
+                                                maxScale={4}
+                                                centerOnInit={true}
+                                            >
+                                                {({ zoomIn, zoomOut, resetTransform }) => (
+                                                    <div className="w-full flex flex-col items-center">
+                                                        <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-neutral-100 p-1 rounded-xl border border-neutral-200 shadow-sm">
+                                                            <div className="flex items-center gap-1">
+                                                                <button type="button" onClick={() => zoomIn()} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white text-neutral-800 transition-all cursor-pointer"><ZoomIn size={14} /></button>
+                                                                <button type="button" onClick={() => zoomOut()} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white text-neutral-800 transition-all cursor-pointer"><ZoomOut size={14} /></button>
+                                                                <button type="button" onClick={() => resetTransform()} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white text-neutral-800 transition-all cursor-pointer"><RefreshCw size={11} /></button>
+                                                            </div>
+                                                            <span className="text-[10px] font-black text-neutral-600 font-mono px-2">
+                                                                หน้า ${activeMenuIndex + 1} / ${currentImages.length}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden shadow-inner border border-neutral-200 bg-neutral-50 cursor-grab active:cursor-grabbing">
+                                                            {menuImageLoading && (
+                                                                <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
+                                                                    <div className="w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                                                                </div>
+                                                            )}
+                                                            <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full flex items-center justify-center">
+                                                                  <img
+                                                                      src={optimizeImageUrl(activeUrl, 900)}
+                                                                      alt={`Menu Page ${activeMenuIndex + 1}`}
+                                                                      onLoad={() => setMenuImageLoading(false)}
+                                                                      className={`w-full h-full object-contain transition-opacity duration-300 ${menuImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                                                                  />
+                                                            </TransformComponent>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </TransformWrapper>
+
+                                            {/* Navigation Controls */}
+                                            <div className="flex items-center justify-between w-full mt-4">
+                                                <button
+                                                    disabled={activeMenuIndex === 0}
+                                                    onClick={() => {
+                                                        setActiveMenuIndex(prev => Math.max(0, prev - 1));
+                                                        setMenuImageLoading(true);
+                                                    }}
+                                                    className="w-9 h-9 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                                                >
+                                                    <ChevronLeft size={18} />
+                                                </button>
+                                                
+                                                <div className="flex gap-1.5 overflow-x-auto max-w-[180px] no-scrollbar py-1">
+                                                    {currentImages.map((_, i) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => {
+                                                                setActiveMenuIndex(i);
+                                                                setMenuImageLoading(true);
+                                                            }}
+                                                            className={`w-2 h-2 rounded-full transition-all flex-shrink-0 ${activeMenuIndex === i ? 'bg-neutral-900 scale-110' : 'bg-neutral-300 opacity-40 hover:opacity-100'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+
+                                                <button
+                                                    disabled={activeMenuIndex === currentImages.length - 1}
+                                                    onClick={() => {
+                                                        setActiveMenuIndex(prev => Math.min(currentImages.length - 1, prev + 1));
+                                                        setMenuImageLoading(true);
+                                                    }}
+                                                    className="w-9 h-9 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                                                >
+                                                    <ChevronRight size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <motion.img
+                                initial={{ scale: 0.9 }}
+                                animate={{ scale: 1 }}
+                                exit={{ scale: 0.9 }}
+                                src={optimizeImageUrl(selectedLightbox.url, 1200)}
+                                alt="Zoomed View"
+                                className="max-w-full max-h-[85vh] object-contain rounded-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -745,7 +789,7 @@ function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, h
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.8, delay }}
             style={{ top, left, right }}
-            className={`absolute pointer-events-none select-none z-0 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'}`}
+            className={`absolute pointer-events-none select-none z-20 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'}`}
         >
             <div className="relative animate-float" style={{ animationDelay: `${delay}s` }}>
                 <img
@@ -776,33 +820,33 @@ function MenuListItem({ item, index, onImageClick }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.3) }}
-            className="flex items-center justify-between gap-4 py-3.5 border-b border-neutral-100 last:border-0 group"
+            className="flex items-center justify-between gap-4 py-3.5 border-b-2 border-neutral-900 last:border-0 group"
         >
             <div className="flex-1 min-w-0">
                 <div className="flex items-center flex-wrap gap-1.5">
-                    <h4 className="font-extrabold text-sm text-neutral-800 tracking-tight group-hover:text-amber-600 transition-colors">
+                    <h4 className="font-black text-sm text-neutral-900 tracking-tight group-hover:text-neutral-600 transition-colors">
                         {item.name}
                     </h4>
                     {isRecommended && (
-                        <span className="text-[9px] bg-neutral-900 text-[#DFFF00] font-black px-1.5 py-0.5 rounded tracking-wider uppercase leading-none scale-90">
+                        <span className="text-[9px] bg-neutral-900 text-[#DFFF00] font-black px-1.5 py-0.5 rounded tracking-wider uppercase leading-none scale-90 border border-neutral-900">
                             BOLD
                         </span>
                     )}
                 </div>
                 {item.description && (
-                    <p className="text-neutral-400 text-xs mt-1 leading-relaxed line-clamp-2 pr-2">
+                    <p className="text-neutral-400 text-xs mt-1 leading-relaxed line-clamp-2 pr-2 font-bold">
                         {item.description}
                     </p>
                 )}
             </div>
             
             <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="font-mono font-black text-sm text-neutral-800">฿{item.price}</span>
+                <span className="font-mono font-black text-sm text-neutral-900">฿{item.price}</span>
                 
                 {item.image_url && (
                     <div 
                         onClick={() => onImageClick(item.image_url)}
-                        className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200/60 shadow-sm cursor-zoom-in relative group-hover:scale-105 transition-transform duration-300 flex-shrink-0"
+                        className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 border-2 border-neutral-900 shadow-[2px_2px_0px_#111111] cursor-zoom-in relative group-hover:scale-105 transition-transform duration-300 flex-shrink-0"
                     >
                         <img 
                             src={optimizeImageUrl(item.image_url, 150)} 
@@ -829,9 +873,9 @@ function SignatureDishCard({ dish, index }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ delay: index * 0.05 }}
-            className="rounded-2xl overflow-hidden bg-white border border-neutral-100 shadow-sm flex flex-col h-full hover:shadow-soft transition-shadow group"
+            className="rounded-2xl overflow-hidden bg-white border-2 border-neutral-900 shadow-[4px_4px_0px_#111111] flex flex-col h-full hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#111111] transition-all group cursor-pointer"
         >
-            <div className="aspect-square overflow-hidden relative bg-neutral-50">
+            <div className="aspect-square overflow-hidden relative bg-neutral-50 border-b-2 border-neutral-900">
                 {!isLoaded && (
                     <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
                         <div className="w-5 h-5 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin" />
@@ -846,9 +890,9 @@ function SignatureDishCard({ dish, index }) {
                 />
             </div>
             {(dish.name || dish.price) && (
-                <div className="p-3 flex-1 flex flex-col justify-between">
-                    {dish.name && <p className="text-xs font-extrabold text-neutral-800 leading-snug">{dish.name}</p>}
-                    {dish.price && <p className="text-[11px] text-neutral-400 font-mono font-bold mt-1">{dish.price}.-</p>}
+                <div className="p-3 flex-1 flex flex-col justify-between bg-white">
+                    {dish.name && <p className="text-xs font-black text-neutral-900 leading-snug tracking-tight">{dish.name}</p>}
+                    {dish.price && <p className="text-[11px] text-neutral-900 font-mono font-black mt-1">฿{dish.price}</p>}
                 </div>
             )}
         </motion.div>
