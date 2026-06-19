@@ -6,10 +6,10 @@ import { supabase } from './lib/supabaseClient';
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
-const optimizeImageUrl = (url, width = 850) => {
+const optimizeImageUrl = (url, width = 850, quality = 75) => {
     if (!url) return '';
     if (url.includes('supabase.co/storage/v1/object/public/')) {
-        return `${url}?width=${width}&quality=80`;
+        return `${url}?width=${width}&quality=${quality}`;
     }
     return url;
 };
@@ -246,6 +246,17 @@ export default function AdsLandingPage() {
                 }
             `}</style>
 
+            {/* ─── BRAND SCRIPT WATERMARK (Background Layer — "ในบ้าน" calligraphy) ─── */}
+            <div className="fixed inset-0 pointer-events-none select-none z-0 flex items-center justify-center">
+                <img
+                    src="/assets/logo-script.webp"
+                    alt=""
+                    aria-hidden="true"
+                    className="w-[80vw] max-w-[600px] opacity-[0.035]"
+                    style={{ filter: 'brightness(0) sepia(1) saturate(0)' }}
+                />
+            </div>
+
             {/* ─── KINETIC TYPOGRAPHY (Background Layer) ─── */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.06] select-none pt-24">
                 <div className="sticky top-20 space-y-12">
@@ -320,17 +331,17 @@ export default function AdsLandingPage() {
                         transition={{ duration: 0.5 }}
                         className="flex items-center gap-4"
                     >
-                        {/* Logo */}
+                        {/* Logo — Uses uploaded logo or falls back to brand geometric logo */}
                         {logoUrl ? (
                             <img
                                 src={optimizeImageUrl(logoUrl, 160)}
-                                alt="Logo"
-                                className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-lg flex-shrink-0"
+                                alt="IN THE HAUS Logo"
+                                className="w-16 h-16 rounded-full object-cover border-2 border-neutral-900 shadow-[3px_3px_0px_#111111] flex-shrink-0"
                                 fetchPriority="high"
                             />
                         ) : (
-                            <div className="w-16 h-16 rounded-full bg-neutral-900 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 shadow-lg">
-                                H
+                            <div className="w-16 h-16 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0 shadow-[3px_3px_0px_#111111] border-2 border-neutral-900 p-2.5">
+                                <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
                             </div>
                         )}
                         
@@ -361,6 +372,8 @@ export default function AdsLandingPage() {
                 {/* ─── FEATURED SIGNATURE DISHES (Pop-Culture Style at Top) ─── */}
                 {signatures.length > 0 && (
                     <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
+                        {/* Brand Accent Dot — Top-right corner */}
+                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[#DFFF00] rounded-full border-2 border-neutral-900" />
                         <div className="text-center mb-6 py-1.5 border-b-2 border-neutral-900 relative">
                             {/* Sticker style tag for signature dishes */}
                             <span className="bg-[#FF453A] text-white text-xs font-black tracking-wide px-4 py-2 border-2 border-neutral-900 inline-block shadow-[3px_3px_0px_#111111] transform -rotate-2 select-none rounded-md">
@@ -377,9 +390,20 @@ export default function AdsLandingPage() {
                     </section>
                 )}
 
+                {/* ─── BRAND DIVIDER ─── */}
+                <div className="flex items-center gap-3 my-6">
+                    <div className="h-px bg-neutral-300 flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #d4d4d4 0px, #d4d4d4 6px, transparent 6px, transparent 12px)' }} />
+                    <div className="w-6 h-6 flex items-center justify-center opacity-30">
+                        <img src="/logo.png" alt="" className="w-full h-full object-contain" aria-hidden="true" />
+                    </div>
+                    <div className="h-px bg-neutral-300 flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #d4d4d4 0px, #d4d4d4 6px, transparent 6px, transparent 12px)' }} />
+                </div>
+
                 {/* ─── NATIVE FEATURED DISHES (10-15 Recommended Items) ─── */}
                 {featuredMenuItems.length > 0 && (
-                    <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
+                    <section className="w-full bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
+                        {/* Brand Accent Dot — Bottom-left corner */}
+                        <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-[#DFFF00] rounded-full border-2 border-neutral-900" />
                         <div className="text-center mb-6 py-1.5 border-b-2 border-neutral-900 relative">
                             {/* Yellow Category Tag styled as sticker */}
                             <span className="bg-[#DFFF00] text-neutral-900 text-xs font-black tracking-wide px-4.5 py-2 border-2 border-neutral-900 inline-block shadow-[4px_4px_0px_#111111] transform -rotate-3 select-none rounded-md hover:rotate-0 transition-transform">
@@ -582,9 +606,31 @@ export default function AdsLandingPage() {
 
             </div>
 
-            {/* ─── FOOTER ─── */}
-            <footer className="bg-neutral-900 text-neutral-500 py-8 text-center text-[10px] font-mono tracking-widest absolute bottom-0 left-0 right-0">
-                <p>© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
+            {/* ─── FOOTER (Enhanced with Brand Elements) ─── */}
+            <footer className="bg-neutral-900 text-neutral-500 py-10 absolute bottom-0 left-0 right-0">
+                <div className="max-w-lg mx-auto px-5 flex flex-col items-center gap-4">
+                    {/* Brand Script Logo */}
+                    <img
+                        src="/assets/logo-script.webp"
+                        alt="ในบ้าน"
+                        className="w-28 opacity-20"
+                        loading="lazy"
+                    />
+                    {/* Geometric Logo */}
+                    <div className="w-8 h-8 opacity-30">
+                        <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" loading="lazy" />
+                    </div>
+                    {/* Slogan */}
+                    <p className="text-neutral-500 text-[10px] font-black tracking-[0.3em] uppercase font-mono">จริตจัด รสชัดเจน</p>
+                    {/* Separator */}
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 h-px bg-neutral-700" />
+                        <div className="w-1.5 h-1.5 bg-[#DFFF00] rounded-full opacity-60" />
+                        <div className="w-4 h-px bg-neutral-700" />
+                    </div>
+                    {/* Copyright */}
+                    <p className="text-neutral-600 text-[9px] font-mono tracking-widest">© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
+                </div>
             </footer>
 
             {/* ─── STICKY FLOATING CONTACT BAR (Mobile-First / Glassmorphism) ─── */}
