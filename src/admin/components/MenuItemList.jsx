@@ -21,7 +21,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
         isDragging
     } = useSortable({ 
         id: item.id,
-        disabled: isRecommended, 
+        disabled: false, 
         data: { 
             category_id: item.category_id, 
             category: item.category,
@@ -38,7 +38,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
 
     // Styles
     const baseCardStyle = "bg-paper border border-gray-200 rounded-xl p-3 flex gap-4 transition-all relative select-none group hover:border-gray-300 hover:shadow-md";
-    const recommendCardStyle = "bg-gray-50 border border-gray-200 rounded-xl p-3 flex gap-4 opacity-80 relative select-none grayscale-[0.2]"; 
+    const recommendCardStyle = "bg-gray-50 border border-gray-200 rounded-xl p-3 flex gap-4 relative select-none group hover:border-gray-300 hover:shadow-md"; 
     const currentStyle = isRecommended ? recommendCardStyle : baseCardStyle;
 
     // Overlay Render (Dragging Preview)
@@ -71,21 +71,15 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
         >
             {/* Drag Handle */}
             <div className="absolute top-2 right-2 z-20">
-                {!isRecommended ? (
-                    <div 
-                        ref={setActivatorNodeRef}
-                        {...attributes}
-                        {...listeners}
-                        className="p-2 text-subInk hover:text-ink cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded-lg transition-colors"
-                        onClick={(e) => e.stopPropagation()} 
-                    >
-                        <GripVertical size={20} />
-                    </div>
-                ) : (
-                    <div className="p-2 text-gray-300">
-                        <Lock size={16} />
-                    </div>
-                )}
+                <div 
+                    ref={setActivatorNodeRef}
+                    {...attributes}
+                    {...listeners}
+                    className="p-2 text-subInk hover:text-ink cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded-lg transition-colors"
+                    onClick={(e) => e.stopPropagation()} 
+                >
+                    <GripVertical size={20} />
+                </div>
             </div>
 
             <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative pointer-events-none border border-gray-100">
@@ -99,8 +93,8 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
             <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
                 <div>
                     <div className="flex justify-between items-start pr-8"> 
-                        <h4 className={`font-bold truncate text-base ${isRecommended ? 'text-subInk' : 'text-ink'}`}>{item.name}</h4>
-                        <span className={`font-mono font-bold ${isRecommended ? 'text-subInk' : 'text-brandDark'}`}>{item.price}</span>
+                        <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
+                        <span className="font-mono font-bold text-brandDark">{item.price}</span>
                     </div>
                     <div className="text-xs text-subInk line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
                 </div>

@@ -266,17 +266,17 @@ export default function AdsLandingPage() {
 
             {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
             {/* Desktop-only floating plates in margins (Larger size with closer horizontal offsets for organic overlap) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 310px)" size="w-44 lg:w-56" delay={0} />
-            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.5} hasSteam />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam />
-            <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam />
-            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} />
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 310px)" size="w-44 lg:w-56" delay={0} zIndex="z-0" />
+            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.5} hasSteam zIndex="z-20" />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam zIndex="z-0" />
+            <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} zIndex="z-20" />
+            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam zIndex="z-0" />
+            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="88%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} zIndex="z-20" />
 
             {/* Mobile-only floating plates (Slightly larger, overlapping content cards for depth) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} className="mobile-plate-right" />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" />
+            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} className="mobile-plate-right" zIndex="z-0" />
+            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" zIndex="z-20" />
+            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" zIndex="z-0" />
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
             <script type="application/ld+json">
@@ -771,7 +771,7 @@ export default function AdsLandingPage() {
 // ─── HELPER SUB-COMPONENTS ───
 
 // Floating Plate Component for Margins (with customized visible dark steam particles)
-function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, isMobile = false, opacity = 1, className = "" }) {
+function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, isMobile = false, opacity = 1, className = "", zIndex = "z-20" }) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -779,7 +779,7 @@ function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, h
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.8, delay }}
             style={{ top, left, right }}
-            className={`absolute pointer-events-none select-none z-20 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'} ${className}`}
+            className={`absolute pointer-events-none select-none ${zIndex} ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'} ${className}`}
         >
             <div className="relative animate-float" style={{ animationDelay: `${delay}s` }}>
                 <img
