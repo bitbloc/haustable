@@ -333,7 +333,7 @@ export default function MenuItemList() {
     const handleRemoveImage = (e) => { e.stopPropagation(); setImageFile(null); setPreviewUrl(null); setImageRemoved(true); }
 
     const handleDelete = async (id) => {
-        if (!confirm('ยืนยันเมนู?')) return
+        if (!confirm('คุณต้องการลบเมนูนี้ใช่หรือไม่? (การลบจะไม่สามารถกู้คืนได้)')) return
         await supabase.from('menu_items').delete().eq('id', id)
         
         // Optimistically remove from state
@@ -342,7 +342,26 @@ export default function MenuItemList() {
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
+        if (e && e.preventDefault) e.preventDefault()
+        
+        // Validation
+        const trimmedName = (formData.name || '').trim()
+        if (!trimmedName) {
+            alert('กรุณากรอกชื่อเมนู')
+            return
+        }
+        
+        if (!formData.category_id) {
+            alert('กรุณาเลือกหมวดหมู่')
+            return
+        }
+        
+        const priceVal = parseFloat(formData.price)
+        if (isNaN(priceVal) || priceVal < 0) {
+            alert('กรุณากรอกราคาที่ถูกต้อง (ราคาต้องไม่ต่ำกว่า 0)')
+            return
+        }
+
         try {
             let imageUrl = editingItem?.image_url || ''
             if (imageRemoved) imageUrl = ''
@@ -360,8 +379,8 @@ export default function MenuItemList() {
             const selectedCatName = selectedCat ? selectedCat.name : 'Uncategorized'
 
             const payload = {
-                name: formData.name,
-                price: parseFloat(formData.price),
+                name: trimmedName,
+                price: priceVal,
                 category_id: formData.category_id || null,
                 category: selectedCatName,
                 description: formData.description,
