@@ -69,7 +69,8 @@ export default function AdminSettings() {
         qr_radius: '50',
         spotify_client_id: '',
         spotify_client_secret: '',
-        link_og_image_url: ''
+        link_og_image_url: '',
+        link_og_description: ''
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -1468,6 +1469,12 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                 <input type="text" value={settings.link_tags || ''} onChange={(e) => handleSave('link_tags', e.target.value)}
                     placeholder="#inthehausth, #homefood, #southernthaifood" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono text-sm" />
                 <p className="text-[10px] text-gray-400 mt-1">ใส่ # นำหน้า คั่นด้วย comma เช่น #tag1, #tag2, #tag3</p>
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-brandDark uppercase mb-1">📝 คำอธิบายสำหรับแชร์โซเชียล (Social Share Description)</label>
+                <textarea rows={3} value={settings.link_og_description || ''} onChange={(e) => handleSave('link_og_description', e.target.value)}
+                    placeholder="ป้อนคำอธิบายของร้านสำหรับแสดงเวลาแชร์ลิงก์ลงโซเชียล เช่น Facebook, LINE..." className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand text-sm" />
+                <p className="text-[10px] text-gray-400 mt-1">ความยาวแนะนำ: ประมาณ 2-3 บรรทัด (ไม่โดนปุ่มแชร์ของแต่ละโซเชียลบดบังคำ)</p>
             </div>
 
             {/* Menu Images Manager - MOVED UP HERE */}

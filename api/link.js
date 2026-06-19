@@ -13,9 +13,9 @@ export default async function handler(req, res) {
         const { data: dbSettings } = await supabase.from('app_settings').select('key, value').like('key', 'link_%')
         const settings = dbSettings ? dbSettings.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {}) : {}
 
-        // 2. Content derived from Google Ad
+        // 2. Content derived from Google Ad (with dynamic description override support)
         const title = "ร้านในบ้าน นครพนม | อาหารใต้รสชัด ริมโขง | จริตจัด รสชัดเจน"
-        const description = "อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · ร้านเท่สไตล์ Thai Twist · กินอาหารใต้กินได้ทุกที่ · มีที่จอดรถสะดวก..."
+        const description = settings.link_og_description || "อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · ร้านเท่สไตล์ Thai Twist · กินอาหารใต้กินได้ทุกที่ · มีที่จอดรถสะดวก..."
         
         // 3. Resolve OG Image URL:
         // Prioritize settings.link_og_image_url (guaranteed compressed by back-office uploader).
