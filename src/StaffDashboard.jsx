@@ -307,6 +307,11 @@ export default function StaffDashboard() {
             
             {/* Header */}
             <header className="px-6 pt-12 pb-6 bg-white rounded-b-[2.5rem] shadow-sm relative z-20">
+                {/* Brand Staff Logo */}
+                <div className="flex justify-start mb-6">
+                    <img src="/logo-staff-light.png" alt="In the haus Staff" className="h-9 object-contain" />
+                </div>
+                
                 <div className="flex justify-between items-start mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-14 h-14 bg-gray-900 rounded-full flex items-center justify-center text-white shadow-lg overflow-hidden border-2 border-white">

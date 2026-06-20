@@ -15,8 +15,8 @@ export default function POSLayout({ children, activeView, onViewChange, selected
         <div className="flex h-full w-full">
             {/* Narrow Sidebar for Navigation */}
             <aside className="w-20 bg-[#1A1A1A] border-r border-white/5 flex flex-col items-center py-6 gap-8">
-                <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg shadow-orange-500/20">
-                    H
+                <div className="w-12 h-12 flex items-center justify-center">
+                    <img src="/logo-staff-dark.png" alt="Staff Logo" className="w-12 h-12 object-contain" />
                 </div>
 
                 <nav className="flex flex-col gap-4 flex-1">

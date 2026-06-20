@@ -20,11 +20,10 @@ export default function StaffHeader({
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="w-10 h-10 bg-[#1A1A1A] text-white rounded-full flex items-center justify-center shadow-md">
-                        <ChefHat className="w-5 h-5" />
-                    </div>
+                    <img src="/logo-staff-light.png" alt="Staff Logo" className="h-9 object-contain" />
+                    <div className="border-l border-gray-300 h-6 mx-1"></div>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+                        <h1 className="text-lg font-bold tracking-tight text-gray-800">{title}</h1>
                     </div>
                 </div>
                  <div className="flex gap-2">

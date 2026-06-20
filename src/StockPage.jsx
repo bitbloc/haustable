@@ -542,9 +542,10 @@ export default function StockPage() {
                         </button>
                         
                         <div className="flex-1 flex flex-col items-center justify-center mx-2">
-                            <div className="flex items-center gap-1.5">
-                                <img src="/logo.png" alt="Haus Logo" className="w-6 h-6 object-contain" />
-                                <h1 className="text-lg font-bold leading-tight">ระบบสต็อก</h1>
+                            <div className="flex items-center gap-2">
+                                <img src="/logo-staff-light.png" alt="Staff Logo" className="h-8 object-contain" />
+                                <div className="border-l border-gray-300 h-5 mx-0.5"></div>
+                                <h1 className="text-base font-bold leading-tight text-gray-800">ระบบสต็อก</h1>
                             </div>
                             <p className="text-[10px] text-gray-500 font-medium leading-none mt-1">
                                 {currentUser?.user_metadata?.full_name || 'Staff Member'}
