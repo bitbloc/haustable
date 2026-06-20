@@ -307,10 +307,6 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam zIndex="z-0" />
             <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="78%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} zIndex="z-0" />
 
-            {/* Mobile-only floating plates (Slightly larger, overlapping content cards for depth) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="8%" right="-4.5rem" size="w-36" delay={0} isMobile opacity={0.85} className="mobile-plate-right" zIndex="z-0" />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" zIndex="z-20" />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" zIndex="z-0" />
 
             {/* ─── BRAND DECORATIVE ELEMENTS (DESKTOP ONLY - Floating in margins) ─── */}
             {/* Brand Star — yellow-green asterisk */}
@@ -449,15 +445,6 @@ export default function AdsLandingPage() {
                     </motion.p>
                 </header>
 
-                {/* ─── MOBILE BRAND ELEMENT (Star) ─── */}
-                <div className="flex justify-center items-center my-6 lg:hidden relative z-0">
-                    <motion.img 
-                        initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
-                        whileInView={{ opacity: 1, scale: 1, rotate: 12 }}
-                        src="/assets/brand-star.webp" alt="" className="w-20 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '2s' }} 
-                    />
-                </div>
-
                 {/* ─── FEATURED SIGNATURE DISHES (Pop-Culture Style at Top) ─── */}
                 {signatures.length > 0 && (
                     <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
@@ -591,16 +578,19 @@ export default function AdsLandingPage() {
 
                 {/* ─── ATMOSPHERE VIBES ─── */}
                 {atmImages.length > 0 && (
-                    <section className="mt-8">
-                        <div className="mb-3 flex items-end justify-between">
-                            <div>
-                                <h2 className="text-neutral-800 text-base font-black tracking-tight">สัมผัสบรรยากาศในบ้าน</h2>
-                                <p className="text-neutral-500 text-[10px] font-mono tracking-wider uppercase mt-0.5 font-bold">Experience the Vibe</p>
-                            </div>
-                            <span className="text-[10px] text-neutral-400 font-bold animate-pulse">Swipe ➔</span>
+                    <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
+                        {/* Brand Accent Dot — Top-right corner */}
+                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[#FF453A] rounded-full border-2 border-neutral-900" />
+                        
+                        <div className="text-center mb-5 py-1.5 border-b-2 border-neutral-900 relative">
+                            {/* Sticker style tag */}
+                            <span className="bg-neutral-900 text-white text-xs font-black tracking-wide px-4 py-2 border-2 border-neutral-900 inline-block shadow-[3px_3px_0px_#FF453A] transform -rotate-1 select-none rounded-md">
+                                สัมผัสบรรยากาศในบ้าน 🏠
+                            </span>
+                            <h2 className="text-neutral-950 text-[10px] font-black tracking-[0.2em] font-mono uppercase mt-4 mb-2">Experience the Vibe</h2>
                         </div>
                         
-                        <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-4 no-scrollbar">
+                        <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 no-scrollbar">
                             {atmImages.map((url, i) => (
                                 <motion.div
                                     key={i}
@@ -609,7 +599,7 @@ export default function AdsLandingPage() {
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.4, delay: i * 0.05 }}
                                     onClick={() => setSelectedLightbox({ type: 'atm', url })}
-                                    className="flex-none w-[75%] max-w-[260px] snap-center rounded-3xl overflow-hidden shadow-sm border border-neutral-100 aspect-square cursor-pointer"
+                                    className="flex-none w-[75%] max-w-[240px] snap-center rounded-2xl overflow-hidden shadow-[2px_2px_0px_#111111] border-2 border-neutral-900 aspect-square cursor-pointer"
                                 >
                                     <img 
                                         src={optimizeImageUrl(url, 600)} 
@@ -619,6 +609,10 @@ export default function AdsLandingPage() {
                                     />
                                 </motion.div>
                             ))}
+                        </div>
+                        
+                        <div className="mt-3 flex justify-center">
+                            <span className="text-[10px] text-neutral-400 font-black tracking-widest uppercase animate-pulse">« Swipe »</span>
                         </div>
                     </section>
                 )}
@@ -694,9 +688,9 @@ export default function AdsLandingPage() {
                     </motion.div>
                 </section>
 
-                {/* ─── ORIGINAL BOOKLET LINK (Minimalist Text Link) ─── */}
+                {/* ─── ORIGINAL BOOKLET LINK (Card Style) ─── */}
                 {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
-                    <div className="mt-8 text-center">
+                    <div className="mt-8">
                         <button
                             onClick={() => {
                                 setSelectedLightbox({
@@ -704,13 +698,27 @@ export default function AdsLandingPage() {
                                     urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
                                 });
                             }}
-                            className="inline-flex items-center gap-1.5 text-neutral-500 hover:text-neutral-950 font-black text-xs cursor-pointer group"
+                            className="w-full bg-white border-2 border-neutral-900 rounded-3xl p-5 shadow-[4px_4px_0px_#111111] flex flex-col items-center justify-center gap-2 group hover:-translate-y-1 hover:shadow-[6px_6px_0px_#111111] active:translate-y-0 active:shadow-[2px_2px_0px_#111111] transition-all cursor-pointer relative z-10 overflow-hidden"
                         >
-                            <span>ดูรูปเล่มเมนูฉบับดั้งเดิม (PDF)</span>
-                            <span className="group-hover:translate-x-1 transition-transform">➔</span>
+                            <div className="absolute -right-4 -top-4 w-16 h-16 bg-neutral-100 rounded-full opacity-50 pointer-events-none" />
+                            <span className="bg-[#DFFF00] text-neutral-900 text-[10px] font-black tracking-[0.2em] uppercase px-3 py-1 rounded-full border-2 border-neutral-900 shadow-[2px_2px_0px_#111111] mb-1">
+                                Full Menu
+                            </span>
+                            <span className="text-neutral-900 font-black text-sm group-hover:text-neutral-700 transition-colors flex items-center gap-2">
+                                📖 ดูรูปเล่มเมนูฉบับดั้งเดิม (PDF) <span className="group-hover:translate-x-1 transition-transform">➔</span>
+                            </span>
                         </button>
                     </div>
                 )}
+
+                {/* ─── MOBILE BRAND ELEMENT (Star) ─── */}
+                <div className="flex justify-center items-center my-10 lg:hidden relative z-0">
+                    <motion.img 
+                        initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
+                        whileInView={{ opacity: 1, scale: 1, rotate: 12 }}
+                        src="/assets/brand-star.webp" alt="" className="w-20 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '2s' }} 
+                    />
+                </div>
 
                 {/* ─── TAGS ─── */}
                 <section className="my-10 relative z-20">
