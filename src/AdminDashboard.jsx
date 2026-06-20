@@ -10,6 +10,8 @@ import ConfirmationModal from './components/ConfirmationModal'
 // Components
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
+import SlipModal from './components/shared/SlipModal'
+import ViewSlipModal from './components/shared/ViewSlipModal'
 
 export default function AdminDashboard() {
     // const { toast } = useToast() -> Removed, uses import now
@@ -18,6 +20,8 @@ export default function AdminDashboard() {
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup, steak
+    const [slipData, setSlipData] = useState(null) // { booking, type }
+    const [viewSlipUrl, setViewSlipUrl] = useState(null)
 
     useEffect(() => {
         fetchData()
@@ -172,6 +176,10 @@ export default function AdminDashboard() {
 
     // 4. Filter for Tabs (Dine-in / Pickup) - View ONLY Today's Confirmed/Pending?
     // Let's make tabs act as filters on the "Today" list mostly.
+    const handlePrint = (booking, type) => {
+        setSlipData({ booking, type })
+    }
+
     const getTabContent = () => {
         if (activeTab === 'overview') {
             return (
@@ -180,14 +188,26 @@ export default function AdminDashboard() {
                     <InboxSection bookings={pendingBookings} onUpdateStatus={updateStatus} />
 
                     {/* TODAY'S SCHEDULE */}
-                    <ScheduleSection bookings={scheduleBookings} loading={loading} />
+                    <ScheduleSection 
+                        bookings={scheduleBookings} 
+                        loading={loading} 
+                        onPrint={handlePrint}
+                        onViewSlip={setViewSlipUrl}
+                    />
                 </div>
             )
         }
 
         // Fallback for old tabs (Dine In / Pickup) - Just show a simple list of TODAY's relevant items
         const filtered = bookings.filter(b => b.booking_type === activeTab && (b.status === 'confirmed' || b.status === 'pending'))
-        return <ScheduleSection bookings={filtered} loading={loading} />
+        return (
+            <ScheduleSection 
+                bookings={filtered} 
+                loading={loading} 
+                onPrint={handlePrint}
+                onViewSlip={setViewSlipUrl}
+            />
+        )
     }
 
     return (
@@ -239,6 +259,22 @@ export default function AdminDashboard() {
                     {getTabContent()}
                 </div>
             </div>
+
+            {/* Slip Modal */}
+            {slipData && (
+                <SlipModal
+                    booking={slipData.booking}
+                    type={slipData.type}
+                    onClose={() => setSlipData(null)}
+                />
+            )}
+
+            {viewSlipUrl && (
+                <ViewSlipModal 
+                    url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
+                    onClose={() => setViewSlipUrl(null)} 
+                />
+            )}
         </PageTransition>
     )
 }

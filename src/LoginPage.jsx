@@ -9,10 +9,13 @@ export default function LoginPage() {
     
     // Listen for Auth Changes (Login Success)
     useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const redirectParam = queryParams.get('redirect');
+        const from = redirectParam || location.state?.from?.pathname || '/staff';
+
         // check current session first
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                const from = location.state?.from?.pathname || '/staff';
                 navigate(from, { replace: true });
             }
         });
@@ -20,7 +23,6 @@ export default function LoginPage() {
         // Listen for future changes (e.g. login completes)
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
              if (event === 'SIGNED_IN' && session) {
-                 const from = location.state?.from?.pathname || '/staff';
                  navigate(from, { replace: true });
              }
         });

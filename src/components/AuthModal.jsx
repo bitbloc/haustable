@@ -334,6 +334,17 @@ export default function AuthModal({ isOpen, onClose }) {
                 {/* View: Login */}
                 {view === 'login' && (
                     <div className="animate-fade-in-up">
+                        {(() => {
+                            const isBackoffice = window.location.pathname.includes('/staff') || new URLSearchParams(window.location.search).get('redirect')?.includes('/admin');
+                            if (isBackoffice) {
+                                return (
+                                    <div className="flex justify-center mb-6">
+                                        <img src="/logo-staff-dark.png" alt="In The Haus Staff" className="h-16 w-auto object-contain" />
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
                         <h2 className="text-2xl font-bold text-white mb-6 text-center">{t('welcomeBack') || "Welcome Back"}</h2>
                         {error && <div className="bg-red-500/10 text-red-500 p-3 rounded-xl text-sm mb-4 text-center">{error}</div>}
 

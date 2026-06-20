@@ -1,7 +1,7 @@
 import { formatThaiTimeOnly } from '../../utils/timeUtils'
-import { MoreHorizontal, Printer, CheckCircle, ChefHat } from 'lucide-react'
+import { Printer, CheckCircle, ChefHat, Image as ImageIcon } from 'lucide-react'
 
-export default function ScheduleSection({ bookings, loading }) {
+export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip }) {
     if (loading) return <div className="text-center py-10 text-subInk animate-pulse">Loading schedule...</div>
 
     return (
@@ -89,13 +89,33 @@ export default function ScheduleSection({ bookings, loading }) {
                                         </span>
                                     </td>
                                     <td className="p-4 pr-6 text-right">
-                                        <div className="flex justify-end gap-2 opacity-50 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="p-2 bg-white border border-gray-200 rounded-lg text-subInk hover:text-ink hover:border-gray-300 transition-colors shadow-sm" title="Print Kitchen Slip">
+                                        <div className="flex justify-end gap-2">
+                                            {/* Print Kitchen Slip */}
+                                            <button 
+                                                onClick={() => onPrint && onPrint(booking, 'kitchen')} 
+                                                className="p-2 bg-white border border-gray-200 rounded-lg text-subInk hover:text-ink hover:border-gray-300 transition-colors shadow-sm" 
+                                                title="Print Kitchen Slip"
+                                            >
                                                 <ChefHat size={16} />
                                             </button>
-                                            <button className="p-2 bg-white border border-gray-200 rounded-lg text-subInk hover:text-ink hover:border-gray-300 transition-colors shadow-sm" title="View Details">
-                                                <MoreHorizontal size={16} />
+                                            {/* Print Customer Bill */}
+                                            <button 
+                                                onClick={() => onPrint && onPrint(booking, 'customer')} 
+                                                className="p-2 bg-white border border-gray-200 rounded-lg text-subInk hover:text-ink hover:border-gray-300 transition-colors shadow-sm" 
+                                                title="Print Customer Bill"
+                                            >
+                                                <Printer size={16} />
                                             </button>
+                                            {/* View Slip */}
+                                            {booking.payment_slip_url && (
+                                                <button 
+                                                    onClick={() => onViewSlip && onViewSlip(booking.payment_slip_url)} 
+                                                    className="p-2 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg shadow-sm transition-colors" 
+                                                    title="View Slip"
+                                                >
+                                                    <ImageIcon size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
