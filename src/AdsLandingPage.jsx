@@ -736,13 +736,6 @@ export default function AdsLandingPage() {
             {/* ─── FOOTER (Enhanced with Brand Elements) ─── */}
             <footer className="bg-neutral-900 text-neutral-500 py-10 absolute bottom-0 left-0 right-0">
                 <div className="max-w-lg mx-auto px-5 flex flex-col items-center gap-4">
-                    {/* Brand Script Logo */}
-                    <img
-                        src="/assets/logo-script.webp"
-                        alt="ในบ้าน"
-                        className="w-28 opacity-20"
-                        loading="lazy"
-                    />
                     {/* Geometric Logo */}
                     <div className="w-8 h-8 opacity-30">
                         <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" loading="lazy" />
