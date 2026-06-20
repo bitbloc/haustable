@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StockCard from './components/stock/StockCard';
+import StockListItem from './components/stock/StockListItem';
 import AdjustmentModal from './components/stock/AdjustmentModal';
 import BarcodeScanner from './components/stock/BarcodeScanner';
 import TransactionHistory from './components/stock/TransactionHistory'; // Added
@@ -39,6 +40,7 @@ export default function StockPage() {
     const [showCategoryManager, setShowCategoryManager] = useState(false); // Added
     const [showItemForm, setShowItemForm] = useState(false); // Added
     const [editingItem, setEditingItem] = useState(null); // Added
+    const [quickCountMode, setQuickCountMode] = useState(false); // Added
     
     // Recipe Builder State
     const [isRecipeOpen, setIsRecipeOpen] = useState(false);
@@ -98,41 +100,20 @@ export default function StockPage() {
             setCurrentUser(data?.user);
         });
         fetchCategories();
+        fetchItems();
     }, []);
 
     // --- Fetching Items ---
     const fetchItems = async () => {
         setLoading(true);
         try {
-            let query = supabase
+            const { data, error } = await supabase
                 .from('stock_items')
                 .select('*')
                 .order('name', { ascending: true });
-
-            // If 'restock' or 'all' tab, we fetch ALL to filter client-side / just show all
-            if (activeCategory !== 'restock' && activeCategory !== 'all' && activeCategory) {
-                query = query.eq('category', activeCategory);
-            }
             
-            const { data, error } = await query;
             if (error) throw error;
-            
-            let result = data || [];
-            
-            // Client-side filtering for Restock Tab
-            if (activeCategory === 'restock') {
-                result = result.filter(item => {
-                    const qty = Number(item.current_quantity) || 0;
-                    const reorder = Number(item.reorder_point) || 0;
-                    const min = Number(item.min_stock_threshold) || 0;
-                    
-                    // Trigger if stock reaches or falls below either threshold (at least one threshold must be > 0)
-                    // We use a small epsilon (0.0001) for float safety
-                    return (reorder > 0 && qty <= reorder + 0.0001) || (min > 0 && qty <= min + 0.0001) || (qty <= 0);
-                });
-            }
-            
-            setItems(result);
+            setItems(data || []);
         } catch (err) {
             console.error(err);
             toast.error('Failed to load stock');
@@ -140,10 +121,6 @@ export default function StockPage() {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        fetchItems();
-    }, [activeCategory]);
 
     // Real-time Subscription
     useEffect(() => {
@@ -511,10 +488,26 @@ export default function StockPage() {
 
     // Filter & Sort Items
     const filteredItems = items
-        .filter(item => 
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            item.barcode?.includes(searchQuery)
-        )
+        .filter(item => {
+            // Global Search if search query is entered
+            if (searchQuery.trim() !== '') {
+                const query = searchQuery.toLowerCase();
+                return (
+                    item.name.toLowerCase().includes(query) || 
+                    item.barcode?.includes(query)
+                );
+            }
+
+            // Otherwise, filter by selected category tab
+            if (activeCategory === 'all') return true;
+            if (activeCategory === 'restock') {
+                const qty = Number(item.current_quantity) || 0;
+                const reorder = Number(item.reorder_point) || 0;
+                const min = Number(item.min_stock_threshold) || 0;
+                return (reorder > 0 && qty <= reorder + 0.0001) || (min > 0 && qty <= min + 0.0001) || (qty <= 0);
+            }
+            return item.category === activeCategory;
+        })
         .sort((a, b) => {
             if (sortMode === 'low_stock') {
                 return (Number(a.current_quantity) || 0) - (Number(b.current_quantity) || 0);
@@ -549,8 +542,11 @@ export default function StockPage() {
                         </button>
                         
                         <div className="flex-1 flex flex-col items-center justify-center mx-2">
-                            <h1 className="text-lg font-bold leading-tight">ระบบสต็อก</h1>
-                            <p className="text-[10px] text-gray-500 font-medium leading-none">
+                            <div className="flex items-center gap-1.5">
+                                <img src="/logo.png" alt="Haus Logo" className="w-6 h-6 object-contain" />
+                                <h1 className="text-lg font-bold leading-tight">ระบบสต็อก</h1>
+                            </div>
+                            <p className="text-[10px] text-gray-500 font-medium leading-none mt-1">
                                 {currentUser?.user_metadata?.full_name || 'Staff Member'}
                             </p>
                         </div>
@@ -631,6 +627,19 @@ export default function StockPage() {
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
                             </button>
+                            
+                            <button 
+                                onClick={() => setQuickCountMode(!quickCountMode)}
+                                className={`p-2 rounded-lg flex items-center gap-1.5 transition-all border font-bold text-xs ${
+                                    quickCountMode 
+                                    ? 'bg-[#1A1A1A] border-[#1A1A1A] text-white shadow-md' 
+                                    : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                                }`}
+                                title="โหมดตรวจนับสต็อกด่วน (Quick Count Mode)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+                                <span className="hidden sm:inline">โหมดตรวจนับด่วน</span>
+                            </button>
                         </div>
 
                         <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
@@ -694,54 +703,27 @@ export default function StockPage() {
                                     item={item} 
                                     onClick={(i) => setSelectedItem(i)} 
                                     onRecipe={handleOpenRecipe}
+                                    quickCountMode={quickCountMode}
+                                    onUpdate={handleAdjustment}
+                                    searchActive={searchQuery.trim() !== ''}
+                                    categories={categories}
                                  />
                              ))}
                         </div>
                     ) : (
-                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col divide-y divide-gray-100">
-                            {filteredItems.map(item => {
-                                return (
-                                    <div 
-                                        key={item.id}
-                                        onClick={() => setSelectedItem(item)}
-                                        className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors active:bg-gray-100"
-                                    >
-                                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                                            {item.image_url ? (
-                                                <img src={item.image_url} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                                    <Package className="w-6 h-6" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-[#1A1A1A] truncate">{item.name}</h3>
-                                                {item.is_base_recipe && (
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleOpenRecipe(item);
-                                                        }}
-                                                        className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scroll"><path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/></svg>
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <p className="text-xs text-gray-500">
-                                                {formatStockDisplay(item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor).displayString}
-                                            </p>
-                                        </div>
-                                        <div className={`text-right px-3 py-1 rounded-full text-xs font-bold ${
-                                            getStatusColor(item.current_quantity, item.reorder_point, item.min_stock_threshold)
-                                        }`}>
-                                            {formatStockDisplay(item.current_quantity).fullUnits}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                        <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                            {filteredItems.map(item => (
+                                <StockListItem 
+                                    key={item.id}
+                                    item={item}
+                                    onClick={(i) => setSelectedItem(i)}
+                                    onRecipe={handleOpenRecipe}
+                                    quickCountMode={quickCountMode}
+                                    onUpdate={handleAdjustment}
+                                    searchActive={searchQuery.trim() !== ''}
+                                    categories={categories}
+                                />
+                            ))}
                         </div>
                     )
                 )}
