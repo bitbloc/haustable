@@ -165,7 +165,7 @@ export default function AdsLandingPage() {
     }
 
     return (
-        <div className="w-full min-h-screen bg-[#FAFAF7] text-neutral-900 overflow-x-hidden font-['IBM_Plex_Sans_Thai',sans-serif] relative pb-28">
+        <div className="w-full min-h-screen flex flex-col bg-[#FAFAF7] text-neutral-900 overflow-x-hidden font-['IBM_Plex_Sans_Thai',sans-serif] relative pb-safe">
             
             {/* Custom Embedded CSS for Micro-animations */}
             <style>{`
@@ -264,22 +264,6 @@ export default function AdsLandingPage() {
                 }
             `}</style>
 
-            {/* ─── BRAND SCRIPT WATERMARK (Background Layer — "ในบ้าน" calligraphy) ─── */}
-            {/* Absolute positioned so it scrolls naturally — pop-out effect when scrolling past */}
-            <div className="absolute top-[15%] left-0 right-0 pointer-events-none select-none z-0 flex items-center justify-center">
-                <motion.img
-                    src="/assets/logo-script.webp"
-                    alt=""
-                    aria-hidden="true"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 0.035, scale: 1 }}
-                    viewport={{ once: false, margin: "-100px" }}
-                    transition={{ duration: 1.2, ease: 'easeOut' }}
-                    className="w-[80vw] max-w-[600px]"
-                    style={{ filter: 'brightness(0) sepia(1) saturate(0)' }}
-                />
-            </div>
-
             {/* ─── KINETIC TYPOGRAPHY (Background Layer) ─── */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.06] select-none pt-24">
                 <div className="sticky top-20 space-y-12">
@@ -334,7 +318,7 @@ export default function AdsLandingPage() {
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100 drop-shadow-md" />
+                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100" />
             </motion.div>
 
             {/* Brand Crescent — red circles arc */}
@@ -362,7 +346,7 @@ export default function AdsLandingPage() {
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float drop-shadow-xl" style={{ animationDelay: '1s' }} />
+                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float" style={{ animationDelay: '1s' }} />
             </motion.div>
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
@@ -412,11 +396,11 @@ export default function AdsLandingPage() {
                             <img
                                 src={optimizeImageUrl(logoUrl, 160)}
                                 alt="IN THE HAUS Logo"
-                                className="w-16 h-16 rounded-full object-cover border-2 border-neutral-900 shadow-[3px_3px_0px_#111111] flex-shrink-0"
+                                className="w-16 h-16 rounded-full object-cover border-2 border-neutral-900 flex-shrink-0"
                                 fetchPriority="high"
                             />
                         ) : (
-                            <div className="w-16 h-16 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0 shadow-[3px_3px_0px_#111111] border-2 border-neutral-900 p-2.5">
+                            <div className="w-16 h-16 rounded-full bg-neutral-900 flex items-center justify-center flex-shrink-0 border-2 border-neutral-900 p-2.5">
                                 <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
                             </div>
                         )}
@@ -474,7 +458,7 @@ export default function AdsLandingPage() {
                         viewport={{ once: false, amount: 0.5 }}
                         src="/assets/brand-mascot.webp" 
                         alt="" 
-                        className="w-28 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.1)] animate-float" 
+                        className="w-28 animate-float" 
                         style={{ animationDelay: '1s' }} 
                     />
                     <motion.img 
@@ -483,7 +467,7 @@ export default function AdsLandingPage() {
                         viewport={{ once: false, amount: 0.5 }}
                         src="/assets/brand-thai-text.webp" 
                         alt="" 
-                        className="w-32 drop-shadow-sm" 
+                        className="w-32" 
                     />
                 </div>
 
@@ -734,7 +718,7 @@ export default function AdsLandingPage() {
             </div>
 
             {/* ─── FOOTER (Enhanced with Brand Elements) ─── */}
-            <footer className="bg-neutral-900 text-neutral-500 py-10 absolute bottom-0 left-0 right-0">
+            <footer className="bg-neutral-900 text-neutral-500 py-10 w-full mt-auto pb-24">
                 <div className="max-w-lg mx-auto px-5 flex flex-col items-center gap-4">
                     {/* Geometric Logo */}
                     <div className="w-8 h-8 opacity-30">
