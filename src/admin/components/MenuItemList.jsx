@@ -8,7 +8,7 @@ import { arrayMove, SortableContext, rectSortingStrategy, useSortable } from '@d
 import { CSS } from '@dnd-kit/utilities'
 
 // --- Sortable Item Component ---
-const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit, handleTogglePickup, isOverlay = false }) {
+const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit, handleDelete, handleTogglePickup, isOverlay = false }) {
     const isRecommended = item.is_recommended;
 
     const {
@@ -69,6 +69,35 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
                 if (!isDragging) handleEdit(item); 
             }}
         >
+            {/* Action Buttons */}
+            {!isOverlay && (
+                <div className="absolute top-2 right-10 z-20 flex gap-1"
+                    onPointerDown={(e) => e.stopPropagation()} 
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            handleEdit(item)
+                        }} 
+                        className="p-1.5 text-subInk hover:text-brandDark hover:bg-gray-100 rounded-lg transition-colors"
+                        title="แก้ไขเมนู"
+                    >
+                        <Edit2 size={16} />
+                    </button>
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(item.id)
+                        }} 
+                        className="p-1.5 text-subInk hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="ลบเมนู"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )}
+
             {/* Drag Handle */}
             <div className="absolute top-2 right-2 z-20">
                 <div 
@@ -92,7 +121,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
             
             <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
                 <div>
-                    <div className="flex justify-between items-start pr-8"> 
+                    <div className="flex justify-between items-start pr-28"> 
                         <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
                         <span className="font-mono font-bold text-brandDark">{item.price}</span>
                     </div>
@@ -329,11 +358,17 @@ export default function MenuItemList() {
 
     const handleDelete = async (id) => {
         if (!confirm('คุณต้องการลบเมนูนี้ใช่หรือไม่? (การลบจะไม่สามารถกู้คืนได้)')) return
-        await supabase.from('menu_items').delete().eq('id', id)
-        
-        // Optimistically remove from state
-        setMenuItems(prev => prev.filter(i => i.id !== id));
-        setIsModalOpen(false); // Close if open
+        try {
+            const { error } = await supabase.from('menu_items').delete().eq('id', id)
+            if (error) throw error
+            
+            // Success
+            setMenuItems(prev => prev.filter(i => i.id !== id))
+            setIsModalOpen(false) // Close if open
+        } catch (err) {
+            console.error("Delete Error:", err)
+            alert('ไม่สามารถลบเมนูได้: ' + err.message)
+        }
     }
 
     const handleDuplicate = async (item) => {
@@ -642,6 +677,7 @@ export default function MenuItemList() {
                                     key={item.id} 
                                     item={item} 
                                     handleEdit={handleEdit} 
+                                    handleDelete={handleDelete}
                                     handleTogglePickup={handleTogglePickup} 
                                 />
                             ))}
@@ -672,6 +708,7 @@ export default function MenuItemList() {
                                                 key={item.id} 
                                                 item={item} 
                                                 handleEdit={handleEdit} 
+                                                handleDelete={handleDelete}
                                                 handleTogglePickup={handleTogglePickup} 
                                             />
                                         ))}
@@ -687,7 +724,7 @@ export default function MenuItemList() {
                             <SortableContext id="uncategorized" items={sections.regular['uncategorized'].map(i=>i.id)} strategy={rectSortingStrategy}>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {sections.regular['uncategorized'].map(item => (
-                                         <SortableMenuItem key={item.id} item={item} handleEdit={handleEdit} handleTogglePickup={handleTogglePickup} />
+                                         <SortableMenuItem key={item.id} item={item} handleEdit={handleEdit} handleDelete={handleDelete} handleTogglePickup={handleTogglePickup} />
                                     ))}
                                 </div>
                             </SortableContext>
@@ -701,6 +738,7 @@ export default function MenuItemList() {
                             <SortableMenuItem 
                                 item={activeDragItem} 
                                 handleEdit={()=>{}}
+                                handleDelete={()=>{}}
                                 handleTogglePickup={()=>{}}
                                 isOverlay 
                             />
