@@ -135,6 +135,24 @@ export default function AdsLandingPage() {
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
 
+    // ─── DYNAMIC SEO (Title & Meta) ───
+    useEffect(() => {
+        if (!loading) {
+            // Using the optimized Google Ads copy for maximum SEO impact
+            document.title = `ร้านในบ้าน นครพนม | อาหารใต้รสจัด ริมโขง | จริตจัด รสชัดเจน`;
+            let metaDescription = document.querySelector('meta[name="description"]');
+            const descText = `อาหารใต้รสจัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่ นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น เปิดทุกวัน ${hours}`;
+            if (metaDescription) {
+                metaDescription.setAttribute("content", descText);
+            } else {
+                metaDescription = document.createElement('meta');
+                metaDescription.name = "description";
+                metaDescription.content = descText;
+                document.head.appendChild(metaDescription);
+            }
+        }
+    }, [hours, loading]);
+
     // Filter only recommended items for the initial presentation (10-15 items)
     const featuredMenuItems = menuItems.filter(item => item.is_recommended).slice(0, 15);
 
@@ -429,7 +447,7 @@ export default function AdsLandingPage() {
                         
                         {/* Name & Info */}
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-xl font-black text-neutral-900 leading-tight tracking-tight uppercase">
+                            <h1 className="text-xl md:text-2xl font-black text-neutral-900 leading-tight tracking-tight uppercase">
                                 {shopName}
                             </h1>
                             <p className="text-neutral-600 font-extrabold text-sm mt-0.5">{shopNameTh}</p>
@@ -676,10 +694,10 @@ export default function AdsLandingPage() {
                 )}
 
                 {/* ─── TAGS ─── */}
-                <section className="my-8">
-                    <div className="flex flex-wrap justify-center gap-2">
+                <section className="my-10 relative z-20">
+                    <div className="flex flex-wrap justify-center gap-2.5">
                         {tags.map(tag => (
-                            <span key={tag} className="px-3 py-1 bg-neutral-200/50 border border-neutral-200/20 text-neutral-500 rounded-full text-[10px] font-bold font-mono tracking-wide">
+                            <span key={tag} className="px-4 py-1.5 bg-white border-2 border-neutral-900 text-neutral-900 rounded-full text-[11px] font-black font-mono tracking-wider shadow-[2px_2px_0px_#111111] hover:scale-105 transition-transform cursor-default select-none">
                                 {tag}
                             </span>
                         ))}
