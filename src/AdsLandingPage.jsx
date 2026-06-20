@@ -312,24 +312,19 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" zIndex="z-20" />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" zIndex="z-0" />
 
-            {/* ─── BRAND DECORATIVE ELEMENTS (BOLD & POP — 100% visible, fully interactive) ─── */}
+            {/* ─── BRAND DECORATIVE ELEMENTS (DESKTOP ONLY - Floating in margins) ─── */}
             {/* Brand Star — yellow-green asterisk */}
             <motion.div
                 initial={{ opacity: 0, rotate: -45, scale: 0.5 }}
                 whileInView={{ opacity: 1, rotate: 12, scale: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.6, delay: 0.2, type: 'spring', bounce: 0.4 }}
-                style={{ top: '15%' }}
-                className="absolute z-0 right-[-0.5rem] md:right-auto lg:right-auto cursor-grab active:cursor-grabbing"
+                style={{ top: '15%', right: 'calc(-50vw + 360px)' }}
+                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <div className="lg:hidden">
-                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-20 opacity-100 animate-float" style={{ animationDelay: '2s' }} />
-                </div>
-                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 360px)' }}>
-                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-36 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '2s' }} />
-                </div>
+                <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-36 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '2s' }} />
             </motion.div>
 
             {/* Brand Thai Text — "ในบ้าน" red typography */}
@@ -338,17 +333,12 @@ export default function AdsLandingPage() {
                 whileInView={{ opacity: 1, x: 0, rotate: -3 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
-                style={{ top: '33%' }}
-                className="absolute z-0 left-[-1rem] md:left-auto lg:left-auto cursor-grab active:cursor-grabbing"
+                style={{ top: '33%', left: 'calc(-50vw + 400px)' }}
+                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <div className="lg:hidden">
-                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-32 opacity-100 drop-shadow-sm" />
-                </div>
-                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 400px)' }}>
-                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100 drop-shadow-md" />
-                </div>
+                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100 drop-shadow-md" />
             </motion.div>
 
             {/* Brand Crescent — red circles arc */}
@@ -357,17 +347,12 @@ export default function AdsLandingPage() {
                 whileInView={{ opacity: 1, rotate: -8, scale: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.7, delay: 0.5, type: 'spring', bounce: 0.3 }}
-                style={{ top: '52%' }}
-                className="absolute z-0 right-[-1rem] md:right-auto lg:right-auto cursor-grab active:cursor-grabbing"
+                style={{ top: '52%', right: 'calc(-50vw + 380px)' }}
+                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <div className="lg:hidden">
-                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-20 opacity-100 animate-float drop-shadow-sm" style={{ animationDelay: '3s' }} />
-                </div>
-                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 380px)' }}>
-                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-40 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '3s' }} />
-                </div>
+                <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-40 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '3s' }} />
             </motion.div>
 
             {/* Brand Mascot — character illustration (THE STAR!) */}
@@ -376,17 +361,12 @@ export default function AdsLandingPage() {
                 whileInView={{ opacity: 1, y: 0, scale: 1, rotate: -5 }}
                 viewport={{ once: false, amount: 0.3 }}
                 transition={{ duration: 0.8, delay: 0.2, type: 'spring', bounce: 0.4 }}
-                style={{ top: '70%' }}
-                className="absolute z-0 left-[-1rem] md:left-auto lg:left-auto cursor-grab active:cursor-grabbing"
+                style={{ top: '70%', left: 'calc(-50vw + 360px)' }}
+                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <div className="lg:hidden">
-                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-24 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '1s' }} />
-                </div>
-                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 360px)' }}>
-                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float drop-shadow-xl" style={{ animationDelay: '1s' }} />
-                </div>
+                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float drop-shadow-xl" style={{ animationDelay: '1s' }} />
             </motion.div>
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
@@ -469,6 +449,15 @@ export default function AdsLandingPage() {
                     </motion.p>
                 </header>
 
+                {/* ─── MOBILE BRAND ELEMENT (Star) ─── */}
+                <div className="flex justify-center items-center my-6 lg:hidden relative z-0">
+                    <motion.img 
+                        initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
+                        whileInView={{ opacity: 1, scale: 1, rotate: 12 }}
+                        src="/assets/brand-star.webp" alt="" className="w-20 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '2s' }} 
+                    />
+                </div>
+
                 {/* ─── FEATURED SIGNATURE DISHES (Pop-Culture Style at Top) ─── */}
                 {signatures.length > 0 && (
                     <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
@@ -490,8 +479,29 @@ export default function AdsLandingPage() {
                     </section>
                 )}
 
-                {/* ─── BRAND DIVIDER ─── */}
-                <div className="flex items-center gap-3 my-6">
+                {/* ─── BRAND DIVIDER (MOBILE MASCOT & THAI TEXT) ─── */}
+                <div className="flex justify-center items-center gap-6 my-10 lg:hidden relative z-0">
+                    <motion.img 
+                        initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                        whileInView={{ opacity: 1, scale: 1, rotate: -5 }}
+                        viewport={{ once: false, amount: 0.5 }}
+                        src="/assets/brand-mascot.webp" 
+                        alt="" 
+                        className="w-28 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.1)] animate-float" 
+                        style={{ animationDelay: '1s' }} 
+                    />
+                    <motion.img 
+                        initial={{ opacity: 0, x: 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: false, amount: 0.5 }}
+                        src="/assets/brand-thai-text.webp" 
+                        alt="" 
+                        className="w-32 drop-shadow-sm" 
+                    />
+                </div>
+
+                {/* ─── DESKTOP BRAND DIVIDER ─── */}
+                <div className="hidden lg:flex items-center gap-3 my-6">
                     <div className="h-px bg-neutral-300 flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #d4d4d4 0px, #d4d4d4 6px, transparent 6px, transparent 12px)' }} />
                     <div className="w-6 h-6 flex items-center justify-center opacity-30">
                         <img src="/logo.png" alt="" className="w-full h-full object-contain" aria-hidden="true" />
@@ -569,6 +579,15 @@ export default function AdsLandingPage() {
                 </AnimatePresence>
 
 
+
+                {/* ─── MOBILE BRAND ELEMENT (Crescent) ─── */}
+                <div className="flex justify-center items-center my-10 lg:hidden relative z-0">
+                    <motion.img 
+                        initial={{ opacity: 0, scale: 0.8, rotate: 20 }}
+                        whileInView={{ opacity: 1, scale: 1, rotate: -5 }}
+                        src="/assets/brand-crescent.webp" alt="" className="w-24 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '3s' }} 
+                    />
+                </div>
 
                 {/* ─── ATMOSPHERE VIBES ─── */}
                 {atmImages.length > 0 && (
