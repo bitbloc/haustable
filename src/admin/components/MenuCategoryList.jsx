@@ -139,15 +139,7 @@ export default function MenuCategoryList() {
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-subInk mb-1">Display Order</label>
-                                <input
-                                    type="number"
-                                    value={formData.display_order}
-                                    onChange={e => setFormData({ ...formData, display_order: e.target.value })}
-                                    className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand outline-none transition-colors"
-                                />
-                            </div>
+
                             <button type="submit" className="w-full bg-brand text-ink font-bold py-3 rounded-xl hover:bg-brandDark mt-2 shadow-lg shadow-brand/20">
                                 Save
                             </button>
@@ -173,15 +165,21 @@ function CategoryItem({ category, onEdit, onDelete, onDragEnd }) {
             <div className="flex items-center gap-4">
                 {/* Drag Handle */}
                 <div 
-                    onPointerDown={(e) => controls.start(e)}
-                    className="bg-gray-100 w-8 h-8 rounded flex items-center justify-center text-subInk cursor-grab active:cursor-grabbing hover:bg-gray-200 transition-colors touch-none"
+                    onPointerDown={(e) => {
+                        e.preventDefault()
+                        controls.start(e)
+                    }}
+                    onTouchStart={(e) => {
+                        e.preventDefault()
+                        controls.start(e)
+                    }}
+                    className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center text-subInk cursor-grab active:cursor-grabbing hover:bg-gray-200 transition-colors touch-none"
+                    style={{ touchAction: 'none' }}
                 >
-                    <GripVertical size={16} />
+                    <GripVertical size={20} />
                 </div>
                 <div>
                      <span className="font-bold text-lg text-ink">{category.name}</span>
-                     {/* Debug or Order Info */}
-                     <span className="text-xs text-subInk block">Order: {category.display_order}</span>
                 </div>
             </div>
             <div className="flex gap-2">
