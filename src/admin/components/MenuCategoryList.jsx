@@ -160,7 +160,7 @@ function CategoryItem({ category, onEdit, onDelete, onDragEnd }) {
             dragListener={false} 
             dragControls={controls}
             onDragEnd={onDragEnd}
-            className="bg-paper border border-gray-200 p-4 rounded-xl flex items-center justify-between group relative select-none hover:border-brand/50 hover:shadow-sm transition-all"
+            className="bg-paper border border-gray-200 p-4 rounded-xl flex items-center justify-between group relative select-none hover:border-brand/50 hover:shadow-sm transition-colors"
         >
             <div className="flex items-center gap-4">
                 {/* Drag Handle */}
