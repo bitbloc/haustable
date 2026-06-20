@@ -294,72 +294,80 @@ export default function AdsLandingPage() {
             <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="48%" right="-4.5rem" size="w-36" delay={0.8} isMobile opacity={0.85} hasSteam className="mobile-plate-right" zIndex="z-20" />
             <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสนั่นไก่" top="68%" left="-4.5rem" size="w-40" delay={2.2} isMobile opacity={0.85} hasSteam className="mobile-plate-left" zIndex="z-0" />
 
-            {/* ─── BRAND DECORATIVE ELEMENTS (Desktop: margins / Mobile: edges with fade transition) ─── */}
+            {/* ─── BRAND DECORATIVE ELEMENTS (BOLD & POP — 100% visible, fully interactive) ─── */}
             {/* Brand Star — yellow-green asterisk */}
             <motion.div
-                initial={{ opacity: 0, rotate: -30, scale: 0.7 }}
-                whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+                initial={{ opacity: 0, rotate: -45, scale: 0.5 }}
+                whileInView={{ opacity: 1, rotate: 12, scale: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
-                style={{ top: '18%' }}
-                className="absolute pointer-events-none select-none z-0 right-[-1rem] md:right-auto lg:right-auto"
+                transition={{ duration: 0.6, delay: 0.2, type: 'spring', bounce: 0.4 }}
+                style={{ top: '15%' }}
+                className="absolute z-0 right-[-0.5rem] md:right-auto lg:right-auto cursor-grab active:cursor-grabbing"
+                drag
+                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
                 <div className="lg:hidden">
-                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-12 opacity-[0.12] animate-float" style={{ animationDelay: '2s' }} />
+                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-20 opacity-100 animate-float" style={{ animationDelay: '2s' }} />
                 </div>
-                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 380px)' }}>
-                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-28 opacity-[0.15] animate-float" style={{ animationDelay: '2s' }} />
+                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 360px)' }}>
+                    <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-36 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '2s' }} />
                 </div>
             </motion.div>
 
             {/* Brand Thai Text — "ในบ้าน" red typography */}
             <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, x: -40, rotate: -5 }}
+                whileInView={{ opacity: 1, x: 0, rotate: -3 }}
                 viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 1, delay: 0.5 }}
-                style={{ top: '35%' }}
-                className="absolute pointer-events-none select-none z-0 left-[-2rem] md:left-auto lg:left-auto"
+                transition={{ duration: 0.8, delay: 0.3 }}
+                style={{ top: '33%' }}
+                className="absolute z-0 left-[-1rem] md:left-auto lg:left-auto cursor-grab active:cursor-grabbing"
+                drag
+                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
                 <div className="lg:hidden">
-                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-24 opacity-[0.06]" />
+                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-32 opacity-100 drop-shadow-sm" />
                 </div>
-                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 420px)' }}>
-                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-52 opacity-[0.08]" />
+                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 400px)' }}>
+                    <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100 drop-shadow-md" />
                 </div>
             </motion.div>
 
             {/* Brand Crescent — red circles arc */}
             <motion.div
-                initial={{ opacity: 0, rotate: 15, scale: 0.8 }}
-                whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+                initial={{ opacity: 0, rotate: 30, scale: 0.6 }}
+                whileInView={{ opacity: 1, rotate: -8, scale: 1 }}
                 viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.8, delay: 0.8 }}
-                style={{ top: '55%' }}
-                className="absolute pointer-events-none select-none z-0 right-[-1.5rem] md:right-auto lg:right-auto"
+                transition={{ duration: 0.7, delay: 0.5, type: 'spring', bounce: 0.3 }}
+                style={{ top: '52%' }}
+                className="absolute z-0 right-[-1rem] md:right-auto lg:right-auto cursor-grab active:cursor-grabbing"
+                drag
+                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
                 <div className="lg:hidden">
-                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-14 opacity-[0.08] animate-float" style={{ animationDelay: '3s' }} />
+                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-20 opacity-100 animate-float drop-shadow-sm" style={{ animationDelay: '3s' }} />
                 </div>
-                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 400px)' }}>
-                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-32 opacity-[0.1] animate-float" style={{ animationDelay: '3s' }} />
+                <div className="hidden lg:block" style={{ position: 'relative', right: 'calc(-50vw + 380px)' }}>
+                    <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-40 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '3s' }} />
                 </div>
             </motion.div>
 
-            {/* Brand Mascot — character illustration */}
+            {/* Brand Mascot — character illustration (THE STAR!) */}
             <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                initial={{ opacity: 0, y: 30, scale: 0.6, rotate: 10 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1, rotate: -5 }}
                 viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                style={{ top: '72%' }}
-                className="absolute pointer-events-none select-none z-0 left-[-1.5rem] md:left-auto lg:left-auto"
+                transition={{ duration: 0.8, delay: 0.2, type: 'spring', bounce: 0.4 }}
+                style={{ top: '70%' }}
+                className="absolute z-0 left-[-1rem] md:left-auto lg:left-auto cursor-grab active:cursor-grabbing"
+                drag
+                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
                 <div className="lg:hidden">
-                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-16 opacity-[0.1] animate-float" style={{ animationDelay: '1s' }} />
+                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-24 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '1s' }} />
                 </div>
-                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 380px)' }}>
-                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-36 opacity-[0.12] animate-float" style={{ animationDelay: '1s' }} />
+                <div className="hidden lg:block" style={{ position: 'relative', left: 'calc(-50vw + 360px)' }}>
+                    <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float drop-shadow-xl" style={{ animationDelay: '1s' }} />
                 </div>
             </motion.div>
 
@@ -897,9 +905,14 @@ function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, h
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: opacity, scale: 1 }}
             viewport={{ once: true, margin: "-50px" }}
+            whileHover={{ opacity: 0.15, x: isMobile ? 0 : (left ? -40 : 40), scale: 0.95 }}
+            whileTap={{ opacity: 0.15, scale: 0.9 }}
+            drag
+            dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
+            dragElastic={0.2}
             transition={{ duration: 0.8, delay }}
             style={{ top, left, right }}
-            className={`absolute pointer-events-none select-none ${zIndex} ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'} ${className}`}
+            className={`absolute z-0 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'} ${className} cursor-grab active:cursor-grabbing`}
         >
             <div className="relative animate-float" style={{ animationDelay: `${delay}s` }}>
                 <img
@@ -994,7 +1007,7 @@ function SignatureDishCard({ dish, index }) {
                 <img
                     src={optimizeImageUrl(dish.img, 400)}
                     alt={dish.name}
-                    loading="lazy"
+                    fetchPriority="high"
                     onLoad={() => setIsLoaded(true)}
                     className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
