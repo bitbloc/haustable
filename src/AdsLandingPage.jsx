@@ -11,7 +11,8 @@ const optimizeImageUrl = (url, width = 850, quality = 75) => {
     if (!url) return '';
     if (url.includes('supabase.co/storage/v1/object/public/')) {
         // Must use render/image/public for Supabase Image Transformations to work
-        return url.replace('/object/public/', '/render/image/public/') + `?width=${width}&quality=${quality}&format=webp`;
+        // Added resize=contain to prevent Supabase from arbitrarily cropping the image when height is omitted
+        return url.replace('/object/public/', '/render/image/public/') + `?width=${width}&quality=${quality}&resize=contain&format=webp`;
     }
     return url;
 };
