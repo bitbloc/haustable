@@ -434,7 +434,7 @@ export default function AdsLandingPage() {
                     <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
                         {/* Circular Brand Stamp (Rotating) */}
                         <motion.img
-                            src="/assets/brand-circle.png" 
+                            src="/assets/brand-circle.webp" 
                             alt="ตราประทับร้านในบ้าน"
                             aria-hidden="true"
                             className="absolute -top-10 -right-4 w-24 lg:-top-12 lg:-right-8 lg:w-32 drop-shadow-sm pointer-events-none z-20"
