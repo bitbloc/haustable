@@ -9,7 +9,7 @@ const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e
 const optimizeImageUrl = (url, width = 850, quality = 75) => {
     if (!url) return '';
     if (url.includes('supabase.co/storage/v1/object/public/')) {
-        return `${url}?width=${width}&quality=${quality}`;
+        return `${url}?width=${width}&quality=${quality}&format=webp`;
     }
     return url;
 };
@@ -304,7 +304,7 @@ export default function AdsLandingPage() {
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-36 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '2s' }} />
+                <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-36 opacity-100 animate-float" style={{ animationDelay: '2s' }} loading="lazy" decoding="async" />
             </motion.div>
 
             {/* Brand Thai Text — "ในบ้าน" red typography */}
@@ -318,7 +318,7 @@ export default function AdsLandingPage() {
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100" />
+                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100" loading="lazy" decoding="async" />
             </motion.div>
 
             {/* Brand Crescent — red circles arc */}
@@ -332,7 +332,7 @@ export default function AdsLandingPage() {
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-40 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '3s' }} />
+                <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-40 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '3s' }} loading="lazy" decoding="async" />
             </motion.div>
 
             {/* Brand Mascot — character illustration (THE STAR!) */}
@@ -346,7 +346,7 @@ export default function AdsLandingPage() {
                 drag
                 dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
             >
-                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float" style={{ animationDelay: '1s' }} />
+                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float" style={{ animationDelay: '1s' }} loading="lazy" decoding="async" />
             </motion.div>
 
             {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
@@ -460,6 +460,8 @@ export default function AdsLandingPage() {
                         alt="" 
                         className="w-28 animate-float" 
                         style={{ animationDelay: '1s' }} 
+                        loading="lazy" 
+                        decoding="async"
                     />
                     <motion.img 
                         initial={{ opacity: 0, x: 20 }}
@@ -468,6 +470,8 @@ export default function AdsLandingPage() {
                         src="/assets/brand-thai-text.webp" 
                         alt="" 
                         className="w-32" 
+                        loading="lazy" 
+                        decoding="async"
                     />
                 </div>
 
@@ -557,6 +561,8 @@ export default function AdsLandingPage() {
                         initial={{ opacity: 0, scale: 0.8, rotate: 20 }}
                         whileInView={{ opacity: 1, scale: 1, rotate: -5 }}
                         src="/assets/brand-crescent.webp" alt="" className="w-24 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '3s' }} 
+                        loading="lazy"
+                        decoding="async"
                     />
                 </div>
 
@@ -590,6 +596,7 @@ export default function AdsLandingPage() {
                                         alt={`Atmosphere ${i + 1}`} 
                                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
                                         loading="lazy"
+                                        decoding="async"
                                     />
                                 </motion.div>
                             ))}
@@ -701,6 +708,8 @@ export default function AdsLandingPage() {
                         initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
                         whileInView={{ opacity: 1, scale: 1, rotate: 12 }}
                         src="/assets/brand-star.webp" alt="" className="w-20 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '2s' }} 
+                        loading="lazy"
+                        decoding="async"
                     />
                 </div>
 
@@ -941,6 +950,8 @@ function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, h
                     src={src}
                     alt={alt}
                     className="w-full h-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.12)] hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                    decoding="async"
                 />
                 
                 {/* Simulated hot steam particles (Using visible dark neutral gray with blur for light background) */}
@@ -998,6 +1009,7 @@ function MenuListItem({ item, index, onImageClick }) {
                             alt={item.name} 
                             className="w-full h-full object-cover"
                             loading="lazy"
+                            decoding="async"
                         />
                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <ZoomInIcon size={12} className="text-white" />
@@ -1030,6 +1042,7 @@ function SignatureDishCard({ dish, index }) {
                     src={optimizeImageUrl(dish.img, 400)}
                     alt={dish.name}
                     fetchPriority="high"
+                    decoding="async"
                     onLoad={() => setIsLoaded(true)}
                     className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
