@@ -432,8 +432,20 @@ export default function AdsLandingPage() {
                 {/* ─── FEATURED SIGNATURE DISHES (Pop-Culture Style at Top) ─── */}
                 {signatures.length > 0 && (
                     <section className="w-full mt-6 bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-[6px_6px_0px_#111111] relative z-10">
-                        {/* Brand Accent Dot — Top-right corner */}
-                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[#DFFF00] rounded-full border-2 border-neutral-900" />
+                        {/* Circular Brand Stamp (Rotating) */}
+                        <motion.img
+                            src="/assets/brand-circle.png" 
+                            alt="ตราประทับร้านในบ้าน"
+                            aria-hidden="true"
+                            className="absolute -top-10 -right-4 w-24 lg:-top-12 lg:-right-8 lg:w-32 drop-shadow-sm pointer-events-none z-20"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 15, ease: "linear", repeat: Infinity }}
+                            loading="lazy"
+                            decoding="async"
+                        />
+                        
+                        {/* Brand Accent Dot — Top-left corner */}
+                        <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-[#DFFF00] rounded-full border-2 border-neutral-900" />
                         <div className="text-center mb-6 py-1.5 border-b-2 border-neutral-900 relative">
                             {/* Sticker style tag for signature dishes */}
                             <span className="bg-[#FF453A] text-white text-xs font-black tracking-wide px-4 py-2 border-2 border-neutral-900 inline-block shadow-[3px_3px_0px_#111111] transform -rotate-2 select-none rounded-md">
