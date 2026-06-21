@@ -10,7 +10,8 @@ const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e
 const optimizeImageUrl = (url, width = 850, quality = 75) => {
     if (!url) return '';
     if (url.includes('supabase.co/storage/v1/object/public/')) {
-        return `${url}?width=${width}&quality=${quality}&format=webp`;
+        // Must use render/image/public for Supabase Image Transformations to work
+        return url.replace('/object/public/', '/render/image/public/') + `?width=${width}&quality=${quality}&format=webp`;
     }
     return url;
 };
