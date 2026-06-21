@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
+import { Analytics } from '@vercel/analytics/react';
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
@@ -934,6 +935,9 @@ export default function AdsLandingPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* ─── VERCEL ANALYTICS ─── */}
+            <Analytics />
 
         </div>
     );
