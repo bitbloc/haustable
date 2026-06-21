@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core' // Added Capacitor import
+import { Analytics } from '@vercel/analytics/react'
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
@@ -116,6 +117,7 @@ function App() {
 
   return (
     <div className="app-container">
+      <Analytics />
       <Toaster position="top-center" richColors closeButton />
       <BookingProvider>
         <Router>
