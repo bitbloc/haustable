@@ -535,7 +535,7 @@ export default function StockPage() {
                             <img 
                                 src="/logo-staff-light.png" 
                                 alt="ในบ้าน Staff" 
-                                className="h-7 object-contain"
+                                className="h-9 object-contain"
                             />
                             <p className="text-[9px] text-gray-400 font-mono mt-0.5">
                                 {currentUser?.user_metadata?.full_name || 'Staff Member'}
