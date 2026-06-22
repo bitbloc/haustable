@@ -1,3 +1,9 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+/* Hallmark · macrostructure: Bento Grid · N5 Floating Nav Pill · Ft2 Inline footer
+ * theme: custom · vibe: "late-night cyber game lobby" · paper: oklch(14% 0.015 110) · accent: oklch(88% 0.16 110)
+ * display: Space Grotesk · body: Geist · axes: dark / geometric-sans / chromatic-other (green-yellow ~110°)
+ * studied: no · context: inferred · v1.1.0
+ */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -247,201 +253,321 @@ export default function ArcadeLobby() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0A0A0C] text-white flex flex-col font-sans overflow-x-hidden relative select-none">
-      {/* Sleek Modern Dark Grid Decoration */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-[#DFFF00]/5 to-transparent pointer-events-none blur-3xl" />
+  const handleRequireLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'line',
+        options: {
+          redirectTo: window.location.origin + '/arcade'
+        }
+      });
+      if (error) throw error;
+    } catch (e) {
+      alert('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
+    }
+  };
 
-      {/* Modern Minimalist Header */}
-      <header className="w-full py-6 px-8 z-10 border-b border-neutral-800/80 bg-neutral-950/40 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+  return (
+    <div id="arcade-lobby-root" className="min-h-screen flex flex-col relative select-none">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@300;400;500;600&display=swap');
+
+        html, body {
+          overflow-x: clip !important;
+        }
+
+        #arcade-lobby-root {
+          --color-paper: oklch(14% 0.015 110);
+          --color-paper-2: oklch(18% 0.018 110);
+          --color-paper-3: oklch(22% 0.018 110);
+          --color-ink: oklch(96% 0.008 110);
+          --color-ink-2: oklch(76% 0.008 110);
+          --color-rule: oklch(28% 0.012 110);
+          --color-muted: oklch(58% 0.010 110);
+          --color-accent: oklch(88% 0.16 110);
+          --color-accent-ink: oklch(10% 0.015 110);
+          --color-focus: oklch(88% 0.20 110);
+          
+          --dur-short: 200ms;
+          --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+          
+          background-color: var(--color-paper);
+          color: var(--color-ink);
+          font-family: 'Geist', sans-serif;
+        }
+
+        #arcade-lobby-root .display-font {
+          font-family: 'Space Grotesk', sans-serif;
+          letter-spacing: -0.03em;
+        }
+
+        #arcade-lobby-root .btn-tab {
+          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+        }
+        #arcade-lobby-root .btn-tab:focus-visible {
+          outline: 2px solid var(--color-focus);
+          outline-offset: 1px;
+        }
+        
+        #arcade-lobby-root .btn-action {
+          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+        }
+        #arcade-lobby-root .btn-action:hover:not(:disabled) {
+          filter: brightness(1.1);
+        }
+        #arcade-lobby-root .btn-action:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        #arcade-lobby-root .btn-action:focus-visible {
+          outline: 2px solid var(--color-focus);
+          outline-offset: 2px;
+        }
+
+        #arcade-lobby-root .glow-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 384px;
+          background: radial-gradient(circle at top, oklch(88% 0.16 110 / 0.06) 0%, transparent 70%);
+          pointer-events: none;
+          filter: blur(40px);
+        }
+
+        #arcade-lobby-root .grid-bg {
+          position: absolute;
+          inset: 0;
+          background-image: 
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+            linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+          background-size: 40px 40px;
+          pointer-events: none;
+        }
+      `}</style>
+
+      {/* Sleek Modern Dark Grid Decoration & Radial Glow */}
+      <div className="grid-bg" />
+      <div className="glow-bg" />
+
+      {/* Floating Header (N5 Floating Pill style) */}
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 p-1.5 bg-[#141416]/80 backdrop-blur-md border border-neutral-800 rounded-full shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] w-[calc(100%-2rem)] max-w-2xl select-none">
+        {/* Brand Wordmark */}
+        <div className="flex items-center gap-2 pl-3.5">
           <img 
             src="/logo-secondary.png" 
             alt="ในบ้าน" 
-            className="h-10 w-auto object-contain" 
-            style={{ filter: 'brightness(0) invert(1)' }} 
+            className="h-5 w-auto object-contain brightness-0 invert" 
           />
-          <div className="border-l border-neutral-800 pl-4">
-            <h1 className="text-sm font-bold font-mono tracking-widest text-neutral-400">
+          <div className="border-l border-neutral-800/80 pl-2.5 hidden sm:block">
+            <h1 className="text-[10px] font-bold font-mono tracking-widest text-neutral-400 display-font">
               PLAYGROUND
             </h1>
-            <p className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">In-store Console</p>
           </div>
         </div>
 
-        {/* Tab Navigation (Modern Flat Styling) */}
-        <div className="flex bg-neutral-900 p-1 rounded-full border border-neutral-800">
+        {/* Tab Navigation */}
+        <div className="flex bg-[#0A0A0C]/50 p-0.5 rounded-full border border-neutral-800/60">
           <button
             onClick={() => setActiveTab('game')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 ${
+            className={`btn-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider display-font ${
               activeTab === 'game' 
-                ? 'bg-[#DFFF00] text-black font-extrabold shadow-[0_2px_10px_rgba(223,255,0,0.2)]' 
+                ? 'bg-[#DFFF00] text-black font-extrabold shadow-[0_2px_8px_rgba(223,255,0,0.15)]' 
                 : 'text-neutral-400 hover:text-white'
             }`}
           >
-            <Gamepad2 className="w-4 h-4" />
-            ตะลุยแดนสตอ
+            <Gamepad2 className="w-3 h-3" />
+            <span>เล่นเกม</span>
           </button>
           
           <Link
             to="/song"
-            className="flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 text-neutral-400 hover:text-white"
+            className="btn-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider text-neutral-400 hover:text-white display-font"
           >
-            <Music className="w-4 h-4" />
-            Request Song
+            <Music className="w-3 h-3" />
+            <span>ขอเพลง</span>
           </Link>
+        </div>
 
-          <button
-            onClick={() => setActiveTab('promo')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold font-mono uppercase tracking-wider transition-all duration-300 relative ${
-              activeTab === 'promo' 
-                ? 'bg-[#DFFF00] text-black' 
-                : 'text-neutral-600 cursor-not-allowed opacity-50'
-            }`}
-            disabled={activeTab !== 'promo'}
-          >
-            <Tag className="w-4 h-4" />
-            Deals
-            <span className="absolute -top-2 -right-2 bg-neutral-800 border border-neutral-700 text-[8px] text-neutral-400 px-1.5 py-0.5 rounded font-mono normal-case tracking-normal">SOON</span>
-          </button>
+        {/* Login Status */}
+        <div className="pr-1.5">
+          {session ? (
+            <div className="flex items-center gap-1 px-3 py-1.5 text-[8px] font-mono text-[#DFFF00] bg-[#DFFF00]/10 rounded-full border border-[#DFFF00]/20">
+              <CheckCircle className="w-2.5 h-2.5 text-[#06C755]" />
+              <span className="font-semibold uppercase tracking-wider">Logged In</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleRequireLogin}
+              className="btn-action flex items-center gap-1 px-3 py-1.5 bg-[#06C755] text-white text-[8px] font-bold font-mono uppercase tracking-wider rounded-full cursor-pointer"
+            >
+              <LogIn className="w-2.5 h-2.5" />
+              <span>LINE Login</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Main Lobby Container */}
-      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center p-6 sm:p-10 gap-10 z-10 max-w-7xl mx-auto w-full">
-        {/* Left Column: Phaser Game View */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {activeTab === 'game' && (
-            <div className="w-full max-w-[450px] sm:max-w-[600px] aspect-[6/7]">
-              <FlappyCatGame onGameOver={handleGameOver} leaderboard={leaderboard} onClaimScore={handleClaimScore} />
-              <div className="mt-4 text-center text-xs text-neutral-500 font-mono">
-                💡 TIP: แตะหน้าจอเพื่อช่วยแมวส้มหลบสิ่งกีดขวางและมีดครัวบิน!
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: High Score Panel & Info */}
-        <div className="w-full lg:w-[400px] flex flex-col gap-6">
-          {/* Modern Leaderboard Container */}
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center justify-between mb-6 border-b border-neutral-800 pb-4">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-[#DFFF00]" />
-                <h2 className="text-lg font-bold font-mono tracking-widest text-[#DFFF00]">HALL OF FAME</h2>
-              </div>
-              <button 
-                onClick={fetchLeaderboard}
-                className="text-xs text-neutral-300 hover:text-white font-mono bg-neutral-800 hover:bg-neutral-700 px-3 py-1 rounded-md transition-colors"
-              >
-                REFRESH
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="py-12 text-center text-neutral-500 font-mono text-sm">
-                LOADING SCORES...
-              </div>
-            ) : leaderboard.length === 0 ? (
-              <div className="py-12 text-center text-neutral-500 font-mono text-sm">
-                NO RECORDED SCORES YET. BE THE FIRST!
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 font-mono">
-                {leaderboard.map((entry, index) => {
-                  const rankColors = [
-                    'text-yellow-400 font-bold border-yellow-400/20 bg-yellow-400/5',
-                    'text-slate-355 font-bold border-slate-300/20 bg-slate-300/5',
-                    'text-amber-650 font-bold border-amber-605/20 bg-amber-600/5'
-                  ];
-                  const isTop3 = index < 3;
-                  
-                  return (
-                    <div 
-                      key={entry.id || index}
-                      className={`flex items-center justify-between p-3 rounded-xl border ${
-                        isTop3 
-                          ? index === 0 ? 'text-yellow-400 border-yellow-400/20 bg-yellow-400/5' : index === 1 ? 'text-slate-300 border-slate-300/20 bg-slate-300/5' : 'text-amber-650 border-amber-600/20 bg-amber-600/5' 
-                          : 'text-neutral-300 border-neutral-800 bg-black/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 text-center font-bold">{index + 1}</span>
-                        {isTop3 && <Award className="w-4 h-4" />}
-                        <span className="truncate max-w-[150px]">{entry.display_name}</span>
-                      </div>
-                      <span className="font-bold text-[#DFFF00]">{entry.score} pts</span>
-                    </div>
-                  );
-                })}
+      {/* Main Lobby Container — Bento Grid Layout */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-6 pt-24 pb-16 z-10 flex flex-col justify-center">
+        
+        {/* Bento Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+          
+          {/* Cell 1: Phaser Game (Hero block, spans 7 columns on lg) */}
+          <div className="lg:col-span-7 flex flex-col bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-4 sm:p-6 backdrop-blur-sm relative overflow-hidden shadow-2xl">
+            {activeTab === 'game' && (
+              <div className="w-full flex flex-col items-center">
+                <div className="w-full aspect-[6/7] max-w-[500px]">
+                  <FlappyCatGame 
+                    onGameOver={handleGameOver} 
+                    leaderboard={leaderboard} 
+                    onClaimScore={handleClaimScore} 
+                    session={session} 
+                    onRequireLogin={handleRequireLogin} 
+                  />
+                </div>
+                <div className="mt-4 text-center text-[11px] text-neutral-400 font-mono leading-relaxed max-w-sm">
+                  <span className="text-[#DFFF00] font-bold">⚡ TIP:</span> แตะหน้าจอช่วยแมวส้มหลบหลีกอุปสรรคและมีดครัวบินเพื่อเก็บแต้ม!
+                </div>
               </div>
             )}
           </div>
 
-          {/* Reward Info Board */}
-          <div className="bg-gradient-to-r from-neutral-900 to-neutral-950 border border-neutral-800 rounded-3xl p-6 shadow-[0_4px_16px_rgba(0,0,0,0.2)]">
-            <h3 className="text-sm font-bold font-mono tracking-wider text-[#DFFF00] mb-2 uppercase">🎁 กติการับรางวัลพิเศษ!</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed mb-3 font-sans">
-              เล่นเกมช่วยเหลือเจ้าแมวส้มหลบสิ่งกีดขวาง! เมื่อเล่นจบ สามารถกดปุ่ม **SAVE SCORE / บันทึกแต้ม** บนหน้าจอเพื่อเคลมคะแนนบันทึกสถิติและรับรางวัลของร้านได้ทันที
-            </p>
-            <div className="text-[10px] text-neutral-500 font-mono">
-              * หมายเหตุ: บันทึกคะแนนได้เฉพาะเมื่ออุปกรณ์ของท่านอยู่ภายในเขตรัศมีของร้านอินเดอะเฮาส์ (ไม่เกิน 1 กม.) เท่านั้น
+          {/* Right Column Group: Leaderboard & Info (Spans 5 columns on lg) */}
+          <div className="lg:col-span-5 flex flex-col gap-6 w-full">
+            
+            {/* Cell 2: Leaderboard (Hall of Fame) */}
+            <div className="bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
+              <div className="flex items-center justify-between mb-5 border-b border-neutral-800/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-[#DFFF00]" />
+                  <h2 className="text-sm font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font">Hall of Fame</h2>
+                </div>
+                <button 
+                  onClick={fetchLeaderboard}
+                  className="btn-action text-[10px] text-neutral-300 hover:text-white font-mono bg-neutral-800/85 px-2.5 py-1 rounded transition-colors duration-200"
+                >
+                  REFRESH
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="py-10 text-center text-neutral-500 font-mono text-xs animate-pulse">
+                  LOADING SCORES…
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <div className="py-10 text-center text-neutral-500 font-mono text-xs">
+                  NO RECORDED SCORES YET. BE THE FIRST!
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5 font-mono text-xs">
+                  {leaderboard.map((entry, index) => {
+                    const isTop3 = index < 3;
+                    return (
+                      <div 
+                        key={entry.id || index}
+                        className={`flex items-center justify-between py-2 px-3 rounded-lg border border-transparent transition-colors duration-200 ${
+                          index === 0 ? 'bg-yellow-500/5 text-yellow-400/90 font-semibold' :
+                          index === 1 ? 'bg-slate-300/5 text-slate-300/90 font-semibold' :
+                          index === 2 ? 'bg-amber-600/5 text-amber-500/90 font-semibold' :
+                          'text-neutral-400 hover:bg-neutral-900/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-4 text-center text-[10px] font-bold text-neutral-500">
+                            {index + 1}
+                          </span>
+                          {isTop3 && <Award className="w-3.5 h-3.5 opacity-90" />}
+                          <span className="truncate max-w-[160px]">{entry.display_name}</span>
+                        </div>
+                        <span className="font-bold text-[#DFFF00]">{entry.score} pts</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* Cell 3: Rules & Info Board */}
+            <div className="bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-6 backdrop-blur-sm shadow-xl flex flex-col gap-4">
+              <div className="flex items-center gap-2 border-b border-neutral-800/60 pb-3">
+                <Tag className="w-4 h-4 text-[#DFFF00]" />
+                <h3 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font">Rules & Rewards</h3>
+              </div>
+              <p className="text-xs text-neutral-400 leading-relaxed font-sans">
+                ช่วยเหลือเจ้าแมวส้มหลบหลีกอุปสรรคเพื่อเก็บแต้มสูงสุด! เมื่อเกมจบลง คุณสามารถกดปุ่ม <strong className="text-white">SAVE SCORE / บันทึกแต้ม</strong> เพื่อบันทึกสถิติของคุณลงในตารางผู้นำ และมีสิทธิ์รับของรางวัลพิเศษประจำสัปดาห์จากทางร้าน
+              </p>
+              <div className="text-[10px] text-neutral-500 font-mono leading-relaxed border-t border-neutral-800/40 pt-3">
+                * พิกัด GPS ของอุปกรณ์ต้องอยู่ภายในรัศมีร้าน ในบ้าน (<span className="text-[#DFFF00]">{MAX_RADIUS_KM} กม.</span>) เพื่อยืนยันความถูกต้องของการบันทึกคะแนน
+              </div>
+            </div>
+
           </div>
+
         </div>
       </main>
 
+      {/* Minimal Footer Signature (Ft2 Inline style) */}
+      <footer className="w-full py-6 border-t border-neutral-800/60 text-center text-[10px] text-neutral-500 font-mono select-none">
+        IN THE HAUS © {new Date().getFullYear()} — IN-STORE ARCADE CONSOLE
+      </footer>
+
       {/* Claim Score Modal Overlay */}
       {showClaimModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in animate-[fadeIn_0.2s_ease-out]">
-          <div className="w-full max-w-md bg-neutral-950 border border-neutral-800 rounded-3xl p-8 shadow-[0_12px_48px_rgba(0,0,0,0.8)] text-center relative overflow-hidden">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-[fadeIn_0.2s_ease-out]">
+          <div className="w-full max-w-md bg-[#141416] border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-[0_12px_48px_rgba(0,0,0,0.8)] text-left relative overflow-hidden">
             {/* Glow line top */}
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#DFFF00]" />
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#DFFF00]" />
 
             <button 
               onClick={() => setShowClaimModal(false)}
-              className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-5 right-5 text-neutral-500 hover:text-white transition-colors duration-200 cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
-
-            <h2 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] mb-6 uppercase">
-              บันทึกคะแนนสะสม
-            </h2>
 
             {/* View: User not logged in */}
             {!session && (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-[#06C755]/10 text-[#06C755] rounded-full flex items-center justify-center mb-6">
-                  <LogIn className="w-8 h-8" />
+              <div className="flex flex-col gap-4 mt-2">
+                <div className="w-10 h-10 bg-[#06C755]/10 text-[#06C755] rounded-xl flex items-center justify-center">
+                  <LogIn className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold mb-2">คุณทำคะแนนได้ {claimScore} แต้ม!</h3>
-                <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-                  กรุณาเข้าสู่ระบบด้วยบัญชี LINE สมาชิกของร้านเพื่อยืนยันตัวตนและสะสมบันทึกคะแนน
-                </p>
+                <div>
+                  <h2 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font mb-1">
+                    LINE ACCOUNT REQUIRED
+                  </h2>
+                  <h3 className="text-base font-bold font-sans text-white mb-2">คุณทำคะแนนได้ {claimScore} แต้ม!</h3>
+                  <p className="text-xs text-neutral-400 leading-relaxed font-sans">
+                    กรุณาเข้าสู่ระบบด้วยบัญชี LINE เพื่อบันทึกคะแนนของคุณลงในตารางผู้นำและรับสิทธิ์ของรางวัลสะสม
+                  </p>
+                </div>
                 <button
                   onClick={handleLineLogin}
-                  className="w-full bg-[#06C755] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer text-xs"
+                  className="btn-action w-full bg-[#06C755] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-xs display-font"
                 >
-                  เข้าสู่ระบบด้วย LINE เพื่อดำเนินการต่อ
+                  เข้าสู่ระบบด้วย LINE เพื่อบันทึกแต้ม
                 </button>
               </div>
             )}
 
             {/* View: Idle (User logged in, ready to claim) */}
             {session && claimStatus === 'idle' && (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-[#DFFF00]/10 text-[#DFFF00] rounded-full flex items-center justify-center mb-6 animate-bounce">
-                  <MapPin className="w-8 h-8" />
+              <div className="flex flex-col gap-4 mt-2">
+                <div className="w-10 h-10 bg-[#DFFF00]/10 text-[#DFFF00] rounded-xl flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold mb-1">บันทึกคะแนน {claimScore} แต้ม</h3>
-                <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-                  กดปุ่มด้านล่างเพื่อตรวจสอบพิกัดตำแหน่ง (GPS) ยืนยันว่าคุณกำลังอยู่ในเขตร้าน
-                </p>
+                <div>
+                  <h2 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font mb-1">
+                    GPS VERIFICATION
+                  </h2>
+                  <h3 className="text-base font-bold font-sans text-white mb-2">บันทึกคะแนน {claimScore} แต้ม</h3>
+                  <p className="text-xs text-neutral-400 leading-relaxed font-sans">
+                    เพื่อความโปร่งใสในการเล่นเกมนอกสถานที่ กรุณาตรวจสอบพิกัดตำแหน่ง (GPS) ยืนยันว่าคุณกำลังอยู่ในเขตร้าน
+                  </p>
+                </div>
                 <button
                   onClick={processClaimScore}
-                  className="w-full bg-[#DFFF00] text-black font-extrabold py-3.5 rounded-xl hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer text-xs"
+                  className="btn-action w-full bg-[#DFFF00] text-black font-extrabold py-3 rounded-xl cursor-pointer text-xs display-font"
                 >
                   ยืนยันตำแหน่ง GPS และบันทึกคะแนน
                 </button>
@@ -450,39 +576,44 @@ export default function ArcadeLobby() {
 
             {/* View: Checking GPS */}
             {claimStatus === 'checking_gps' && (
-              <div className="py-8 flex flex-col items-center">
-                <RefreshCw className="w-10 h-10 text-[#DFFF00] animate-spin mb-4" />
-                <p className="text-sm text-neutral-400 font-mono animate-pulse">กำลังตรวจสอบตำแหน่งพิกัด GPS...</p>
+              <div className="py-8 flex flex-col items-center justify-center gap-3">
+                <RefreshCw className="w-8 h-8 text-[#DFFF00] animate-spin" />
+                <p className="text-xs text-neutral-400 font-mono animate-pulse">กำลังตรวจสอบตำแหน่งพิกัด GPS…</p>
               </div>
             )}
 
             {/* View: Saving to Database */}
             {claimStatus === 'saving' && (
-              <div className="py-8 flex flex-col items-center">
-                <RefreshCw className="w-10 h-10 text-[#DFFF00] animate-spin mb-4" />
-                <p className="text-sm text-neutral-400 font-mono animate-pulse">กำลังบันทึกข้อมูลคะแนน...</p>
+              <div className="py-8 flex flex-col items-center justify-center gap-3">
+                <RefreshCw className="w-8 h-8 text-[#DFFF00] animate-spin" />
+                <p className="text-xs text-neutral-400 font-mono animate-pulse">กำลังบันทึกข้อมูลคะแนนสะสม…</p>
               </div>
             )}
 
             {/* View: Success */}
             {claimStatus === 'success' && (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-[#39FF14]/10 text-[#39FF14] rounded-full flex items-center justify-center mb-6">
-                  <CheckCircle className="w-9 h-9" />
+              <div className="flex flex-col gap-4 mt-2">
+                <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold mb-1 text-[#39FF14]">บันทึกคะแนนสะสมสำเร็จ!</h3>
-                <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl py-4 px-6 w-full my-4 flex justify-between items-center">
-                  <span className="text-neutral-400 text-xs font-mono">คะแนนที่บันทึก</span>
-                  <span className="text-xl font-bold font-mono text-[#DFFF00]">{claimScore} แต้ม</span>
+                <div>
+                  <h2 className="text-xs font-bold font-mono tracking-widest text-emerald-400 uppercase display-font mb-1">
+                    SUCCESS
+                  </h2>
+                  <h3 className="text-base font-bold font-sans text-white mb-2">บันทึกคะแนนสำเร็จ!</h3>
+                  <div className="bg-neutral-900/80 border border-neutral-800/80 rounded-2xl py-3.5 px-5 w-full my-2 flex justify-between items-center font-mono">
+                    <span className="text-neutral-400 text-xs">คะแนนที่บันทึก</span>
+                    <span className="text-lg font-bold text-[#DFFF00]">{claimScore} แต้ม</span>
+                  </div>
+                  {distance && (
+                    <p className="text-[10px] text-neutral-500 font-mono">
+                      ยืนยันพิกัดเรียบร้อย (ระยะห่างจากร้าน: {(distance * 1000).toFixed(0)} เมตร)
+                    </p>
+                  )}
                 </div>
-                {distance && (
-                  <p className="text-[10px] text-neutral-500 mb-6 font-mono">
-                    ยืนยันพิกัดเรียบร้อย (ระยะห่างจากร้าน: {(distance * 1000).toFixed(0)} เมตร)
-                  </p>
-                )}
                 <button
                   onClick={() => setShowClaimModal(false)}
-                  className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3.5 rounded-xl transition-all cursor-pointer text-xs"
+                  className="btn-action w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3 rounded-xl cursor-pointer text-xs display-font"
                 >
                   ปิดหน้าต่าง
                 </button>
@@ -491,24 +622,29 @@ export default function ArcadeLobby() {
 
             {/* View: Error */}
             {claimStatus === 'error' && (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-6">
-                  <ShieldAlert className="w-8 h-8" />
+              <div className="flex flex-col gap-4 mt-2">
+                <div className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center">
+                  <ShieldAlert className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold mb-2 text-red-500">บันทึกคะแนนไม่สำเร็จ</h3>
-                <p className="text-xs text-red-400 mb-8 leading-relaxed px-2">
-                  {claimError}
-                </p>
-                <div className="flex w-full gap-3">
+                <div>
+                  <h2 className="text-xs font-bold font-mono tracking-widest text-red-500 uppercase display-font mb-1">
+                    VERIFICATION FAILED
+                  </h2>
+                  <h3 className="text-base font-bold font-sans text-white mb-1">ไม่สามารถบันทึกคะแนนได้</h3>
+                  <p className="text-xs text-red-400/90 leading-relaxed font-sans">
+                    {claimError}
+                  </p>
+                </div>
+                <div className="flex w-full gap-3 mt-2">
                   <button
                     onClick={session ? processClaimScore : handleLineLogin}
-                    className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3 rounded-xl transition-all cursor-pointer text-xs"
+                    className="btn-action flex-1 bg-[#DFFF00] text-black font-extrabold py-3 rounded-xl cursor-pointer text-xs display-font text-center"
                   >
-                    ลองใหม่อีกครั้ง
+                    ลองใหม่ดูอีกครั้ง
                   </button>
                   <button
                     onClick={() => setShowClaimModal(false)}
-                    className="flex-1 bg-black/40 border border-neutral-800 text-neutral-400 hover:text-white py-3 rounded-xl transition-all text-xs"
+                    className="btn-action flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 rounded-xl text-xs display-font text-center"
                   >
                     ยกเลิก
                   </button>

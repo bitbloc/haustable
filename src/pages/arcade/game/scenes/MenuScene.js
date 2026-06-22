@@ -85,23 +85,57 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // 3. Play Button / Instruction Text
-    const startText = this.add.text(width / 2, 280, 'แตะเพื่อเริ่มเล่น', {
-      fontFamily: 'Prompt, Arial, sans-serif',
-      fontSize: '18px',
-      fill: '#FFFFFF',
-      stroke: '#000000',
-      strokeThickness: 4,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(5);
+    // Check if user is logged in to determine button text
+    const session = this.registry.get('session');
+    const isLoggedIn = !!session;
 
-    // Make instruction blink
-    this.tweens.add({
-      targets: startText,
-      alpha: 0.2,
-      duration: 600,
-      yoyo: true,
-      repeat: -1
-    });
+    if (isLoggedIn) {
+      const startText = this.add.text(width / 2, 280, 'แตะเพื่อเริ่มเล่น', {
+        fontFamily: 'Prompt, Arial, sans-serif',
+        fontSize: '18px',
+        fill: '#FFFFFF',
+        stroke: '#000000',
+        strokeThickness: 4,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(5);
+
+      // Make instruction blink
+      this.tweens.add({
+        targets: startText,
+        alpha: 0.2,
+        duration: 600,
+        yoyo: true,
+        repeat: -1
+      });
+    } else {
+      // Not logged in — Show login required message
+      const lockText = this.add.text(width / 2, 270, '🔒 เข้าสู่ระบบก่อนเล่น', {
+        fontFamily: 'Prompt, Arial, sans-serif',
+        fontSize: '18px',
+        fill: '#06C755',
+        stroke: '#000000',
+        strokeThickness: 4,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(5);
+
+      const loginHint = this.add.text(width / 2, 300, 'แตะเพื่อ Login ด้วย LINE', {
+        fontFamily: 'Prompt, Arial, sans-serif',
+        fontSize: '14px',
+        fill: '#AAAAAA',
+        stroke: '#000000',
+        strokeThickness: 3,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(5);
+
+      // Pulse the lock text
+      this.tweens.add({
+        targets: [lockText, loginHint],
+        alpha: 0.3,
+        duration: 800,
+        yoyo: true,
+        repeat: -1
+      });
+    }
 
     // 4. Leaderboard Section
     this.add.text(width / 2, 345, '--- อันดับสูงสุด ---', {
@@ -163,10 +197,21 @@ export default class MenuScene extends Phaser.Scene {
       playBGM();
     }
 
-    // 6. Input Event: Click/Touch to Start
+    // 6. Input Event: Click/Touch to Start (Login-Gated)
     this.input.once('pointerdown', () => {
-      try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
-      this.scene.start('PlayScene');
+      // Re-read session from registry (may have changed since scene was created)
+      const currentSession = this.registry.get('session');
+      if (currentSession) {
+        // Logged in — start the game!
+        try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
+        this.scene.start('PlayScene');
+      } else {
+        // Not logged in — trigger LINE login from React
+        const onRequireLogin = this.registry.get('onRequireLogin');
+        if (onRequireLogin) {
+          onRequireLogin();
+        }
+      }
     });
   }
 

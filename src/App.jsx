@@ -39,6 +39,7 @@ import CustomerOrderLanding from './pos/CustomerOrderLanding'
 import CustomerOrderStatus from './pos/CustomerOrderStatus'
 import SongRequestPage from './pages/SongRequestPage'
 import AdminSongRequests from './pages/AdminSongRequests'
+import RequireAuthLayout from './components/layout/RequireAuthLayout'
 import { Suspense, lazy } from 'react'
 
 const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
@@ -124,8 +125,11 @@ function App() {
             <Route path="/" element={<Home session={session} />} />
             <Route path="/qa" element={<QnAPage />} />
             <Route path="/link" element={<AdsLandingPage />} />
-            <Route path="/songs" element={<SongRequestPage />} />
-            <Route path="/song" element={<SongRequestPage />} />
+            {/* Song Request (Login Required) */}
+            <Route element={<RequireAuthLayout />}>
+              <Route path="/songs" element={<SongRequestPage />} />
+              <Route path="/song" element={<SongRequestPage />} />
+            </Route>
 
             {/* Arcade & Lobby Games */}
             <Route path="/arcade" element={

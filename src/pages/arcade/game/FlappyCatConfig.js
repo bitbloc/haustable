@@ -4,7 +4,7 @@ import MenuScene from './scenes/MenuScene';
 import PlayScene from './scenes/PlayScene';
 import GameOverScene from './scenes/GameOverScene';
 
-export const getGameConfig = (parentEl, onGameOver, initialLeaderboard, onClaimScore) => {
+export const getGameConfig = (parentEl, onGameOver, initialLeaderboard, onClaimScore, session, onRequireLogin) => {
   return {
     type: Phaser.AUTO,
     // Size suitable for iPad / Mobile viewport display
@@ -31,6 +31,8 @@ export const getGameConfig = (parentEl, onGameOver, initialLeaderboard, onClaimS
         game.registry.set('onGameOver', onGameOver);
         game.registry.set('initialLeaderboard', initialLeaderboard);
         game.registry.set('onClaimScore', onClaimScore);
+        game.registry.set('session', session);
+        game.registry.set('onRequireLogin', onRequireLogin);
       }
     }
   };

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import { getGameConfig } from './game/FlappyCatConfig';
 
-export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore }) {
+export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
 
@@ -10,7 +10,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore })
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
 
-    const config = getGameConfig(containerRef.current, onGameOver, leaderboard, onClaimScore);
+    const config = getGameConfig(containerRef.current, onGameOver, leaderboard, onClaimScore, session, onRequireLogin);
     const game = new Phaser.Game(config);
     gameRef.current = game;
 
@@ -21,6 +21,13 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore })
       }
     };
   }, []);
+
+  // Keep session updated in Phaser registry when React session changes
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.registry.set('session', session);
+    }
+  }, [session]);
 
   // Update leaderboard in Phaser when it updates in React state
   useEffect(() => {
