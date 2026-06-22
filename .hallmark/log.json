@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-06-22",
+    "macrostructure": "Catalogue",
+    "theme": "custom",
+    "theme_axes": "light / geometric-sans / chromatic-other (yellow-green ~100°)",
+    "vibe": "utility precision, brand yellow-green, warm-tinted",
+    "enrichment": "none",
+    "brief": "Redesign staff stock management page"
+  },
+  {
+    "date": "2026-06-22",
     "macrostructure": "Marquee Hero",
     "theme": "custom",
     "theme_axes": "dark / high-contrast-serif / warm (yellow-green ~100°)",

@@ -23,18 +23,18 @@ export default function StockListItem({
     const isCritical = (minThreshold > 0 && qty <= minThreshold + EPSILON) || (qty <= EPSILON);
     const isWarning = !isCritical && reorderPoint > 0 && qty <= reorderPoint + EPSILON;
 
-    let bgClass = 'hover:bg-gray-50';
+    let bgClass = 'hover:bg-gray-50/60';
     if (success) {
         bgClass = 'bg-green-50/50 hover:bg-green-50';
     } else if (saving) {
         bgClass = 'bg-blue-50/50 hover:bg-blue-50';
     } else if (isCritical) {
-        bgClass = 'bg-red-50/30 hover:bg-red-50/50';
+        bgClass = 'bg-red-50/30 hover:bg-red-50/40';
     } else if (isWarning) {
-        bgClass = 'bg-orange-50/30 hover:bg-orange-50/50';
+        bgClass = 'bg-orange-50/30 hover:bg-orange-50/40';
     }
 
-    const textClass = isCritical && !saving && !success ? 'text-red-700' : isWarning && !saving && !success ? 'text-orange-700' : 'text-gray-900';
+    const textClass = isCritical && !saving && !success ? 'text-red-700' : isWarning && !saving && !success ? 'text-orange-700' : 'text-[var(--color-hallmark-ink)]';
 
     const getStatusColorClass = (qty, reorder, min) => {
         const numQty = Number(qty) || 0;
@@ -42,9 +42,9 @@ export default function StockListItem({
         const numReorder = Number(reorder) || 0;
         const EPSILON = 0.0001;
 
-        if ((numMin > 0 && numQty <= numMin + EPSILON) || numQty <= EPSILON) return 'bg-red-100 text-red-600';
-        if (numReorder > 0 && numQty <= numReorder + EPSILON) return 'bg-orange-100 text-orange-700';
-        return 'bg-green-50 text-green-700';
+        if ((numMin > 0 && numQty <= numMin + EPSILON) || numQty <= EPSILON) return 'bg-red-50 border-red-200 text-red-700';
+        if (numReorder > 0 && numQty <= numReorder + EPSILON) return 'bg-orange-50 border-orange-200 text-orange-700';
+        return 'bg-green-50 border-green-200 text-green-700';
     };
 
     const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
@@ -85,21 +85,21 @@ export default function StockListItem({
             onClick={() => {
                 if (!quickCountMode) onClick(item);
             }}
-            className={`p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors border-b border-gray-100 select-none ${bgClass} ${!quickCountMode ? 'cursor-pointer active:bg-gray-100' : ''}`}
+            className={`p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors border-b border-[var(--color-hallmark-rule)]/50 select-none ${bgClass} ${!quickCountMode ? 'cursor-pointer active:bg-gray-100/50' : ''}`}
         >
             {/* Left Section: Info */}
             <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden relative border border-gray-200/50">
+                <div className="w-11 h-11 bg-gray-50 rounded-lg flex-shrink-0 overflow-hidden relative border border-[var(--color-hallmark-rule)]/50 shadow-sm">
                     {item.image_url ? (
                         <img src={item.image_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300">
-                            <Package className="w-6 h-6" />
+                            <Package className="w-5 h-5" />
                         </div>
                     )}
                     {/* Status Alert Badge */}
                     {(isCritical || isWarning) && !saving && !success && (
-                        <div className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full border border-white flex items-center justify-center">
+                        <div className="absolute top-0 right-0 w-3 h-3 bg-white rounded-full flex items-center justify-center border border-[var(--color-hallmark-rule)]/50">
                             <div className={`w-1.5 h-1.5 rounded-full ${isCritical ? 'bg-red-500' : 'bg-orange-400'}`}></div>
                         </div>
                     )}
@@ -116,7 +116,7 @@ export default function StockListItem({
                                     e.stopPropagation();
                                     if (onRecipe) onRecipe(item);
                                 }}
-                                className="p-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded transition-colors"
+                                className="p-1 bg-orange-100 hover:bg-orange-250 text-orange-700 rounded transition-colors border border-orange-200/50"
                             >
                                 <FileText className="w-3 h-3" />
                             </button>
@@ -124,12 +124,12 @@ export default function StockListItem({
                         
                         {/* Category Badge */}
                         {searchActive && categoryLabel && (
-                            <span className="text-[8px] bg-gray-100 border border-gray-200 text-gray-500 font-bold px-1.5 py-0.5 rounded">
+                            <span className="text-[8px] bg-white border border-[var(--color-hallmark-rule)] text-gray-400 font-bold px-2 py-0.5 rounded uppercase tracking-wider">
                                 {categoryLabel}
                             </span>
                         )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-[11px] text-gray-400 mt-0.5 font-medium">
                         {formatStockDisplay(item.current_quantity, item.unit || item.pack_unit, item.usage_unit, item.conversion_factor).displayString}
                     </p>
                 </div>
@@ -140,7 +140,7 @@ export default function StockListItem({
                 {!quickCountMode ? (
                     /* Display Mode */
                     <div className="flex items-center gap-3 ml-auto">
-                        <div className={`text-right px-3 py-1 rounded-full text-xs font-bold ${getStatusColorClass(item.current_quantity, item.reorder_point, item.min_stock_threshold)}`}>
+                        <div className={`text-right px-3 py-1 rounded-full text-xs font-bold border font-mono ${getStatusColorClass(item.current_quantity, item.reorder_point, item.min_stock_threshold)}`}>
                             {formatStockDisplay(item.current_quantity).fullUnits} {item.unit}
                         </div>
                     </div>
@@ -148,13 +148,13 @@ export default function StockListItem({
                     /* Quick Edit Mode */
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto ml-auto">
                         {/* Counter Adjuster */}
-                        <div className="flex items-center bg-gray-50 p-1 rounded-xl border border-gray-200">
+                        <div className="flex items-center bg-gray-50/85 p-0.5 rounded-lg border border-[var(--color-hallmark-rule)] shadow-inner">
                             <button 
                                 type="button"
                                 onClick={() => triggerUpdate(Math.max(0, fullUnits - 1) + (percent / 100))}
-                                className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-90 transition-transform"
+                                className="w-6.5 h-6.5 rounded-md bg-white border border-[var(--color-hallmark-rule)] flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all text-gray-600"
                             >
-                                <Minus className="w-3 h-3 text-gray-600" />
+                                <Minus className="w-3 h-3" />
                             </button>
                             
                             <input 
@@ -164,23 +164,23 @@ export default function StockListItem({
                                     const val = parseInt(e.target.value) || 0;
                                     triggerUpdate(Math.max(0, val) + (percent / 100));
                                 }}
-                                className="w-10 bg-transparent text-center font-extrabold text-xs text-gray-900 border-none outline-none focus:ring-0 p-0"
+                                className="w-8 bg-transparent text-center font-mono font-bold text-xs text-gray-900 border-none outline-none focus:ring-0 p-0"
                             />
 
                             <button 
                                 type="button"
                                 onClick={() => triggerUpdate((fullUnits + 1) + (percent / 100))}
-                                className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-90 transition-transform"
+                                className="w-6.5 h-6.5 rounded-md bg-white border border-[var(--color-hallmark-rule)] flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all text-gray-600"
                             >
-                                <Plus className="w-3 h-3 text-gray-600" />
+                                <Plus className="w-3 h-3" />
                             </button>
                         </div>
 
                         {/* Remainder Picker */}
                         {isLiquidOrSplit && (
                             <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase hidden sm:inline">เศษ:</span>
-                                <div className="grid grid-cols-4 gap-0.5 bg-gray-100 p-0.5 rounded-lg border border-gray-200 w-36">
+                                <span className="text-[9px] font-bold text-gray-400 uppercase hidden sm:inline tracking-wider">เศษ:</span>
+                                <div className="grid grid-cols-4 gap-0.5 bg-gray-150 p-0.5 rounded-md border border-[var(--color-hallmark-rule)] w-32">
                                     {[0, 25, 50, 75].map((p) => {
                                         const isActive = percent === p;
                                         return (
@@ -188,10 +188,10 @@ export default function StockListItem({
                                                 key={p}
                                                 type="button"
                                                 onClick={() => triggerUpdate(fullUnits + (p / 100))}
-                                                className={`text-[8px] font-extrabold py-1.5 rounded transition-all text-center ${
+                                                className={`text-[8px] py-1.5 rounded transition-all text-center font-bold px-0.5 ${
                                                     isActive 
-                                                    ? 'bg-blue-600 text-white shadow-sm scale-105' 
-                                                    : 'text-gray-500 hover:bg-gray-200'
+                                                    ? 'bg-[#1A1A1A] text-white shadow-sm font-extrabold' 
+                                                    : 'text-gray-500 hover:bg-gray-50'
                                                 }`}
                                             >
                                                 {p === 0 ? '0%' : `${p}%`}
@@ -203,11 +203,11 @@ export default function StockListItem({
                         )}
 
                         {/* Save status icons */}
-                        <div className="w-6 h-6 flex items-center justify-center">
+                        <div className="w-5 h-5 flex items-center justify-center">
                             {saving ? (
-                                <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                                <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
                             ) : success ? (
-                                <Check className="w-4 h-4 text-green-600 font-bold" />
+                                <Check className="w-3.5 h-3.5 text-green-600 font-bold" />
                             ) : null}
                         </div>
                     </div>
