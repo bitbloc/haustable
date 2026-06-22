@@ -34,7 +34,7 @@ export default function Home({ session }) {
             />
 
             {/* 1. Announcement Bar (Fixed Top - Redesigned) */}
-            <div className="fixed top-0 left-0 w-full z-[60] bg-[#000] border-b border-[#DFFF00]/30 h-10 flex items-center overflow-hidden">
+            <div className="fixed top-0 left-0 w-full z-[60] bg-[var(--color-hallmark-paper-dark)] border-b border-[var(--color-brand)]/30 h-10 flex items-center overflow-hidden">
                  <div className="relative w-full flex items-center">
                      <motion.div
                         className="whitespace-nowrap flex gap-12 font-mono text-sm uppercase tracking-widest"
@@ -48,13 +48,13 @@ export default function Home({ session }) {
                         {/* Repeat content for smooth loop */}
                         {Array(4).fill(
                             <div className="flex items-center gap-4">
-                                <span className="text-[#DFFF00] font-bold">
+                                <span className="text-[var(--color-brand)] font-bold">
                                     {settings?.announcement_headline || "WELCOME"}
                                 </span>
                                 <span className="text-white/80">
                                     {settings?.announcement_detail || "Welcome to HAUS TABLE"}
                                 </span>
-                                <span className="w-1.5 h-1.5 bg-[#DFFF00] rounded-full mx-4" />
+                                <span className="w-1.5 h-1.5 bg-[var(--color-brand)] rounded-full mx-4" />
                             </div>
                         )}
                     </motion.div>

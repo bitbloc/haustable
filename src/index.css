@@ -2,6 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -16,6 +17,31 @@
   --color-ink: #111827;    /* Primary Text */
   --color-subInk: #6B7280; /* Secondary Text */
   --color-brand: #DFFF00;  /* Brand Accent */
+}
+
+:root {
+  /* Hallmark Typography Tokens */
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+  --font-outlier: 'Space Mono', monospace;
+
+  /* Hallmark Palette (Tinted neutrals & rich darks) */
+  --color-hallmark-paper: oklch(97% 0.008 100);      /* Warm tinted background */
+  --color-hallmark-paper-dark: oklch(12% 0.008 100); /* Tinted charcoal (#0e0f0a) */
+  --color-hallmark-ink: oklch(18% 0.01 100);          /* Tinted dark text */
+  --color-hallmark-ink-muted: oklch(50% 0.008 100);   /* Muted grey */
+  --color-hallmark-rule: oklch(85% 0.008 100);        /* Border line */
+  
+  /* Brand & Status Accents */
+  --color-brand: oklch(88% 0.18 100);                 /* HAUS yellow-green #DFFF00 */
+  --color-accent-red: oklch(62% 0.22 25);             /* Alert / Phone red #FF453A */
+  --color-accent-green: oklch(64% 0.22 140);           /* Line / Delivery green #06C755 */
+  --color-accent-blue: oklch(52% 0.16 250);            /* Q&A / Maps blue */
+
+  /* Specific animations */
+  --dur-short: 150ms;
+  --dur-medium: 300ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @tailwind base;

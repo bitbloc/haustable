@@ -2,9 +2,9 @@ import KineticText from '../KineticText'
 
 export default function HomeHeader({ t, status }) {
     return (
-        <div className="flex flex-col items-center mt-12 mb-4">
+        <div className="flex flex-col items-start text-left mt-8 mb-4 w-full">
             {/* Secondary Logo (New) */}
-            <div className="w-24 md:w-32 mb-[-10px] z-10">
+            <div className="w-20 md:w-28 mb-[-5px] z-10">
                 <img 
                     src="/logo-secondary.png" 
                     alt="Secondary Logo" 
@@ -13,7 +13,7 @@ export default function HomeHeader({ t, status }) {
             </div>
 
             {/* Logo Image */}
-            <div className="w-full max-w-[280px] md:max-w-[400px] px-8 py-4">
+            <div className="w-full max-w-[280px] md:max-w-[340px] pr-8 py-3 pl-0">
                 <img 
                     src="/assets/logo-script.webp" 
                     alt="HAUS TABLE" 
@@ -22,11 +22,11 @@ export default function HomeHeader({ t, status }) {
             </div>
             
             {/* Status Indicator */}
-            <div className="flex items-center gap-3">
-                <div className={`relative flex items-center justify-center w-3 h-3 rounded-full ${status.isOpen ? 'bg-[#DFFF00] shadow-[0_0_10px_#DFFF00]' : 'bg-red-500'}`}>
-                    {status.isOpen && <div className="absolute inset-0 bg-[#DFFF00] rounded-full animate-ping opacity-75" />}
+            <div className="flex items-center gap-2.5 mt-2 font-[var(--font-outlier)]">
+                <div className={`relative flex items-center justify-center w-2.5 h-2.5 rounded-full ${status.isOpen ? 'bg-[var(--color-brand)] shadow-[0_0_8px_var(--color-brand)]' : 'bg-[var(--color-accent-red)]'}`}>
+                    {status.isOpen && <div className="absolute inset-0 bg-[var(--color-brand)] rounded-full animate-ping opacity-75" />}
                 </div>
-                <span className={`text-sm font-bold tracking-[0.2em] ${status.isOpen ? 'text-[#DFFF00]' : 'text-red-500'}`}>
+                <span className={`text-xs font-bold tracking-[0.25em] ${status.isOpen ? 'text-[var(--color-brand)]' : 'text-[var(--color-accent-red)]'}`}>
                     {status.isOpen ? "OPEN NOW" : "CLOSED"}
                 </span>
             </div>

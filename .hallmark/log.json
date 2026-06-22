@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-06-22",
+    "macrostructure": "Marquee Hero",
+    "theme": "custom",
+    "theme_axes": "dark / high-contrast-serif / warm (yellow-green ~100°)",
+    "vibe": "asymmetric editorial print layout",
+    "enrichment": "none",
+    "brief": "Redesign /link and landing pages"
+  },
+  {
+    "date": "2026-06-22",
     "macrostructure": "Bento Grid",
     "theme": "custom",
     "theme_axes": "dark / geometric-sans / chromatic-other (green-yellow ~110°)",

@@ -85,6 +85,7 @@ export default function ArcadeLobby() {
           id,
           score,
           created_at,
+          display_name,
           profiles (
             display_name,
             nickname
@@ -95,11 +96,11 @@ export default function ArcadeLobby() {
 
       if (error) throw error;
 
-      // Map profiles display_name/nickname to entry for easier Phaser usage
+      // Map display_name / profiles display_name/nickname to entry for easier Phaser usage
       const formatted = (data || []).map(entry => ({
         id: entry.id,
         score: entry.score,
-        display_name: entry.profiles?.nickname || entry.profiles?.display_name || 'GUEST'
+        display_name: entry.display_name || entry.profiles?.nickname || entry.profiles?.display_name || 'GUEST'
       }));
 
       setLeaderboard(formatted);
