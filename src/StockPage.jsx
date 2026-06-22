@@ -532,11 +532,11 @@ export default function StockPage() {
                         </button>
                         
                         <div className="flex-1 flex flex-col items-center justify-center mx-1">
-                            <div className="flex items-center gap-2">
-                                <span className="font-display tracking-tight text-xl font-bold uppercase text-[var(--color-hallmark-ink)]">In The Haus</span>
-                                <div className="border-l border-[var(--color-hallmark-rule)] h-4 mx-0.5"></div>
-                                <h1 className="text-xs font-bold tracking-wider uppercase text-[var(--color-hallmark-ink-muted)]">Stock</h1>
-                            </div>
+                            <img 
+                                src="/logo-staff-light.png" 
+                                alt="ในบ้าน Staff" 
+                                className="h-7 object-contain"
+                            />
                             <p className="text-[9px] text-gray-400 font-mono mt-0.5">
                                 {currentUser?.user_metadata?.full_name || 'Staff Member'}
                             </p>
