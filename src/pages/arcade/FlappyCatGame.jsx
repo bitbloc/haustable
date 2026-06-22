@@ -3,10 +3,9 @@ import Phaser from 'phaser';
 import { getGameConfig } from './game/FlappyCatConfig';
 import { Maximize2, Minimize2 } from 'lucide-react';
 
-export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin }) {
+export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin, isFullscreen, setIsFullscreen }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Initialize Phaser Game
   useEffect(() => {

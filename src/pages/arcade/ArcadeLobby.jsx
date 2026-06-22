@@ -24,6 +24,7 @@ export default function ArcadeLobby() {
   const [claimError, setClaimError] = useState('');
   const [distance, setDistance] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [isGameFullscreen, setIsGameFullscreen] = useState(false);
 
   const SHOP_LAT = 17.39008981227407;
   const SHOP_LNG = 104.79292770946343;
@@ -415,7 +416,7 @@ export default function ArcadeLobby() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
           
           {/* Cell 1: Phaser Game (Hero block, spans 7 columns on lg) */}
-          <div className="lg:col-span-7 flex flex-col bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-4 sm:p-6 backdrop-blur-sm relative overflow-hidden shadow-2xl">
+          <div className={`lg:col-span-7 flex flex-col bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-4 sm:p-6 relative shadow-2xl transition-all duration-200 ${isGameFullscreen ? 'z-[999]' : 'backdrop-blur-sm overflow-hidden'}`}>
             {activeTab === 'game' && (
               <div className="w-full flex flex-col items-center">
                 <div className="w-full aspect-[6/7] max-w-[500px]">
@@ -425,6 +426,8 @@ export default function ArcadeLobby() {
                     onClaimScore={handleClaimScore} 
                     session={session} 
                     onRequireLogin={handleRequireLogin} 
+                    isFullscreen={isGameFullscreen}
+                    setIsFullscreen={setIsGameFullscreen}
                   />
                 </div>
                 <div className="mt-4 text-center text-[11px] text-neutral-400 font-mono leading-relaxed max-w-sm">
