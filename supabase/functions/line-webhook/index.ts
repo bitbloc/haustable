@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
 
             console.log(`Found ${itemsToBuy.length} items to buy`)
 
-            const headerTitle = isBuyback ? "🛒 ของต้องซื้อ (อัพเดท 24 ชม.)" : "🛒 รายการของที่ต้องซื้อ";
+            const headerTitle = isBuyback ? "RESTOCK LIST (24H)" : "RESTOCK LIST";
             let messages = [];
 
             if (itemsToBuy.length === 0) {
@@ -138,14 +138,14 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "vertical",
                     contents: [
-                      { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
-                      { type: "text", text: dateStr, color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: dateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    contents: [{ type: "text", text: "✅ สต็อกเพียงพอทุกรายการ", color: "#2D804E", size: "sm", align: "center", weight: "bold" }]
+                    contents: [{ type: "text", text: "ALL INVENTORY QUANTITIES WITHIN LIMITS", color: "#2D804E", size: "xs", align: "center", weight: "bold" }]
                   },
                   styles: {
                     header: {
@@ -163,35 +163,37 @@ Deno.serve(async (req) => {
                const bubbles: any[] = []
                let currentItems: any[] = []
                
+               const tableHeader = {
+                   type: "box",
+                   layout: "horizontal",
+                   margin: "sm",
+                   contents: [
+                       { type: "text", text: "STATUS", color: "#888888", size: "xxs", weight: "bold", flex: 2 },
+                       { type: "text", text: "ITEM", color: "#888888", size: "xxs", weight: "bold", flex: 5 },
+                       { type: "text", text: "QTY/LIMIT", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                   ]
+               };
+
                itemsToBuy.forEach((item: any, index: number) => {
                  const itemName = item.name || 'Unknown Item'
                  const current = Number(item.current_quantity) || 0
                  const min = Number(item.min_stock_threshold) || 0
                  const reorder = Number(item.reorder_point) || 0
                  
-                 let statusEmoji = '🟢'
+                 let statusLabel = 'OK'
                  let statusColor = '#2D804E'
-                 if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#1A1A1A' }
-                 else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#9E2D2D' }
-                 else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#9E672D' }
+                 if (current <= EPSILON) { statusLabel = 'OUT'; statusColor = '#1A1A1A' }
+                 else if (min > 0 && current <= min + EPSILON) { statusLabel = 'CRIT'; statusColor = '#9E2D2D' }
+                 else if (reorder > 0 && current <= reorder + EPSILON) { statusLabel = 'WARN'; statusColor = '#9E672D' }
 
                  currentItems.push({
                      type: "box",
                      layout: "horizontal",
                      margin: "md",
                      contents: [
-                         { type: "text", text: statusEmoji, flex: 0, margin: "none", size: "xs" },
-                         { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, margin: "md", flex: 3 },
-                         {
-                             type: "box",
-                             layout: "vertical",
-                             flex: 2,
-                             alignItems: "flex-end",
-                             contents: [
-                                 { type: "text", text: `เหลือ ${current}`, color: statusColor, size: "xs", weight: "bold" },
-                                 { type: "text", text: `(ขั้นต่ำ ${min > 0 ? min : reorder})`, color: "#888888", size: "xxs" }
-                             ]
-                         }
+                         { type: "text", text: `[${statusLabel}]`, color: statusColor, size: "xs", weight: "bold", flex: 2 },
+                         { type: "text", text: itemName.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, flex: 5 },
+                         { type: "text", text: `${current} / ${min > 0 ? min : reorder}`, color: "#1A1A1A", size: "sm", align: "end", flex: 3 }
                      ]
                  })
 
@@ -199,10 +201,17 @@ Deno.serve(async (req) => {
                      currentItems.push({ type: "separator", margin: "md", color: "#E2E2E0" })
                  }
 
-                 if (currentItems.length >= 19 || index === itemsToBuy.length - 1) {
+                 if (currentItems.length >= 17 || index === itemsToBuy.length - 1) {
                      if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
                          currentItems.pop()
                      }
+
+                     const bodyContents = [
+                         tableHeader,
+                         { type: "separator", margin: "md", color: "#1A1A1A" },
+                         ...currentItems
+                     ];
+
                      bubbles.push({
                          type: "bubble",
                          size: "mega",
@@ -211,15 +220,15 @@ Deno.serve(async (req) => {
                              layout: "vertical",
                              paddingAll: "20px",
                              contents: [
-                                 { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
-                                 { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
+                                 { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
+                                 { type: "text", text: `${dateStr.toUpperCase()} (PAGE ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
                              ]
                          },
                          body: {
                              type: "box",
                              layout: "vertical",
                              paddingAll: "20px",
-                             contents: currentItems
+                             contents: bodyContents
                          },
                          styles: {
                              header: {
@@ -356,6 +365,7 @@ Deno.serve(async (req) => {
 
             // Construct Reply
             let messages = []
+            const engTitle = "STOCK LOGS";
 
             if (!transactions || transactions.length === 0) {
               messages.push({
@@ -363,18 +373,21 @@ Deno.serve(async (req) => {
                 altText: headerTitle,
                 contents: {
                   type: "bubble",
+                  size: "mega",
                   header: {
                     type: "box",
                     layout: "vertical",
+                    paddingAll: "20px",
                     contents: [
-                      { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
-                      { type: "text", text: dateStr, color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: engTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: dateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    contents: [{ type: "text", text: "🚫 ไม่มีรายการอัพเดท", color: "#888888", size: "sm", align: "center" }]
+                    paddingAll: "20px",
+                    contents: [{ type: "text", text: "NO TRANSACTIONS RECORDED", color: "#888888", size: "xs", align: "center", weight: "bold" }]
                   },
                   styles: {
                     header: {
@@ -392,6 +405,17 @@ Deno.serve(async (req) => {
                const bubbles = []
                let currentItems = []
                
+               const logHeader = {
+                   type: "box",
+                   layout: "horizontal",
+                   margin: "sm",
+                   contents: [
+                       { type: "text", text: "TIME", color: "#888888", size: "xxs", weight: "bold", flex: 2 },
+                       { type: "text", text: "TRANSACTION DETAIL", color: "#888888", size: "xxs", weight: "bold", flex: 5 },
+                       { type: "text", text: "BALANCE", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                   ]
+               };
+               
                transactions.forEach((tx: any, index: number) => {
                  const sign = tx.quantity_change > 0 ? '+' : ''
                  
@@ -407,43 +431,45 @@ Deno.serve(async (req) => {
                  const itemName = item?.name || 'Unknown Item'
                  const itemUnit = item?.unit || ''
                  
-                 // Status Logic
                  const current = Number(item?.current_quantity) || 0
                  const min = Number(item?.min_stock_threshold) || 0
                  const reorder = Number(item?.reorder_point) || 0
                  const EPSILON = 0.0001;
                  
-                 let statusEmoji = '🟢'
+                 let statusLabel = 'OK'
                  let statusColor = '#2D804E'
-                 if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#1A1A1A' }
-                 else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#9E2D2D' }
-                 else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#9E672D' }
+                 if (current <= EPSILON) { statusLabel = 'OUT'; statusColor = '#1A1A1A' }
+                 else if (min > 0 && current <= min + EPSILON) { statusLabel = 'CRIT'; statusColor = '#9E2D2D' }
+                 else if (reorder > 0 && current <= reorder + EPSILON) { statusLabel = 'WARN'; statusColor = '#9E672D' }
 
                  currentItems.push({
                      type: "box",
-                     layout: "vertical",
+                     layout: "horizontal",
                      margin: "md",
                      contents: [
+                         { type: "text", text: time, color: "#888888", size: "xs", flex: 2 },
                          {
                              type: "box",
-                             layout: "horizontal",
+                             layout: "vertical",
+                             flex: 5,
                              contents: [
-                                 { type: "text", text: `🕒 ${time}`, color: "#888888", size: "xs", flex: 0 },
-                                 { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, margin: "md", flex: 1 }
+                                 { type: "text", text: itemName.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
+                                 { type: "text", text: `${sign}${tx.quantity_change} ${itemUnit.toUpperCase()}`, color: "#666666", size: "xs", margin: "xs" },
+                                 ...(tx.note ? [{
+                                     type: "text", text: `NOTE: ${tx.note}`, color: "#aaaaaa", size: "xxs", margin: "xs", wrap: true
+                                 }] : [])
                              ]
                          },
                          {
                              type: "box",
-                             layout: "baseline",
-                             margin: "xs",
+                             layout: "vertical",
+                             flex: 3,
+                             alignItems: "flex-end",
                              contents: [
-                                 { type: "text", text: `📝 ${sign}${tx.quantity_change} ${itemUnit}`, color: "#666666", size: "xs", flex: 2 },
-                                 { type: "text", text: `เหลือ ${current} ${statusEmoji}`, color: statusColor, size: "xs", align: "end", weight: "bold", flex: 3 }
+                                 { type: "text", text: `BAL: ${current}`, color: "#1A1A1A", size: "xs", weight: "bold" },
+                                 { type: "text", text: `[${statusLabel}]`, color: statusColor, size: "xxs", weight: "bold", margin: "xs" }
                              ]
-                         },
-                         ...(tx.note ? [{
-                             type: "text", text: `💬 Note: ${tx.note}`, color: "#888888", size: "xxs", margin: "xs", wrap: true
-                         }] : [])
+                         }
                      ]
                  })
 
@@ -451,12 +477,19 @@ Deno.serve(async (req) => {
                      currentItems.push({ type: "separator", margin: "md", color: "#E2E2E0" })
                  }
 
-                 // Chunk into bubbles every 19 items
-                 if (currentItems.length >= 19 || index === transactions.length - 1) {
+                 // Chunk into bubbles every 15 items
+                 if (currentItems.length >= 15 || index === transactions.length - 1) {
                      // removing last separator if exists
                      if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
                          currentItems.pop()
                      }
+                     
+                     const bodyContents = [
+                         logHeader,
+                         { type: "separator", margin: "md", color: "#1A1A1A" },
+                         ...currentItems
+                     ];
+
                      bubbles.push({
                          type: "bubble",
                          size: "mega",
@@ -465,15 +498,15 @@ Deno.serve(async (req) => {
                              layout: "vertical",
                              paddingAll: "20px",
                              contents: [
-                                 { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
-                                 { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
+                                 { type: "text", text: engTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
+                                 { type: "text", text: `${dateStr.toUpperCase()} (PAGE ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
                              ]
                          },
                          body: {
                              type: "box",
                              layout: "vertical",
                              paddingAll: "20px",
-                             contents: currentItems
+                             contents: bodyContents
                          },
                          styles: {
                              header: {
@@ -595,11 +628,23 @@ Deno.serve(async (req) => {
             let flexContents = [];
 
             if (attendances.length === 0 && leaves.length === 0) {
-               flexContents.push({ type: "text", text: "🚫 ยังไม่มีข้อมูลในวันนี้", color: "#888888", size: "sm", align: "center" });
+               flexContents.push({ type: "text", text: "NO RECORDED TRANSACTIONS FOR TODAY", color: "#888888", size: "xs", align: "center", weight: "bold" });
             } else {
                if (attendances.length > 0) {
-                  flexContents.push({ type: "text", text: "[บันทึกเข้า-ออกเวลา]", weight: "bold", color: "#1A1A1A", size: "sm", margin: "md" });
-                  flexContents.push({ type: "separator", margin: "sm", color: "#E2E2E0" });
+                  flexContents.push({ type: "text", text: "SHIFT RECORDINGS", weight: "bold", color: "#1A1A1A", size: "sm", margin: "md" });
+                  
+                  const attendanceHeader = {
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "sm",
+                      contents: [
+                          { type: "text", text: "EMPLOYEE", color: "#888888", size: "xxs", weight: "bold", flex: 4 },
+                          { type: "text", text: "CLOCK IN", color: "#888888", size: "xxs", weight: "bold", flex: 3 },
+                          { type: "text", text: "CLOCK OUT", color: "#888888", size: "xxs", weight: "bold", flex: 3 }
+                      ]
+                  };
+                  flexContents.push(attendanceHeader);
+                  flexContents.push({ type: "separator", margin: "sm", color: "#1A1A1A" });
 
                   const empMap = new Map()
                   attendances.forEach((record: any) => {
@@ -625,27 +670,18 @@ Deno.serve(async (req) => {
                      }
                   })
 
-                  Array.from(empMap.values()).forEach((emp, i, arr) => {
-                     const inTxt = emp.in ? `${emp.in} น. ${emp.moodIn}` : '-'
-                     const outTxt = emp.out ? `${emp.out} น. ${emp.moodOut}` : '-'
+                  Array.from(empMap.values()).forEach((emp: any, i: number, arr: any[]) => {
+                     const inTxt = emp.in ? `${emp.in} ${emp.moodIn}` : '-'
+                     const outTxt = emp.out ? `${emp.out} ${emp.moodOut}` : '-'
                      
                      flexContents.push({
                          type: "box",
-                         layout: "vertical",
+                         layout: "horizontal",
                          margin: "md",
                          contents: [
-                             { type: "text", text: `👤 ${emp.name}`, weight: "bold", size: "sm", color: "#1A1A1A" },
-                             {
-                                 type: "box",
-                                 layout: "horizontal",
-                                 margin: "sm",
-                                 contents: [
-                                     { type: "text", text: "🟢 เข้า", color: "#888888", size: "xs", flex: 1 },
-                                     { type: "text", text: inTxt, color: "#1A1A1A", size: "xs", flex: 3 },
-                                     { type: "text", text: "🔴 ออก", color: "#888888", size: "xs", flex: 1 },
-                                     { type: "text", text: outTxt, color: "#1A1A1A", size: "xs", flex: 3 }
-                                 ]
-                             }
+                             { type: "text", text: emp.name.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", flex: 4, wrap: true },
+                             { type: "text", text: inTxt, color: "#1A1A1A", size: "xs", flex: 3 },
+                             { type: "text", text: outTxt, color: "#1A1A1A", size: "xs", flex: 3 }
                          ]
                      })
                      if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
@@ -653,37 +689,33 @@ Deno.serve(async (req) => {
                }
 
                if (leaves.length > 0) {
-                  flexContents.push({ type: "text", text: "[พนักงานที่ลาวันนี้]", weight: "bold", color: "#1A1A1A", size: "sm", margin: "xl" });
-                  flexContents.push({ type: "separator", margin: "sm", color: "#E2E2E0" });
+                  flexContents.push({ type: "text", text: "ACTIVE LEAVES", weight: "bold", color: "#1A1A1A", size: "sm", margin: "xl" });
+                  
+                  const leaveHeader = {
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "sm",
+                      contents: [
+                          { type: "text", text: "EMPLOYEE", color: "#888888", size: "xxs", weight: "bold", flex: 3 },
+                          { type: "text", text: "REASON", color: "#888888", size: "xxs", weight: "bold", flex: 4 },
+                          { type: "text", text: "STATUS", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                      ]
+                  };
+                  flexContents.push(leaveHeader);
+                  flexContents.push({ type: "separator", margin: "sm", color: "#1A1A1A" });
 
                   leaves.forEach((leave: any, i: number, arr: any[]) => {
                      const statusColor = leave.status === 'approved' ? '#2D804E' : (leave.status === 'pending' ? '#9E672D' : '#9E2D2D')
-                     const statusText = leave.status === 'approved' ? '✅ อนุมัติแล้ว' : (leave.status === 'pending' ? '⏳ รออนุมัติ' : '❌ ไม่อนุมัติ')
+                     const statusText = leave.status === 'approved' ? 'APPROVED' : (leave.status === 'pending' ? 'PENDING' : 'REJECTED')
                      
                      flexContents.push({
                          type: "box",
-                         layout: "vertical",
+                         layout: "horizontal",
                          margin: "md",
                          contents: [
-                             { type: "text", text: `⛱️ ${leave.employee_name}`, weight: "bold", size: "sm", color: "#1A1A1A" },
-                             {
-                                 type: "box",
-                                 layout: "baseline",
-                                 margin: "xs",
-                                 contents: [
-                                     { type: "text", text: "เหตุผล", color: "#888888", size: "xs", flex: 1 },
-                                     { type: "text", text: leave.reason || '-', color: "#1A1A1A", size: "xs", flex: 4, wrap: true }
-                                 ]
-                             },
-                             {
-                                 type: "box",
-                                 layout: "baseline",
-                                 margin: "xs",
-                                 contents: [
-                                     { type: "text", text: "สถานะ", color: "#888888", size: "xs", flex: 1 },
-                                     { type: "text", text: statusText, color: statusColor, size: "xs", flex: 4, weight: "bold" }
-                                 ]
-                             }
+                             { type: "text", text: leave.employee_name.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", flex: 3, wrap: true },
+                             { type: "text", text: leave.reason || '-', color: "#666666", size: "xs", flex: 4, wrap: true },
+                             { type: "text", text: statusText, color: statusColor, size: "xs", weight: "bold", align: "end", flex: 3 }
                          ]
                      })
                      if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
@@ -693,7 +725,7 @@ Deno.serve(async (req) => {
 
             const messagesPayload = [{
                 type: "flex",
-                altText: `🧑‍💼 สรุปการเข้างานวันนี้ (${titleDateStr})`,
+                altText: `🧑‍💼 ATTENDANCE REPORT: ${titleDateStr}`,
                 contents: {
                     type: "bubble",
                     size: "mega",
@@ -701,8 +733,8 @@ Deno.serve(async (req) => {
                         type: "box",
                         layout: "vertical",
                         contents: [
-                            { type: "text", text: "🧑‍💼 สรุปการเข้างาน", weight: "bold", color: "#1A1A1A", size: "md" },
-                            { type: "text", text: titleDateStr, color: "#666666", size: "xs", margin: "xs" }
+                            { type: "text", text: "ATTENDANCE SUMMARY", weight: "bold", color: "#1A1A1A", size: "sm" },
+                            { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -872,19 +904,26 @@ Deno.serve(async (req) => {
             let flexContents = [];
             
             if (results.length === 0) {
-               flexContents.push({ type: "text", text: "❌ ไม่พบผลลัพธ์ราคากลางบนเว็บ", color: "#888888", size: "sm", align: "center" });
+               flexContents.push({ type: "text", text: "NO PRICES FOUND FOR KEYWORD", color: "#888888", size: "xs", align: "center", weight: "bold" });
             } else {
                const displayItems = results.slice(0, 5)
                displayItems.forEach((r: any, i: number, arr: any[]) => {
                   
                   const contents = [
-                      { type: "text", text: r.title, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true }
+                      { 
+                        type: "box", 
+                        layout: "horizontal", 
+                        contents: [
+                          { type: "text", text: r.title.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, flex: 7 },
+                          { type: "text", text: r.prices && r.prices.length > 0 ? `฿${r.prices[0]}` : "-", weight: "bold", size: "sm", color: "#9E2D2D", align: "end", flex: 3 }
+                        ]
+                      }
                   ];
 
-                  if (r.prices && r.prices.length > 0) {
-                      const priceStr = r.prices.map((p: number) => `฿${p}`).join(', ');
+                  if (r.prices && r.prices.length > 1) {
+                      const otherPrices = r.prices.slice(1).map((p: number) => `฿${p}`).join(', ');
                       contents.push({
-                         type: "text", text: `💰 ราคาที่พบ: ${priceStr}`, color: "#9E2D2D", size: "xs", weight: "bold", margin: "xs"
+                         type: "text", text: `RANGE: ${otherPrices}`, color: "#666666", size: "xs", margin: "xs"
                       });
                   }
 
@@ -900,10 +939,11 @@ Deno.serve(async (req) => {
                   if (r.domain) {
                       contents.push({
                           type: "text",
-                          text: `แหล่งที่มา: ${r.domain}`,
+                          text: `SOURCE: ${r.domain.toUpperCase()}`,
                           color: "#aaaaaa",
-                          size: "xs",
-                          margin: "xs"
+                          size: "xxs",
+                          margin: "xs",
+                          weight: "bold"
                       });
                   }
 
@@ -919,13 +959,13 @@ Deno.serve(async (req) => {
                
                if (results.length > 5) {
                    flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
-                   flexContents.push({ type: "text", text: `(แสดง 5 จาก ${results.length} รายการ)`, color: "#888888", size: "xs", align: "center", margin: "md" });
+                   flexContents.push({ type: "text", text: `(SHOWN 5 OF ${results.length} ENTRIES)`, color: "#888888", size: "xs", align: "center", margin: "md" });
                }
             }
 
             const messagesPayload = [{
                 type: "flex",
-                altText: `🔍 ราคากลาง: ${keyword}`,
+                altText: `🔍 PRICE INDEX: ${keyword}`,
                 contents: {
                     type: "bubble",
                     size: "mega",
@@ -933,8 +973,8 @@ Deno.serve(async (req) => {
                         type: "box",
                         layout: "vertical",
                         contents: [
-                            { type: "text", text: "🔍 ผลค้นหาราคากลาง", weight: "bold", color: "#1A1A1A", size: "md" },
-                            { type: "text", text: `ค้นหา: "${keyword}"`, color: "#666666", size: "xs", margin: "xs" }
+                            { type: "text", text: "PRICE INDEX", weight: "bold", color: "#1A1A1A", size: "sm" },
+                            { type: "text", text: `SEARCH: "${keyword.toUpperCase()}"`, color: "#666666", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
