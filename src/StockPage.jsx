@@ -26,6 +26,7 @@ import CategoryManager from './components/stock/CategoryManager';
 import StockItemForm from './components/stock/StockItemForm'; // Added
 import RecipeBuilder from './components/recipes/RecipeBuilder'; // Added
 import { toast } from 'sonner';
+import './StockPage.css';
 
 export default function StockPage() {
     const navigate = useNavigate();
@@ -517,193 +518,192 @@ export default function StockPage() {
         });
 
     return (
-        <div className="min-h-screen bg-[var(--color-hallmark-paper)] text-[#1A1A1A] safe-area-inset-bottom font-sans">
+        <div className="stock-page">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-[var(--color-hallmark-paper)]/90 backdrop-blur-md border-b border-[var(--color-hallmark-rule)]/50 transition-all duration-300">
-                <div className="p-4 safe-area-inset-top">
-                    {/* Top Bar */}
-                    <div className="flex items-center justify-between mb-4 gap-2">
-                        <button 
-                            onClick={() => navigate('/staff')}
-                            className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-[var(--color-hallmark-rule)] hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
-                            title="ย้อนกลับ"
-                        >
-                            <ArrowLeft className="w-4 h-4 text-gray-700" />
-                        </button>
-                        
-                        <div className="flex-1 flex flex-col items-center justify-center mx-1">
-                            <img 
-                                src="/logo-staff-light.png" 
-                                alt="ในบ้าน Staff" 
-                                className="h-9 object-contain"
-                            />
-                            <p className="text-[9px] text-gray-400 font-mono mt-0.5">
-                                {currentUser?.user_metadata?.full_name || 'Staff Member'}
-                            </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 bg-white border border-[var(--color-hallmark-rule)] rounded-full p-1 shadow-sm">
-                            {/* Update Stock Button (Manual Push) */}
-                             <button 
-                                onClick={handleManualUpdate}
-                                disabled={loading}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-green-600 hover:bg-green-50 active:scale-90 transition-all"
-                                title="ส่งสรุปเข้า LINE"
-                             >
-                                <Send className="w-4 h-4" />
-                             </button>
-
-                            {/* Report Button */}
-                             <button 
-                                onClick={() => setShowReport(true)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-50 active:scale-90 transition-all"
-                                title="รายงานการใช้"
-                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-                            </button>
-                             <button 
-                                onClick={() => setShowHistory(true)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-50 active:scale-90 transition-all"
-                                title="ประวัติรายการ"
-                             >
-                                <History className="w-4 h-4 text-gray-600" />
-                            </button>
-                             <button 
-                                onClick={() => setShowCategoryManager(true)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-50 active:scale-90 transition-all"
-                                title="จัดการหมวดหมู่"
-                             >
-                                <Settings className="w-4 h-4 text-gray-600" />
-                            </button>
-                            <button 
-                                onClick={() => { setEditingItem(null); setShowItemForm(true); }}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1A1A1A] hover:bg-black text-white active:scale-90 transition-all"
-                                title="เพิ่มวัตถุดิบ"
-                             >
-                                <Plus className="w-4 h-4" />
-                            </button>
-                             <button 
-                                onClick={fetchItems} 
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-50 active:scale-90 transition-all"
-                                title="โหลดข้อมูลใหม่"
-                             >
-                                <RefreshCw className={`w-4 h-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-                            </button>
-                        </div>
+            <header className="sp-header">
+                <div className="sp-header__top">
+                    <button 
+                        onClick={() => navigate('/staff')}
+                        className="sp-header__back"
+                        title="ย้อนกลับ"
+                        aria-label="ย้อนกลับ"
+                    >
+                        <ArrowLeft />
+                    </button>
+                    
+                    <div className="sp-header__logo-wrap">
+                        <img 
+                            src="/logo-staff-light.png" 
+                            alt="ในบ้าน Staff" 
+                            className="sp-header__logo"
+                        />
+                        <p className="sp-header__user">
+                            {currentUser?.user_metadata?.full_name || 'Staff Member'}
+                        </p>
                     </div>
+                    
+                    <div className="sp-header__actions">
+                        {/* Update Stock Button (Manual Push) */}
+                         <button 
+                            onClick={handleManualUpdate}
+                            disabled={loading}
+                            className="sp-header__btn sp-header__btn--line"
+                            title="ส่งสรุปเข้า LINE"
+                            aria-label="ส่งสรุปเข้า LINE"
+                         >
+                            <Send />
+                         </button>
 
-                    {/* Search & Scan Bar */}
-                    <div className="flex gap-2.5 mb-3">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input 
-                                type="text"
-                                placeholder="ค้นหาวัตถุดิบ (ชื่อ/บาร์โค้ด)..."
-                                className="w-full bg-white border border-[var(--color-hallmark-rule)] rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium focus:outline-none focus:border-[#1A1A1A] focus:ring-1 focus:ring-[#1A1A1A] transition-all placeholder-gray-400"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
+                        {/* Report Button */}
+                         <button 
+                            onClick={() => setShowReport(true)}
+                            className="sp-header__btn"
+                            title="รายงานการใช้"
+                            aria-label="รายงานการใช้"
+                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                        </button>
+                         <button 
+                            onClick={() => setShowHistory(true)}
+                            className="sp-header__btn"
+                            title="ประวัติรายการ"
+                            aria-label="ประวัติรายการ"
+                         >
+                            <History />
+                        </button>
+                         <button 
+                            onClick={() => setShowCategoryManager(true)}
+                            className="sp-header__btn"
+                            title="จัดการหมวดหมู่"
+                            aria-label="จัดการหมวดหมู่"
+                         >
+                            <Settings />
+                        </button>
                         <button 
-                            onClick={() => setShowScanner(true)}
-                            className="w-10 h-10 bg-white border border-[var(--color-hallmark-rule)] text-[#1A1A1A] hover:bg-gray-50 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-sm"
-                            title="สแกนบาร์โค้ด"
-                        >
-                            <Scan className="w-5 h-5" />
+                            onClick={() => { setEditingItem(null); setShowItemForm(true); }}
+                            className="sp-header__btn sp-header__btn--accent"
+                            title="เพิ่มวัตถุดิบ"
+                            aria-label="เพิ่มวัตถุดิบ"
+                         >
+                            <Plus />
+                        </button>
+                         <button 
+                            onClick={fetchItems} 
+                            className="sp-header__btn"
+                            title="โหลดข้อมูลใหม่"
+                            aria-label="โหลดข้อมูลใหม่"
+                         >
+                            <RefreshCw className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
+                </div>
 
-                    {/* View & Sort Controls */}
-                    <div className="flex justify-between items-center px-1 mb-1">
-                        <div className="flex gap-1.5 items-center">
-                            {/* Grid / List View Selector */}
-                            <div className="flex bg-white border border-[var(--color-hallmark-rule)] p-0.5 rounded-lg shadow-sm">
-                                <button 
-                                    onClick={() => setViewMode('grid')}
-                                    className={`p-1.5 rounded transition-all ${viewMode === 'grid' ? 'bg-gray-100 text-black font-bold' : 'text-gray-400 hover:text-gray-600'}`}
-                                    title="มุมมองการ์ด"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-                                </button>
-                                <button 
-                                    onClick={() => setViewMode('list')}
-                                    className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-gray-100 text-black font-bold' : 'text-gray-400 hover:text-gray-600'}`}
-                                    title="มุมมองรายการ"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
-                                </button>
-                            </div>
-                            
-                            {/* Quick Count Mode Toggle */}
+                {/* Search & Scan Bar */}
+                <div className="sp-search-bar">
+                    <div className="sp-search-bar__input-wrap">
+                        <Search className="sp-search-bar__icon" />
+                        <input 
+                            type="text"
+                            placeholder="ค้นหาวัตถุดิบ (ชื่อ/บาร์โค้ด)..."
+                            className="sp-search-bar__input"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <button 
+                        onClick={() => setShowScanner(true)}
+                        className="sp-search-bar__scan"
+                        title="สแกนบาร์โค้ด"
+                        aria-label="สแกนบาร์โค้ด"
+                    >
+                        <Scan />
+                    </button>
+                </div>
+
+                {/* View & Sort Controls */}
+                <div className="sp-controls">
+                    <div className="sp-controls__left">
+                        {/* Grid / List View Selector */}
+                        <div className="sp-controls__toggle-group">
                             <button 
-                                onClick={() => setQuickCountMode(!quickCountMode)}
-                                className={`h-8 px-2.5 rounded-lg flex items-center gap-1.5 transition-all border text-[11px] font-bold ${
-                                    quickCountMode 
-                                    ? 'bg-[#1A1A1A] border-[#1A1A1A] text-white shadow-sm' 
-                                    : 'bg-white border-[var(--color-hallmark-rule)] text-gray-500 hover:bg-gray-50 shadow-sm'
-                                }`}
-                                title="โหมดตรวจนับสต็อกด่วน (Quick Count Mode)"
+                                onClick={() => setViewMode('grid')}
+                                className={`sp-controls__toggle-btn ${viewMode === 'grid' ? 'sp-controls__toggle-btn--active' : ''}`}
+                                title="มุมมองการ์ด"
+                                aria-label="มุมมองการ์ด"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
-                                <span>ตรวจนับด่วน</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('list')}
+                                className={`sp-controls__toggle-btn ${viewMode === 'list' ? 'sp-controls__toggle-btn--active' : ''}`}
+                                title="มุมมองรายการ"
+                                aria-label="มุมมองรายการ"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
                             </button>
                         </div>
+                        
+                        {/* Quick Count Mode Toggle */}
+                        <button 
+                            onClick={() => setQuickCountMode(!quickCountMode)}
+                            className={`sp-controls__quick-count ${quickCountMode ? 'sp-controls__quick-count--active' : ''}`}
+                            title="โหมดตรวจนับสต็อกด่วน (Quick Count Mode)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+                            <span>ตรวจนับด่วน</span>
+                        </button>
+                    </div>
 
-                        {/* Sort Controls */}
-                        <div className="flex bg-white border border-[var(--color-hallmark-rule)] p-0.5 rounded-lg shadow-sm">
-                            <button 
-                                onClick={() => setSortMode('name')}
-                                className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider transition-all ${sortMode === 'name' ? 'bg-gray-100 text-black' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                A-Z
-                            </button>
-                            <button 
-                                onClick={() => setSortMode('low_stock')}
-                                className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider transition-all ${sortMode === 'low_stock' ? 'bg-red-50 text-red-600' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                                LOW STOCK
-                            </button>
-                        </div>
+                    {/* Sort Controls */}
+                    <div className="sp-controls__sort">
+                        <button 
+                            onClick={() => setSortMode('name')}
+                            className={`sp-controls__sort-btn ${sortMode === 'name' ? 'sp-controls__sort-btn--active' : ''}`}
+                        >
+                            A-Z
+                        </button>
+                        <button 
+                            onClick={() => setSortMode('low_stock')}
+                            className={`sp-controls__sort-btn sp-controls__sort-btn--low ${sortMode === 'low_stock' ? 'sp-controls__sort-btn--low-active' : ''}`}
+                        >
+                            LOW STOCK
+                        </button>
                     </div>
                 </div>
 
                 {/* Category Tabs */}
-                <div className="flex overflow-x-auto px-4 pb-2.5 hide-scrollbar gap-2 border-b border-[var(--color-hallmark-rule)]/50 pt-2">
+                <div className="sp-tabs">
                     {categories.map(cat => {
                         const isActive = activeCategory === cat.id;
                         return (
                             <button 
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
-                                className={`px-3 py-1.5 whitespace-nowrap font-bold text-xs rounded-full border transition-all select-none ${
-                                    isActive 
-                                    ? 'bg-[#1A1A1A] border-[#1A1A1A] text-white shadow-sm' 
-                                    : 'bg-white border-[var(--color-hallmark-rule)] text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                                }`}
+                                className={`sp-tab ${isActive ? 'sp-tab--active' : ''}`}
                             >
-                                <span className={`mr-1 text-sm filter ${isActive ? 'grayscale-0' : 'grayscale-[0.3]'}`}>{cat.icon}</span>
-                                {cat.label}
+                                <span className="sp-tab__icon" aria-hidden="true">{cat.icon}</span>
+                                <span>{cat.label}</span>
                             </button>
                         );
                     })}
                 </div>
-            </div>
+            </header>
 
             {/* Main Content Info */}
-            <div className="p-4 pb-20 safe-area-inset-bottom">
+            <main className="sp-content">
                 {loading && items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400 animate-pulse">
-                        <Package className="w-12 h-12 mb-4 opacity-50 text-gray-300" />
-                        <p className="text-sm font-bold font-mono uppercase tracking-wider text-gray-400">กำลังโหลดระบบสต็อก...</p>
+                    <div className="sp-loading">
+                        <Package className="sp-loading__icon" />
+                        <span className="sp-loading__title">กำลังโหลดระบบสต็อก...</span>
                     </div>
                 ) : filteredItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                        <Package className="w-12 h-12 mb-4 opacity-30 text-gray-300" />
-                        <p className="text-sm font-bold font-mono uppercase tracking-wider text-gray-400">ไม่พบสินค้าในหมวดหมู่: {activeCategory}</p>
+                    <div className="sp-empty">
+                        <Package className="sp-empty__icon" />
+                        <span className="sp-empty__title">ไม่พบสินค้าในหมวดหมู่: {activeCategory}</span>
                     </div>
                 ) : (
                     viewMode === 'grid' ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5">
+                        <div className="sp-grid">
                              {filteredItems.map(item => (
                                  <StockCard 
                                     key={item.id} 
@@ -718,7 +718,7 @@ export default function StockPage() {
                              ))}
                         </div>
                     ) : (
-                        <div className="bg-white rounded-2xl border border-[var(--color-hallmark-rule)] overflow-hidden flex flex-col shadow-sm">
+                        <div className="sp-list">
                             {filteredItems.map(item => (
                                 <StockListItem 
                                     key={item.id}
@@ -734,7 +734,7 @@ export default function StockPage() {
                         </div>
                     )
                 )}
-            </div>
+            </main>
             
             {/* Modals */}
             {selectedItem && (

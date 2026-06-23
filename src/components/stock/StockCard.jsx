@@ -86,15 +86,16 @@ export default function StockCard({
             onClick={() => {
                 if (!quickCountMode) onClick(item);
             }}
-            className={`
-                relative flex flex-col items-center p-3.5 rounded-xl border transition-[border-color,box-shadow] duration-150 ease-out text-left w-full h-full select-none
-                ${bgClass}
-                ${!quickCountMode ? 'cursor-pointer hover:shadow-md hover:border-[var(--color-hallmark-ink-muted)]' : ''}
-            `}
+            className={`sc-card ${quickCountMode ? 'sc-card--non-interactive' : ''} ${
+                success ? 'sc-card--success' : 
+                saving ? 'sc-card--saving' : 
+                isCritical ? 'sc-card--critical' : 
+                isWarning ? 'sc-card--warning' : ''
+            }`}
         >
             {/* Category badge for global search */}
             {searchActive && categoryLabel && (
-                <div className="absolute top-2 left-2 z-10 bg-white/90 text-gray-500 font-bold px-2 py-0.5 rounded border border-[var(--color-hallmark-rule)] text-[8px] uppercase tracking-wider">
+                <div className="sc-badge">
                     {categoryLabel}
                 </div>
             )}
@@ -108,103 +109,95 @@ export default function StockCard({
                     }}
                     className="absolute top-2 left-2 z-10"
                 >
-                    <div className={`
-                        flex items-center gap-1.5 px-2 py-1 rounded-md transition-all shadow-sm border text-[10px] font-bold
-                        ${item.is_base_recipe 
-                            ? 'bg-orange-100/90 border-orange-200 text-orange-800' 
-                            : 'bg-white border-[var(--color-hallmark-rule)] text-gray-400 hover:bg-gray-50 hover:text-[#1A1A1A] opacity-0 group-hover:opacity-100'
-                        }
-                    `}>
-                        <FileText className="w-3 h-3" />
+                    <div className={`sc-recipe ${item.is_base_recipe ? 'sc-recipe--active' : ''}`}>
+                        <FileText />
                         <span>สูตร</span>
                     </div>
                 </div>
             )}
 
             {/* Status Indicator Icon / Saving Spinner / Success Check */}
-            <div className="absolute top-2.5 right-2.5 z-10">
+            <div className={`sc-status-icon ${isCritical ? 'sc-status-icon--critical' : 'sc-status-icon--warning'}`}>
                 {saving ? (
-                    <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />
+                    <Loader2 className="animate-spin" />
                 ) : success ? (
-                    <Check className="w-3.5 h-3.5 text-green-600 font-bold" />
+                    <Check />
                 ) : (isCritical || isWarning) && (
-                    <div className={textClass}>
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                    </div>
+                    <AlertTriangle />
                 )}
             </div>
 
             {/* Image Area */}
-            <div className="w-14 h-14 mb-2.5 rounded-lg overflow-hidden bg-gray-50 border border-[var(--color-hallmark-rule)]/50 flex items-center justify-center shrink-0 mt-4 shadow-sm">
+            <div className="sc-image-wrap">
                 {item.image_url ? (
                     <img 
                         src={item.image_url} 
                         alt={item.name} 
-                        className="w-full h-full object-cover"
+                        className="sc-image"
                     />
                 ) : (
-                    <Package className="w-5 h-5 text-gray-300" />
+                    <span className="sc-image-placeholder">
+                        <Package />
+                    </span>
                 )}
             </div>
 
             {/* Info */}
-            <div className="w-full flex-1 flex flex-col justify-between">
+            <div className="sc-info">
                 <div>
-                    <h3 className={`font-bold text-xs leading-tight mb-1.5 line-clamp-2 ${textClass}`}>
+                    <h3 className={`sc-title ${isCritical ? 'sc-title--critical' : isWarning ? 'sc-title--warning' : ''}`}>
                         {item.name}
                     </h3>
                 </div>
                 
                 {/* Quantity Display */}
-                <div className="w-full">
+                <div className="sc-qty">
                     {!quickCountMode ? (
-                        <div className="flex flex-col w-full gap-1">
+                        <div className="sc-breakdown">
                             {/* Main Summary */}
-                            <div className="flex items-baseline justify-between mb-0.5">
-                                 <span className={`text-[9px] font-bold uppercase tracking-wider ${labelClass}`}>คงเหลือรวม</span>
-                                 <span className={`text-lg font-mono font-extrabold ${textClass}`}>
+                            <div className="sc-qty__header">
+                                 <span className={`sc-qty__label ${isCritical ? 'sc-qty__label--critical' : isWarning ? 'sc-qty__label--warning' : ''}`}>คงเหลือรวม</span>
+                                 <span className={`sc-qty__val ${isCritical ? 'sc-qty__val--critical' : isWarning ? 'sc-qty__val--warning' : ''}`}>
                                     {fullUnits + (hasOpen ? 1 : 0)}
                                  </span>
                             </div>
 
                             {/* Detailed Breakdown */}
-                            <div className="flex flex-col gap-1">
+                            <div className="sc-breakdown">
                                 {/* Unopened */}
                                 {fullUnits > 0 && (
-                                     <div className="flex justify-between items-center text-[10px] bg-gray-50/50 p-1.5 rounded-lg border border-[var(--color-hallmark-rule)]/60">
-                                         <span className="text-gray-400 font-bold">ยังไม่เปิด</span>
-                                         <span className="font-bold text-gray-900 font-mono">{fullUnits} {item.unit || item.pack_unit}</span>
+                                     <div className="sc-breakdown__item">
+                                         <span>ยังไม่เปิด</span>
+                                         <span>{fullUnits} {item.unit || item.pack_unit}</span>
                                      </div>
                                 )}
 
                                 {/* Opened */}
                                 {hasOpen && (
-                                     <div className="p-1.5 bg-blue-50/40 rounded-lg border border-blue-100 flex items-center justify-between text-[10px]">
-                                         <span className="text-blue-800 font-bold text-[9px]">เปิดแล้ว</span>
-                                         <span className="text-blue-600 font-bold font-mono">
+                                     <div className="sc-breakdown__item sc-breakdown__item--open">
+                                         <span>เปิดแล้ว</span>
+                                         <span>
                                             {remainderUsage !== null ? `${remainderUsage} ${item.usage_unit}` : `${percent}%`}
                                          </span>
                                      </div>
                                 )}
                                 
                                 {fullUnits === 0 && !hasOpen && (
-                                     <div className="text-center text-[10px] text-red-500 font-bold py-1 bg-red-50/30 rounded-lg border border-red-100/50">สินค้าหมด</div>
+                                     <div className="sc-breakdown__item sc-breakdown__item--empty">สินค้าหมด</div>
                                 )}
                             </div>
                         </div>
                     ) : (
                         /* Inline Adjuster Mode */
-                        <div className="flex flex-col w-full gap-1.5 mt-1 border-t border-[var(--color-hallmark-rule)]/50 pt-2" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between">
-                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">ยังไม่เปิด ({item.unit})</span>
-                            </div>
+                        <div className="sp-adjuster" onClick={e => e.stopPropagation()}>
+                            <div className="sp-adjuster__header">ยังไม่เปิด ({item.unit})</div>
                             
                             {/* Counter */}
-                            <div className="flex items-center justify-between bg-gray-50/80 p-0.5 rounded-lg border border-[var(--color-hallmark-rule)] shadow-inner">
+                            <div className="sp-adjuster__counter">
                                 <button 
                                     type="button"
                                     onClick={() => triggerUpdate(Math.max(0, fullUnits - 1) + (percent / 100))}
-                                    className="w-6.5 h-6.5 rounded-md bg-white border border-[var(--color-hallmark-rule)] flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all text-gray-600"
+                                    className="sp-adjuster__btn"
                                 >
                                     <Minus className="w-3 h-3" />
                                 </button>
@@ -216,13 +209,13 @@ export default function StockCard({
                                         const val = parseInt(e.target.value) || 0;
                                         triggerUpdate(Math.max(0, val) + (percent / 100));
                                     }}
-                                    className="w-8 bg-transparent text-center font-mono font-bold text-xs text-gray-900 border-none outline-none focus:ring-0 p-0"
+                                    className="sp-adjuster__input"
                                 />
 
                                 <button 
                                     type="button"
                                     onClick={() => triggerUpdate((fullUnits + 1) + (percent / 100))}
-                                    className="w-6.5 h-6.5 rounded-md bg-white border border-[var(--color-hallmark-rule)] flex items-center justify-center shadow-sm hover:bg-gray-100 active:scale-95 transition-all text-gray-600"
+                                    className="sp-adjuster__btn"
                                 >
                                     <Plus className="w-3 h-3" />
                                 </button>
@@ -230,9 +223,9 @@ export default function StockCard({
 
                             {/* Percentage buttons for opened liquid/remainder */}
                             {isLiquidOrSplit && (
-                                <div className="flex flex-col gap-1 mt-1">
-                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">เปิดแล้ว (เศษ):</span>
-                                    <div className="grid grid-cols-4 gap-0.5 bg-gray-150 p-0.5 rounded-md border border-[var(--color-hallmark-rule)]">
+                                <>
+                                    <div className="sp-adjuster__percent-label">เปิดแล้ว (เศษ)</div>
+                                    <div className="sp-adjuster__percent-grid">
                                         {[0, 25, 50, 75].map((p) => {
                                             const isActive = percent === p;
                                             return (
@@ -240,18 +233,14 @@ export default function StockCard({
                                                     key={p}
                                                     type="button"
                                                     onClick={() => triggerUpdate(fullUnits + (p / 100))}
-                                                    className={`text-[8px] py-1 rounded transition-all text-center px-0.5 font-bold ${
-                                                        isActive 
-                                                        ? 'bg-[#1A1A1A] text-white shadow-sm font-extrabold' 
-                                                        : 'text-gray-500 hover:bg-gray-50'
-                                                    }`}
+                                                    className={`sp-adjuster__percent-btn ${isActive ? 'sp-adjuster__percent-btn--active' : ''}`}
                                                 >
                                                     {p === 0 ? '0%' : `${p}%`}
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                </div>
+                                </>
                             )}
                         </div>
                     )}
@@ -260,9 +249,9 @@ export default function StockCard({
             
             {/* Visual Bar for Proportional Layout */}
             {!quickCountMode && item.par_level > 0 && (
-                <div className="w-full h-1 bg-gray-100 rounded-full mt-2.5 overflow-hidden shrink-0 border border-gray-200/10">
+                <div className="sc-par-bar">
                     <div 
-                        className={`h-full rounded-full transition-[width] duration-300 ${isCritical ? 'bg-red-500' : isWarning ? 'bg-orange-400' : 'bg-[var(--color-brand)]'}`}
+                        className={`sc-par-fill ${isCritical ? 'sc-par-fill--critical' : isWarning ? 'sc-par-fill--warning' : ''}`}
                         style={{ width: `${Math.min(((Number(item.current_quantity) || 0) / (Number(item.par_level) || 1)) * 100, 100)}%` }}
                     />
                 </div>
