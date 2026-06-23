@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-06-22",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "light / mono / chromatic-other (yellow-green ~100°)",
+    "vibe": "industrial precision, Braun-instrument, mono slab",
+    "enrichment": "none",
+    "brief": "Redesign staff dashboard — Dieter Rams utilitarian"
+  },
+  {
+    "date": "2026-06-22",
     "macrostructure": "Catalogue",
     "theme": "custom",
     "theme_axes": "light / geometric-sans / chromatic-other (yellow-green ~100°)",
