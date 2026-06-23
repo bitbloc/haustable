@@ -137,16 +137,25 @@ Deno.serve(async (req) => {
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#1A1A1A",
                     contents: [
-                      { type: "text", text: headerTitle, weight: "bold", color: "#FFFFFF", size: "lg" },
-                      { type: "text", text: dateStr, color: "#CCCCCC", size: "xs", margin: "xs" }
+                      { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
+                      { type: "text", text: dateStr, color: "#666666", size: "xs", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
-                    contents: [{ type: "text", text: "✅ สต็อกเพียงพอทุกรายการ", color: "#06C755", size: "sm", align: "center", weight: "bold" }]
+                    contents: [{ type: "text", text: "✅ สต็อกเพียงพอทุกรายการ", color: "#2D804E", size: "sm", align: "center", weight: "bold" }]
+                  },
+                  styles: {
+                    header: {
+                      backgroundColor: "#F4F4F3",
+                      separator: true,
+                      separatorColor: "#E2E2E0"
+                    },
+                    body: {
+                      backgroundColor: "#FFFFFF"
+                    }
                   }
                 }
               })
@@ -161,10 +170,10 @@ Deno.serve(async (req) => {
                  const reorder = Number(item.reorder_point) || 0
                  
                  let statusEmoji = '🟢'
-                 let statusColor = '#06C755'
-                 if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#111111' }
-                 else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#EF4444' }
-                 else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#F59E0B' }
+                 let statusColor = '#2D804E'
+                 if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#1A1A1A' }
+                 else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#9E2D2D' }
+                 else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#9E672D' }
 
                  currentItems.push({
                      type: "box",
@@ -180,14 +189,14 @@ Deno.serve(async (req) => {
                              alignItems: "flex-end",
                              contents: [
                                  { type: "text", text: `เหลือ ${current}`, color: statusColor, size: "xs", weight: "bold" },
-                                 { type: "text", text: `(ขั้นต่ำ ${min > 0 ? min : reorder})`, color: "#aaaaaa", size: "xxs" }
+                                 { type: "text", text: `(ขั้นต่ำ ${min > 0 ? min : reorder})`, color: "#888888", size: "xxs" }
                              ]
                          }
                      ]
                  })
 
                  if (index < itemsToBuy.length - 1) {
-                     currentItems.push({ type: "separator", margin: "md", color: "#F0F0F0" })
+                     currentItems.push({ type: "separator", margin: "md", color: "#E2E2E0" })
                  }
 
                  if (currentItems.length >= 19 || index === itemsToBuy.length - 1) {
@@ -200,11 +209,10 @@ Deno.serve(async (req) => {
                          header: {
                              type: "box",
                              layout: "vertical",
-                             backgroundColor: "#1A1A1A",
                              paddingAll: "20px",
                              contents: [
-                                 { type: "text", text: headerTitle, weight: "bold", color: "#FFFFFF", size: "lg" },
-                                 { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#CCCCCC", size: "xs", margin: "xs" }
+                                 { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
+                                 { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
                              ]
                          },
                          body: {
@@ -212,6 +220,16 @@ Deno.serve(async (req) => {
                              layout: "vertical",
                              paddingAll: "20px",
                              contents: currentItems
+                         },
+                         styles: {
+                             header: {
+                                 backgroundColor: "#F4F4F3",
+                                 separator: true,
+                                 separatorColor: "#E2E2E0"
+                             },
+                             body: {
+                                 backgroundColor: "#FFFFFF"
+                             }
                          }
                      })
                      currentItems = []
@@ -220,8 +238,8 @@ Deno.serve(async (req) => {
                
                if (bubbles.length > 5) {
                   bubbles.length = 5;
-                  bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
-                  bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#EF4444", size: "xs", margin: "md", align: "center" })
+                  bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                  bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#9E2D2D", size: "xs", margin: "md", align: "center" })
                }
                
                if (bubbles.length === 1) {
@@ -348,16 +366,25 @@ Deno.serve(async (req) => {
                   header: {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#1A1A1A",
                     contents: [
-                      { type: "text", text: headerTitle, weight: "bold", color: "#FFFFFF", size: "lg" },
-                      { type: "text", text: dateStr, color: "#CCCCCC", size: "xs", margin: "xs" }
+                      { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
+                      { type: "text", text: dateStr, color: "#666666", size: "xs", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
                     contents: [{ type: "text", text: "🚫 ไม่มีรายการอัพเดท", color: "#888888", size: "sm", align: "center" }]
+                  },
+                  styles: {
+                    header: {
+                      backgroundColor: "#F4F4F3",
+                      separator: true,
+                      separatorColor: "#E2E2E0"
+                    },
+                    body: {
+                      backgroundColor: "#FFFFFF"
+                    }
                   }
                 }
               })
@@ -366,108 +393,117 @@ Deno.serve(async (req) => {
                let currentItems = []
                
                transactions.forEach((tx: any, index: number) => {
-                const sign = tx.quantity_change > 0 ? '+' : ''
-                
-                let time = ""
-                try {
-                  time = new Date(new Date(tx.created_at).getTime() + (7 * 60 * 60 * 1000))
-                    .toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-                } catch (e) {
-                  time = tx.created_at.substring(11, 16)
-                }
-                
-                const item = tx.stock_items
-                const itemName = item?.name || 'Unknown Item'
-                const itemUnit = item?.unit || ''
-                
-                // Status Logic
-                const current = Number(item?.current_quantity) || 0
-                const min = Number(item?.min_stock_threshold) || 0
-                const reorder = Number(item?.reorder_point) || 0
-                const EPSILON = 0.0001;
-                
-                let statusEmoji = '🟢'
-                let statusColor = '#06C755'
-                if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#111111' }
-                else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#EF4444' }
-                else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#F59E0B' }
+                 const sign = tx.quantity_change > 0 ? '+' : ''
+                 
+                 let time = ""
+                 try {
+                   time = new Date(new Date(tx.created_at).getTime() + (7 * 60 * 60 * 1000))
+                     .toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+                 } catch (e) {
+                   time = tx.created_at.substring(11, 16)
+                 }
+                 
+                 const item = tx.stock_items
+                 const itemName = item?.name || 'Unknown Item'
+                 const itemUnit = item?.unit || ''
+                 
+                 // Status Logic
+                 const current = Number(item?.current_quantity) || 0
+                 const min = Number(item?.min_stock_threshold) || 0
+                 const reorder = Number(item?.reorder_point) || 0
+                 const EPSILON = 0.0001;
+                 
+                 let statusEmoji = '🟢'
+                 let statusColor = '#2D804E'
+                 if (current <= EPSILON) { statusEmoji = '⚫ หมด'; statusColor = '#1A1A1A' }
+                 else if (min > 0 && current <= min + EPSILON) { statusEmoji = '🔴 วิกฤต'; statusColor = '#9E2D2D' }
+                 else if (reorder > 0 && current <= reorder + EPSILON) { statusEmoji = '🟠 ต้องเติม'; statusColor = '#9E672D' }
 
-                currentItems.push({
-                    type: "box",
-                    layout: "vertical",
-                    margin: "md",
-                    contents: [
-                        {
-                            type: "box",
-                            layout: "horizontal",
-                            contents: [
-                                { type: "text", text: `🕒 ${time}`, color: "#aaaaaa", size: "xs", flex: 0 },
-                                { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, margin: "md", flex: 1 }
-                            ]
-                        },
-                        {
-                            type: "box",
-                            layout: "baseline",
-                            margin: "xs",
-                            contents: [
-                                { type: "text", text: `📝 ${sign}${tx.quantity_change} ${itemUnit}`, color: "#888888", size: "xs", flex: 2 },
-                                { type: "text", text: `เหลือ ${current} ${statusEmoji}`, color: statusColor, size: "xs", align: "end", weight: "bold", flex: 3 }
-                            ]
-                        },
-                        ...(tx.note ? [{
-                            type: "text", text: `💬 Note: ${tx.note}`, color: "#aaaaaa", size: "xxs", margin: "xs", wrap: true
-                        }] : [])
-                    ]
-                })
+                 currentItems.push({
+                     type: "box",
+                     layout: "vertical",
+                     margin: "md",
+                     contents: [
+                         {
+                             type: "box",
+                             layout: "horizontal",
+                             contents: [
+                                 { type: "text", text: `🕒 ${time}`, color: "#888888", size: "xs", flex: 0 },
+                                 { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, margin: "md", flex: 1 }
+                             ]
+                         },
+                         {
+                             type: "box",
+                             layout: "baseline",
+                             margin: "xs",
+                             contents: [
+                                 { type: "text", text: `📝 ${sign}${tx.quantity_change} ${itemUnit}`, color: "#666666", size: "xs", flex: 2 },
+                                 { type: "text", text: `เหลือ ${current} ${statusEmoji}`, color: statusColor, size: "xs", align: "end", weight: "bold", flex: 3 }
+                             ]
+                         },
+                         ...(tx.note ? [{
+                             type: "text", text: `💬 Note: ${tx.note}`, color: "#888888", size: "xxs", margin: "xs", wrap: true
+                         }] : [])
+                     ]
+                 })
 
-                if (index < transactions.length - 1) {
-                    currentItems.push({ type: "separator", margin: "md", color: "#F0F0F0" })
-                }
+                 if (index < transactions.length - 1) {
+                     currentItems.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                 }
 
-                // Chunk into bubbles every 10 items
-                if (currentItems.length >= 19 || index === transactions.length - 1) {
-                    // removing last separator if exists
-                    if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
-                        currentItems.pop()
-                    }
-                    bubbles.push({
-                        type: "bubble",
-                        size: "mega",
-                        header: {
-                            type: "box",
-                            layout: "vertical",
-                            backgroundColor: "#1A1A1A",
-                            paddingAll: "20px",
-                            contents: [
-                                { type: "text", text: headerTitle, weight: "bold", color: "#FFFFFF", size: "lg" },
-                                { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#CCCCCC", size: "xs", margin: "xs" }
-                            ]
-                        },
-                        body: {
-                            type: "box",
-                            layout: "vertical",
-                            paddingAll: "20px",
-                            contents: currentItems
-                        }
-                    })
-                    currentItems = []
-                }
-              })
-              
-              if (bubbles.length > 5) {
-                 bubbles.length = 5; // LINE Carousel max safe size to avoid 50KB limit
-                 bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
-                 bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#EF4444", size: "xs", margin: "md", align: "center" })
-              }
-              
-              messages.push({
-                  type: "flex",
-                  altText: headerTitle,
-                  contents: {
-                      type: "carousel",
-                      contents: bubbles
-                  }
-              })
+                 // Chunk into bubbles every 19 items
+                 if (currentItems.length >= 19 || index === transactions.length - 1) {
+                     // removing last separator if exists
+                     if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
+                         currentItems.pop()
+                     }
+                     bubbles.push({
+                         type: "bubble",
+                         size: "mega",
+                         header: {
+                             type: "box",
+                             layout: "vertical",
+                             paddingAll: "20px",
+                             contents: [
+                                 { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "md" },
+                                 { type: "text", text: `${dateStr} (หน้า ${bubbles.length + 1})`, color: "#666666", size: "xs", margin: "xs" }
+                             ]
+                         },
+                         body: {
+                             type: "box",
+                             layout: "vertical",
+                             paddingAll: "20px",
+                             contents: currentItems
+                         },
+                         styles: {
+                             header: {
+                                 backgroundColor: "#F4F4F3",
+                                 separator: true,
+                                 separatorColor: "#E2E2E0"
+                             },
+                             body: {
+                                 backgroundColor: "#FFFFFF"
+                             }
+                         }
+                     })
+                     currentItems = []
+                 }
+               })
+               
+               if (bubbles.length > 5) {
+                  bubbles.length = 5; // LINE Carousel max safe size to avoid 50KB limit
+                  bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                  bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#9E2D2D", size: "xs", margin: "md", align: "center" })
+               }
+               
+               messages.push({
+                   type: "flex",
+                   altText: headerTitle,
+                   contents: {
+                       type: "carousel",
+                       contents: bubbles
+                   }
+               })
             }
 
             console.log(`Sending Stock Reply (${messages.length} bubbles)`)
@@ -563,7 +599,7 @@ Deno.serve(async (req) => {
             } else {
                if (attendances.length > 0) {
                   flexContents.push({ type: "text", text: "[บันทึกเข้า-ออกเวลา]", weight: "bold", color: "#1A1A1A", size: "sm", margin: "md" });
-                  flexContents.push({ type: "separator", margin: "sm", color: "#F0F0F0" });
+                  flexContents.push({ type: "separator", margin: "sm", color: "#E2E2E0" });
 
                   const empMap = new Map()
                   attendances.forEach((record: any) => {
@@ -604,24 +640,24 @@ Deno.serve(async (req) => {
                                  layout: "horizontal",
                                  margin: "sm",
                                  contents: [
-                                     { type: "text", text: "🟢 เข้า", color: "#aaaaaa", size: "xs", flex: 1 },
+                                     { type: "text", text: "🟢 เข้า", color: "#888888", size: "xs", flex: 1 },
                                      { type: "text", text: inTxt, color: "#1A1A1A", size: "xs", flex: 3 },
-                                     { type: "text", text: "🔴 ออก", color: "#aaaaaa", size: "xs", flex: 1 },
+                                     { type: "text", text: "🔴 ออก", color: "#888888", size: "xs", flex: 1 },
                                      { type: "text", text: outTxt, color: "#1A1A1A", size: "xs", flex: 3 }
                                  ]
                              }
                          ]
                      })
-                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
+                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
                   })
                }
 
                if (leaves.length > 0) {
                   flexContents.push({ type: "text", text: "[พนักงานที่ลาวันนี้]", weight: "bold", color: "#1A1A1A", size: "sm", margin: "xl" });
-                  flexContents.push({ type: "separator", margin: "sm", color: "#F0F0F0" });
+                  flexContents.push({ type: "separator", margin: "sm", color: "#E2E2E0" });
 
                   leaves.forEach((leave: any, i: number, arr: any[]) => {
-                     const statusColor = leave.status === 'approved' ? '#06C755' : (leave.status === 'pending' ? '#F59E0B' : '#EF4444')
+                     const statusColor = leave.status === 'approved' ? '#2D804E' : (leave.status === 'pending' ? '#9E672D' : '#9E2D2D')
                      const statusText = leave.status === 'approved' ? '✅ อนุมัติแล้ว' : (leave.status === 'pending' ? '⏳ รออนุมัติ' : '❌ ไม่อนุมัติ')
                      
                      flexContents.push({
@@ -635,7 +671,7 @@ Deno.serve(async (req) => {
                                  layout: "baseline",
                                  margin: "xs",
                                  contents: [
-                                     { type: "text", text: "เหตุผล", color: "#aaaaaa", size: "xs", flex: 1 },
+                                     { type: "text", text: "เหตุผล", color: "#888888", size: "xs", flex: 1 },
                                      { type: "text", text: leave.reason || '-', color: "#1A1A1A", size: "xs", flex: 4, wrap: true }
                                  ]
                              },
@@ -644,13 +680,13 @@ Deno.serve(async (req) => {
                                  layout: "baseline",
                                  margin: "xs",
                                  contents: [
-                                     { type: "text", text: "สถานะ", color: "#aaaaaa", size: "xs", flex: 1 },
+                                     { type: "text", text: "สถานะ", color: "#888888", size: "xs", flex: 1 },
                                      { type: "text", text: statusText, color: statusColor, size: "xs", flex: 4, weight: "bold" }
                                  ]
                              }
                          ]
                      })
-                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" })
+                     if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
                   })
                }
             }
@@ -664,11 +700,9 @@ Deno.serve(async (req) => {
                     header: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#1A1A1A",
-                        paddingAll: "20px",
                         contents: [
-                            { type: "text", text: "🧑‍💼 สรุปการเข้างาน", weight: "bold", color: "#FFFFFF", size: "lg" },
-                            { type: "text", text: titleDateStr, color: "#CCCCCC", size: "xs", margin: "xs" }
+                            { type: "text", text: "🧑‍💼 สรุปการเข้างาน", weight: "bold", color: "#1A1A1A", size: "md" },
+                            { type: "text", text: titleDateStr, color: "#666666", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -676,6 +710,16 @@ Deno.serve(async (req) => {
                         layout: "vertical",
                         paddingAll: "20px",
                         contents: flexContents
+                    },
+                    styles: {
+                        header: {
+                            backgroundColor: "#F4F4F3",
+                            separator: true,
+                            separatorColor: "#E2E2E0"
+                        },
+                        body: {
+                            backgroundColor: "#FFFFFF"
+                        }
                     }
                 }
             }];
@@ -840,7 +884,7 @@ Deno.serve(async (req) => {
                   if (r.prices && r.prices.length > 0) {
                       const priceStr = r.prices.map((p: number) => `฿${p}`).join(', ');
                       contents.push({
-                         type: "text", text: `💰 ราคาที่พบ: ${priceStr}`, color: "#EF4444", size: "xs", weight: "bold", margin: "xs"
+                         type: "text", text: `💰 ราคาที่พบ: ${priceStr}`, color: "#9E2D2D", size: "xs", weight: "bold", margin: "xs"
                       });
                   }
 
@@ -870,12 +914,12 @@ Deno.serve(async (req) => {
                       contents: contents
                   });
 
-                  if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" });
+                  if (i < arr.length - 1) flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
                })
                
                if (results.length > 5) {
-                   flexContents.push({ type: "separator", margin: "md", color: "#F0F0F0" });
-                   flexContents.push({ type: "text", text: `(แสดง 5 จาก ${results.length} รายการ)`, color: "#aaaaaa", size: "xs", align: "center", margin: "md" });
+                   flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
+                   flexContents.push({ type: "text", text: `(แสดง 5 จาก ${results.length} รายการ)`, color: "#888888", size: "xs", align: "center", margin: "md" });
                }
             }
 
@@ -888,11 +932,9 @@ Deno.serve(async (req) => {
                     header: {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#1A1A1A", // Premium Dark Theme
-                        paddingAll: "20px",
                         contents: [
-                            { type: "text", text: "🔍 ผลค้นหาราคากลาง", weight: "bold", color: "#FFFFFF", size: "lg" },
-                            { type: "text", text: `ค้นหา: "${keyword}"`, color: "#AAAAAA", size: "xs", margin: "xs" }
+                            { type: "text", text: "🔍 ผลค้นหาราคากลาง", weight: "bold", color: "#1A1A1A", size: "md" },
+                            { type: "text", text: `ค้นหา: "${keyword}"`, color: "#666666", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
@@ -900,6 +942,16 @@ Deno.serve(async (req) => {
                         layout: "vertical",
                         paddingAll: "20px",
                         contents: flexContents
+                    },
+                    styles: {
+                        header: {
+                            backgroundColor: "#F4F4F3",
+                            separator: true,
+                            separatorColor: "#E2E2E0"
+                        },
+                        body: {
+                            backgroundColor: "#FFFFFF"
+                        }
                     }
                 }
             }];

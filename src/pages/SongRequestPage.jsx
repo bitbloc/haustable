@@ -349,37 +349,34 @@ export default function SongRequestPage() {
                  text: `🎵 SONG REQUEST · ${donationAmount} THB`,
                  weight: "bold",
                  size: "sm",
-                 color: "#1DB954"
+                 color: "#1A1A1A"
                }
-             ],
-             backgroundColor: "#121212",
-             paddingAll: "16px"
+             ]
            },
           body: {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#181818",
             contents: [
               {
                 type: "text",
                 text: trackName,
                 weight: "bold",
                 size: "lg",
-                color: "#FFFFFF",
+                color: "#1A1A1A",
                 wrap: true
               },
               {
                 type: "text",
                 text: `${artistName} · ${durationMin}:${durationSec}`,
                 size: "sm",
-                color: "#B3B3B3",
+                color: "#666666",
                 margin: "xs",
                 wrap: true
               },
               {
                 type: "separator",
                 margin: "lg",
-                color: "#282828"
+                color: "#E2E2E0"
               },
               {
                 type: "box",
@@ -394,7 +391,7 @@ export default function SongRequestPage() {
                       {
                         type: "text",
                         text: "ผู้ขอ",
-                        color: "#B3B3B3",
+                        color: "#888888",
                         size: "xs",
                         flex: 1
                       },
@@ -403,7 +400,7 @@ export default function SongRequestPage() {
                         text: requesterName,
                         weight: "bold",
                         size: "sm",
-                        color: "#FFFFFF",
+                        color: "#1A1A1A",
                         flex: 4,
                         wrap: true
                       }
@@ -416,7 +413,7 @@ export default function SongRequestPage() {
                       {
                         type: "text",
                         text: "ตำแหน่ง",
-                        color: "#B3B3B3",
+                        color: "#888888",
                         size: "xs",
                         flex: 1
                       },
@@ -424,7 +421,7 @@ export default function SongRequestPage() {
                         type: "text",
                         text: gpsNote,
                         size: "xs",
-                        color: "#FFFFFF",
+                        color: "#1A1A1A",
                         flex: 4,
                         wrap: true
                       }
@@ -437,7 +434,7 @@ export default function SongRequestPage() {
                       {
                         type: "text",
                         text: "ข้อความ",
-                        color: "#B3B3B3",
+                        color: "#888888",
                         size: "xs",
                         flex: 1
                       },
@@ -445,7 +442,7 @@ export default function SongRequestPage() {
                         type: "text",
                         text: dedicationMessage || "-",
                         size: "sm",
-                        color: "#FFFFFF",
+                        color: "#1A1A1A",
                         flex: 4,
                         wrap: true,
                         style: "italic"
@@ -460,12 +457,11 @@ export default function SongRequestPage() {
             type: "box",
             layout: "vertical",
             spacing: "sm",
-            backgroundColor: "#121212",
             contents: [
               {
                 type: "button",
                 style: "primary",
-                color: "#1DB954",
+                color: "#1A1A1A",
                 height: "sm",
                 action: {
                   type: "uri",
@@ -483,8 +479,22 @@ export default function SongRequestPage() {
                   uri: slipPublicUrl
                 }
               }
-            ],
-            paddingAll: "16px"
+            ]
+          },
+          styles: {
+            header: {
+              backgroundColor: "#F4F4F3",
+              separator: true,
+              separatorColor: "#E2E2E0"
+            },
+            body: {
+              backgroundColor: "#FFFFFF"
+            },
+            footer: {
+              backgroundColor: "#F4F4F3",
+              separator: true,
+              separatorColor: "#E2E2E0"
+            }
           }
         }
       }

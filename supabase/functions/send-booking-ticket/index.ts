@@ -42,7 +42,6 @@ serve(async (req) => {
         size: "kilo",
         header: {
           type: "box",
-          layout: "vertical",
           layout: "horizontal",
           contents: [
             {
@@ -62,7 +61,7 @@ serve(async (req) => {
               height: "40px",
               cornerRadius: "100px",
               borderWidth: "1px",
-              borderColor: "#e5e7eb"
+              borderColor: "#E2E2E0"
             },
             {
               type: "box",
@@ -72,14 +71,14 @@ serve(async (req) => {
                   type: "text",
                   text: "HAUS TABLE",
                   weight: "bold",
-                  color: "#111827",
+                  color: "#1A1A1A",
                   size: "sm"
                 },
                 {
                   type: "text",
                   text: "BOOKING TICKET",
                   size: "xxs",
-                  color: "#6b7280",
+                  color: "#666666",
                   weight: "bold",
                   tracking: "widest"
                 }
@@ -101,7 +100,7 @@ serve(async (req) => {
                  {
                   type: "text",
                   text: "Customer",
-                  color: "#9ca3af",
+                  color: "#888888",
                   size: "xxs",
                   weight: "bold",
                   wrap: true
@@ -111,7 +110,7 @@ serve(async (req) => {
                   text: customerName || "Guest",
                   weight: "bold",
                   size: "xl",
-                  color: "#111827",
+                  color: "#1A1A1A",
                   wrap: true
                 }
               ]
@@ -127,7 +126,7 @@ serve(async (req) => {
                     {
                       type: "text",
                       text: "Date & Time",
-                      color: "#9ca3af",
+                      color: "#888888",
                       size: "xxs",
                       weight: "bold"
                     },
@@ -135,7 +134,7 @@ serve(async (req) => {
                       type: "text",
                       text: dateTime || "-",
                       size: "sm",
-                      color: "#374151",
+                      color: "#1A1A1A",
                       weight: "bold"
                     }
                   ],
@@ -148,7 +147,7 @@ serve(async (req) => {
                     {
                       type: "text",
                       text: "Table",
-                      color: "#9ca3af",
+                      color: "#888888",
                       size: "xxs",
                       weight: "bold"
                     },
@@ -156,7 +155,7 @@ serve(async (req) => {
                       type: "text",
                       text: tableName || "TBA",
                       size: "lg",
-                      color: "#111827",
+                      color: "#1A1A1A",
                       weight: "bold"
                     }
                   ],
@@ -168,7 +167,7 @@ serve(async (req) => {
             {
               type: "separator",
               margin: "lg",
-              color: "#e5e7eb"
+              color: "#E2E2E0"
             },
             {
               type: "box",
@@ -177,7 +176,7 @@ serve(async (req) => {
                 {
                   type: "text",
                   text: "Order Summary",
-                  color: "#9ca3af",
+                  color: "#888888",
                   size: "xxs",
                   weight: "bold",
                   margin: "md"
@@ -186,7 +185,7 @@ serve(async (req) => {
                   type: "text",
                   text: itemsSummary || "No items",
                   size: "xs",
-                  color: "#4b5563",
+                  color: "#666666",
                   wrap: true,
                   margin: "sm"
                 },
@@ -197,14 +196,14 @@ serve(async (req) => {
                     {
                       type: "text",
                       text: "Total Amount",
-                      color: "#6b7280",
+                      color: "#666666",
                       size: "xs",
                       weight: "bold"
                     },
                     {
                       type: "text",
                       text: totalAmount ? `${totalAmount}.-` : "-",
-                      color: "#111827",
+                      color: "#1A1A1A",
                       size: "sm",
                       weight: "bold",
                       align: "end"
@@ -215,8 +214,7 @@ serve(async (req) => {
               ]
             }
           ],
-          paddingAll: "20px",
-          backgroundColor: "#f9fafb"
+          paddingAll: "20px"
         },
         footer: {
           type: "box",
@@ -230,7 +228,7 @@ serve(async (req) => {
                   type: "text",
                   text: "Scan at the store to Check-in",
                   size: "xxs",
-                  color: "#6b7280",
+                  color: "#666666",
                   align: "center",
                   weight: "bold",
                   margin: "sm"
@@ -251,17 +249,26 @@ serve(async (req) => {
               type: "text",
               text: `Ref: #${trackingToken || bookingId}`,
               size: "xxs",
-              color: "#d1d5db",
+              color: "#888888",
               align: "center",
               margin: "md"
             }
           ],
-          paddingAll: "20px",
-          backgroundColor: "#ffffff"
+          paddingAll: "20px"
         },
         styles: {
           header: {
-            backgroundColor: "#ffffff"
+            backgroundColor: "#F4F4F3",
+            separator: true,
+            separatorColor: "#E2E2E0"
+          },
+          body: {
+            backgroundColor: "#FFFFFF"
+          },
+          footer: {
+            backgroundColor: "#F4F4F3",
+            separator: true,
+            separatorColor: "#E2E2E0"
           }
         }
       }

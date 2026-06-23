@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     if (bookingDetails && (type === 'confirmed' || type === 'cancelled')) {
         // --- FLEX MESSAGE ---
         const isConfirmed = type === 'confirmed'
-        const color = isConfirmed ? '#06C755' : '#EF4444' // Green vs Red
+        const statusColor = isConfirmed ? '#2D804E' : '#9E2D2D' // Rams Green vs Rams Red
         const title = isConfirmed ? 'Booking Confirmed' : 'Booking Cancelled'
         const desc = isConfirmed ? 'Your table is ready. See you soon!' : 'Please contact us for more info.'
 
@@ -60,18 +60,16 @@ Deno.serve(async (req) => {
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        { "type": "text", "text": title, "weight": "bold", "color": "#FFFFFF", "size": "lg" }
-                    ],
-                    "backgroundColor": color,
-                    "paddingAll": "20px"
+                        { "type": "text", "text": title, "weight": "bold", "color": statusColor, "size": "md" }
+                    ]
                 },
                 "body": {
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
-                        { "type": "text", "text": `Hello, ${bookingDetails.customerName}`, "weight": "bold", "size": "md", "margin": "md" },
-                        { "type": "text", "text": desc, "size": "xs", "color": "#aaaaaa", "margin": "xs" },
-                        { "type": "separator", "margin": "xl" },
+                        { "type": "text", "text": `Hello, ${bookingDetails.customerName}`, "weight": "bold", "size": "md", "color": "#1A1A1A", "margin": "md" },
+                        { "type": "text", "text": desc, "size": "xs", "color": "#666666", "margin": "xs" },
+                        { "type": "separator", "margin": "xl", "color": "#E2E2E0" },
                         {
                             "type": "box",
                             "layout": "vertical",
@@ -82,37 +80,47 @@ Deno.serve(async (req) => {
                                     "type": "box",
                                     "layout": "baseline",
                                     "contents": [
-                                        { "type": "text", "text": "Date", "color": "#aaaaaa", "size": "sm", "flex": 2 },
-                                        { "type": "text", "text": bookingDetails.date, "weight": "bold", "color": "#666666", "size": "sm", "flex": 4, "wrap": true }
+                                        { "type": "text", "text": "Date", "color": "#888888", "size": "sm", "flex": 2 },
+                                        { "type": "text", "text": bookingDetails.date, "weight": "bold", "color": "#1A1A1A", "size": "sm", "flex": 4, "wrap": true }
                                     ]
                                 },
                                 {
                                     "type": "box",
                                     "layout": "baseline",
                                     "contents": [
-                                        { "type": "text", "text": "Time", "color": "#aaaaaa", "size": "sm", "flex": 2 },
-                                        { "type": "text", "text": bookingDetails.time, "weight": "bold", "color": "#666666", "size": "sm", "flex": 4, "wrap": true }
+                                        { "type": "text", "text": "Time", "color": "#888888", "size": "sm", "flex": 2 },
+                                        { "type": "text", "text": bookingDetails.time, "weight": "bold", "color": "#1A1A1A", "size": "sm", "flex": 4, "wrap": true }
                                     ]
                                 },
                                 {
                                     "type": "box",
                                     "layout": "baseline",
                                     "contents": [
-                                        { "type": "text", "text": "Table", "color": "#aaaaaa", "size": "sm", "flex": 2 },
-                                        { "type": "text", "text": bookingDetails.tableName, "weight": "bold", "color": "#666666", "size": "sm", "flex": 4, "wrap": true }
+                                        { "type": "text", "text": "Table", "color": "#888888", "size": "sm", "flex": 2 },
+                                        { "type": "text", "text": bookingDetails.tableName, "weight": "bold", "color": "#1A1A1A", "size": "sm", "flex": 4, "wrap": true }
                                     ]
                                 },
                                 {
                                     "type": "box",
                                     "layout": "baseline",
                                     "contents": [
-                                        { "type": "text", "text": "Guests", "color": "#aaaaaa", "size": "sm", "flex": 2 },
-                                        { "type": "text", "text": `${bookingDetails.pax} Pax`, "weight": "bold", "color": "#666666", "size": "sm", "flex": 4, "wrap": true }
+                                        { "type": "text", "text": "Guests", "color": "#888888", "size": "sm", "flex": 2 },
+                                        { "type": "text", "text": `${bookingDetails.pax} Pax`, "weight": "bold", "color": "#1A1A1A", "size": "sm", "flex": 4, "wrap": true }
                                     ]
                                 }
                             ]
                         }
                     ]
+                },
+                "styles": {
+                    "header": {
+                        "backgroundColor": "#F4F4F3",
+                        "separator": true,
+                        "separatorColor": "#E2E2E0"
+                    },
+                    "body": {
+                        "backgroundColor": "#FFFFFF"
+                    }
                 }
             }
         }

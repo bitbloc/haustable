@@ -285,19 +285,19 @@ export default function StockPage() {
                 const EPSILON = 0.0001;
                 
                 let statusEmoji = '🟢';
-                let statusColor = '#06C755';
+                let statusColor = '#2D804E';
                 if (qty <= EPSILON) {
                     statusEmoji = '⚫ หมด';
-                    statusColor = '#111111';
+                    statusColor = '#1A1A1A';
                 } else if (minThreshold > 0 && qty <= minThreshold + EPSILON) {
                     statusEmoji = '🔴 วิกฤต';
-                    statusColor = '#EF4444';
+                    statusColor = '#9E2D2D';
                 } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
                     statusEmoji = '🟠 ต้องเติม';
-                    statusColor = '#F59E0B';
+                    statusColor = '#9E672D';
                 } else if (qty <= minThreshold) {
                     statusEmoji = '🔴 วิกฤต';
-                    statusColor = '#EF4444';
+                    statusColor = '#9E2D2D';
                 }
                 
                 // Friendly Format (Unopened + Opened)
@@ -334,7 +334,7 @@ export default function StockPage() {
                                 {
                                     type: "text",
                                     text: `ทำรายการ: ${actionLabels}`,
-                                    color: "#888888",
+                                    color: "#666666",
                                     size: "xs",
                                     flex: 2
                                 },
@@ -356,7 +356,7 @@ export default function StockPage() {
                 flexItems.push({
                     type: "separator",
                     margin: "md",
-                    color: "#F0F0F0"
+                    color: "#E2E2E0"
                 });
 
                 index++;
@@ -388,19 +388,17 @@ export default function StockPage() {
                                 type: "text",
                                 text: "📦 สรุปอัพเดทสต็อก",
                                 weight: "bold",
-                                size: "lg",
-                                color: "#FFFFFF"
+                                size: "md",
+                                color: "#1A1A1A"
                             },
                             {
                                 type: "text",
                                 text: "1 ชั่วโมงล่าสุด",
-                                color: "#CCCCCC",
+                                color: "#666666",
                                 size: "xs",
                                 margin: "xs"
                             }
-                        ],
-                        backgroundColor: "#1A1A1A",
-                        paddingAll: "20px"
+                        ]
                     },
                     body: {
                         type: "box",
@@ -415,12 +413,26 @@ export default function StockPage() {
                             {
                                 type: "text",
                                 text: `โดย: ${staffNames}`,
-                                color: "#aaaaaa",
+                                color: "#888888",
                                 size: "xs",
                                 align: "end"
                             }
-                        ],
-                        paddingAll: "20px"
+                        ]
+                    },
+                    styles: {
+                        header: {
+                            backgroundColor: "#F4F4F3",
+                            separator: true,
+                            separatorColor: "#E2E2E0"
+                        },
+                        body: {
+                            backgroundColor: "#FFFFFF"
+                        },
+                        footer: {
+                            backgroundColor: "#F4F4F3",
+                            separator: true,
+                            separatorColor: "#E2E2E0"
+                        }
                     }
                 }
             };

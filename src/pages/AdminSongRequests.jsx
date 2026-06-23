@@ -158,37 +158,34 @@ export default function AdminSongRequests() {
                 text: "🧪 [TEST] SONG REQUEST",
                 weight: "bold",
                 size: "sm",
-                color: "#FF3366"
+                color: "#9E2D2D"
               }
-            ],
-            backgroundColor: "#121212",
-            paddingAll: "16px"
+            ]
           },
           body: {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#181818",
             contents: [
               {
                 type: "text",
                 text: testForm.trackName,
                 weight: "bold",
                 size: "lg",
-                color: "#FFFFFF",
+                color: "#1A1A1A",
                 wrap: true
               },
               {
                 type: "text",
                 text: `${testForm.artistName} · (3:00)`,
                 size: "sm",
-                color: "#B3B3B3",
+                color: "#666666",
                 margin: "xs",
                 wrap: true
               },
               {
                 type: "separator",
                 margin: "lg",
-                color: "#282828"
+                color: "#E2E2E0"
               },
               {
                 type: "box",
@@ -203,7 +200,7 @@ export default function AdminSongRequests() {
                       {
                         type: "text",
                         text: "ผู้ขอ",
-                        color: "#B3B3B3",
+                        color: "#888888",
                         size: "xs",
                         flex: 1
                       },
@@ -212,7 +209,7 @@ export default function AdminSongRequests() {
                         text: testForm.requesterName || 'Admin Test',
                         weight: "bold",
                         size: "sm",
-                        color: "#FFFFFF",
+                        color: "#1A1A1A",
                         flex: 4,
                         wrap: true
                       }
@@ -225,7 +222,7 @@ export default function AdminSongRequests() {
                       {
                         type: "text",
                         text: "ข้อความ",
-                        color: "#B3B3B3",
+                        color: "#888888",
                         size: "xs",
                         flex: 1
                       },
@@ -233,7 +230,7 @@ export default function AdminSongRequests() {
                         type: "text",
                         text: testForm.message || "-",
                         size: "sm",
-                        color: "#FFFFFF",
+                        color: "#1A1A1A",
                         flex: 4,
                         wrap: true
                       }
@@ -241,8 +238,17 @@ export default function AdminSongRequests() {
                   }
                 ]
               }
-            ],
-            paddingAll: "20px"
+            ]
+          },
+          styles: {
+            header: {
+              backgroundColor: "#F4F4F3",
+              separator: true,
+              separatorColor: "#E2E2E0"
+            },
+            body: {
+              backgroundColor: "#FFFFFF"
+            }
           }
         }
       }
