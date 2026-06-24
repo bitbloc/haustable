@@ -394,10 +394,11 @@ export default function StockPage() {
             const staffNames = filteredStaff.length > 0 ? filteredStaff.join(', ') : 'Staff';
             message += `โดย: ${staffNames}`;
 
-            const flexPayload = {
-                type: "flex",
-                altText: "📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)",
-                contents: {
+            const bubbles = [];
+            const chunkSize = 8;
+            for (let i = 0; i < flexItems.length; i += chunkSize) {
+                const chunk = flexItems.slice(i, i + chunkSize);
+                bubbles.push({
                     type: "bubble",
                     size: "mega",
                     header: {
@@ -413,7 +414,7 @@ export default function StockPage() {
                             },
                             {
                                 type: "text",
-                                text: "1 ชั่วโมงล่าสุด",
+                                text: `1 ชั่วโมงล่าสุด (หน้า ${bubbles.length + 1})`,
                                 color: "#666666",
                                 size: "xs",
                                 margin: "xs"
@@ -424,7 +425,7 @@ export default function StockPage() {
                         type: "box",
                         layout: "vertical",
                         paddingAll: "20px",
-                        contents: flexItems
+                        contents: chunk
                     },
                     footer: {
                         type: "box",
@@ -454,6 +455,19 @@ export default function StockPage() {
                             separatorColor: "#E2E2E0"
                         }
                     }
+                });
+            }
+
+            if (bubbles.length > 5) {
+                bubbles.length = 5;
+            }
+
+            const flexPayload = {
+                type: "flex",
+                altText: "📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)",
+                contents: bubbles.length === 1 ? bubbles[0] : {
+                    type: "carousel",
+                    contents: bubbles
                 }
             };
 

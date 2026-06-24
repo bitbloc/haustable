@@ -211,55 +211,50 @@ Deno.serve(async (req) => {
                              width: "4px",
                              backgroundColor: indicatorBarColor,
                              cornerRadius: "sm",
-                              contents: []
+                             contents: []
                          },
-                         // Content details
+                         // Item Name
+                         {
+                             type: "text",
+                             text: itemName,
+                             weight: "bold",
+                             size: "sm",
+                             color: "#1A1A1A",
+                             wrap: true,
+                             flex: 5,
+                             gravity: "center",
+                             margin: "md"
+                         },
+                         // Right quantity & status details
                          {
                              type: "box",
-                             layout: "horizontal",
+                             layout: "vertical",
+                             flex: 5,
                              margin: "md",
-                             flex: 1,
                              contents: [
                                  {
                                      type: "text",
-                                     text: itemName,
-                                     weight: "bold",
-                                     size: "sm",
+                                     text: `${current} / ${min > 0 ? min : reorder} ${item.unit || ''}`,
                                      color: "#1A1A1A",
-                                     wrap: true,
-                                     flex: 5,
-                                     gravity: "center"
+                                     size: "sm",
+                                     weight: "bold",
+                                     align: "end"
                                  },
                                  {
-                                     type: "box",
-                                     layout: "vertical",
-                                     flex: 5,
-                                     contents: [
-                                         {
-                                             type: "text",
-                                             text: `${current} / ${min > 0 ? min : reorder} ${item.unit || ''}`,
-                                             color: "#1A1A1A",
-                                             size: "sm",
-                                             weight: "bold",
-                                             align: "end"
-                                         },
-                                         {
-                                             type: "text",
-                                             text: statusEmoji,
-                                             color: indicatorBarColor,
-                                             size: "xxs",
-                                             weight: "bold",
-                                             margin: "xs",
-                                             align: "end"
-                                         }
-                                     ]
+                                     type: "text",
+                                     text: statusEmoji,
+                                     color: indicatorBarColor,
+                                     size: "xxs",
+                                     weight: "bold",
+                                     margin: "xs",
+                                     align: "end"
                                  }
                              ]
                          }
                      ]
                  })
 
-                 if (currentItems.length >= 17 || index === itemsToBuy.length - 1) {
+                 if (currentItems.length >= 8 || index === itemsToBuy.length - 1) {
                      const bodyContents = [
                          tableHeader,
                          { type: "separator", margin: "md", color: "#1A1A1A" },
@@ -511,59 +506,64 @@ Deno.serve(async (req) => {
                  const changeColor = tx.quantity_change > 0 ? '#1B4D3E' : tx.quantity_change < 0 ? '#8B0000' : '#666666';
 
                  currentItems.push({
-                     type: "box",
-                     layout: "horizontal",
-                     backgroundColor: rowBgColor,
-                     cornerRadius: "md",
-                     paddingAll: "md",
-                     margin: "sm",
-                     contents: [
-                         // Left indicator bar
-                         {
-                             type: "box",
-                             layout: "vertical",
-                             width: "4px",
-                             backgroundColor: indicatorBarColor,
-                             cornerRadius: "sm",
+                      type: "box",
+                      layout: "horizontal",
+                      backgroundColor: rowBgColor,
+                      cornerRadius: "md",
+                      paddingAll: "md",
+                      margin: "sm",
+                      contents: [
+                          // Left indicator bar
+                          {
+                              type: "box",
+                              layout: "vertical",
+                              width: "4px",
+                              backgroundColor: indicatorBarColor,
+                              cornerRadius: "sm",
                               contents: []
-                         },
-                         // Details content
-                         {
-                             type: "box",
-                             layout: "horizontal",
-                             margin: "md",
-                             flex: 1,
-                             contents: [
-                                 { type: "text", text: time, color: "#444444", size: "xs", weight: "bold", flex: 2, gravity: "center" },
-                                 {
-                                     type: "box",
-                                     layout: "vertical",
-                                     flex: 5,
-                                     contents: [
-                                         { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
-                                         { type: "text", text: `${sign}${tx.quantity_change} ${itemUnit}`, color: changeColor, size: "xs", weight: "bold", margin: "xs" },
-                                         ...(tx.note ? [{
-                                             type: "text", text: `NOTE: ${tx.note}`, color: "#777777", size: "xxs", margin: "xs", wrap: true
-                                         }] : [])
-                                     ]
-                                 },
-                                 {
-                                     type: "box",
-                                     layout: "vertical",
-                                     flex: 3,
-                                     contents: [
-                                         { type: "text", text: `BAL: ${current}`, color: "#1A1A1A", size: "xs", weight: "bold", align: "end" },
-                                         { type: "text", text: statusEmoji, color: indicatorBarColor, size: "xxs", weight: "bold", margin: "xs", align: "end" }
-                                     ]
-                                 }
-                             ]
-                         }
-                     ]
-                 })
+                          },
+                          // Time
+                          { 
+                              type: "text", 
+                              text: time, 
+                              color: "#444444", 
+                              size: "xs", 
+                              weight: "bold", 
+                              flex: 2, 
+                              gravity: "center",
+                              margin: "md"
+                          },
+                          // Item Name & transaction details
+                          {
+                              type: "box",
+                              layout: "vertical",
+                              flex: 5,
+                              margin: "md",
+                              contents: [
+                                  { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
+                                  { type: "text", text: `${sign}${tx.quantity_change} ${itemUnit}`, color: changeColor, size: "xs", weight: "bold", margin: "xs" },
+                                  ...(tx.note ? [{
+                                      type: "text", text: `NOTE: ${tx.note}`, color: "#777777", size: "xxs", margin: "xs", wrap: true
+                                  }] : [])
+                              ]
+                          },
+                          // Balance & status
+                          {
+                              type: "box",
+                              layout: "vertical",
+                              flex: 3,
+                              margin: "md",
+                              contents: [
+                                  { type: "text", text: `BAL: ${current}`, color: "#1A1A1A", size: "xs", weight: "bold", align: "end" },
+                                  { type: "text", text: statusEmoji, color: indicatorBarColor, size: "xxs", weight: "bold", margin: "xs", align: "end" }
+                              ]
+                          }
+                      ]
+                  })
 
 
                  // Chunk into bubbles every 15 items
-                 if (currentItems.length >= 15 || index === transactions.length - 1) {
+                 if (currentItems.length >= 8 || index === transactions.length - 1) {
                      const bodyContents = [
                          logHeader,
                          { type: "separator", margin: "md", color: "#1A1A1A" },
