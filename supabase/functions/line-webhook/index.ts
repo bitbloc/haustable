@@ -5,6 +5,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function formatStockQty(qty: number, unit: string): string {
+  const safeQty = Math.max(0, qty);
+  const fullUnits = Math.floor(safeQty);
+  const remainder = Number((safeQty - fullUnits).toFixed(4));
+  const percent = Math.round(remainder * 100);
+  const hasOpen = percent > 0;
+  const openedUnits = hasOpen ? 1 : 0;
+  const totalPhysical = fullUnits + openedUnits;
+  const unitLabel = unit || '';
+
+  if (hasOpen) {
+    if (fullUnits > 0) {
+      return `${totalPhysical} ${unitLabel} (ยังไม่เปิด ${fullUnits}, เหลืออยู่ ${percent}%)`;
+    } else {
+      return `1 ${unitLabel} (เหลืออยู่ ${percent}%)`;
+    }
+  } else {
+    return `${fullUnits} ${unitLabel}`;
+  }
+}
+
 async function verifySignature(body: string, signature: string, secret: string) {
   const encoder = new TextEncoder()
   const keyBuffer = encoder.encode(secret)
@@ -109,6 +130,9 @@ Deno.serve(async (req) => {
             if (isBuyback) {
                const dayAgo = new Date(new Date().getTime() - (24 * 60 * 60 * 1000)).toISOString()
                query = query.gte('updated_at', dayAgo)
+            } else {
+               const threeDaysAgo = new Date(new Date().getTime() - (3 * 24 * 60 * 60 * 1000)).toISOString()
+               query = query.gte('updated_at', threeDaysAgo)
             }
 
             const { data: items, error } = await query
@@ -125,7 +149,7 @@ Deno.serve(async (req) => {
 
             console.log(`Found ${itemsToBuy.length} items to buy`)
 
-            const headerTitle = isBuyback ? "RESTOCK LIST (24H)" : "RESTOCK LIST";
+            const headerTitle = isBuyback ? "RESTOCK LIST (24H)" : "RESTOCK LIST (3 DAYS)";
             let messages = [];
 
             if (itemsToBuy.length === 0) {
@@ -169,7 +193,7 @@ Deno.serve(async (req) => {
                    margin: "sm",
                    contents: [
                        { type: "text", text: "ITEM DETAILS", color: "#888888", size: "xxs", weight: "bold", flex: 1 },
-                       { type: "text", text: "CURRENT / LIMIT", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 1 }
+                       { type: "text", text: "REMAINING", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 1 }
                    ]
                };
 
@@ -234,11 +258,12 @@ Deno.serve(async (req) => {
                              contents: [
                                  {
                                      type: "text",
-                                     text: `${current} / ${min > 0 ? min : reorder} ${item.unit || ''}`,
+                                     text: formatStockQty(current, item.unit || ''),
                                      color: "#1A1A1A",
                                      size: "sm",
                                      weight: "bold",
-                                     align: "end"
+                                     align: "end",
+                                     wrap: true
                                  },
                                  {
                                      type: "text",
@@ -461,7 +486,7 @@ Deno.serve(async (req) => {
                    contents: [
                        { type: "text", text: "TIME", color: "#888888", size: "xxs", weight: "bold", flex: 2 },
                        { type: "text", text: "TRANSACTION DETAIL", color: "#888888", size: "xxs", weight: "bold", flex: 5 },
-                       { type: "text", text: "BALANCE", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                       { type: "text", text: "REMAINING", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
                    ]
                };
                
@@ -554,7 +579,15 @@ Deno.serve(async (req) => {
                               flex: 3,
                               margin: "md",
                               contents: [
-                                  { type: "text", text: `BAL: ${current}`, color: "#1A1A1A", size: "xs", weight: "bold", align: "end" },
+                                  { 
+                                      type: "text", 
+                                      text: formatStockQty(current, itemUnit), 
+                                      color: "#1A1A1A", 
+                                      size: "xs", 
+                                      weight: "bold", 
+                                      align: "end",
+                                      wrap: true
+                                  },
                                   { type: "text", text: statusEmoji, color: indicatorBarColor, size: "xxs", weight: "bold", margin: "xs", align: "end" }
                               ]
                           }
