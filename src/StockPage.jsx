@@ -291,13 +291,10 @@ export default function StockPage() {
                     statusColor = '#1A1A1A';
                 } else if (minThreshold > 0 && qty <= minThreshold + EPSILON) {
                     statusEmoji = '🔴 วิกฤต';
-                    statusColor = '#9E2D2D';
                 } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
                     statusEmoji = '🟠 ต้องเติม';
-                    statusColor = '#9E672D';
                 } else if (qty <= minThreshold) {
                     statusEmoji = '🔴 วิกฤต';
-                    statusColor = '#9E2D2D';
                 }
                 
                 // Friendly Format (Unopened + Opened)
@@ -311,61 +308,84 @@ export default function StockPage() {
                     return t;
                 }).join(', ');
 
+                let indicatorBarColor = '#2D804E';
+                let rowBgColor = '#FFFFFF';
+                if (qty <= EPSILON) {
+                    indicatorBarColor = '#4B4B4B';
+                    rowBgColor = '#F5F5F5';
+                } else if ((minThreshold > 0 && qty <= minThreshold + EPSILON) || qty <= minThreshold) {
+                    indicatorBarColor = '#E63946'; // CRIT
+                    rowBgColor = '#FFEBEB'; // Light red highlight
+                } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
+                    indicatorBarColor = '#F4A261'; // WARN
+                    rowBgColor = '#FFF6EB'; // Light orange highlight
+                }
+
                 message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${display} ${statusEmoji}\n\n`;
                 
                 flexItems.push({
                     type: "box",
-                    layout: "vertical",
-                    margin: "md",
+                    layout: "horizontal",
+                    backgroundColor: rowBgColor,
+                    cornerRadius: "md",
+                    paddingAll: "md",
+                    margin: "sm",
                     contents: [
-                        {
-                            type: "text",
-                            text: `${index}. ${item.name}`,
-                            weight: "bold",
-                            size: "sm",
-                            color: "#1A1A1A",
-                            wrap: true
-                        },
+                        // Left indicator bar
                         {
                             type: "box",
-                            layout: "baseline",
-                            margin: "sm",
+                            layout: "vertical",
+                            width: "4px",
+                            backgroundColor: indicatorBarColor,
+                            cornerRadius: "sm",
+                            contents: []
+                        },
+                        // Details content
+                        {
+                            type: "box",
+                            layout: "vertical",
+                            margin: "md",
+                            flex: 1,
                             contents: [
                                 {
                                     type: "text",
-                                    text: `ทำรายการ: ${actionLabels}`,
-                                    color: "#666666",
-                                    size: "xs",
-                                    flex: 2
+                                    text: `${index}. ${item.name}`,
+                                    weight: "bold",
+                                    size: "sm",
+                                    color: "#1A1A1A",
+                                    wrap: true
                                 },
                                 {
-                                    type: "text",
-                                    text: `${display} ${statusEmoji}`,
-                                    color: statusColor,
-                                    size: "sm",
-                                    align: "end",
-                                    weight: "bold",
-                                    flex: 3,
-                                    wrap: true
+                                    type: "box",
+                                    layout: "baseline",
+                                    margin: "xs",
+                                    contents: [
+                                        {
+                                            type: "text",
+                                            text: `ทำรายการ: ${actionLabels}`,
+                                            color: "#555555",
+                                            size: "xs",
+                                            flex: 2
+                                        },
+                                        {
+                                            type: "text",
+                                            text: `${display} ${statusEmoji}`,
+                                            color: indicatorBarColor === "#2A9D8F" ? "#2D804E" : indicatorBarColor,
+                                            size: "sm",
+                                            align: "end",
+                                            weight: "bold",
+                                            flex: 3,
+                                            wrap: true
+                                        }
+                                    ]
                                 }
                             ]
                         }
                     ]
                 });
                 
-                flexItems.push({
-                    type: "separator",
-                    margin: "md",
-                    color: "#E2E2E0"
-                });
-
                 index++;
             });
-
-            // Remove the last separator if items exist
-            if (flexItems.length > 0 && flexItems[flexItems.length - 1].type === 'separator') {
-                flexItems.pop();
-            }
 
             const filteredStaff = Array.from(performers).filter(name => 
                 !name.toLowerCase().includes('antigravity') && 

@@ -168,9 +168,8 @@ Deno.serve(async (req) => {
                    layout: "horizontal",
                    margin: "sm",
                    contents: [
-                       { type: "text", text: "STATUS", color: "#888888", size: "xxs", weight: "bold", flex: 2 },
-                       { type: "text", text: "ITEM", color: "#888888", size: "xxs", weight: "bold", flex: 5 },
-                       { type: "text", text: "QTY/LIMIT", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 3 }
+                       { type: "text", text: "ITEM DETAILS", color: "#888888", size: "xxs", weight: "bold", flex: 1 },
+                       { type: "text", text: "CURRENT / LIMIT", color: "#888888", size: "xxs", weight: "bold", align: "end", flex: 1 }
                    ]
                };
 
@@ -180,32 +179,87 @@ Deno.serve(async (req) => {
                  const min = Number(item.min_stock_threshold) || 0
                  const reorder = Number(item.reorder_point) || 0
                  
-                 let statusLabel = 'OK'
-                 let statusColor = '#2D804E'
-                 if (current <= EPSILON) { statusLabel = 'OUT'; statusColor = '#1A1A1A' }
-                 else if (min > 0 && current <= min + EPSILON) { statusLabel = 'CRIT'; statusColor = '#9E2D2D' }
-                 else if (reorder > 0 && current <= reorder + EPSILON) { statusLabel = 'WARN'; statusColor = '#9E672D' }
+                 let indicatorBarColor = '#2D804E';
+                 let rowBgColor = '#FFFFFF';
+                 let statusEmoji = '🟢 OK';
+                 if (current <= EPSILON) { 
+                     statusEmoji = '⚫ OUT';
+                     indicatorBarColor = '#4B4B4B';
+                     rowBgColor = '#F5F5F5';
+                 } else if (min > 0 && current <= min + EPSILON) { 
+                     statusEmoji = '🔴 CRIT';
+                     indicatorBarColor = '#E63946';
+                     rowBgColor = '#FFEBEB';
+                 } else if (reorder > 0 && current <= reorder + EPSILON) { 
+                     statusEmoji = '🟠 WARN';
+                     indicatorBarColor = '#F4A261';
+                     rowBgColor = '#FFF6EB';
+                 }
 
                  currentItems.push({
                      type: "box",
                      layout: "horizontal",
-                     margin: "md",
+                     backgroundColor: rowBgColor,
+                     cornerRadius: "md",
+                     paddingAll: "md",
+                     margin: "sm",
                      contents: [
-                         { type: "text", text: `[${statusLabel}]`, color: statusColor, size: "xs", weight: "bold", flex: 2 },
-                         { type: "text", text: itemName.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true, flex: 5 },
-                         { type: "text", text: `${current} / ${min > 0 ? min : reorder}`, color: "#1A1A1A", size: "sm", align: "end", flex: 3 }
+                         // Left indicator bar
+                         {
+                             type: "box",
+                             layout: "vertical",
+                             width: "4px",
+                             backgroundColor: indicatorBarColor,
+                             cornerRadius: "sm",
+                              contents: []
+                         },
+                         // Content details
+                         {
+                             type: "box",
+                             layout: "horizontal",
+                             margin: "md",
+                             flex: 1,
+                             contents: [
+                                 {
+                                     type: "text",
+                                     text: itemName,
+                                     weight: "bold",
+                                     size: "sm",
+                                     color: "#1A1A1A",
+                                     wrap: true,
+                                     flex: 5,
+                                     gravity: "center"
+                                 },
+                                 {
+                                     type: "box",
+                                     layout: "vertical",
+                                     flex: 5,
+                                     contents: [
+                                         {
+                                             type: "text",
+                                             text: `${current} / ${min > 0 ? min : reorder} ${item.unit || ''}`,
+                                             color: "#1A1A1A",
+                                             size: "sm",
+                                             weight: "bold",
+                                             align: "end"
+                                         },
+                                         {
+                                             type: "text",
+                                             text: statusEmoji,
+                                             color: indicatorBarColor,
+                                             size: "xxs",
+                                             weight: "bold",
+                                             margin: "xs",
+                                             align: "end"
+                                         }
+                                     ]
+                                 }
+                             ]
+                         }
                      ]
                  })
 
-                 if (index < itemsToBuy.length - 1) {
-                     currentItems.push({ type: "separator", margin: "md", color: "#E2E2E0" })
-                 }
-
                  if (currentItems.length >= 17 || index === itemsToBuy.length - 1) {
-                     if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
-                         currentItems.pop()
-                     }
-
                      const bodyContents = [
                          tableHeader,
                          { type: "separator", margin: "md", color: "#1A1A1A" },
@@ -435,55 +489,81 @@ Deno.serve(async (req) => {
                  const min = Number(item?.min_stock_threshold) || 0
                  const reorder = Number(item?.reorder_point) || 0
                  const EPSILON = 0.0001;
-                 
-                 let statusLabel = 'OK'
-                 let statusColor = '#2D804E'
-                 if (current <= EPSILON) { statusLabel = 'OUT'; statusColor = '#1A1A1A' }
-                 else if (min > 0 && current <= min + EPSILON) { statusLabel = 'CRIT'; statusColor = '#9E2D2D' }
-                 else if (reorder > 0 && current <= reorder + EPSILON) { statusLabel = 'WARN'; statusColor = '#9E672D' }
+
+                  let indicatorBarColor = '#2D804E';
+                  let rowBgColor = '#FFFFFF';
+                  let statusEmoji = '🟢 OK';
+
+                 if (current <= EPSILON) { 
+                     statusEmoji = '⚫ OUT';
+                     indicatorBarColor = '#4B4B4B';
+                     rowBgColor = '#F5F5F5';
+                 } else if (min > 0 && current <= min + EPSILON) { 
+                     statusEmoji = '🔴 CRIT';
+                     indicatorBarColor = '#E63946';
+                     rowBgColor = '#FFEBEB';
+                 } else if (reorder > 0 && current <= reorder + EPSILON) { 
+                     statusEmoji = '🟠 WARN';
+                     indicatorBarColor = '#F4A261';
+                     rowBgColor = '#FFF6EB';
+                 }
+
+                 const changeColor = tx.quantity_change > 0 ? '#1B4D3E' : tx.quantity_change < 0 ? '#8B0000' : '#666666';
 
                  currentItems.push({
                      type: "box",
                      layout: "horizontal",
-                     margin: "md",
+                     backgroundColor: rowBgColor,
+                     cornerRadius: "md",
+                     paddingAll: "md",
+                     margin: "sm",
                      contents: [
-                         { type: "text", text: time, color: "#888888", size: "xs", flex: 2 },
+                         // Left indicator bar
                          {
                              type: "box",
                              layout: "vertical",
-                             flex: 5,
-                             contents: [
-                                 { type: "text", text: itemName.toUpperCase(), weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
-                                 { type: "text", text: `${sign}${tx.quantity_change} ${itemUnit.toUpperCase()}`, color: "#666666", size: "xs", margin: "xs" },
-                                 ...(tx.note ? [{
-                                     type: "text", text: `NOTE: ${tx.note}`, color: "#aaaaaa", size: "xxs", margin: "xs", wrap: true
-                                 }] : [])
-                             ]
+                             width: "4px",
+                             backgroundColor: indicatorBarColor,
+                             cornerRadius: "sm",
+                              contents: []
                          },
+                         // Details content
                          {
                              type: "box",
-                             layout: "vertical",
-                             flex: 3,
-                             alignItems: "flex-end",
+                             layout: "horizontal",
+                             margin: "md",
+                             flex: 1,
                              contents: [
-                                 { type: "text", text: `BAL: ${current}`, color: "#1A1A1A", size: "xs", weight: "bold" },
-                                 { type: "text", text: `[${statusLabel}]`, color: statusColor, size: "xxs", weight: "bold", margin: "xs" }
+                                 { type: "text", text: time, color: "#444444", size: "xs", weight: "bold", flex: 2, gravity: "center" },
+                                 {
+                                     type: "box",
+                                     layout: "vertical",
+                                     flex: 5,
+                                     contents: [
+                                         { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
+                                         { type: "text", text: `${sign}${tx.quantity_change} ${itemUnit}`, color: changeColor, size: "xs", weight: "bold", margin: "xs" },
+                                         ...(tx.note ? [{
+                                             type: "text", text: `NOTE: ${tx.note}`, color: "#777777", size: "xxs", margin: "xs", wrap: true
+                                         }] : [])
+                                     ]
+                                 },
+                                 {
+                                     type: "box",
+                                     layout: "vertical",
+                                     flex: 3,
+                                     contents: [
+                                         { type: "text", text: `BAL: ${current}`, color: "#1A1A1A", size: "xs", weight: "bold", align: "end" },
+                                         { type: "text", text: statusEmoji, color: indicatorBarColor, size: "xxs", weight: "bold", margin: "xs", align: "end" }
+                                     ]
+                                 }
                              ]
                          }
                      ]
                  })
 
-                 if (index < transactions.length - 1) {
-                     currentItems.push({ type: "separator", margin: "md", color: "#E2E2E0" })
-                 }
 
                  // Chunk into bubbles every 15 items
                  if (currentItems.length >= 15 || index === transactions.length - 1) {
-                     // removing last separator if exists
-                     if (currentItems.length > 0 && currentItems[currentItems.length - 1].type === 'separator') {
-                         currentItems.pop()
-                     }
-                     
                      const bodyContents = [
                          logHeader,
                          { type: "separator", margin: "md", color: "#1A1A1A" },
