@@ -37,23 +37,21 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
     }
 
     // Styles
-    const baseCardStyle = "bg-paper border border-gray-200 rounded-xl p-3 flex gap-4 transition-all relative select-none group hover:border-gray-300 hover:shadow-md";
-    const recommendCardStyle = "bg-gray-50 border border-gray-200 rounded-xl p-3 flex gap-4 relative select-none group hover:border-gray-300 hover:shadow-md"; 
+    const baseCardStyle = "bg-paper border border-gray-200 rounded-xl p-3 flex gap-3 transition-all relative select-none group hover:border-gray-300 hover:shadow-md menu-item-card";
+    const recommendCardStyle = "bg-gray-50 border border-gray-200 rounded-xl p-3 flex gap-3 relative select-none group hover:border-gray-300 hover:shadow-md menu-item-card"; 
     const currentStyle = isRecommended ? recommendCardStyle : baseCardStyle;
 
     // Overlay Render (Dragging Preview)
     if (isOverlay) {
          return (
-            <div className="bg-paper border-brand ring-2 ring-brand rounded-xl p-3 flex gap-4 shadow-xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px]">
+            <div className="bg-paper border-brand ring-2 ring-brand rounded-xl p-3 flex gap-3 shadow-xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px] menu-item-card">
                  <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative border border-gray-100">
                     {item.image_url ? <img src={item.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>}
                 </div>
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 pointer-events-none">
                     <div>
-                         <div className="pr-4">
-                            <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
-                            <div className="text-brandDark font-mono font-bold text-sm mt-0.5">{item.price} ฿</div>
-                        </div>
+                         <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
+                         <div className="text-brandDark font-mono font-bold text-sm mt-0.5">{item.price} ฿</div>
                     </div>
                 </div>
             </div>
@@ -64,87 +62,93 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`${currentStyle}`}
+            className={`${currentStyle} flex justify-between gap-3 items-stretch`}
             onClick={(e) => {
                 if (!isDragging) handleEdit(item); 
             }}
         >
-            {/* Action Buttons */}
-            {!isOverlay && (
-                <div className="absolute top-2 right-8 z-20 flex gap-0.5"
+            {/* Left + Center Area (Pointer events none for dnd safety) */}
+            <div className="flex-1 min-w-0 flex gap-3 pointer-events-none">
+                {/* Image */}
+                <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative border border-gray-100">
+                    {item.image_url ? (
+                        <img src={item.image_url} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>
+                    )}
+                </div>
+                
+                {/* Text details */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                    <div>
+                        <h4 className="font-bold truncate text-base text-ink" title={item.name}>{item.name}</h4>
+                        <div className="font-mono font-bold text-brandDark text-sm mt-0.5">{item.price} ฿</div>
+                        <div className="text-xs text-subInk line-clamp-1 mt-1" title={item.description}>{item.description || 'ไม่มีคำอธิบาย'}</div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                        {isRecommended && <span className="text-[10px] bg-gray-200 text-subInk border border-gray-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">FIXED</span>}
+                        {!item.is_available && <span className="text-[10px] bg-red-50 text-red-500 border border-red-100 px-1.5 py-0.5 rounded">หมด</span>}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Action Column */}
+            <div className="flex flex-col justify-between items-end shrink-0 pl-3 border-l border-gray-100">
+                {/* Top row: Edit, Delete, Drag */}
+                <div className="flex items-center gap-1"
                     onPointerDown={(e) => e.stopPropagation()} 
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            handleEdit(item)
-                        }} 
-                        className="p-1.5 text-subInk hover:text-brandDark hover:bg-gray-100 rounded-lg transition-colors"
-                        title="แก้ไขเมนู"
+                    {!isOverlay && (
+                        <>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEdit(item)
+                                }} 
+                                className="p-1.5 text-subInk hover:text-brandDark hover:bg-gray-100 rounded-lg transition-colors"
+                                title="แก้ไขเมนู"
+                            >
+                                <Edit2 size={16} />
+                            </button>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDelete(item.id)
+                                }} 
+                                className="p-1.5 text-subInk hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="ลบเมนู"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </>
+                    )}
+                    {/* Drag Handle */}
+                    <div 
+                        ref={setActivatorNodeRef}
+                        {...attributes}
+                        {...listeners}
+                        className="p-1.5 text-subInk hover:text-ink cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded transition-colors flex items-center justify-center"
+                        style={{ width: '26px', height: '26px' }}
+                        onClick={(e) => e.stopPropagation()} 
                     >
-                        <Edit2 size={16} />
-                    </button>
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            handleDelete(item.id)
-                        }} 
-                        className="p-1.5 text-subInk hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        title="ลบเมนู"
-                    >
-                        <Trash2 size={16} />
-                    </button>
-                </div>
-            )}
-
-            {/* Drag Handle */}
-            <div className="absolute top-2 right-1.5 z-20">
-                <div 
-                    ref={setActivatorNodeRef}
-                    {...attributes}
-                    {...listeners}
-                    className="p-2 text-subInk hover:text-ink cursor-grab active:cursor-grabbing hover:bg-gray-100 rounded-lg transition-colors"
-                    onClick={(e) => e.stopPropagation()} 
-                >
-                    <GripVertical size={20} />
-                </div>
-            </div>
-
-            <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative pointer-events-none border border-gray-100">
-                {item.image_url ? (
-                    <img src={item.image_url} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20} /></div>
-                )}
-            </div>
-            
-            <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
-                <div>
-                    <div className="pr-20"> 
-                        <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
-                        <div className="font-mono font-bold text-brandDark text-sm mt-0.5">{item.price} ฿</div>
+                        <GripVertical size={16} />
                     </div>
-                    <div className="text-xs text-subInk line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                    {isRecommended && <span className="text-[10px] bg-gray-200 text-subInk border border-gray-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">FIXED</span>}
-                    {!item.is_available && <span className="text-[10px] bg-red-50 text-red-500 border border-red-100 px-1.5 py-0.5 rounded">หมด</span>}
-                </div>
-            </div>
 
-            {/* Inline Pickup Toggle */}
-            <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10" 
-                onPointerDown={(e) => e.stopPropagation()} 
-                onClick={(e) => e.stopPropagation()}
-            >
-                <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-subInk' : 'text-gray-300'}`}>Pick-up</span>
-                <button
-                    onClick={(e) => handleTogglePickup(e, item)}
-                    className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-brand' : 'bg-gray-200'}`}
+                {/* Bottom row: Inline Pickup Toggle */}
+                <div className="flex items-center gap-1.5" 
+                    onPointerDown={(e) => e.stopPropagation()} 
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
-                </button>
+                    <span className={`text-[10px] font-bold ${item.is_pickup_available !== false ? 'text-subInk' : 'text-gray-300'}`}>Pick-up</span>
+                    <button
+                        onClick={(e) => handleTogglePickup(e, item)}
+                        className={`w-8 h-4 rounded-full p-0.5 transition-colors cursor-pointer ${item.is_pickup_available !== false ? 'bg-brand' : 'bg-gray-200'}`}
+                    >
+                        <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${item.is_pickup_available !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </button>
+                </div>
             </div>
         </div>
     )
@@ -653,9 +657,9 @@ export default function MenuItemList() {
                 {/* 1. Recommend Lane */}
                 <div 
                     id="container-recommend"
-                    className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white border border-brand/20 min-h-[160px] shadow-sm"
+                    className="mb-12 p-6 rounded-2xl bg-gradient-to-r from-gray-50 to-white border border-brand/20 min-h-[160px] shadow-sm"
                 >
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-6">
                         <Star className="text-brand fill-brand" size={20} />
                         <h3 className="text-lg font-bold text-brandDark tracking-wide">Recommend Menu (Top Fixed)</h3>
                         <span className="text-xs text-subInk ml-auto">ลากเมนูขึ้นมาเพื่อแนะนำ</span>
@@ -666,7 +670,7 @@ export default function MenuItemList() {
                         items={sections.recommend.map(i => i.id)} 
                         strategy={rectSortingStrategy}
                     >
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {sections.recommend.length === 0 && (
                                 <div className="col-span-full py-8 text-center border border-dashed border-gray-300 rounded-xl text-subInk bg-white/50">
                                     ยังไม่มีเมนูแนะนำ
@@ -686,13 +690,13 @@ export default function MenuItemList() {
                 </div>
 
                 {/* 2. Regular Categories */}
-                <div className="space-y-8">
+                <div className="space-y-12">
                     {categories.map(cat => {
                         const items = sections.regular[cat.id] || [];
 
                         return (
                             <div key={cat.id} id={`container-${cat.id}`} className="min-h-[100px] rounded-xl transition-colors">
-                                <h3 className="text-xl font-bold text-ink mb-4 border-l-4 border-brand pl-3 flex items-center gap-2">
+                                <h3 className="text-xl font-bold text-ink mb-6 border-l-4 border-brand pl-3 flex items-center gap-2">
                                     {cat.name} <span className="text-xs text-subInk font-normal">({items.length})</span>
                                 </h3>
                                 
@@ -701,7 +705,7 @@ export default function MenuItemList() {
                                     items={items.map(i => i.id)} 
                                     strategy={rectSortingStrategy}
                                 >
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {items.length === 0 && <p className="text-subInk text-sm py-4 italic">No items in this category...</p>}
                                         {items.map(item => (
                                             <SortableMenuItem 

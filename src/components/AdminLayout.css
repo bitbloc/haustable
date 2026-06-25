@@ -273,11 +273,16 @@
 
 /* --- Cards / Containers --- */
 .admin-system .card,
-.admin-system [class*="bg-white"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full),
-.admin-system [class*="bg-paper"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full) {
+.admin-system [class*="bg-white"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full):not(.menu-item-card),
+.admin-system [class*="bg-paper"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full):not(.menu-item-card) {
   border: 1px solid var(--ram-rule) !important;
   background-color: var(--ram-paper) !important;
   padding: 1.5rem !important;
+}
+
+/* Explicit compact card padding for menu item list cards */
+.admin-system .menu-item-card {
+  padding: 0.75rem !important; /* 12px padding */
 }
 
 /* Dieter Rams / Braun Mechanical Slide Switch */
