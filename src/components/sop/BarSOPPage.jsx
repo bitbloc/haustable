@@ -97,7 +97,15 @@ export default function BarSOPPage() {
                 </div>
 
                 {/* Category Pills */}
-                <div className="flex overflow-x-auto px-4 pb-3 gap-2 no-scrollbar">
+                <div 
+                    className="flex overflow-x-auto px-4 pb-3 gap-2 no-scrollbar"
+                    onWheel={e => {
+                        if (e.deltaY !== 0) {
+                            e.preventDefault();
+                            e.currentTarget.scrollLeft += e.deltaY * 0.8;
+                        }
+                    }}
+                >
                     {/* All Tab */}
                     <button
                         onClick={() => setActiveCategory(null)}

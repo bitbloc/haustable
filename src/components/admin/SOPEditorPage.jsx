@@ -553,7 +553,15 @@ export default function SOPEditorPage() {
                     </div>
 
                     {/* Category tabs */}
-                    <div className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-200 max-w-4xl mx-auto no-scrollbar">
+                    <div 
+                        className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-200 max-w-4xl mx-auto no-scrollbar"
+                        onWheel={e => {
+                            if (e.deltaY !== 0) {
+                                e.preventDefault();
+                                e.currentTarget.scrollLeft += e.deltaY * 0.8;
+                            }
+                        }}
+                    >
                         <button onClick={() => setActiveCategory(null)} className={`pb-2.5 pt-2.5 whitespace-nowrap font-mono font-bold text-xs border-b-2 ${!activeCategory ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>[ทั้งหมด]</button>
                         {categories.map(cat => (
                             <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`pb-2.5 pt-2.5 whitespace-nowrap font-mono font-bold text-xs border-b-2 ${activeCategory === cat.id ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
@@ -649,7 +657,15 @@ export default function SOPEditorPage() {
                 </div>
 
                 {/* Dieter Rams Subheader Anchors list (Horizontal Scrollable Menu) */}
-                <div className="border-t border-gray-200 py-2.5 overflow-x-auto no-scrollbar bg-gray-50">
+                <div 
+                    className="border-t border-gray-200 py-2.5 overflow-x-auto no-scrollbar bg-gray-50"
+                    onWheel={e => {
+                        if (e.deltaY !== 0) {
+                            e.preventDefault();
+                            e.currentTarget.scrollLeft += e.deltaY * 0.8;
+                        }
+                    }}
+                >
                     <div className="flex gap-2 px-4 max-w-3xl mx-auto">
                         {[
                             { id: 'basic', label: 'ข้อมูลทั่วไป' },
