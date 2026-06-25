@@ -1,275 +1,280 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, ChevronDown, GripVertical, Download, Settings, RefreshCw, Link } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Trash2, Edit2, Eye, EyeOff, Save, X, Settings, RefreshCw, Link, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
-import useBarSOP, { SOP_ACTIONS, getActionByKey } from '../../hooks/useBarSOP';
+import useBarSOP, { SOP_ACTIONS } from '../../hooks/useBarSOP';
 import SOPRecipeCard from '../sop/SOPRecipeCard';
 import SOPCategoryManager from '../sop/SOPCategoryManager';
 import { toast } from 'sonner';
 import { THAI_UNITS } from '../../utils/unitUtils';
 
-// ── Step Editor Row ──
-function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients }) {
+// ── Step Editor Row (Dieter Rams style, Collapsible Accordion) ──
+function StepRow({ step, index, onUpdate, onDelete, onMove, isLast, availableIngredients, isExpanded, onToggleExpand }) {
     return (
-        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-purple-100 transition-colors flex flex-col gap-3 relative sm:flex-row sm:items-start sm:gap-2 sm:p-3">
-            {/* Step Header: Step Number, Move Buttons, Delete Button (Mobile) */}
-            <div className="flex items-center justify-between border-b pb-2 sm:border-b-0 sm:pb-0 sm:flex-col sm:gap-1.5 sm:pt-2 sm:w-auto">
-                <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+        <div className="border border-gray-200 rounded bg-white overflow-hidden transition-all duration-200">
+            {/* Header (Collapsed View) */}
+            <div 
+                onClick={onToggleExpand}
+                className="p-3 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors select-none"
+            >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="w-6 h-6 rounded bg-gray-200 text-gray-700 flex items-center justify-center text-xs font-mono font-bold flex-shrink-0">
                         {index + 1}
-                    </div>
-                    <div className="flex sm:flex-col gap-1">
-                        <button 
-                            onClick={() => onMove(index, -1)} 
-                            disabled={index === 0} 
-                            className="w-8 h-8 sm:w-6 sm:h-6 bg-white border border-gray-200 rounded-lg text-gray-500 flex items-center justify-center text-xs font-bold disabled:opacity-20 hover:text-purple-600 hover:border-purple-200 transition-colors cursor-pointer"
-                            title="ย้ายขึ้น"
-                        >
-                            ▲
-                        </button>
-                        <button 
-                            onClick={() => onMove(index, 1)} 
-                            disabled={isLast} 
-                            className="w-8 h-8 sm:w-6 sm:h-6 bg-white border border-gray-200 rounded-lg text-gray-500 flex items-center justify-center text-xs font-bold disabled:opacity-20 hover:text-purple-600 hover:border-purple-200 transition-colors cursor-pointer"
-                            title="ย้ายลง"
-                        >
-                            ▼
-                        </button>
-                    </div>
+                    </span>
+                    <span className="text-sm font-bold text-gray-800 truncate">
+                        {step.title || <span className="text-gray-400 italic">ขั้นตอนยังไม่มีชื่อ</span>}
+                    </span>
+                    {step.duration_sec && (
+                        <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+                            ⏱ {step.duration_sec}s
+                        </span>
+                    )}
+                    {step.action && (
+                        <span className="text-xs text-gray-500 font-mono">
+                            [{step.action}]
+                        </span>
+                    )}
                 </div>
-
-                <button 
-                    onClick={() => onDelete(index)} 
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg sm:hidden flex-shrink-0 transition-colors"
-                    title="ลบขั้นตอน"
-                >
-                    <Trash2 size={18} />
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                    <button 
+                        onClick={() => onMove(index, -1)} 
+                        disabled={index === 0} 
+                        className="p-1 text-gray-400 hover:text-black disabled:opacity-20 cursor-pointer text-xs"
+                        title="ย้ายขึ้น"
+                    >
+                        ▲
+                    </button>
+                    <button 
+                        onClick={() => onMove(index, 1)} 
+                        disabled={isLast} 
+                        className="p-1 text-gray-400 hover:text-black disabled:opacity-20 cursor-pointer text-xs"
+                        title="ย้ายลง"
+                    >
+                        ▼
+                    </button>
+                    <button 
+                        onClick={() => onDelete(index)} 
+                        className="p-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                        title="ลบขั้นตอน"
+                    >
+                        <Trash2 size={15} />
+                    </button>
+                    <span className="text-xs text-gray-400 ml-1 font-mono">
+                        {isExpanded ? 'ย่อ ▲' : 'แก้ไข ▼'}
+                    </span>
+                </div>
             </div>
 
-            {/* Action Selector */}
-            <div className="w-full sm:w-28 flex-shrink-0">
-                <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">ประเภทการทำ</label>
-                <select
-                    value={step.action || 'pour'}
-                    onChange={e => onUpdate(index, { ...step, action: e.target.value })}
-                    className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm bg-white focus:border-purple-400 outline-none"
-                >
-                    {SOP_ACTIONS.map(a => (
-                        <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Inputs Details */}
-            <div className="flex-1 flex flex-col gap-2">
-                <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">ชื่อขั้นตอน</label>
-                    <input 
-                        value={step.title || ''} 
-                        onChange={e => onUpdate(index, { ...step, title: e.target.value })} 
-                        placeholder="ชื่อขั้นตอน (เช่น เตรียมน้ำมะพร้าว)" 
-                        className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm font-bold focus:border-purple-400 outline-none" 
-                    />
-                </div>
-                <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">รายละเอียดขั้นตอน</label>
-                    <textarea 
-                        value={step.instruction || ''} 
-                        onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} 
-                        placeholder="รายละเอียดขั้นตอน (เช่น ร่อนผงลงในถ้วย)" 
-                        className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm focus:border-purple-400 outline-none resize-none" 
-                        rows={2} 
-                    />
-                </div>
-                <div>
-                    <label className="text-[10px] font-bold text-yellow-600 uppercase block mb-1 sm:hidden">จุดสำคัญ (Key Point)</label>
-                    <input 
-                        value={step.key_points || ''} 
-                        onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} 
-                        placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" 
-                        className="w-full p-2.5 sm:p-2 border border-yellow-200 bg-yellow-50 rounded-lg text-sm focus:border-yellow-400 outline-none" 
-                    />
-                </div>
-                <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase block mb-1 sm:hidden">เหตุผล (Reason)</label>
-                    <input 
-                        value={step.reason || ''} 
-                        onChange={e => onUpdate(index, { ...step, reason: e.target.value })} 
-                        placeholder="เหตุผล (เช่น ลดการจับตัวเป็นก้อน)" 
-                        className="w-full p-2.5 sm:p-2 border border-gray-200 bg-gray-50 rounded-lg text-xs italic focus:border-purple-400 outline-none" 
-                    />
-                </div>
-
-                {/* Attached ingredients */}
-                <div className="flex flex-col gap-1.5 mt-1 border-t pt-2 border-gray-100">
-                    <div className="text-[10px] text-gray-500 font-bold">แนบปริมาณวัตถุดิบ (อ้างอิงสูตร)</div>
-                    {(() => {
-                        const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
-                        if (refs.length === 0) return null;
-                        return (
-                            <div className="flex flex-wrap gap-1 mb-1">
-                                {refs.map((ref, idx) => (
-                                    <span key={idx} className="inline-flex items-center gap-1 bg-purple-50 border border-purple-100 text-purple-700 px-2.5 py-1 rounded text-xs sm:text-[11px]">
-                                        {ref}
-                                        <button 
-                                            onClick={() => {
-                                                const newRefs = refs.filter((_, i) => i !== idx);
-                                                onUpdate(index, { 
-                                                    ...step, 
-                                                    ingredient_refs: newRefs, 
-                                                    ingredient_ref: newRefs.length > 0 ? newRefs[0] : null 
-                                                });
-                                            }} 
-                                            className="hover:text-red-500 hover:bg-purple-100 rounded p-1 sm:p-0.5 transition-colors cursor-pointer"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-                        );
-                    })()}
-                    {(() => {
-                        const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
-                        const available = (availableIngredients || []).filter(name => !refs.includes(name));
-                        if (available.length === 0) return null;
-                        return (
+            {/* Expanded Fields */}
+            {isExpanded && (
+                <div className="p-4 border-t border-gray-200 bg-white space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label className="text-xs font-mono font-bold text-gray-500 uppercase block mb-1">ประเภทการทำ</label>
                             <select
-                                value=""
-                                onChange={e => {
-                                    const val = e.target.value;
-                                    if (val && !refs.includes(val)) {
-                                        const newRefs = [...refs, val];
-                                        onUpdate(index, { 
-                                            ...step, 
-                                            ingredient_refs: newRefs, 
-                                            ingredient_ref: newRefs[0] 
-                                        });
-                                    }
-                                }}
-                                className="w-full p-2.5 sm:p-1 border border-gray-200 rounded-md text-sm sm:text-[11px] text-gray-500 bg-white focus:border-purple-400 outline-none"
+                                value={step.action || 'pour'}
+                                onChange={e => onUpdate(index, { ...step, action: e.target.value })}
+                                className="w-full p-2 border border-gray-300 rounded text-sm bg-white focus:border-black focus:ring-0 outline-none"
                             >
-                                <option value="">+ แนบปริมาณวัตถุดิบเพิ่ม...</option>
-                                {available.map(name => (
-                                    <option key={name} value={name}>{name}</option>
+                                {SOP_ACTIONS.map(a => (
+                                    <option key={a.key} value={a.key}>{a.icon} {a.label}</option>
                                 ))}
                             </select>
-                        );
-                    })()}
-                </div>
-            </div>
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="text-xs font-mono font-bold text-gray-500 uppercase block mb-1">ชื่อขั้นตอน</label>
+                            <input 
+                                value={step.title || ''} 
+                                onChange={e => onUpdate(index, { ...step, title: e.target.value })} 
+                                placeholder="ชื่อขั้นตอน (เช่น สกัดช็อตกาแฟ)" 
+                                className="w-full p-2 border border-gray-300 rounded text-sm font-semibold focus:border-black focus:ring-0 outline-none" 
+                            />
+                        </div>
+                    </div>
 
-            {/* Duration (Seconds) */}
-            <div className="w-full sm:w-20 flex-shrink-0 flex items-center gap-2 sm:flex-col sm:items-stretch sm:justify-start">
-                <span className="text-xs text-gray-400 sm:hidden w-20 flex-shrink-0">เวลาดำเนินการ:</span>
-                <div className="flex-1 flex items-center gap-1.5">
-                    <input
-                        type="number"
-                        value={step.duration_sec || ''}
-                        onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value) : null })}
-                        placeholder="เวลา(วิ)"
-                        className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm text-center focus:border-purple-400 outline-none"
-                        title="เวลา (วินาที)"
-                    />
-                    <span className="text-xs text-gray-400 sm:hidden">วิ</span>
-                </div>
-                <span className="text-xs text-gray-400 sm:text-center sm:block hidden">วินาที</span>
-            </div>
+                    <div>
+                        <label className="text-xs font-mono font-bold text-gray-500 uppercase block mb-1">รายละเอียดขั้นตอน</label>
+                        <textarea 
+                            value={step.instruction || ''} 
+                            onChange={e => onUpdate(index, { ...step, instruction: e.target.value })} 
+                            placeholder="รายละเอียดขั้นตอนอย่างย่อ" 
+                            className="w-full p-2 border border-gray-300 rounded text-sm focus:border-black focus:ring-0 outline-none resize-none" 
+                            rows={3} 
+                        />
+                    </div>
 
-            {/* Desktop Delete */}
-            <button 
-                onClick={() => onDelete(index)} 
-                className="hidden sm:inline-flex p-2 text-gray-300 hover:text-red-500 transition-colors mt-0.5 cursor-pointer"
-                title="ลบขั้นตอน"
-            >
-                <Trash2 size={16} />
-            </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-xs font-mono font-bold text-amber-600 uppercase block mb-1">จุดสำคัญ (Key Point)</label>
+                            <input 
+                                value={step.key_points || ''} 
+                                onChange={e => onUpdate(index, { ...step, key_points: e.target.value })} 
+                                placeholder="จุดสำคัญ (เช่น น้ำต้องเย็นจัด)" 
+                                className="w-full p-2 border border-amber-300 bg-amber-50/20 rounded text-sm focus:border-amber-600 focus:ring-0 outline-none" 
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-mono font-bold text-gray-500 uppercase block mb-1">เหตุผล (Reason)</label>
+                            <input 
+                                value={step.reason || ''} 
+                                onChange={e => onUpdate(index, { ...step, reason: e.target.value })} 
+                                placeholder="เหตุผล (เช่น ลดการแยกชั้น)" 
+                                className="w-full p-2 border border-gray-300 bg-gray-50 rounded text-sm focus:border-black focus:ring-0 outline-none" 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label className="text-xs font-mono font-bold text-gray-500 uppercase block mb-1">เวลาดำเนินการ (วินาที)</label>
+                            <input
+                                type="number"
+                                value={step.duration_sec || ''}
+                                onChange={e => onUpdate(index, { ...step, duration_sec: e.target.value ? parseInt(e.target.value) : null })}
+                                placeholder="เช่น 30"
+                                className="w-full p-2 border border-gray-300 rounded text-sm focus:border-black focus:ring-0 outline-none font-mono"
+                            />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">แนบปริมาณวัตถุดิบ (อ้างอิงสูตร)</label>
+                            {(() => {
+                                const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
+                                const available = (availableIngredients || []).filter(name => !refs.includes(name));
+                                return (
+                                    <div className="space-y-2 mt-1">
+                                        {refs.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                                {refs.map((ref, idx) => (
+                                                    <span key={idx} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">
+                                                        {ref}
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newRefs = refs.filter((_, i) => i !== idx);
+                                                                onUpdate(index, { 
+                                                                    ...step, 
+                                                                    ingredient_refs: newRefs, 
+                                                                    ingredient_ref: newRefs.length > 0 ? newRefs[0] : null 
+                                                                });
+                                                            }} 
+                                                            className="text-gray-400 hover:text-red-600 p-0.5 font-bold"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {available.length > 0 && (
+                                            <select
+                                                value=""
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (val && !refs.includes(val)) {
+                                                        const newRefs = [...refs, val];
+                                                        onUpdate(index, { 
+                                                            ...step, 
+                                                            ingredient_refs: newRefs, 
+                                                            ingredient_ref: newRefs[0] 
+                                                        });
+                                                    }
+                                                }}
+                                                className="w-full p-2 border border-gray-300 rounded text-xs text-gray-600 bg-white focus:border-black focus:ring-0 outline-none cursor-pointer"
+                                            >
+                                                <option value="">+ แนบวัตถุดิบ...</option>
+                                                {available.map(name => (
+                                                    <option key={name} value={name}>{name}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-// ── Ingredient Editor Row ──
+// ── Ingredient Row (Unified row for both linked & manual ingredients) ──
 function IngredientRow({ ing, index, onUpdate, onDelete }) {
     const isStandard = THAI_UNITS.some(u => u.value.toLowerCase() === (ing.unit || '').trim().toLowerCase());
     const showWarning = ing.unit && !isStandard;
 
     return (
-        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-3 relative sm:flex-row sm:items-center sm:gap-2 sm:p-2">
-            {/* Top row (Name & Delete) on mobile, inline on desktop */}
-            <div className="flex gap-2 w-full sm:w-auto sm:flex-1">
+        <div className="p-3 bg-white rounded border border-gray-200 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-2">
+            <div className="flex gap-2 flex-1 items-center">
+                {ing.isLinked && (
+                    <span className="px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] rounded font-mono font-bold flex-shrink-0" title="ดึงข้อมูลจากคลังสินค้า">
+                        LINKED
+                    </span>
+                )}
                 <input 
                     value={ing.name || ''} 
                     onChange={e => onUpdate(index, { ...ing, name: e.target.value })} 
                     placeholder="ชื่อวัตถุดิบ" 
-                    className="flex-1 p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm font-semibold focus:border-purple-400 outline-none" 
+                    className="flex-1 p-2 border border-gray-300 rounded text-sm font-semibold focus:border-black focus:ring-0 outline-none" 
                 />
-                <button 
-                    onClick={() => onDelete(index)} 
-                    className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg sm:hidden flex-shrink-0 transition-colors"
-                    title="ลบวัตถุดิบ"
-                >
-                    <Trash2 size={18} />
-                </button>
             </div>
             
-            {/* Qty, Unit and Warning */}
-            <div className="flex gap-2 items-center w-full sm:w-auto">
-                <div className="flex-1 sm:w-20 flex items-center gap-1">
-                    <span className="text-xs text-gray-400 sm:hidden w-12 flex-shrink-0">จำนวน:</span>
+            <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-500 sm:hidden">จำนวน:</span>
                     <input 
                         type="number" 
                         value={ing.qty || ''} 
                         onChange={e => onUpdate(index, { ...ing, qty: e.target.value ? parseFloat(e.target.value) : 0 })} 
-                        className="w-full sm:w-20 p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm text-center focus:border-purple-400 outline-none" 
-                        placeholder="จำนวน" 
+                        className="w-16 p-2 border border-gray-300 rounded text-sm text-center focus:border-black focus:ring-0 outline-none font-mono" 
+                        placeholder="0" 
                     />
                 </div>
-                <div className="flex-1 sm:w-20 flex items-center gap-1">
-                    <span className="text-xs text-gray-400 sm:hidden w-12 flex-shrink-0">หน่วย:</span>
+                
+                <div className="flex items-center gap-1 relative">
+                    <span className="text-xs text-gray-500 sm:hidden">หน่วย:</span>
                     <input 
                         value={ing.unit || ''} 
                         onChange={e => onUpdate(index, { ...ing, unit: e.target.value })} 
                         list="sop-units"
-                        className={`w-full sm:w-20 p-2.5 sm:p-2 border border-gray-200 rounded-lg text-sm text-center outline-none ${showWarning ? 'border-orange-400 bg-orange-50 focus:border-orange-500' : 'focus:border-purple-400'}`} 
+                        className={`w-16 p-2 border rounded text-sm text-center focus:border-black focus:ring-0 outline-none ${showWarning ? 'border-amber-400 bg-amber-50 focus:border-amber-600' : 'border-gray-300'}`} 
                         placeholder="หน่วย" 
                     />
                     {showWarning && (
-                        <span className="text-orange-500 cursor-help flex-shrink-0" title="หน่วยวัดนี้ไม่ได้เป็นมาตรฐานในการคำนวณต้นทุนคลังสินค้า">⚠️</span>
+                        <span className="text-amber-600 cursor-help text-xs ml-1" title="หน่วยวัดนี้ไม่ได้เป็นมาตรฐานในการคำนวณต้นทุนคลังสินค้า">⚠️</span>
                     )}
                 </div>
-            </div>
 
-            {/* Remark */}
-            <div className="w-full sm:flex-1">
                 <input 
                     value={ing.remark || ''} 
                     onChange={e => onUpdate(index, { ...ing, remark: e.target.value })} 
-                    className="w-full p-2.5 sm:p-2 border border-gray-200 rounded-lg text-xs focus:border-purple-400 outline-none" 
-                    placeholder="หมายเหตุ (เช่น ร่อนก่อนใช้)" 
+                    className="flex-1 min-w-[120px] p-2 border border-gray-300 rounded text-xs focus:border-black focus:ring-0 outline-none" 
+                    placeholder="หมายเหตุ (เช่น กรองเอาแต่น้ำ)" 
                 />
-            </div>
 
-            {/* Checkboxes and Desktop Delete */}
-            <div className="flex items-center justify-between w-full sm:w-auto gap-3 border-t pt-2 sm:border-t-0 sm:pt-0 border-gray-100">
-                <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
-                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded w-4 h-4 text-purple-600 focus:ring-purple-400" />
-                        <span>Scale แก้ว</span>
+                <div className="flex items-center gap-2 border-t pt-2 sm:border-t-0 sm:pt-0 border-gray-100 w-full sm:w-auto justify-end">
+                    <label className="flex items-center gap-1 text-[11px] text-gray-500 cursor-pointer select-none">
+                        <input type="checkbox" checked={ing.scalable !== false} onChange={e => onUpdate(index, { ...ing, scalable: e.target.checked })} className="rounded text-black border-gray-300 focus:ring-0 w-3.5 h-3.5" />
+                        <span>Scale</span>
                     </label>
-                    <label className="flex items-center gap-1.5 text-xs text-amber-600 font-bold cursor-pointer">
-                        <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded text-amber-500 focus:ring-amber-400 w-4 h-4" />
+                    <label className="flex items-center gap-1 text-[11px] text-amber-600 font-bold cursor-pointer select-none">
+                        <input type="checkbox" checked={ing.is_sweetener === true} onChange={e => onUpdate(index, { ...ing, is_sweetener: e.target.checked })} className="rounded text-amber-500 border-gray-300 focus:ring-0 w-3.5 h-3.5" />
                         <span>🍬 สารหวาน</span>
                     </label>
+                    <label className="flex items-center gap-1 text-[11px] text-gray-500 cursor-pointer select-none">
+                        <input type="checkbox" checked={ing.isHidden === true} onChange={e => onUpdate(index, { ...ing, isHidden: e.target.checked })} className="rounded text-red-500 border-gray-300 focus:ring-0 w-3.5 h-3.5" />
+                        <span>👁 ซ่อน</span>
+                    </label>
+
+                    <button 
+                        type="button"
+                        onClick={() => onDelete(index)} 
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+                        title="ลบวัตถุดิบ"
+                    >
+                        <Trash2 size={16} />
+                    </button>
                 </div>
-                
-                <button 
-                    onClick={() => onDelete(index)} 
-                    className="hidden sm:inline-flex p-2 text-gray-300 hover:text-red-500 transition-colors"
-                    title="ลบวัตถุดิบ"
-                >
-                    <Trash2 size={16} />
-                </button>
             </div>
         </div>
     );
@@ -300,27 +305,39 @@ function ImportModal({ onClose, onImport }) {
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
-                <div className="p-4 border-b flex justify-between items-center">
-                    <h3 className="font-bold text-lg flex items-center gap-2"><Download size={20} className="text-purple-600" /> Import จาก Recipe Lab</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={18} /></button>
+            <div className="bg-white rounded w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[70vh] border border-gray-300">
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h3 className="font-mono font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                        🔗 Import จาก Recipe Lab
+                    </h3>
+                    <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded"><X size={16} /></button>
                 </div>
                 <div className="p-3 border-b">
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหา..." className="w-full p-2 bg-gray-100 rounded-xl text-sm" autoFocus />
+                    <input 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)} 
+                        placeholder="ค้นหาเมนูหรือเบส..." 
+                        className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-black font-mono" 
+                        autoFocus 
+                    />
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {loading ? <div className="text-center py-10 text-gray-400">Loading...</div> :
-                    filtered.length === 0 ? <div className="text-center py-10 text-gray-400">ไม่พบ</div> :
+                <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                    {loading ? <div className="text-center py-8 font-mono text-xs text-gray-400">Loading...</div> :
+                    filtered.length === 0 ? <div className="text-center py-8 font-mono text-xs text-gray-400">ไม่พบข้อมูล</div> :
                     filtered.map(item => (
-                        <button key={item.type + item.id} onClick={() => onImport(item.id, item.type)} className="w-full p-3 rounded-xl hover:bg-purple-50 text-left flex justify-between items-center">
+                        <button 
+                            key={item.type + item.id} 
+                            onClick={() => onImport(item.id, item.type)} 
+                            className="w-full p-3 rounded hover:bg-gray-100 text-left flex justify-between items-center border border-transparent hover:border-gray-200"
+                        >
                             <div>
                                 <div className="font-bold text-sm flex items-center gap-2">
-                                    {item.type === 'stock' && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[10px] rounded">Base</span>}
+                                    {item.type === 'stock' && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[10px] rounded font-mono">Base</span>}
                                     {item.name}
                                 </div>
-                                <div className="text-xs text-gray-400">{item.type === 'menu' ? 'Menu Item' : 'Stock Recipe'}</div>
+                                <div className="text-xs text-gray-400 font-mono mt-0.5">{item.type === 'menu' ? 'Menu Item' : 'Stock Recipe'}</div>
                             </div>
-                            <Download size={14} className="text-gray-300" />
+                            <Download size={14} className="text-gray-400" />
                         </button>
                     ))}
                 </div>
@@ -329,17 +346,39 @@ function ImportModal({ onClose, onImport }) {
     );
 }
 
-// ── Main Editor Page ──
+// ── Main Editor Page (Dieter Rams style layout) ──
 export default function SOPEditorPage() {
     const navigate = useNavigate();
-    const { recipes, categories, glassSizes, loading, activeCategory, setActiveCategory, searchQuery, setSearchQuery, fetchRecipes, saveSOPRecipe, deleteSOPRecipe, saveCategory, deleteCategory, scaleIngredients, fetchRecipeLabSummary, refresh } = useBarSOP({ department: 'bar', staffMode: false });
+    const { 
+        recipes, 
+        categories, 
+        glassSizes, 
+        loading, 
+        activeCategory, 
+        setActiveCategory, 
+        searchQuery, 
+        setSearchQuery, 
+        fetchRecipes, 
+        saveSOPRecipe, 
+        deleteSOPRecipe, 
+        saveCategory, 
+        deleteCategory, 
+        scaleIngredients, 
+        fetchRecipeLabSummary, 
+        syncSOPWithRecipeLab, 
+        refresh 
+    } = useBarSOP({ department: 'bar', staffMode: false });
 
     const [editing, setEditing] = useState(null); // null = list view, object = editing
     const [showImport, setShowImport] = useState(false);
     const [showCategoryManager, setShowCategoryManager] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState('basic');
+    
+    // Accordion expand index
+    const [expandedStepIndex, setExpandedStepIndex] = useState(0);
+    // Navigation Anchors state
+    const [activeAnchor, setActiveAnchor] = useState('basic');
 
     // ── Create new empty recipe ──
     const handleNew = () => {
@@ -350,6 +389,8 @@ export default function SOPEditorPage() {
             garnish: '', notes: '', is_published: false, sort_order: 0,
             advanced_details: { equipment: [], qc_standards: [], troubleshooting: [], shelf_life: [], checklist: [] }
         });
+        setExpandedStepIndex(0);
+        setActiveAnchor('basic');
     };
 
     const isCustomMode = editing?.scaling_rules?._mode === 'custom';
@@ -376,10 +417,7 @@ export default function SOPEditorPage() {
     const handleSave = async () => {
         if (!editing.name.trim()) { toast.error('กรุณาใส่ชื่อ SOP'); return; }
 
-        const manualIngs = (editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined && !i.isHidden);
-        const linkedIngs = (editing.linked_preview || []).filter(i => !i.isHidden);
-        const allIngs = [...manualIngs, ...linkedIngs];
-        
+        const allIngs = editing.ingredients || [];
         const nonStandardUnits = [];
         allIngs.forEach(ing => {
             const unitStr = (ing.unit || '').trim();
@@ -392,7 +430,7 @@ export default function SOPEditorPage() {
         });
         
         if (nonStandardUnits.length > 0) {
-            const confirmMsg = `พบหน่วยส่วนผสมที่ไม่อยู่ในหน่วยมาตรฐาน (${nonStandardUnits.join(', ')}) ซึ่งจะไม่สามารถนำไปวิเคราะห์ต้นทุนอัตโนมัติได้ ยืนยันที่จะบันทึกสูตรใช่หรือไม่?`;
+            const confirmMsg = `พบหน่วยส่วนผสมที่ไม่อยู่ในหน่วยมาตรฐาน (${nonStandardUnits.join(', ')}) ซึ่งจะไม่สามารถนำไปคำนวณต้นทุนได้อัตโนมัติ ยืนยันที่จะบันทึกสูตรใช่หรือไม่?`;
             if (!window.confirm(confirmMsg)) {
                 return;
             }
@@ -407,70 +445,57 @@ export default function SOPEditorPage() {
         }
     };
 
-    // ── Link to Recipe Lab ──
+    // ── Link/Import from Recipe Lab ──
     const handleLink = async (sourceId, sourceType) => {
         const linkedIngs = await fetchRecipeLabSummary(sourceId, sourceType);
         
-        setEditing(prev => ({ 
-            ...prev, 
-            source_menu_item_id: sourceType === 'menu' ? sourceId : null,
-            source_stock_item_id: sourceType === 'stock' ? sourceId : null,
-            linked_preview: linkedIngs,
-            // Automatically clear ingredients that were previously imported as static
-            ingredients: prev.ingredients?.filter(i => !i.isLinked) || []
-        }));
+        setEditing(prev => {
+            const currentManuals = (prev.ingredients || []).filter(i => !i.isLinked);
+            const freshLinked = linkedIngs.map(i => ({
+                ...i,
+                isLinked: true
+            }));
+            
+            return {
+                ...prev,
+                source_menu_item_id: sourceType === 'menu' ? sourceId : null,
+                source_stock_item_id: sourceType === 'stock' ? sourceId : null,
+                ingredients: [...freshLinked, ...currentManuals]
+            };
+        });
         
         setShowImport(false);
+        toast.success('เชื่อมโยงส่วนผสมจาก Recipe Lab เรียบร้อย');
     };
 
-    // Prepare linked preview on edit
-    useEffect(() => {
-        if (editing && editing.id && !editing.linked_preview) {
-            setEditing(prev => ({
-                ...prev,
-                linked_preview: prev.display_ingredients?.filter(i => i.isLinked) || []
-            }));
-        }
-    }, [editing?.id]);
+    // ── Sync with Recipe Lab ──
+    const handleSync = async () => {
+        const sourceId = editing.source_menu_item_id || editing.source_stock_item_id;
+        const sourceType = editing.source_menu_item_id ? 'menu' : 'stock';
+        if (!sourceId) return;
 
-    // ── Ingredient CRUD & Visibility ──
+        setSaving(true);
+        const merged = await syncSOPWithRecipeLab(sourceId, sourceType, editing.ingredients || []);
+        setEditing(prev => ({
+            ...prev,
+            ingredients: merged
+        }));
+        setSaving(false);
+    };
+
+    // ── Ingredient CRUD Handlers ──
     const addIngredient = () => setEditing(prev => ({ ...prev, ingredients: [...(prev.ingredients || []), { name: '', qty: 0, unit: 'ml', scalable: true, is_sweetener: false }] }));
     const updateIngredient = (i, val) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.map((ing, idx) => idx === i ? val : ing) }));
-    // Delete only true manual ingredients, not linked overrides
-    const deleteIngredient = (i) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.filter((ing, idx) => idx !== i) }));
-    
-    const toggleHideLinked = (ingName) => {
+    const deleteIngredient = (i) => setEditing(prev => ({ ...prev, ingredients: prev.ingredients.filter((_, idx) => idx !== i) }));
+
+    // ── Step CRUD Handlers ──
+    const addStep = () => {
         setEditing(prev => {
-            const existing = (prev.ingredients || []).find(i => i.name === ingName);
-            let newManuals;
-            if (existing) {
-                newManuals = prev.ingredients.map(i => i.name === ingName ? { ...i, isHidden: !i.isHidden } : i);
-            } else {
-                newManuals = [...(prev.ingredients || []), { name: ingName, isHidden: true }];
-            }
-            
-            const newPreview = (prev.linked_preview || []).map(i => i.name === ingName ? { ...i, isHidden: !i.isHidden } : i);
-            return { ...prev, ingredients: newManuals, linked_preview: newPreview };
+            const newSteps = [...(prev.steps || []), { order: (prev.steps?.length || 0) + 1, action: 'pour', title: '', instruction: '', duration_sec: null }];
+            setExpandedStepIndex(newSteps.length - 1);
+            return { ...prev, steps: newSteps };
         });
     };
-
-    const toggleSweetenerLinked = (ingName) => {
-        setEditing(prev => {
-            const existing = (prev.ingredients || []).find(i => i.name === ingName);
-            let newManuals;
-            if (existing) {
-                newManuals = prev.ingredients.map(i => i.name === ingName ? { ...i, is_sweetener: !i.is_sweetener } : i);
-            } else {
-                newManuals = [...(prev.ingredients || []), { name: ingName, is_sweetener: true }];
-            }
-            
-            const newPreview = (prev.linked_preview || []).map(i => i.name === ingName ? { ...i, is_sweetener: !i.is_sweetener } : i);
-            return { ...prev, ingredients: newManuals, linked_preview: newPreview };
-        });
-    };
-
-    // ── Step CRUD ──
-    const addStep = () => setEditing(prev => ({ ...prev, steps: [...(prev.steps || []), { order: (prev.steps?.length || 0) + 1, action: 'pour', instruction: '', duration_sec: null }] }));
     const updateStep = (i, val) => setEditing(prev => ({ ...prev, steps: prev.steps.map((s, idx) => idx === i ? val : s) }));
     const deleteStep = (i) => setEditing(prev => ({ ...prev, steps: prev.steps.filter((_, idx) => idx !== i) }));
     const moveStep = (i, dir) => {
@@ -479,99 +504,115 @@ export default function SOPEditorPage() {
             const j = i + dir;
             if (j < 0 || j >= arr.length) return prev;
             [arr[i], arr[j]] = [arr[j], arr[i]];
+            // update expanded index
+            if (expandedStepIndex === i) setExpandedStepIndex(j);
+            else if (expandedStepIndex === j) setExpandedStepIndex(i);
             return { ...prev, steps: arr };
         });
+    };
+
+    // Smooth Scroll Helper
+    const scrollToSection = (id) => {
+        setActiveAnchor(id);
+        const el = document.getElementById(`sec-${id}`);
+        if (el) {
+            const offset = 120; // compensate for headers
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = el.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
     };
 
     // ── LIST VIEW ──
     if (!editing) {
         return (
-            <div className="min-h-screen bg-gray-50 font-sans">
-                <div className="sticky top-0 z-30 bg-white border-b shadow-sm">
-                    <div className="p-4 flex justify-between items-center max-w-5xl mx-auto">
+            <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+                {/* Minimalist Subheader */}
+                <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
+                    <div className="p-4 flex justify-between items-center max-w-4xl mx-auto">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft className="w-5 h-5 text-gray-600" /></button>
+                            <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded text-gray-500"><ArrowLeft className="w-5 h-5" /></button>
                             <div>
-                                <h1 className="text-xl font-bold">📋 SOP Editor</h1>
-                                <p className="text-xs text-gray-500">จัดการสูตรเครื่องดื่มสำหรับพนักงาน</p>
+                                <h1 className="text-base font-bold font-mono uppercase tracking-wider">SOP Recipes</h1>
+                                <p className="text-xs text-gray-500 font-mono">Management system for Bar standard procedures</p>
                             </div>
                         </div>
-                        <div className="flex gap-1.5 sm:gap-2">
-                            <button onClick={() => setShowCategoryManager(true)} className="p-2 hover:bg-gray-100 rounded-full text-gray-500" title="จัดการหมวดหมู่"><Settings size={20} /></button>
-                            <button onClick={refresh} className="p-2 hover:bg-gray-100 rounded-full text-gray-500"><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
-                            <button onClick={handleNew} className="bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-xl font-bold flex items-center gap-1.5 hover:bg-purple-700 shadow-lg text-sm">
-                                <Plus size={16} /> 
-                                <span className="hidden sm:inline">New SOP</span>
+                        <div className="flex gap-1">
+                            <button onClick={() => setShowCategoryManager(true)} className="p-2 hover:bg-gray-100 rounded text-gray-500" title="หมวดหมู่"><Settings size={18} /></button>
+                            <button onClick={refresh} className="p-2 hover:bg-gray-100 rounded text-gray-500"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
+                            <button onClick={handleNew} className="bg-black text-white px-3 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 hover:bg-gray-800 tracking-wider">
+                                <Plus size={14} /> NEW SOP
                             </button>
                         </div>
                     </div>
-                    {/* Category Tabs */}
-                    <div 
-                        className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-100 max-w-5xl mx-auto no-scrollbar scroll-smooth"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                        <button onClick={() => setActiveCategory(null)} className={`pb-3 pt-3 whitespace-nowrap font-bold text-sm border-b-[3px] ${!activeCategory ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400'}`}>ทั้งหมด</button>
+
+                    {/* Category tabs */}
+                    <div className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-200 max-w-4xl mx-auto no-scrollbar">
+                        <button onClick={() => setActiveCategory(null)} className={`pb-2.5 pt-2.5 whitespace-nowrap font-mono font-bold text-xs border-b-2 ${!activeCategory ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>[ทั้งหมด]</button>
                         {categories.map(cat => (
-                            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`pb-3 pt-3 whitespace-nowrap font-bold text-sm border-b-[3px] ${activeCategory === cat.id ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`pb-2.5 pt-2.5 whitespace-nowrap font-mono font-bold text-xs border-b-2 ${activeCategory === cat.id ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
                                 {cat.icon} {cat.label}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <div className="max-w-5xl mx-auto p-4 space-y-3 pb-20">
+                <div className="max-w-4xl mx-auto p-4 space-y-4 pb-20">
                     {/* Search Bar */}
-                    <div className="relative mb-4">
+                    <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="ค้นหาเมนู SOP (พิมพ์ชื่อเมนู หรือส่วนผสม...)"
+                            placeholder="ค้นหาข้อมูลสูตร หรือวัตถุดิบ..."
                             value={searchQuery || ''}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-sm"
+                            className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded text-sm focus:outline-none focus:border-black transition-all font-mono"
                         />
                         {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                            >
-                                <X size={16} />
+                            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black">
+                                <X size={15} />
                             </button>
                         )}
                     </div>
 
                     {loading ? (
-                        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-2xl animate-pulse" />)}</div>
+                        <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-14 bg-white rounded border border-gray-200 animate-pulse" />)}</div>
                     ) : recipes.length === 0 ? (
-                        <div className="text-center py-20 text-gray-400">
-                            <p className="text-lg font-bold mb-2">ยังไม่มี SOP</p>
-                            <button onClick={handleNew} className="text-purple-600 font-bold hover:underline">+ สร้าง SOP แรก</button>
+                        <div className="text-center py-20 text-gray-400 border border-dashed border-gray-300 rounded bg-white">
+                            <p className="text-sm font-mono uppercase tracking-wider mb-2">ยังไม่มีสูตร SOP ในหมวดหมู่นี้</p>
+                            <button onClick={handleNew} className="text-black font-bold text-sm hover:underline font-mono">+ สร้าง SOP ใหม่</button>
                         </div>
                     ) : (
-                        <div className="grid gap-3">
+                        <div className="border border-gray-200 rounded overflow-hidden bg-white divide-y divide-gray-100">
                             {recipes.map(recipe => (
-                                <div key={recipe.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between gap-4">
+                                <div key={recipe.id} className="p-3 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <span className="text-2xl">{recipe.category?.icon || '📋'}</span>
+                                        <span className="text-xl flex-shrink-0">{recipe.category?.icon || '📋'}</span>
                                         <div className="min-w-0">
-                                            <h3 className="font-bold truncate">{recipe.name}</h3>
-                                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                                                <span>{recipe.category?.label || 'Uncategorized'}</span>
+                                            <h3 className="font-bold text-sm tracking-tight text-gray-800">{recipe.name}</h3>
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-400 font-mono mt-0.5">
+                                                <span>{recipe.category?.label || 'ทั่วไป'}</span>
                                                 <span>•</span>
                                                 <span>{recipe.base_glass_size_oz}oz</span>
                                                 <span>•</span>
-                                                <span>{(recipe.ingredients || []).length} ingredients</span>
+                                                <span>{(recipe.ingredients || []).length} ings</span>
                                                 <span>•</span>
                                                 <span>{(recipe.steps || []).length} steps</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
-                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${recipe.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                            {recipe.is_published ? 'Published' : 'Draft'}
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${recipe.is_published ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                                            {recipe.is_published ? 'PUBLISHED' : 'DRAFT'}
                                         </span>
-                                        <button onClick={() => setEditing({ ...recipe })} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Edit2 size={16} /></button>
-                                        <button onClick={async () => { if (confirm('ลบ SOP นี้?')) { await deleteSOPRecipe(recipe.id); fetchRecipes(activeCategory); }}} className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                                        <button onClick={() => setEditing({ ...recipe })} className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded transition-colors"><Edit2 size={15} /></button>
+                                        <button onClick={async () => { if (confirm('ลบสูตร SOP นี้?')) { await deleteSOPRecipe(recipe.id); fetchRecipes(activeCategory); }}} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"><Trash2 size={15} /></button>
                                     </div>
                                 </div>
                             ))}
@@ -586,54 +627,66 @@ export default function SOPEditorPage() {
         );
     }
 
-    // ── EDIT VIEW ──
+    // ── EDIT VIEW (Dieter Rams Single-Scroll Layout) ──
     return (
-        <div className="min-h-screen bg-gray-50 font-sans">
-            <div className="sticky top-0 z-30 bg-white border-b shadow-sm">
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-32">
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
                 <div className="p-4 flex justify-between items-center max-w-3xl mx-auto">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setEditing(null)} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft className="w-5 h-5" /></button>
-                        <h1 className="text-lg font-bold">{editing.id ? 'แก้ไข SOP' : 'สร้าง SOP ใหม่'}</h1>
+                        <button onClick={() => setEditing(null)} className="p-2 hover:bg-gray-100 rounded text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
+                        <h1 className="text-sm font-mono font-bold uppercase tracking-wider">{editing.id ? 'Edit Recipe' : 'New Recipe'}</h1>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => setShowPreview(!showPreview)} className={`p-2 rounded-full ${showPreview ? 'bg-purple-100 text-purple-600' : 'hover:bg-gray-100 text-gray-500'} hidden sm:block`}>
-                            {showPreview ? <EyeOff size={20} /> : <Eye size={20} />}
+                        <button onClick={() => setShowPreview(!showPreview)} className={`p-2 rounded border ${showPreview ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:text-black hover:border-black'} text-xs font-mono font-bold flex items-center gap-1.5`}>
+                            {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
+                            <span>PREVIEW</span>
                         </button>
-                        <button onClick={handleSave} disabled={saving} className="bg-purple-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-purple-700 disabled:opacity-50 text-sm hidden sm:flex">
-                            <Save size={16} /> {saving ? 'Saving...' : 'Save'}
+                        <button onClick={handleSave} disabled={saving} className="bg-black text-white border border-black px-4 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 hover:bg-gray-800 disabled:opacity-50 tracking-wider">
+                            <Save size={14} /> {saving ? 'SAVING...' : 'SAVE'}
                         </button>
+                    </div>
+                </div>
+
+                {/* Dieter Rams Subheader Anchors list (Horizontal Scrollable Menu) */}
+                <div className="border-t border-gray-200 py-2.5 overflow-x-auto no-scrollbar bg-gray-50">
+                    <div className="flex gap-2 px-4 max-w-3xl mx-auto">
+                        {[
+                            { id: 'basic', label: 'ข้อมูลทั่วไป' },
+                            { id: 'scaling', label: 'ขนาด & การคำนวณ' },
+                            { id: 'ingredients', label: 'ส่วนผสม & อุปกรณ์' },
+                            { id: 'steps', label: 'ขั้นตอนการทำ' },
+                            { id: 'pro', label: 'QC & มาตรฐาน' }
+                        ].map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => scrollToSection(item.id)}
+                                className={`px-3 py-1.5 text-xs font-mono font-bold border transition-colors rounded whitespace-nowrap ${
+                                    activeAnchor === item.id 
+                                        ? 'bg-black text-white border-black shadow-sm' 
+                                        : 'bg-white text-gray-500 border-gray-200 hover:text-black hover:border-black'
+                                }`}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto p-4 space-y-6 pb-28 sm:pb-20">
-                {/* Tab Navigation */}
-                <div 
-                    className="flex overflow-x-auto gap-2 p-2 bg-gray-100 rounded-xl mb-4 no-scrollbar scroll-smooth"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                    {['basic', 'ingredients', 'steps', 'pro'].map(tab => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                            {tab === 'basic' && '1. ข้อมูลพื้นฐาน'}
-                            {tab === 'ingredients' && '2. ส่วนผสม & อุปกรณ์'}
-                            {tab === 'steps' && '3. ขั้นตอนการทำ'}
-                            {tab === 'pro' && '4. Pro Details'}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Preview */}
+            <div className="max-w-3xl mx-auto p-4 space-y-8 mt-4">
+                {/* Live Preview (Conditional Box) */}
                 {showPreview && (
-                    <div className="bg-[#0D0D0D] p-4 rounded-2xl">
-                        <p className="text-[10px] text-[#555] uppercase tracking-wider mb-2 px-1">Staff Preview</p>
+                    <div className="bg-black p-4 rounded border border-gray-800 shadow-2xl">
+                        <div className="text-[10px] text-gray-500 font-mono uppercase tracking-wider mb-3 px-1 border-b border-gray-900 pb-1 flex justify-between items-center">
+                            <span>SOP Viewer Screen Simulation</span>
+                            <span className="text-green-500">ONLINE</span>
+                        </div>
                         <SOPRecipeCard 
                             recipe={{ 
                                 ...editing, 
                                 category: categories.find(c => c.id === editing.category_id),
-                                display_ingredients: [
-                                    ...(editing.linked_preview || []),
-                                    ...(editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined)
-                                ]
+                                display_ingredients: editing.ingredients || []
                             }} 
                             glassSizes={glassSizes} 
                             scaleIngredients={scaleIngredients} 
@@ -643,73 +696,70 @@ export default function SOPEditorPage() {
                     </div>
                 )}
 
-                {/* BASIC TAB */}
-                {activeTab === 'basic' && (
-                    <div className="space-y-6">
-                        {/* Basic Info */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                    <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">ข้อมูลพื้นฐาน</h2>
+                {/* ── SECTION 1: ข้อมูลทั่วไป (General Info) ── */}
+                <section id="sec-basic" className="bg-white p-5 rounded border border-gray-200 space-y-4">
+                    <div className="border-b border-gray-100 pb-2 flex justify-between items-center">
+                        <h2 className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">01 / ข้อมูลทั่วไป (General Info)</h2>
+                        <span className="text-[10px] text-gray-400 font-mono">1-SCROLL</span>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-xs font-bold text-gray-500 block mb-1">ชื่อเมนู (TH)</label>
-                            <input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full p-3 border rounded-xl font-bold" placeholder="เช่น ลาเต้เย็น" />
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">ชื่อเมนู (ภาษาไทย)</label>
+                            <input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full p-2.5 border border-gray-300 rounded font-bold text-sm focus:border-black outline-none" placeholder="เช่น มัทฉะลาเต้เย็น" />
                         </div>
                         <div>
-                            <label className="text-xs font-bold text-gray-500 block mb-1">ชื่อ EN (optional)</label>
-                            <input value={editing.name_en || ''} onChange={e => setEditing({ ...editing, name_en: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="e.g. Iced Latte" />
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">ชื่อเมนู (EN / optional)</label>
+                            <input value={editing.name_en || ''} onChange={e => setEditing({ ...editing, name_en: e.target.value })} className="w-full p-2.5 border border-gray-300 rounded text-sm focus:border-black outline-none font-mono" placeholder="e.g. Iced Matcha Latte" />
                         </div>
                         <div>
-                            <label className="text-xs font-bold text-gray-500 block mb-1">หมวดหมู่</label>
-                            <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: e.target.value })} className="w-full p-3 border rounded-xl bg-white">
-                                <option value="">-- เลือกหมวด --</option>
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">หมวดหมู่สูตร SOP</label>
+                            <select value={editing.category_id || ''} onChange={e => setEditing({ ...editing, category_id: e.target.value })} className="w-full p-2.5 border border-gray-300 rounded bg-white text-sm focus:border-black outline-none">
+                                <option value="">-- เลือกหมวดหมู่ --</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
                             </select>
                         </div>
                         {!isCustomMode && (
                             <div>
-                                <label className="text-xs font-bold text-gray-500 block mb-1">ขนาดแก้วมาตรฐาน</label>
-                                <select value={editing.base_glass_size_oz} onChange={e => setEditing({ ...editing, base_glass_size_oz: parseInt(e.target.value) })} className="w-full p-3 border rounded-xl bg-white">
-                                    {glassSizes.map(gs => <option key={gs.id} value={gs.size_oz}>{gs.size_oz} oz ({gs.name})</option>)}
-                                    <option value="16">16 oz (default)</option>
+                                <label className="text-xs font-mono font-bold text-gray-500 block mb-1">ขนาดแก้วมาตรฐาน (Base Glass Size)</label>
+                                <select value={editing.base_glass_size_oz} onChange={e => setEditing({ ...editing, base_glass_size_oz: parseInt(e.target.value) })} className="w-full p-2.5 border border-gray-300 rounded bg-white text-sm focus:border-black outline-none font-mono">
+                                    {glassSizes.map(gs => <option key={gs.id} value={gs.size_oz}>{gs.size_oz} oz ({gs.name || gs.label})</option>)}
+                                    <option value="16">16 oz (Default)</option>
                                 </select>
                             </div>
                         )}
                         <div>
-                            <label className="text-xs font-bold text-gray-500 block mb-1">เวลาทำ (Prep Time)</label>
-                            <input value={editing.advanced_details?.prep_time || ''} onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, prep_time: e.target.value }})} className="w-full p-3 border rounded-xl" placeholder="เช่น 3-4 นาที" />
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">เวลาสกัด/เตรียม (Prep Time)</label>
+                            <input value={editing.advanced_details?.prep_time || ''} onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, prep_time: e.target.value }})} className="w-full p-2.5 border border-gray-300 rounded text-sm focus:border-black outline-none" placeholder="เช่น 2-3 นาที" />
                         </div>
                         <div>
-                            <label className="text-xs font-bold text-gray-500 block mb-1">ระดับน้ำแข็ง (Ice Level)</label>
-                            <input value={editing.advanced_details?.ice_level || ''} onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, ice_level: e.target.value }})} className="w-full p-3 border rounded-xl" placeholder="เช่น เต็มแก้ว 90%" />
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">ระดับน้ำแข็งมาตรฐาน (Ice Level)</label>
+                            <input value={editing.advanced_details?.ice_level || ''} onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, ice_level: e.target.value }})} className="w-full p-2.5 border border-gray-300 rounded text-sm focus:border-black outline-none" placeholder="เช่น เต็มแก้ว 100%" />
                         </div>
                         <div className="md:col-span-2">
-                            <label className="text-xs font-bold text-gray-500 block mb-1">ลักษณะเมนู (Profile)</label>
-                            <input value={editing.advanced_details?.profile || ''} onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, profile: e.target.value }})} className="w-full p-3 border rounded-xl" placeholder="เช่น มัทฉะแยกชั้นบน น้ำมะพร้าวอยู่ด้านล่าง" />
+                            <label className="text-xs font-mono font-bold text-gray-500 block mb-1">รายละเอียดเครื่องดื่มย่อ (Profile Description)</label>
+                            <input value={editing.advanced_details?.profile || ''} onChange={e => setEditing({ ...editing, advanced_details: { ...editing.advanced_details, profile: e.target.value }})} className="w-full p-2.5 border border-gray-300 rounded text-sm focus:border-black outline-none" placeholder="เช่น โทนชาเขียวเข้มข้น หวานละมุนแยกชั้นกับนมสด" />
                         </div>
                     </div>
-                </div>
+                </section>
 
-                {/* Scaling Rules / Custom Presets */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                    <div className="flex justify-between items-start">
+                {/* ── SECTION 2: ขนาด & การคำนวณ (Scaling & Presets) ── */}
+                <section id="sec-scaling" className="bg-white p-5 rounded border border-gray-200 space-y-4">
+                    <div className="border-b border-gray-100 pb-2 flex justify-between items-start">
                         <div>
-                            <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">
-                                {isCustomMode ? '🪣 ตัวเลือกขนาด (Presets)' : '🥤 ขนาดแก้วที่ขาย'}
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-1">
-                                {isCustomMode ? 'กำหนดปุ่มสำหรับให้พนักงานกดเลือกทำสูตร (เช่น 1 ลิตร, 1.5 ลิตร)' : 'เลือกว่าเมนูนี้สามารถขายในแก้วขนาดใดได้บ้าง'}
-                            </p>
+                            <h2 className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">02 / การคำนวณและปรับขนาด (Scaling Rules)</h2>
                         </div>
-                        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
-                            <button onClick={() => toggleCustomMode(false)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${!isCustomMode ? 'bg-white shadow text-purple-700' : 'text-gray-500 hover:text-gray-700'}`}>แก้ว (oz)</button>
-                            <button onClick={() => toggleCustomMode(true)} className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all ${isCustomMode ? 'bg-white shadow text-purple-700' : 'text-gray-500 hover:text-gray-700'}`}>ทำเบส (Custom)</button>
+                        <div className="flex bg-gray-100 p-0.5 rounded border border-gray-200">
+                            <button onClick={() => toggleCustomMode(false)} className={`px-2 py-1 text-[10px] font-mono font-bold rounded ${!isCustomMode ? 'bg-white shadow text-black' : 'text-gray-400'}`}>แก้ว (OZ)</button>
+                            <button onClick={() => toggleCustomMode(true)} className={`px-2 py-1 text-[10px] font-mono font-bold rounded ${isCustomMode ? 'bg-white shadow text-black' : 'text-gray-400'}`}>เบส (CUSTOM)</button>
                         </div>
                     </div>
-                    
+
                     {isCustomMode ? (
                         <div className="space-y-3">
+                            <p className="text-xs text-gray-400 font-mono">กำหนดสเกลสำหรับทำสูตรล็อตใหญ่ (เช่น 1 ถัง, 1.5 ลิตร) และตัวคูณปริมาณวัตถุดิบ</p>
                             {(editing.scaling_rules?.presets || []).map((preset, idx) => (
-                                <div key={idx} className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
                                     <input 
                                         value={preset.name} 
                                         onChange={e => {
@@ -718,410 +768,364 @@ export default function SOPEditorPage() {
                                             setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
                                         }}
                                         placeholder="ชื่อปุ่ม (เช่น 1.5 ลิตร)"
-                                        className="flex-1 p-2 border rounded-lg text-sm font-bold focus:border-purple-400 outline-none"
+                                        className="flex-1 p-2 border border-gray-300 rounded text-sm font-bold focus:border-black outline-none"
                                     />
-                                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase">ตัวคูณ (x)</span>
+                                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-200">
+                                        <span className="text-[10px] font-mono font-bold text-gray-400">MULTIPLIER</span>
                                         <input 
-                                            type="number" step="0.1"
+                                            type="number" step="0.01"
                                             value={preset.multiplier}
                                             onChange={e => {
                                                 const newPresets = [...editing.scaling_rules.presets];
                                                 newPresets[idx].multiplier = parseFloat(e.target.value) || 1;
                                                 setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
                                             }}
-                                            className={`w-16 p-1 text-sm text-center font-mono font-bold outline-none ${preset.isBase ? 'text-gray-500 bg-transparent' : 'text-purple-600'}`}
+                                            className={`w-14 p-0.5 text-sm text-center font-mono font-bold outline-none ${preset.isBase ? 'text-gray-400 bg-transparent' : 'text-black'}`}
                                             disabled={preset.isBase}
-                                            title={preset.isBase ? "สูตรมาตรฐาน ตัวคูณต้องเป็น 1 เสมอ" : "ตัวคูณสำหรับ Preset นี้"}
                                         />
                                     </div>
                                     {!preset.isBase && (
                                         <button onClick={() => {
                                             const newPresets = editing.scaling_rules.presets.filter((_, i) => i !== idx);
                                             setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
-                                        }} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                                        }} className="p-1.5 text-gray-400 hover:text-red-600">
                                             <Trash2 size={16} />
                                         </button>
                                     )}
                                 </div>
                             ))}
                             <button onClick={() => {
-                                const newPresets = [...(editing.scaling_rules?.presets || []), { name: 'ขนาดใหม่', multiplier: 1.5 }];
+                                const newPresets = [...(editing.scaling_rules?.presets || []), { name: 'สเกลใหม่', multiplier: 2.0 }];
                                 setEditing({ ...editing, scaling_rules: { ...editing.scaling_rules, presets: newPresets } });
-                            }} className="text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors bg-purple-50 px-4 py-2 rounded-lg">+ เพิ่ม Preset</button>
+                            }} className="text-xs font-mono font-bold text-black border border-black hover:bg-gray-50 px-3 py-1.5 rounded">+ เพิ่ม Preset ใหม่</button>
                         </div>
                     ) : (
-                        <div className="flex flex-wrap gap-3">
-                            {glassSizes.map(gs => {
-                                const isBase = gs.size_oz === editing.base_glass_size_oz;
-                                const isAvailable = isBase || editing.scaling_rules?.[String(gs.size_oz)] !== undefined;
-                                
-                                return (
-                                    <button
-                                        key={gs.id}
-                                        onClick={() => {
-                                            if (isBase) return; // Cannot toggle base size
-                                            const newRules = { ...editing.scaling_rules };
-                                            if (isAvailable) {
-                                                delete newRules[String(gs.size_oz)];
-                                            } else {
-                                                // Auto calculate multiplier: target / base
-                                                newRules[String(gs.size_oz)] = gs.size_oz / editing.base_glass_size_oz;
-                                            }
-                                            setEditing({ ...editing, scaling_rules: newRules });
-                                        }}
-                                        className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all w-24 h-24 ${
-                                            isAvailable 
-                                            ? 'border-purple-500 bg-purple-50' 
-                                            : 'border-gray-200 bg-white hover:border-gray-300'
-                                        } ${isBase ? 'opacity-80 cursor-default' : 'cursor-pointer'}`}
-                                    >
-                                        <div className={`w-6 h-6 rounded-md border flex items-center justify-center mb-2 ${
-                                            isAvailable ? 'bg-purple-500 border-purple-500 text-white' : 'bg-white border-gray-300'
-                                        }`}>
-                                            {isAvailable && <span className="text-sm font-bold">✓</span>}
-                                        </div>
-                                        <span className={`font-bold text-lg ${isAvailable ? 'text-purple-700' : 'text-gray-500'}`}>{gs.size_oz}oz</span>
-                                        {isBase && <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white">แก้วมาตรฐาน</span>}
-                                    </button>
-                                );
-                            })}
+                        <div className="space-y-2">
+                            <p className="text-xs text-gray-400 font-mono">เลือกขนาดแก้วที่จำหน่ายสำหรับเมนูนี้ และสเกลปริมาณน้ำ (ระบบคำนวณสเกลให้อัตโนมัติ)</p>
+                            <div className="flex flex-wrap gap-2">
+                                {glassSizes.map(gs => {
+                                    const isBase = gs.size_oz === editing.base_glass_size_oz;
+                                    const isAvailable = isBase || editing.scaling_rules?.[String(gs.size_oz)] !== undefined;
+                                    
+                                    return (
+                                        <button
+                                            key={gs.id}
+                                            type="button"
+                                            onClick={() => {
+                                                if (isBase) return;
+                                                const newRules = { ...editing.scaling_rules };
+                                                if (isAvailable) {
+                                                    delete newRules[String(gs.size_oz)];
+                                                } else {
+                                                    newRules[String(gs.size_oz)] = gs.size_oz / editing.base_glass_size_oz;
+                                                }
+                                                setEditing({ ...editing, scaling_rules: newRules });
+                                            }}
+                                            className={`relative px-4 py-3 rounded border text-left flex flex-col justify-between min-w-[100px] h-[90px] ${
+                                                isAvailable ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200 hover:border-black'
+                                            }`}
+                                        >
+                                            <div className="text-[10px] font-mono tracking-widest">{isBase ? 'STANDARD' : isAvailable ? 'ON SALE' : 'UNAVAILABLE'}</div>
+                                            <div className="font-bold text-lg font-mono tracking-tight mt-1">{gs.size_oz} <span className="text-xs">OZ</span></div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
-                </div>
+                </section>
 
-                {/* Garnish & Notes */}
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                    <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">🎀 ตกแต่ง & หมายเหตุ</h2>
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">Garnish / ของตกแต่ง</label>
-                        <input value={editing.garnish || ''} onChange={e => setEditing({ ...editing, garnish: e.target.value })} className="w-full p-3 border rounded-xl" placeholder="เช่น ผงมัทฉะโรยหน้า, ใบสะระแหน่" />
-                    </div>
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">Notes / หมายเหตุพิเศษ</label>
-                        <textarea value={editing.notes || ''} onChange={e => setEditing({ ...editing, notes: e.target.value })} className="w-full p-3 border rounded-xl resize-none" rows={2} placeholder="เช่น ลูกค้าแพ้ถั่ว ให้ใช้นม oat แทน" />
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={editing.is_published} onChange={e => setEditing({ ...editing, is_published: e.target.checked })} className="w-5 h-5 rounded" />
-                            <span className="font-bold text-sm">{editing.is_published ? '✅ เผยแพร่ (พนักงานเห็น)' : '⬜ Draft (ซ่อนจากพนักงาน)'}</span>
-                        </label>
-                    </div>
-                </div>
-                </div>
-                )}
-
-                {/* INGREDIENTS TAB */}
-                {activeTab === 'ingredients' && (
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📦 ส่วนผสม</h2>
-                        <button onClick={() => setShowImport(true)} className="text-xs text-purple-600 font-bold flex items-center gap-1 hover:underline"><Download size={14} /> เชื่อมโยงข้อมูล Recipe Lab</button>
+                {/* ── SECTION 3: ส่วนผสมและอุปกรณ์ (Ingredients & Equipment) ── */}
+                <section id="sec-ingredients" className="bg-white p-5 rounded border border-gray-200 space-y-4">
+                    <div className="border-b border-gray-100 pb-2 flex justify-between items-center">
+                        <h2 className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">03 / ส่วนผสมและอุปกรณ์ (Ingredients)</h2>
+                        <button onClick={() => setShowImport(true)} className="text-xs font-mono font-bold text-black border border-black px-2 py-1 rounded hover:bg-gray-50 flex items-center gap-1">
+                            <Download size={12} /> Recipe Lab Connection
+                        </button>
                     </div>
 
-                    {/* Linked Ingredients */}
+                    {/* Linked Status & Sync button */}
                     {(editing.source_menu_item_id || editing.source_stock_item_id) && (
-                        <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-3">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-purple-700 flex items-center gap-1">
-                                    <Link size={12} /> ดึงข้อมูลอัตโนมัติจาก Recipe Lab
-                                </span>
-                                <button onClick={() => setEditing(prev => ({ ...prev, source_menu_item_id: null, source_stock_item_id: null, linked_preview: [] }))} className="text-[10px] text-red-500 hover:underline">ยกเลิกเชื่อมโยง</button>
+                        <div className="flex items-center justify-between p-3 bg-indigo-50/50 border border-indigo-100 rounded">
+                            <div className="min-w-0">
+                                <div className="text-xs font-bold text-indigo-900 flex items-center gap-1.5 font-mono">
+                                    <Link size={12} /> เชื่อมต่อคลังวัตถุดิบอัตโนมัติ
+                                </div>
+                                <p className="text-[10px] text-indigo-500 font-mono mt-0.5">ส่วนผสมที่เปลี่ยนแปลงใน Recipe Lab สามารถซิงค์ปรับโครงสร้างที่นี่ได้</p>
                             </div>
-                            <div className="space-y-1">
-                                {(editing.linked_preview || []).map((ing, i) => (
-                                    <div key={`linked-${i}`} className={`flex justify-between items-center text-sm py-1 border-b border-purple-100/50 last:border-0 ${ing.isHidden ? 'opacity-40' : ''}`}>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => toggleHideLinked(ing.name)} title={ing.isHidden ? "แสดงใน SOP" : "ซ่อนใน SOP (เช่น แก้ว)"} className="p-1 hover:bg-purple-100 rounded text-purple-400">
-                                                {ing.isHidden ? <EyeOff size={14} className="text-red-400" /> : <Eye size={14} />}
-                                            </button>
-                                            
-                                            <button 
-                                                onClick={() => toggleSweetenerLinked(ing.name)} 
-                                                title={ing.is_sweetener ? "เป็นสารหวาน" : "ทั่วไป (ไม่ใช่สารหวาน)"} 
-                                                className={`p-1 rounded transition-colors text-xs ${
-                                                    ing.is_sweetener 
-                                                        ? 'bg-amber-50 text-amber-500 border border-amber-200' 
-                                                        : 'text-gray-300 hover:text-amber-500 hover:bg-gray-100'
-                                                }`}
-                                            >
-                                                🍬
-                                            </button>
-
-                                            <span className={ing.isHidden ? 'line-through text-gray-500' : 'text-gray-700'}>{ing.name}</span>
-                                        </div>
-                                        <span className="text-gray-500 font-mono">{ing.qty} {ing.unit}</span>
-                                    </div>
-                                ))}
-                                {(!editing.linked_preview || editing.linked_preview.length === 0) && (
-                                    <div className="text-xs text-gray-400 italic">ไม่มีส่วนผสม หรือกำลังโหลด...</div>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={handleSync}
+                                    className="px-2.5 py-1 text-xs font-mono font-bold bg-white border border-indigo-200 text-indigo-700 rounded hover:bg-indigo-50 transition-colors shadow-sm"
+                                >
+                                    SYNC
+                                </button>
+                                <button 
+                                    onClick={() => setEditing(prev => ({ ...prev, source_menu_item_id: null, source_stock_item_id: null }))}
+                                    className="text-xs font-mono text-red-600 hover:underline"
+                                >
+                                    UNLINK
+                                </button>
                             </div>
                         </div>
                     )}
 
-                    {/* Manual Extra Ingredients */}
-                    <div>
-                        <h3 className="text-xs font-bold text-gray-500 mb-2">ส่วนผสมเพิ่มเติม (Manual)</h3>
-                        <div className="space-y-2 mb-2">
-                            {(editing.ingredients || []).filter(i => !i.isLinked && i.qty !== undefined).map((ing, i) => (
-                                <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} />
-                            ))}
-                        </div>
-                        <button onClick={addIngredient} className="w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:text-purple-600 transition-colors font-bold">+ เพิ่มวัตถุดิบอื่น (เช่น Garnish พิเศษ)</button>
+                    {/* Integrated list */}
+                    <div className="space-y-2">
+                        {(editing.ingredients || []).map((ing, i) => (
+                            <IngredientRow key={i} ing={ing} index={i} onUpdate={updateIngredient} onDelete={deleteIngredient} />
+                        ))}
+                        {(editing.ingredients || []).length === 0 && (
+                            <div className="text-center py-6 font-mono text-xs text-gray-400 italic">
+                                ยังไม่มีส่วนผสม กรุณากดเชื่อมโยงคลังสินค้าหรือแอดวัตถุดิบแบบพอร์ทัล
+                            </div>
+                        )}
+                        <button onClick={addIngredient} className="w-full py-2 border border-dashed border-gray-300 rounded text-xs font-mono font-bold text-gray-500 hover:border-black hover:text-black transition-colors">+ เพิ่มวัตถุดิบ (ADD INGREDIENT)</button>
                     </div>
-                    
-                    <div className="border-t pt-4 mt-4">
-                        <h3 className="text-xs font-bold text-gray-500 mb-2">อุปกรณ์ที่ใช้ (Equipment)</h3>
+
+                    <div className="border-t border-gray-100 pt-4 mt-4 space-y-2">
+                        <label className="text-xs font-mono font-bold text-gray-500 block">อุปกรณ์เฉพาะ (Required Equipment)</label>
                         <textarea
-                            value={Array.isArray(editing.advanced_details?.equipment) 
-                                ? editing.advanced_details.equipment.join(', ') 
-                                : (editing.advanced_details?.equipment || '')}
+                            value={Array.isArray(editing.advanced_details?.equipment) ? editing.advanced_details.equipment.join(', ') : (editing.advanced_details?.equipment || '')}
                             onChange={e => {
-                                // Save as an array separated by commas or newlines
                                 const val = e.target.value;
                                 const arr = val.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-                                setEditing({ 
-                                    ...editing, 
-                                    advanced_details: { 
-                                        ...editing.advanced_details, 
-                                        equipment: arr 
-                                    } 
-                                });
+                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, equipment: arr } });
                             }}
-                            className="w-full p-3 border rounded-xl text-sm resize-none"
-                            rows={3}
-                            placeholder="พิมพ์ชื่ออุปกรณ์ที่ใช้แล้วคั่นด้วยเครื่องหมายลูกน้ำ หรือ Enter (เช่น ช้อนตวง, ถ้วยตีมัทฉะ)"
+                            className="w-full p-2.5 border border-gray-300 rounded text-sm focus:border-black focus:ring-0 outline-none resize-none font-mono"
+                            rows={2}
+                            placeholder="ตง ช้อนชา, บิวเรตต์ (คั่นด้วย Enter หรือลูกน้ำ ,)"
                         />
                     </div>
-                </div>
-                )}
+                </section>
 
-                {/* STEPS TAB */}
-                {activeTab === 'steps' && (
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3">
-                    <div className="flex justify-between items-center">
-                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">📋 ขั้นตอน ({(editing.steps || []).length})</h2>
-                        <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded">พนักงานดูปริมาณวัตถุดิบได้จากตารางด้านบน</span>
+                {/* ── SECTION 4: ขั้นตอนการทำ (Steps) ── */}
+                <section id="sec-steps" className="bg-white p-5 rounded border border-gray-200 space-y-4">
+                    <div className="border-b border-gray-100 pb-2 flex justify-between items-center">
+                        <h2 className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">04 / ขั้นตอนการเตรียมและดำเนินการ (Steps)</h2>
+                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded font-mono text-gray-500">{(editing.steps || []).length} ขั้นตอน</span>
                     </div>
+
                     <div className="space-y-2">
                         {(editing.steps || []).map((step, i) => (
                             <StepRow 
-                                key={i} step={step} index={i} 
-                                onUpdate={updateStep} onDelete={deleteStep} onMove={moveStep} 
+                                key={i} 
+                                step={step} 
+                                index={i} 
+                                onUpdate={updateStep} 
+                                onDelete={deleteStep} 
+                                onMove={moveStep} 
                                 isLast={i === editing.steps.length - 1} 
-                                availableIngredients={[
-                                    ...(editing.linked_preview || []).map(ing => ing.name),
-                                    ...(editing.ingredients || []).filter(ing => !ing.isLinked && ing.qty !== undefined).map(ing => ing.name)
-                                ]}
+                                isExpanded={expandedStepIndex === i}
+                                onToggleExpand={() => setExpandedStepIndex(expandedStepIndex === i ? null : i)}
+                                availableIngredients={(editing.ingredients || []).map(ing => ing.name)}
                             />
                         ))}
+                        {(editing.steps || []).length === 0 && (
+                            <div className="text-center py-6 font-mono text-xs text-gray-400 italic">
+                                ยังไม่มีขั้นตอนดำเนินการบันทึก
+                            </div>
+                        )}
+                        <button onClick={addStep} className="w-full py-2 border border-dashed border-gray-300 rounded text-xs font-mono font-bold text-gray-500 hover:border-black hover:text-black transition-colors">+ เพิ่มขั้นตอนดำเนินการ (ADD STEP)</button>
                     </div>
-                    <button onClick={addStep} className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 transition-colors font-bold">+ เพิ่มขั้นตอน</button>
-                </div>
-                )}
+                </section>
 
-                {/* PRO DETAILS TAB */}
-                {activeTab === 'pro' && (
-                <div className="space-y-6">
-                    {/* Copy from existing recipe */}
-                    <div className="bg-purple-50 p-5 rounded-2xl border border-purple-100 flex items-center justify-between gap-4">
-                        <div>
-                            <h3 className="font-bold text-sm text-purple-900">🔄 คัดลอกข้อมูล Pro Details จากสูตรอื่น</h3>
-                            <p className="text-xs text-purple-700 mt-1">คัดลอก QC, การแก้ปัญหา, อายุการจัดเก็บ และ Checklist จากสูตรเดิมที่มีอยู่แล้ว</p>
-                        </div>
+                {/* ── SECTION 5: QC & มาตรฐานคุณภาพ (Pro Details) ── */}
+                <section id="sec-pro" className="bg-white p-5 rounded border border-gray-200 space-y-6">
+                    <div className="border-b border-gray-100 pb-2 flex justify-between items-center">
+                        <h2 className="text-xs font-mono font-bold text-gray-500 uppercase tracking-widest">05 / มาตรฐานการบริการ & ประกันคุณภาพ (QC)</h2>
+                        
+                        {/* Copy details selector */}
                         <select
-                            className="w-64 p-2.5 border border-purple-200 rounded-lg text-sm bg-white focus:border-purple-400 outline-none"
+                            className="p-1 border border-gray-300 rounded text-[11px] font-mono outline-none bg-white focus:border-black"
                             onChange={(e) => {
-                                const recipeId = e.target.value;
-                                if (!recipeId) return;
-                                const sourceRecipe = recipes.find(r => r.id === recipeId);
-                                if (sourceRecipe && sourceRecipe.advanced_details) {
-                                    if (confirm(`คัดลอกข้อมูล Pro Details จาก "${sourceRecipe.name}" ใช่หรือไม่? (ข้อมูลเดิมในแท็บนี้จะถูกทับทั้งหมด)`)) {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const source = recipes.find(r => r.id === val);
+                                if (source && source.advanced_details) {
+                                    if (confirm(`คัดลอกข้อมูลความปลอดภัย/QC จาก "${source.name}" หรือไม่? ข้อมูลเดิมจะถูกทับทั้งหมด`)) {
                                         setEditing({
                                             ...editing,
                                             advanced_details: {
                                                 ...editing.advanced_details,
-                                                qc_standards: sourceRecipe.advanced_details.qc_standards || [],
-                                                troubleshooting: sourceRecipe.advanced_details.troubleshooting || [],
-                                                shelf_life: sourceRecipe.advanced_details.shelf_life || [],
-                                                checklist: sourceRecipe.advanced_details.checklist || []
+                                                qc_standards: source.advanced_details.qc_standards || [],
+                                                troubleshooting: source.advanced_details.troubleshooting || [],
+                                                shelf_life: source.advanced_details.shelf_life || [],
+                                                checklist: source.advanced_details.checklist || []
                                             }
                                         });
                                     }
                                 }
-                                e.target.value = ""; // Reset
+                                e.target.value = "";
                             }}
                         >
-                            <option value="">-- เลือกสูตรต้นแบบ --</option>
+                            <option value="">[คัดลอกข้อมูล Pro จากสูตรอื่น]</option>
                             {recipes.filter(r => r.id !== editing.id).map(r => (
                                 <option key={r.id} value={r.id}>{r.name}</option>
                             ))}
                         </select>
                     </div>
 
-                    {/* QC Standards */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">🎯 มาตรฐานรสชาติ (QC)</h2>
-                        <div className="space-y-2">
-                            {(editing.advanced_details?.qc_standards || []).map((qc, i) => (
-                                <div key={i} className="flex gap-2">
-                                    <input value={qc.topic} onChange={e => {
-                                        const newQc = [...editing.advanced_details.qc_standards];
-                                        newQc[i].topic = e.target.value;
-                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                    }} className="w-1/3 p-2 border rounded-lg text-sm" placeholder="หัวข้อ (เช่น สีมัทฉะ)" />
-                                    <input value={qc.standard} onChange={e => {
-                                        const newQc = [...editing.advanced_details.qc_standards];
-                                        newQc[i].standard = e.target.value;
-                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                    }} className="flex-1 p-2 border rounded-lg text-sm" placeholder="มาตรฐาน (เช่น เขียวสด ไม่คล้ำ)" />
-                                    <button onClick={() => {
-                                        const newQc = [...editing.advanced_details.qc_standards];
-                                        newQc.splice(i, 1);
-                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                    }} className="p-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-                                </div>
-                            ))}
-                            <button onClick={() => {
-                                const newQc = [...(editing.advanced_details?.qc_standards || []), { topic: '', standard: '' }];
-                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                            }} className="text-sm font-bold text-purple-600 hover:text-purple-800">+ เพิ่มมาตรฐาน QC</button>
-                        </div>
+                    {/* QC list */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-mono font-bold text-gray-500 block">มาตรฐานของรสชาติและหน้าตา (QC Standards)</label>
+                        {(editing.advanced_details?.qc_standards || []).map((qc, i) => (
+                            <div key={i} className="flex gap-2 items-center">
+                                <input value={qc.topic} onChange={e => {
+                                    const newQc = [...editing.advanced_details.qc_standards];
+                                    newQc[i].topic = e.target.value;
+                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
+                                }} className="w-1/3 p-2 border border-gray-300 rounded text-sm focus:border-black font-semibold" placeholder="หัวข้อ (เช่น กลิ่น)" />
+                                <input value={qc.standard} onChange={e => {
+                                    const newQc = [...editing.advanced_details.qc_standards];
+                                    newQc[i].standard = e.target.value;
+                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
+                                }} className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black" placeholder="มาตรฐานรสชาติที่ยอมรับได้" />
+                                <button onClick={() => {
+                                    const newQc = [...editing.advanced_details.qc_standards];
+                                    newQc.splice(i, 1);
+                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
+                                }} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                            </div>
+                        ))}
+                        <button onClick={() => {
+                            const newQc = [...(editing.advanced_details?.qc_standards || []), { topic: '', standard: '' }];
+                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
+                        }} className="text-xs font-mono font-bold text-black border border-black px-3 py-1.5 rounded hover:bg-gray-50">+ เพิ่มมาตรฐาน QC</button>
                     </div>
 
-                    {/* Troubleshooting */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                        <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">🔧 การแก้ปัญหา (Troubleshooting)</h2>
-                        <div className="space-y-3">
-                            {(editing.advanced_details?.troubleshooting || []).map((tb, i) => (
-                                <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-200 relative">
-                                    <button onClick={() => {
+                    {/* Troubleshooting list */}
+                    <div className="space-y-3 border-t border-gray-100 pt-4">
+                        <label className="text-xs font-mono font-bold text-gray-500 block">การแก้ปัญหาเบื้องต้น (Troubleshooting)</label>
+                        {(editing.advanced_details?.troubleshooting || []).map((tb, i) => (
+                            <div key={i} className="p-3 bg-gray-50 rounded border border-gray-200 relative space-y-2">
+                                <button onClick={() => {
+                                    const newTb = [...editing.advanced_details.troubleshooting];
+                                    newTb.splice(i, 1);
+                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
+                                }} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                                <div className="space-y-1.5 pr-6">
+                                    <input value={tb.problem} onChange={e => {
                                         const newTb = [...editing.advanced_details.troubleshooting];
-                                        newTb.splice(i, 1);
+                                        newTb[i].problem = e.target.value;
                                         setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                    }} className="absolute top-2 right-2 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-                                    <div className="space-y-2 pr-6">
-                                        <input value={tb.problem} onChange={e => {
-                                            const newTb = [...editing.advanced_details.troubleshooting];
-                                            newTb[i].problem = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                        }} className="w-full p-2 border rounded-lg text-sm font-bold text-red-600" placeholder="ปัญหา (เช่น มัทฉะขม)" />
-                                        <input value={tb.cause} onChange={e => {
-                                            const newTb = [...editing.advanced_details.troubleshooting];
-                                            newTb[i].cause = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                        }} className="w-full p-2 border rounded-lg text-sm" placeholder="สาเหตุ (เช่น น้ำร้อนเกินไป)" />
-                                        <input value={tb.solution} onChange={e => {
-                                            const newTb = [...editing.advanced_details.troubleshooting];
-                                            newTb[i].solution = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                        }} className="w-full p-2 border border-green-200 bg-green-50 rounded-lg text-sm" placeholder="วิธีแก้ (เช่น ใช้น้ำ 70 องศา)" />
-                                    </div>
+                                    }} className="w-full p-2 border border-gray-300 rounded text-sm font-bold text-red-600 focus:border-red-500" placeholder="ปัญหาที่อาจเกิดขึ้น" />
+                                    <input value={tb.cause} onChange={e => {
+                                        const newTb = [...editing.advanced_details.troubleshooting];
+                                        newTb[i].cause = e.target.value;
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
+                                    }} className="w-full p-2 border border-gray-300 rounded text-xs focus:border-black" placeholder="สาเหตุที่เป็นไปได้" />
+                                    <input value={tb.solution} onChange={e => {
+                                        const newTb = [...editing.advanced_details.troubleshooting];
+                                        newTb[i].solution = e.target.value;
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
+                                    }} className="w-full p-2 border border-green-300 bg-green-50/50 rounded text-xs focus:border-green-600" placeholder="วิธีการแก้ไขความละเอียด" />
+                                </div>
+                            </div>
+                        ))}
+                        <button onClick={() => {
+                            const newTb = [...(editing.advanced_details?.troubleshooting || []), { problem: '', cause: '', solution: '' }];
+                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
+                        }} className="text-xs font-mono font-bold text-black border border-black px-3 py-1.5 rounded hover:bg-gray-50">+ เพิ่มแนวทางการแก้ปัญหา</button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100 pt-4">
+                        {/* Shelf life */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-mono font-bold text-gray-500 block">อายุและการจัดเก็บรักษา (Shelf Life)</label>
+                            {(editing.advanced_details?.shelf_life || []).map((sl, i) => (
+                                <div key={i} className="flex gap-1.5 items-center">
+                                    <input value={sl.item} onChange={e => {
+                                        const newSl = [...editing.advanced_details.shelf_life];
+                                        newSl[i].item = e.target.value;
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
+                                    }} className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black" placeholder="รายการ (เช่น เบสชาเย็น)" />
+                                    <input value={sl.age} onChange={e => {
+                                        const newSl = [...editing.advanced_details.shelf_life];
+                                        newSl[i].age = e.target.value;
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
+                                    }} className="w-20 p-2 border border-gray-300 rounded text-sm text-center focus:border-black font-mono" placeholder="1 วัน" />
+                                    <button onClick={() => {
+                                        const newSl = [...editing.advanced_details.shelf_life];
+                                        newSl.splice(i, 1);
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
+                                    }} className="p-1.5 text-gray-400 hover:text-red-500"><X size={16} /></button>
                                 </div>
                             ))}
                             <button onClick={() => {
-                                const newTb = [...(editing.advanced_details?.troubleshooting || []), { problem: '', cause: '', solution: '' }];
-                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                            }} className="text-sm font-bold text-purple-600 hover:text-purple-800">+ เพิ่มปัญหาและวิธีแก้</button>
+                                const newSl = [...(editing.advanced_details?.shelf_life || []), { item: '', age: '' }];
+                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
+                            }} className="text-xs font-mono font-bold text-black border border-black px-2 py-1.5 rounded hover:bg-gray-50">+ Add Shelf Life</button>
+                        </div>
+
+                        {/* Checklist before serving */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-mono font-bold text-gray-500 block">รายการเช็คก่อนส่งมอบ (Serving Checklist)</label>
+                            {(editing.advanced_details?.checklist || []).map((cl, i) => (
+                                <div key={i} className="flex gap-1.5 items-center">
+                                    <span className="text-gray-400 font-mono">☑</span>
+                                    <input value={cl} onChange={e => {
+                                        const newCl = [...editing.advanced_details.checklist];
+                                        newCl[i] = e.target.value;
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
+                                    }} className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black" placeholder="เช่น เช็ดขอบแก้วเรียบร้อย" />
+                                    <button onClick={() => {
+                                        const newCl = [...editing.advanced_details.checklist];
+                                        newCl.splice(i, 1);
+                                        setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
+                                    }} className="p-1.5 text-gray-400 hover:text-red-500"><X size={16} /></button>
+                                </div>
+                            ))}
+                            <button onClick={() => {
+                                const newCl = [...(editing.advanced_details?.checklist || []), ''];
+                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
+                            }} className="text-xs font-mono font-bold text-black border border-black px-2 py-1.5 rounded hover:bg-gray-50">+ Add Checklist</button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Shelf Life */}
-                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                            <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">⏳ Shelf Life / การเก็บรักษา</h2>
-                            <div className="space-y-2">
-                                {(editing.advanced_details?.shelf_life || []).map((sl, i) => (
-                                    <div key={i} className="flex gap-2">
-                                        <input value={sl.item} onChange={e => {
-                                            const newSl = [...editing.advanced_details.shelf_life];
-                                            newSl[i].item = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                        }} className="flex-1 p-2 border rounded-lg text-sm" placeholder="รายการ (เช่น น้ำมะพร้าว base)" />
-                                        <input value={sl.age} onChange={e => {
-                                            const newSl = [...editing.advanced_details.shelf_life];
-                                            newSl[i].age = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                        }} className="w-24 p-2 border rounded-lg text-sm" placeholder="อายุ (เช่น 1 วัน)" />
-                                        <button onClick={() => {
-                                            const newSl = [...editing.advanced_details.shelf_life];
-                                            newSl.splice(i, 1);
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                        }} className="p-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-                                    </div>
-                                ))}
-                                <button onClick={() => {
-                                    const newSl = [...(editing.advanced_details?.shelf_life || []), { item: '', age: '' }];
-                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                }} className="text-sm font-bold text-purple-600 hover:text-purple-800">+ เพิ่ม Shelf Life</button>
-                            </div>
-                        </div>
-
-                        {/* Checklist */}
-                        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                            <h2 className="font-bold text-sm text-gray-400 uppercase tracking-wider">✅ Checklist ก่อนเสิร์ฟ</h2>
-                            <div className="space-y-2">
-                                {(editing.advanced_details?.checklist || []).map((cl, i) => (
-                                    <div key={i} className="flex gap-2 items-center">
-                                        <span className="text-gray-300">☑</span>
-                                        <input value={cl} onChange={e => {
-                                            const newCl = [...editing.advanced_details.checklist];
-                                            newCl[i] = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
-                                        }} className="flex-1 p-2 border rounded-lg text-sm" placeholder="เช่น แก้วสะอาด" />
-                                        <button onClick={() => {
-                                            const newCl = [...editing.advanced_details.checklist];
-                                            newCl.splice(i, 1);
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
-                                        }} className="p-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-                                    </div>
-                                ))}
-                                <button onClick={() => {
-                                    const newCl = [...(editing.advanced_details?.checklist || []), ''];
-                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
-                                }} className="text-sm font-bold text-purple-600 hover:text-purple-800">+ เพิ่ม Checklist</button>
-                            </div>
-                        </div>
+                    <div className="border-t border-gray-100 pt-4 flex items-center gap-3">
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <input type="checkbox" checked={editing.is_published} onChange={e => setEditing({ ...editing, is_published: e.target.checked })} className="w-5 h-5 rounded text-black border-gray-300 focus:ring-0" />
+                            <span className="font-bold text-sm font-mono tracking-tight">{editing.is_published ? '✅ PUBLISHED (พนักงานสามารถเห็นได้)' : '⬜ DRAFT (ซ่อนจากผู้ใช้งานทั่วไป)'}</span>
+                        </label>
                     </div>
-                </div>
-                )}
+                </section>
             </div>
 
-            {/* Import Modal */}
+            {/* Import Modal overlay */}
             {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleLink} />}
 
-            {/* Standard units datalist */}
+            {/* Standard units list */}
             <datalist id="sop-units">
                 {THAI_UNITS.map(u => (
                     <option key={u.value} value={u.value}>{u.label}</option>
                 ))}
             </datalist>
 
-            {/* Sticky Bottom Action Bar for Mobile */}
+            {/* Sticky Bottom Actions for Mobile */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex justify-between gap-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
                 <button 
                     onClick={() => setEditing(null)} 
-                    className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+                    className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-mono font-bold rounded text-xs transition-colors cursor-pointer"
                 >
-                    ย้อนกลับ
+                    BACK
                 </button>
                 <button 
                     onClick={() => setShowPreview(!showPreview)} 
-                    className={`py-3 px-4 font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                        showPreview ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
+                    className={`py-3 px-4 font-mono font-bold rounded text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                        showPreview ? 'bg-black text-white border-black border' : 'bg-gray-100 text-gray-600'
                     }`}
                 >
-                    {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
-                    <span>{showPreview ? 'ปิดพรีวิว' : 'พรีวิว'}</span>
+                    {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
+                    <span>{showPreview ? 'CLOSE PREVIEW' : 'PREVIEW'}</span>
                 </button>
                 <button 
                     onClick={handleSave} 
                     disabled={saving} 
-                    className="flex-[1.5] py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-md cursor-pointer"
+                    className="flex-[1.5] py-3 px-4 bg-black hover:bg-gray-800 text-white font-mono font-bold rounded text-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md cursor-pointer"
                 >
-                    <Save size={16} />
-                    <span>{saving ? 'บันทึก...' : 'บันทึก SOP'}</span>
+                    <Save size={14} />
+                    <span>{saving ? 'SAVING...' : 'SAVE SOP'}</span>
                 </button>
             </div>
         </div>

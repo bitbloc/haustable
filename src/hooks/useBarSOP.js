@@ -99,63 +99,11 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             const { data: sops, error } = await query;
             if (error) throw error;
 
-            // Dynamically fetch linked ingredients from Recipe Lab
-            const menuIds = sops.filter(r => r.source_menu_item_id).map(r => r.source_menu_item_id);
-            const stockIds = sops.filter(r => r.source_stock_item_id).map(r => r.source_stock_item_id);
-
-            let linkedIngs = [];
-            
-            if (menuIds.length > 0) {
-                const { data: mIngs } = await supabase
-                    .from('recipe_ingredients')
-                    .select('parent_menu_item_id, quantity, unit, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(name, usage_unit)')
-                    .in('parent_menu_item_id', menuIds);
-                if (mIngs) linkedIngs = [...linkedIngs, ...mIngs];
-            }
-
-            if (stockIds.length > 0) {
-                const { data: sIngs } = await supabase
-                    .from('recipe_ingredients')
-                    .select('parent_stock_item_id, quantity, unit, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(name, usage_unit)')
-                    .in('parent_stock_item_id', stockIds);
-                if (sIngs) linkedIngs = [...linkedIngs, ...sIngs];
-            }
-
-            // Populate each recipe with dynamic ingredients
-            const populatedData = sops.map(r => {
-                let dynamic = [];
-                if (r.source_menu_item_id) {
-                    dynamic = linkedIngs.filter(i => i.parent_menu_item_id === r.source_menu_item_id);
-                } else if (r.source_stock_item_id) {
-                    dynamic = linkedIngs.filter(i => i.parent_stock_item_id === r.source_stock_item_id);
-                }
-
-                const mappedDynamic = dynamic.map(i => {
-                    const ingName = i.ingredient?.name || 'Unknown';
-                    // Find if there's an override in manual ingredients (e.g. isHidden)
-                    const override = (r.ingredients || []).find(m => m.name === ingName);
-                    
-                    return {
-                        name: ingName,
-                        qty: i.quantity || 0,
-                        unit: i.unit || i.ingredient?.usage_unit || 'unit',
-                        scalable: true,
-                        isLinked: true, // Flag to show it's from Recipe Lab
-                        isHidden: override?.isHidden || false,
-                        is_sweetener: override?.is_sweetener || false
-                    };
-                });
-
-                // Extra manual ingredients are those in r.ingredients that are not linked overrides
-                const extraManuals = (r.ingredients || []).filter(m => 
-                    !mappedDynamic.some(d => d.name === m.name)
-                );
-
-                return {
-                    ...r,
-                    display_ingredients: [...mappedDynamic, ...extraManuals]
-                };
-            });
+            // Map ingredients directly to display_ingredients for compatibility
+            const populatedData = sops.map(r => ({
+                ...r,
+                display_ingredients: r.ingredients || []
+            }));
 
             setRecipes(populatedData);
 
@@ -442,6 +390,25 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     }, [fetchCategories]);
 
     // ────────────────────────────────
+    // Sync with Recipe Lab
+    // ────────────────────────────────
+    const syncSOPWithRecipeLab = useCallback(async (sourceId, sourceType, currentIngredients = []) => {
+        if (!sourceId) return currentIngredients;
+        const freshLinked = await fetchRecipeLabSummary(sourceId, sourceType);
+        if (!freshLinked || freshLinked.length === 0) {
+            toast.error('ไม่พบส่วนผสมใน Recipe Lab หรือสูตรว่างเปล่า');
+            return currentIngredients;
+        }
+
+        // Merge: keep manual items (isLinked !== true), replace or append linked items
+        const manuals = currentIngredients.filter(i => !i.isLinked);
+        const merged = [...freshLinked, ...manuals];
+        
+        toast.success('ซิงค์ข้อมูลจาก Recipe Lab สำเร็จ');
+        return merged;
+    }, [fetchRecipeLabSummary]);
+
+    // ────────────────────────────────
     // Save Glass Size
     // ────────────────────────────────
     const saveGlassSize = useCallback(async (glassSize) => {
@@ -499,6 +466,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         fetchGlassSizes,
         scaleIngredients,
         fetchRecipeLabSummary,
+        syncSOPWithRecipeLab,
         saveSOPRecipe,
         deleteSOPRecipe,
         saveCategory,
