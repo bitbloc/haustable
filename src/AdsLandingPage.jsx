@@ -553,15 +553,23 @@ export default function AdsLandingPage() {
                     href="https://lin.ee/EuzwG7c" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex-1 bg-[var(--color-brand)] text-white hover:opacity-90 rounded-sm py-2.5 px-3 flex items-center justify-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                    className="flex-1 bg-[var(--color-brand)] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
-                    <MessageCircle size={12} /> CHAT ON LINE
+                    <MessageCircle size={12} /> LINE CHAT
+                </a>
+                <a 
+                    href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                >
+                    <Navigation size={12} /> DIRECTIONS
                 </a>
                 <a 
                     href="tel:0985284217" 
-                    className="flex-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 rounded-sm py-2.5 px-3 flex items-center justify-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                    className="flex-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
-                    <Phone size={12} /> CALL / BOOK TABLE
+                    <Phone size={12} /> CALL / BOOK
                 </a>
             </div>
 
