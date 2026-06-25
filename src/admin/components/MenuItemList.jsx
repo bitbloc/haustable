@@ -50,9 +50,9 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div>
-                         <div className="flex justify-between items-start">
+                         <div className="pr-4">
                             <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
-                            <span className="text-brandDark font-mono font-bold">{item.price}</span>
+                            <div className="text-brandDark font-mono font-bold text-sm mt-0.5">{item.price} ฿</div>
                         </div>
                     </div>
                 </div>
@@ -71,7 +71,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
         >
             {/* Action Buttons */}
             {!isOverlay && (
-                <div className="absolute top-2 right-10 z-20 flex gap-1"
+                <div className="absolute top-2 right-8 z-20 flex gap-0.5"
                     onPointerDown={(e) => e.stopPropagation()} 
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -99,7 +99,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
             )}
 
             {/* Drag Handle */}
-            <div className="absolute top-2 right-2 z-20">
+            <div className="absolute top-2 right-1.5 z-20">
                 <div 
                     ref={setActivatorNodeRef}
                     {...attributes}
@@ -121,9 +121,9 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
             
             <div className="flex-1 min-w-0 flex flex-col justify-between pointer-events-none">
                 <div>
-                    <div className="flex justify-between items-start pr-28"> 
+                    <div className="pr-20"> 
                         <h4 className="font-bold truncate text-base text-ink">{item.name}</h4>
-                        <span className="font-mono font-bold text-brandDark">{item.price}</span>
+                        <div className="font-mono font-bold text-brandDark text-sm mt-0.5">{item.price} ฿</div>
                     </div>
                     <div className="text-xs text-subInk line-clamp-1 mt-1">{item.description || 'ไม่มีคำอธิบาย'}</div>
                 </div>

@@ -95,7 +95,8 @@
 }
 
 /* --- Physical Buttons --- */
-.admin-system button,
+/* Target standard action buttons, excluding icon-only, toggles, sub-menus, or tab buttons */
+.admin-system button:not(.p-1):not(.p-1\.5):not(.p-2):not(.p-3):not(.p-0):not([class*="hover:bg-"]):not(.admin-tab-btn):not([class*="border-b"]):not(.w-8):not(.h-8):not(.w-12):not(.h-12):not(.rounded-full),
 .admin-system a.button,
 .admin-system .btn {
   font-family: var(--ram-font-display);
@@ -106,7 +107,7 @@
   border: 1px solid var(--ram-ink) !important;
   background-color: var(--ram-paper) !important;
   color: var(--ram-ink) !important;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem !important;
   transition: transform 100ms cubic-bezier(0.16, 1, 0.3, 1), background-color 100ms;
   cursor: pointer;
   display: inline-flex;
@@ -114,16 +115,82 @@
   justify-content: center;
   gap: 0.5rem;
 }
-.admin-system button:hover,
+.admin-system button:not(.p-1):not(.p-1\.5):not(.p-2):not(.p-3):not(.p-0):not([class*="hover:bg-"]):not(.admin-tab-btn):not([class*="border-b"]):not(.w-8):not(.h-8):not(.w-12):not(.h-12):not(.rounded-full):hover,
 .admin-system a.button:hover {
   background-color: var(--ram-canvas) !important;
 }
-.admin-system button:active,
+.admin-system button:not(.p-1):not(.p-1\.5):not(.p-2):not(.p-3):not(.p-0):not([class*="hover:bg-"]):not(.admin-tab-btn):not([class*="border-b"]):not(.w-8):not(.h-8):not(.w-12):not(.h-12):not(.rounded-full):active,
 .admin-system a.button:active {
-  transform: translateY(1px);
+  transform: translateY(1px) !important;
 }
 .admin-system button:focus-visible {
   outline: 2px solid var(--ram-accent);
+}
+
+/* Reset / Override for Icon & Utility buttons */
+.admin-system button.p-1,
+.admin-system button.p-1\.5,
+.admin-system button.p-2,
+.admin-system button.p-2\.5,
+.admin-system button.p-3,
+.admin-system button.p-0,
+.admin-system button.rounded-full,
+.admin-system button.sd-header__btn,
+.admin-system button.sd-live__refresh,
+.admin-system button.w-8,
+.admin-system button.h-8,
+.admin-system button.w-12,
+.admin-system button.h-12,
+.admin-system button[class*="hover:bg-"] {
+  border: none !important;
+  background-color: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  text-transform: none !important;
+  font-family: inherit !important;
+}
+
+/* Specific styling for small icon buttons like edit/delete to look like Rams mechanical keys */
+.admin-system button.p-1\.5,
+.admin-system button.p-2 {
+  border: 1px solid var(--ram-rule) !important;
+  background-color: var(--ram-paper) !important;
+  color: var(--ram-ink-muted) !important;
+  border-radius: 2px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.375rem !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+.admin-system button.p-1\.5:hover,
+.admin-system button.p-2:hover {
+  border-color: var(--ram-ink) !important;
+  color: var(--ram-ink) !important;
+  background-color: var(--ram-canvas) !important;
+}
+.admin-system button.p-1\.5:active,
+.admin-system button.p-2:active {
+  transform: translateY(1px) !important;
+}
+
+/* Special styling for edit/delete buttons */
+.admin-system button.p-1\.5[class*="hover:text-red"],
+.admin-system button.p-2[class*="hover:text-red"] {
+  color: var(--ram-ink-muted) !important;
+}
+.admin-system button.p-1\.5[class*="hover:text-red"]:hover,
+.admin-system button.p-2[class*="hover:text-red"]:hover {
+  border-color: var(--ram-alert) !important;
+  color: var(--ram-alert) !important;
+  background-color: oklch(95% 0.03 25) !important;
 }
 
 /* Special Button highlights */
@@ -283,4 +350,41 @@
   background-color: var(--ram-paper) !important;
   border-color: var(--ram-rule) var(--ram-rule) var(--ram-paper) !important;
   cursor: default;
+}
+
+/* Tab overrides in AdminMenuPage and sub-headers */
+.admin-system header button,
+.admin-system .admin-tabs-container button,
+.admin-system .admin-tab-btn,
+.admin-system button[class*="border-b-"],
+.admin-system button[class*="border-transparent"] {
+  border: none !important;
+  background: transparent !important;
+  padding: 0.75rem 1rem !important;
+  font-family: var(--ram-font-display) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-radius: 0px !important;
+  color: var(--ram-ink-muted) !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  width: auto !important;
+  height: auto !important;
+}
+.admin-system header button:hover,
+.admin-system button[class*="border-transparent"]:hover {
+  color: var(--ram-ink) !important;
+  background-color: var(--ram-canvas) !important;
+}
+.admin-system header button[class*="border-brand"],
+.admin-system header button[class*="border-b-2"].border-brand,
+.admin-system button[class*="border-b-"].is-active,
+.admin-system button[class*="border-b-2"].text-brandDark {
+  border-bottom: 2px solid var(--ram-ink) !important;
+  color: var(--ram-ink) !important;
 }
