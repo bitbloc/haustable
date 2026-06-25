@@ -32,6 +32,7 @@ export default function AdsLandingPage() {
     const [activeMenuIndex, setActiveMenuIndex] = useState(0);
     const [menuImageLoading, setMenuImageLoading] = useState(true);
     const [showAllMenu, setShowAllMenu] = useState(false);
+    const [activeSection, setActiveSection] = useState('menu'); // 'menu' | 'atmosphere' | 'connect'
 
     useEffect(() => { fetchData(); }, []);
 
@@ -167,615 +168,404 @@ export default function AdsLandingPage() {
         );
     }
 
+    /* Hallmark · component: AdsLandingPage · genre: modern-minimal · theme: custom · vibe: "Dieter Rams industrial modern slab"
+     * states: default · hover · focus · active
+     * contrast: pass (APCA / WCAG compliant)
+     */
     return (
-        <div className="w-full min-h-screen flex flex-col bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] overflow-x-hidden font-[var(--font-body)] relative pb-safe">
+        <div className="ads-landing-page w-full min-h-screen flex flex-col bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] overflow-x-hidden font-[var(--font-body)] relative pb-safe">
             
-            {/* Custom Embedded CSS for Micro-animations */}
+            {/* Custom Embedded CSS for layout and animations */}
             <style>{`
-                @keyframes float {
-                    0% { transform: translateY(0px); }
-                    50% { transform: translateY(-10px); }
-                    100% { transform: translateY(0px); }
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
                 }
-                .animate-float {
-                    animation: float 6s ease-in-out infinite;
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
                 }
-                @keyframes steam-rise {
-                    0% {
-                        transform: translateY(0) scale(0.6) rotate(0deg);
-                        opacity: 0;
-                        filter: blur(3px);
-                    }
-                    20% {
-                        opacity: 0.5;
-                        filter: blur(4px);
-                    }
-                    50% {
-                        transform: translateY(-40px) scale(1.1) rotate(5deg);
-                        opacity: 0.3;
-                        filter: blur(6px);
-                    }
-                    80% {
-                        opacity: 0.1;
-                        filter: blur(8px);
-                    }
-                    100% {
-                        transform: translateY(-80px) scale(1.4) rotate(-5deg);
-                        opacity: 0;
-                        filter: blur(10px);
-                    }
-                }
-                .steam-container {
-                    position: absolute;
-                    left: 0;
-                    right: 0;
-                    top: -24px;
-                    display: flex;
-                    justify-content: center;
-                    gap: 8px;
-                    pointer-events: none;
-                    z-index: 20;
-                }
-                .steam-particle-1 {
-                    width: 6px;
-                    height: 30px;
-                    background: rgba(140, 140, 140, 0.4);
-                    border-radius: 9999px;
-                    animation: steam-rise 3s infinite ease-in-out;
-                    animation-delay: 0s;
-                }
-                .steam-particle-2 {
-                    width: 8px;
-                    height: 40px;
-                    background: rgba(120, 120, 120, 0.3);
-                    border-radius: 9999px;
-                    animation: steam-rise 3.4s infinite ease-in-out;
-                    animation-delay: 0.7s;
-                }
-                .steam-particle-3 {
-                    width: 5px;
-                    height: 25px;
-                    background: rgba(130, 130, 130, 0.35);
-                    border-radius: 9999px;
-                    animation: steam-rise 2.8s infinite ease-in-out;
-                    animation-delay: 1.4s;
-                }
-                @keyframes leaf-sway {
-                    0% { transform: translate(0, 0) rotate(0deg); }
-                    50% { transform: translate(4px, 6px) rotate(8deg); }
-                    100% { transform: translate(0, 0) rotate(0deg); }
-                }
-                .leaf-sway {
-                    animation: leaf-sway 4s ease-in-out infinite;
-                }
-                @keyframes marquee {
-                    0% { transform: translateX(0%); }
-                    100% { transform: translateX(-50%); }
-                }
-                .animate-marquee {
-                    animation: marquee 45s linear infinite;
-                }
-                @media (max-width: 420px) {
-                    .mobile-plate-right {
-                        right: -5.5rem !important;
-                        width: 8rem !important;
-                    }
-                    .mobile-plate-left {
-                        left: -5.5rem !important;
-                        width: 8rem !important;
-                    }
+                .active-dot-glow {
+                    box-shadow: 0 0 8px var(--color-brand);
                 }
             `}</style>
 
-            {/* ─── KINETIC TYPOGRAPHY (Background Layer) ─── */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.06] select-none pt-24">
-                <div className="sticky top-20 space-y-12">
-                    <div className="marquee-container flex overflow-hidden white-space-nowrap">
-                        <div className="marquee-content animate-marquee flex gap-8 text-[9rem] font-black uppercase tracking-tighter text-transparent" style={{ WebkitTextStroke: '2px var(--color-hallmark-ink)' }}>
-                            <span>IN THE HAUS · WE MAKE IT BOLD · จริตจัด รสชัดเจน · SOUTHERN TASTE · </span>
-                            <span>IN THE HAUS · WE MAKE IT BOLD · จริตจัด รสชัดเจน · SOUTHERN TASTE · </span>
-                        </div>
-                    </div>
-                    <div className="marquee-container flex overflow-hidden white-space-nowrap">
-                        <div className="marquee-content animate-marquee flex gap-8 text-[7rem] font-black uppercase tracking-tighter text-transparent" style={{ WebkitTextStroke: '2px var(--color-hallmark-ink)', animationDirection: 'reverse', animationDuration: '55s' }}>
-                            <span>REAL ATTITUDE · CLEAR TASTE · อร่อยปากลำบากทวาร · แซ่บหรอยแรง · </span>
-                            <span>REAL ATTITUDE · CLEAR TASTE · อร่อยปากลำบากทวาร · แซ่บหรอยแรง · </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ─── FLOATING FOOD PLATES (Responsive & Layered with visible steam) ─── */}
-            {/* Desktop-only floating plates in margins (Larger size with closer horizontal offsets for organic overlap) */}
-            <FloatingPlate src="/assets/food-green-curry.webp" alt="แกงเขียวหวาน" top="12%" left="calc(50% - 310px)" size="w-44 lg:w-56" delay={0} zIndex="z-0" />
-            <FloatingPlate src="/assets/food-beef-curry-1.webp" alt="แกงเนื้อเผ็ด" top="24%" right="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.5} hasSteam zIndex="z-20" />
-            <FloatingPlate src="/assets/food-pork-belly.webp" alt="หมูสามชั้นย่าง" top="38%" left="calc(50% - 330px)" size="w-44 lg:w-56" delay={0.8} hasSteam zIndex="z-0" />
-            <FloatingPlate src="/assets/food-beef-rice.webp" alt="ข้าวหน้าเนื้อ" top="50%" right="calc(50% - 310px)" size="w-44 lg:w-56" delay={2.2} zIndex="z-20" />
-            <FloatingPlate src="/assets/food-chicken-curry.webp" alt="มัสมั่นไก่" top="65%" left="calc(50% - 320px)" size="w-48 lg:w-60" delay={1.2} hasSteam zIndex="z-0" />
-            <FloatingPlate src="/assets/food-fried-garlic-pork.webp" alt="คั่วกลิ้งหมูกรอบ" top="78%" left="calc(50% - 310px)" size="w-48 lg:w-60" delay={2.8} zIndex="z-0" />
-
-
-            {/* ─── BRAND DECORATIVE ELEMENTS (DESKTOP ONLY - Floating in margins) ─── */}
-            {/* Brand Star — yellow-green asterisk */}
-            <motion.div
-                initial={{ opacity: 0, rotate: -45, scale: 0.5 }}
-                whileInView={{ opacity: 1, rotate: 12, scale: 1 }}
-                viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.6, delay: 0.2, type: 'spring', bounce: 0.4 }}
-                style={{ top: '15%', right: 'calc(-50vw + 360px)' }}
-                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
-                drag
-                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
-            >
-                <img src="/assets/brand-star.webp" alt="" aria-hidden="true" className="w-36 opacity-100 animate-float" style={{ animationDelay: '2s' }} loading="lazy" decoding="async" />
-            </motion.div>
-
-            {/* Brand Thai Text — "ในบ้าน" red typography */}
-            <motion.div
-                initial={{ opacity: 0, x: -40, rotate: -5 }}
-                whileInView={{ opacity: 1, x: 0, rotate: -3 }}
-                viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
-                style={{ top: '33%', left: 'calc(-50vw + 400px)' }}
-                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
-                drag
-                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
-            >
-                <img src="/assets/brand-thai-text.webp" alt="" aria-hidden="true" className="w-64 opacity-100" loading="lazy" decoding="async" />
-            </motion.div>
-
-            {/* Brand Crescent — red circles arc */}
-            <motion.div
-                initial={{ opacity: 0, rotate: 30, scale: 0.6 }}
-                whileInView={{ opacity: 1, rotate: -8, scale: 1 }}
-                viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.7, delay: 0.5, type: 'spring', bounce: 0.3 }}
-                style={{ top: '52%', right: 'calc(-50vw + 380px)' }}
-                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
-                drag
-                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
-            >
-                <img src="/assets/brand-crescent.webp" alt="" aria-hidden="true" className="w-40 opacity-100 animate-float drop-shadow-md" style={{ animationDelay: '3s' }} loading="lazy" decoding="async" />
-            </motion.div>
-
-            {/* Brand Mascot — character illustration (THE STAR!) */}
-            <motion.div
-                initial={{ opacity: 0, y: 30, scale: 0.6, rotate: 10 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1, rotate: -5 }}
-                viewport={{ once: false, amount: 0.3 }}
-                transition={{ duration: 0.8, delay: 0.2, type: 'spring', bounce: 0.4 }}
-                style={{ top: '70%', left: 'calc(-50vw + 360px)' }}
-                className="absolute z-0 hidden lg:block cursor-grab active:cursor-grabbing"
-                drag
-                dragConstraints={{ left: -50, right: 50, top: -50, bottom: 50 }}
-            >
-                <img src="/assets/brand-mascot.webp" alt="" aria-hidden="true" className="w-52 opacity-100 animate-float" style={{ animationDelay: '1s' }} loading="lazy" decoding="async" />
-            </motion.div>
-
-            {/* ─── LOCAL SEO STRUCTURED DATA ─── */}
-            <script type="application/ld+json">
-                {JSON.stringify({
-                    "@context": "https://schema.org",
-                    "@type": "Restaurant",
-                    "name": shopName,
-                    "image": logoUrl || "https://haustable.vercel.app/logo.png",
-                    "priceRange": "$$",
-                    "address": {
-                        "@type": "PostalAddress",
-                        "streetAddress": "ริมแม่น้ำโขง",
-                        "addressLocality": "นครพนม",
-                        "addressCountry": "TH"
-                    },
-                    "geo": {
-                        "@type": "GeoCoordinates",
-                        "latitude": "17.40722",
-                        "longitude": "104.78028"
-                    },
-                    "url": "https://haustable.vercel.app/link",
-                    "telephone": "098-528-4217",
-                    "openingHoursSpecification": {
-                        "@type": "OpeningHoursSpecification",
-                        "dayOfWeek": [
-                            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-                        ],
-                        "opens": "11:30",
-                        "closes": "23:30"
-                    }
-                })}
-            </script>
-
-            <div className="w-full max-w-lg mx-auto px-5 relative z-10">
+            <div className="w-full max-w-lg mx-auto px-4 relative z-10 flex-grow flex flex-col">
                 
-                {/* ─── HEADER: LOGO + IDENTITY ─── */}
-                <header className="pt-10 pb-4">
-                    <motion.div
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="flex items-center gap-4"
-                    >
-                        {/* Logo — Uses uploaded logo or falls back to brand geometric logo */}
-                        {logoUrl ? (
-                            <img
-                                src={optimizeImageUrl(logoUrl, 160)}
-                                alt="IN THE HAUS Logo"
-                                className="w-16 h-16 rounded-full object-cover border-2 border-[var(--color-hallmark-ink)] flex-shrink-0"
-                                fetchPriority="high"
-                            />
-                        ) : (
-                            <div className="w-16 h-16 rounded-full bg-[var(--color-hallmark-ink)] flex items-center justify-center flex-shrink-0 border-2 border-[var(--color-hallmark-ink)] p-2.5">
-                                <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
-                            </div>
-                        )}
-                        
-                        {/* Name & Info */}
-                        <div className="flex-1 min-w-0">
-                            <h1 className="text-2xl md:text-3xl font-[var(--font-display)] text-[var(--color-hallmark-ink)] leading-none uppercase">
-                                {shopName}
-                            </h1>
-                            <p className="text-[var(--color-hallmark-ink-muted)] font-bold text-xs mt-0.5">{shopNameTh}</p>
-                            <div className="flex items-center gap-1.5 mt-1 text-[var(--color-hallmark-ink-muted)] text-[10px] font-[var(--font-outlier)] font-bold">
-                                <Clock size={12} className="opacity-75" />
-                                <span>{hours}</span>
+                {/* ─── HEADER: IDENTITY & METADATA ─── */}
+                <header className="pt-8 pb-4 border-b border-[var(--color-hallmark-rule)] animate-fade-in">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            {logoUrl ? (
+                                <img
+                                    src={optimizeImageUrl(logoUrl, 120)}
+                                    alt="IN THE HAUS Logo"
+                                    className="w-12 h-12 rounded-sm object-cover border border-[var(--color-hallmark-ink)] flex-shrink-0"
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-sm bg-[var(--color-hallmark-ink)] flex items-center justify-center flex-shrink-0 p-1.5">
+                                    <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
+                                </div>
+                            )}
+                            <div>
+                                <h1 className="text-lg md:text-xl font-[var(--font-display)] font-bold text-[var(--color-hallmark-ink)] tracking-wider uppercase leading-none">
+                                    {shopName}
+                                </h1>
+                                <p className="text-[var(--color-hallmark-ink-muted)] font-[var(--font-display)] font-bold text-[10px] tracking-widest uppercase mt-1">{shopNameTh}</p>
                             </div>
                         </div>
-                    </motion.div>
+                        
+                        <p className="text-xs text-[var(--color-hallmark-ink-muted)] leading-relaxed font-[var(--font-body)]">
+                            {subtitle}
+                        </p>
 
-                    {/* Subtitle */}
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-xs text-[var(--color-hallmark-ink-muted)] mt-4 tracking-wide font-[var(--font-outlier)] font-bold leading-relaxed border-l-2 border-[var(--color-hallmark-ink)] pl-3 py-0.5"
-                    >
-                        {subtitle}
-                    </motion.p>
+                        {/* Braun Info Panel */}
+                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] p-3 rounded-sm font-mono text-[9px] text-[var(--color-hallmark-ink)] space-y-1 mt-2">
+                            <div className="flex justify-between gap-4">
+                                <span className="text-[var(--color-hallmark-ink-muted)]">STATUS:</span>
+                                <span className="flex items-center gap-1 font-bold">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    OPEN DAILY
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                                <span className="text-[var(--color-hallmark-ink-muted)]">HOURS:</span>
+                                <span className="font-bold">{hours.replace('เปิดทุกวัน ', '')}</span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                                <span className="text-[var(--color-hallmark-ink-muted)]">LOC:</span>
+                                <span className="font-bold">{locationText}</span>
+                            </div>
+                        </div>
+                    </div>
                 </header>
 
-                {/* ─── FEATURED SIGNATURE DISHES (Pop-Culture Style at Top) ─── */}
-                {signatures.length > 0 && (
-                    <section className="w-full mt-6 py-4 relative z-10">
-                        {/* Circular Brand Stamp (Rotating) */}
-                        <motion.img
-                            src="/assets/brand-circle.webp" 
-                            alt="ตราประทับร้านในบ้าน"
-                            aria-hidden="true"
-                            className="absolute -top-10 -right-4 w-24 lg:-top-12 lg:-right-8 lg:w-32 drop-shadow-sm pointer-events-none z-20"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 15, ease: "linear", repeat: Infinity }}
-                            loading="lazy"
-                            decoding="async"
-                        />
-                        
-                        {/* Brand Accent Dot — Top-left corner */}
-                        <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-[var(--color-brand)] rounded-full border-2 border-[var(--color-hallmark-ink)]" />
-                        <div className="text-center mb-6 py-1.5 border-b-2 border-[var(--color-hallmark-rule)] relative">
-                            {/* Sticker style tag for signature dishes */}
-                            <span className="bg-[var(--color-accent-red)] text-white text-xs font-black tracking-wide px-4 py-2 border-2 border-[var(--color-hallmark-ink)] inline-block shadow-[3px_3px_0px_var(--color-hallmark-ink)] transform -rotate-2 select-none rounded-md">
-                                ★ เมนูแนะนำเด็ดห้ามพลาด ★
-                            </span>
-                            <h2 className="text-[var(--color-hallmark-ink)] text-xs font-bold font-[var(--font-outlier)] uppercase mt-4">Signature Dishes</h2>
-                        </div>
-
-                        <div className={`grid gap-4 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                            {signatures.map((dish, i) => (
-                                <SignatureDishCard key={i} dish={dish} index={i} />
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                {/* ─── BRAND DIVIDER (MOBILE MASCOT & THAI TEXT) ─── */}
-                <div className="flex justify-center items-center gap-6 my-10 lg:hidden relative z-0">
-                    <motion.img 
-                        initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                        whileInView={{ opacity: 1, scale: 1, rotate: -5 }}
-                        viewport={{ once: false, amount: 0.5 }}
-                        src="/assets/brand-mascot.webp" 
-                        alt="" 
-                        className="w-28 animate-float" 
-                        style={{ animationDelay: '1s' }} 
-                        loading="lazy" 
-                        decoding="async"
-                    />
-                    <motion.img 
-                        initial={{ opacity: 0, x: 20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: false, amount: 0.5 }}
-                        src="/assets/brand-thai-text.webp" 
-                        alt="" 
-                        className="w-32" 
-                        loading="lazy" 
-                        decoding="async"
-                    />
+                {/* ─── SECTION CONTROLS (Braun Selector Panel) ─── */}
+                <div className="grid grid-cols-3 border-b border-[var(--color-hallmark-rule)] mb-6 bg-[var(--color-hallmark-paper)] sticky top-0 z-30">
+                    <button
+                        onClick={() => setActiveSection('menu')}
+                        className={`py-3.5 flex flex-col items-center justify-center gap-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-wider border-r border-[var(--color-hallmark-rule)] cursor-pointer transition-all ${activeSection === 'menu' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] font-black' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'}`}
+                    >
+                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeSection === 'menu' ? 'bg-[var(--color-brand)] active-dot-glow scale-110' : 'bg-neutral-300'}`} />
+                        01 / MENU
+                    </button>
+                    <button
+                        onClick={() => setActiveSection('atmosphere')}
+                        className={`py-3.5 flex flex-col items-center justify-center gap-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-wider border-r border-[var(--color-hallmark-rule)] cursor-pointer transition-all ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] font-black' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'}`}
+                    >
+                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeSection === 'atmosphere' ? 'bg-[var(--color-brand)] active-dot-glow scale-110' : 'bg-neutral-300'}`} />
+                        02 / VIBE
+                    </button>
+                    <button
+                        onClick={() => setActiveSection('connect')}
+                        className={`py-3.5 flex flex-col items-center justify-center gap-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-all ${activeSection === 'connect' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] font-black' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'}`}
+                    >
+                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeSection === 'connect' ? 'bg-[var(--color-brand)] active-dot-glow scale-110' : 'bg-neutral-300'}`} />
+                        03 / CONNECT
+                    </button>
                 </div>
 
-                {/* ─── DESKTOP BRAND DIVIDER ─── */}
-                <div className="hidden lg:flex items-center gap-3 my-6">
-                    <div className="h-px bg-neutral-300 flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #d4d4d4 0px, #d4d4d4 6px, transparent 6px, transparent 12px)' }} />
-                    <div className="w-6 h-6 flex items-center justify-center opacity-30">
-                        <img src="/logo.png" alt="" className="w-full h-full object-contain" aria-hidden="true" />
+                {/* ─── SECTION 1: MENU & SIGNATURES ─── */}
+                {activeSection === 'menu' && (
+                    <div className="space-y-6 flex-grow animate-fade-in">
+                        
+                        {/* Signatures */}
+                        {signatures.length > 0 && (
+                            <section className="space-y-3">
+                                <div className="flex items-center justify-between pb-2 border-b border-[var(--color-hallmark-rule)]">
+                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink-muted)]">
+                                        [ 01.1 // SIGNATURE DISHES ]
+                                    </h3>
+                                    <span className="text-[8px] font-mono bg-[var(--color-brand)] text-white px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                                        RECOMMENDED
+                                    </span>
+                                </div>
+                                <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                                    {signatures.map((dish, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm overflow-hidden flex flex-col group cursor-pointer"
+                                            onClick={() => setSelectedLightbox({ type: 'menu', url: dish.img })}
+                                        >
+                                            <div className="aspect-square relative overflow-hidden bg-neutral-100 border-b border-[var(--color-hallmark-rule)]">
+                                                <img 
+                                                    src={optimizeImageUrl(dish.img, 400)} 
+                                                    alt={dish.name} 
+                                                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" 
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                />
+                                            </div>
+                                            <div className="p-2 flex-grow flex flex-col justify-between">
+                                                <p className="font-[var(--font-body)] font-bold text-[10px] leading-tight text-[var(--color-hallmark-ink)] line-clamp-2">{dish.name}</p>
+                                                <p className="font-mono text-[10px] font-bold text-[var(--color-brand)] mt-1.5">฿{dish.price}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Specialties List */}
+                        {featuredMenuItems.length > 0 && (
+                            <section className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 space-y-4">
+                                <div className="flex items-center justify-between pb-2.5 border-b border-[var(--color-hallmark-rule)]">
+                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                        [ 01.2 // SPECIALTIES ]
+                                    </h3>
+                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                        {featuredMenuItems.length} ITEMS
+                                    </span>
+                                </div>
+                                
+                                <div className="divide-y divide-[var(--color-hallmark-rule)]">
+                                    {featuredMenuItems.map((item, idx) => (
+                                        <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                                    ))}
+                                </div>
+                                
+                                {/* Accordion Toggle Button */}
+                                <div className="pt-3 border-t border-dashed border-[var(--color-hallmark-rule)]">
+                                    <button
+                                        onClick={() => setShowAllMenu(!showAllMenu)}
+                                        className="w-full py-2 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm cursor-pointer"
+                                    >
+                                        {showAllMenu ? "[-] CLOSE ALL MENU SECTIONS" : "[+] VIEW FULL MENU (80+ ITEMS)"}
+                                    </button>
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Full Menu Accordion Content */}
+                        <AnimatePresence>
+                            {showAllMenu && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                                    className="w-full space-y-4 overflow-hidden"
+                                >
+                                    {menuCategories.map((category) => {
+                                        const categoryItems = menuItems.filter(item => item.category_id === category.id);
+                                        if (categoryItems.length === 0) return null;
+
+                                        return (
+                                            <div key={category.id} className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 animate-fade-in">
+                                                <div className="mb-3 pb-2 border-b border-[var(--color-hallmark-rule)] flex justify-between items-center">
+                                                    <span className="font-[var(--font-display)] text-xs font-bold tracking-wider text-[var(--color-hallmark-ink)] uppercase">
+                                                        // {category.name}
+                                                    </span>
+                                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                                        {categoryItems.length} ITEMS
+                                                    </span>
+                                                </div>
+                                                <div className="divide-y divide-[var(--color-hallmark-rule)]">
+                                                    {categoryItems.map((item, idx) => (
+                                                        <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Original Booklet Menu trigger */}
+                        {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
+                            <section>
+                                <button
+                                    onClick={() => {
+                                        setSelectedLightbox({
+                                            type: 'booklet_slider',
+                                            urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
+                                        });
+                                    }}
+                                    className="w-full bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 flex flex-col items-center justify-center gap-1 hover:bg-neutral-100/50 transition-colors cursor-pointer"
+                                >
+                                    <span className="text-[9px] font-mono text-[var(--color-brand)] font-bold tracking-widest uppercase">
+                                        // CLASSIC BOOKLET MENU
+                                    </span>
+                                    <span className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] flex items-center gap-1.5 mt-1">
+                                        📖 เปิดเล่มเมนูดั้งเดิม (PDF) ➔
+                                    </span>
+                                </button>
+                            </section>
+                        )}
+                        
                     </div>
-                    <div className="h-px bg-neutral-300 flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #d4d4d4 0px, #d4d4d4 6px, transparent 6px, transparent 12px)' }} />
-                </div>
-
-                {/* ─── NATIVE FEATURED DISHES (10-15 Recommended Items) ─── */}
-                {featuredMenuItems.length > 0 && (
-                    <section className="w-full bg-white rounded-3xl p-5 border-2 border-[var(--color-hallmark-ink)] shadow-[6px_6px_0px_var(--color-hallmark-ink)] relative z-10">
-                        {/* Brand Accent Dot — Bottom-left corner */}
-                        <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-[var(--color-brand)] rounded-full border-2 border-[var(--color-hallmark-ink)]" />
-                        <div className="text-center mb-6 py-1.5 border-b-2 border-[var(--color-hallmark-rule)] relative">
-                            {/* Yellow Category Tag styled as sticker */}
-                            <span className="bg-[var(--color-brand)] text-[var(--color-hallmark-ink)] text-xs font-black tracking-wide px-4.5 py-2 border-2 border-[var(--color-hallmark-ink)] inline-block shadow-[4px_4px_0px_var(--color-hallmark-ink)] transform -rotate-3 select-none rounded-md hover:rotate-0 transition-transform">
-                                ✦ เมนูยอดฮิตจริตจัด รสชัดเจน ✦
-                            </span>
-                            <h2 className="text-[var(--color-hallmark-ink)] text-xs font-bold font-[var(--font-outlier)] uppercase mt-4">Featured Specialties</h2>
-                        </div>
-
-                        <div className="space-y-4">
-                            {featuredMenuItems.map((item, idx) => (
-                                <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
-                            ))}
-                        </div>
-
-                        {/* Accordion CTA Button */}
-                        <div className="mt-6 text-center pt-4 border-t-2 border-dashed border-[var(--color-hallmark-rule)]">
-                            <button
-                                onClick={() => setShowAllMenu(!showAllMenu)}
-                                className="inline-flex items-center gap-2 px-6 py-3.5 bg-[var(--color-hallmark-ink)] text-white rounded-2xl hover:bg-neutral-800 border-2 border-[var(--color-hallmark-ink)] shadow-[4px_4px_0px_var(--color-hallmark-ink)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-[background-color,transform,box-shadow] duration-200 ease-out text-xs font-black cursor-pointer"
-                            >
-                                <span>{showAllMenu ? "▲ ปิดเมนูทั้งหมด" : "▼ ดูเมนูทั้งหมด (80+ รายการ)"}</span>
-                            </button>
-                        </div>
-                    </section>
                 )}
 
-                {/* ─── FULL MENU ACCORDION CONTENT ─── */}
-                <AnimatePresence>
-                    {showAllMenu && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.4, ease: 'easeInOut' }}
-                            className="w-full mt-4 space-y-6 overflow-hidden relative z-10"
-                        >
-                            {menuCategories.map((category) => {
-                                // Get items in this category
-                                const categoryItems = menuItems.filter(item => item.category_id === category.id);
-                                if (categoryItems.length === 0) return null;
-
-                                return (
-                                    <div key={category.id} className="bg-white rounded-3xl p-5 border-2 border-[var(--color-hallmark-ink)] shadow-[6px_6px_0px_var(--color-hallmark-ink)]">
-                                        <div className="mb-4 pb-2 border-b-2 border-[var(--color-hallmark-rule)] flex justify-between items-center relative">
-                                            {/* Sticker Badge style category tag */}
-                                            <span className="bg-[var(--color-brand)] text-[var(--color-hallmark-ink)] text-xs font-black tracking-wide px-3.5 py-2 border-2 border-[var(--color-hallmark-ink)] inline-block transform -rotate-2 select-none shadow-[3px_3px_0px_var(--color-hallmark-ink)] rounded-md">
-                                                ★ {category.name}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-[var(--color-hallmark-ink-muted)] font-[var(--font-outlier)]">
-                                                {categoryItems.length} รายการ
-                                            </span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {categoryItems.map((item, idx) => (
-                                                <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-
-
-                {/* ─── MOBILE BRAND ELEMENT (Crescent) ─── */}
-                <div className="flex justify-center items-center my-10 lg:hidden relative z-0">
-                    <motion.img 
-                        initial={{ opacity: 0, scale: 0.8, rotate: 20 }}
-                        whileInView={{ opacity: 1, scale: 1, rotate: -5 }}
-                        src="/assets/brand-crescent.webp" alt="" className="w-24 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '3s' }} 
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
-
-                {/* ─── ATMOSPHERE VIBES ─── */}
-                {atmImages.length > 0 && (
-                    <section className="w-full mt-6 py-4 relative z-10">
-                        {/* Brand Accent Dot — Top-right corner */}
-                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[var(--color-accent-red)] rounded-full border-2 border-[var(--color-hallmark-ink)]" />
-                        
-                        <div className="text-center mb-5 py-1.5 border-b-2 border-[var(--color-hallmark-rule)] relative">
-                            {/* Sticker style tag */}
-                            <span className="bg-[var(--color-hallmark-ink)] text-white text-xs font-black tracking-wide px-4 py-2 border-2 border-[var(--color-hallmark-ink)] inline-block shadow-[3px_3px_0px_var(--color-accent-red)] transform -rotate-1 select-none rounded-md">
-                                สัมผัสบรรยากาศในบ้าน 🏠
+                {/* ─── SECTION 2: VIBE / ATMOSPHERE ─── */}
+                {activeSection === 'atmosphere' && atmImages.length > 0 && (
+                    <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 animate-fade-in flex-grow">
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                [ 02 // ATMOSPHERE IMAGES ]
+                            </h3>
+                            <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                {atmImages.length} VIEWS
                             </span>
-                            <h2 className="text-[var(--color-hallmark-ink)] text-xs font-bold font-[var(--font-outlier)] uppercase mt-4 mb-2">Experience the Vibe</h2>
                         </div>
                         
-                        <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 no-scrollbar">
+                        <div className="grid grid-cols-2 gap-3">
                             {atmImages.map((url, i) => (
                                 <div
                                     key={i}
                                     onClick={() => setSelectedLightbox({ type: 'atm', url })}
-                                    className="flex-none w-[75%] max-w-[240px] snap-center rounded-2xl overflow-hidden shadow-[2px_2px_0px_var(--color-hallmark-ink)] border-2 border-[var(--color-hallmark-ink)] aspect-square cursor-pointer"
+                                    className="border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] rounded-sm overflow-hidden aspect-square cursor-pointer hover:border-[var(--color-brand)] transition-colors duration-150"
                                 >
                                     <img 
-                                        src={optimizeImageUrl(url, 600)} 
+                                        src={optimizeImageUrl(url, 500)} 
                                         alt={`Atmosphere ${i + 1}`} 
-                                        className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 ease-out" 
+                                        className="w-full h-full object-cover hover:scale-102 transition-transform duration-300" 
                                         loading="lazy"
                                         decoding="async"
                                     />
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {/* ─── SECTION 3: CONNECT / LINKS ─── */}
+                {activeSection === 'connect' && (
+                    <div className="space-y-4 flex-grow animate-fade-in">
                         
-                        <div className="mt-3 flex justify-center">
-                            <span className="text-[10px] text-neutral-400 font-black tracking-widest uppercase animate-pulse">« Swipe »</span>
-                        </div>
-                    </section>
-                )}
-
-                {/* ─── SOCIAL LINKS ─── */}
-                <section className="mt-6 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                        <LinkCard 
-                            href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9" 
-                            icon={<MapPin size={16} />} 
-                            title="แผนที่นำทางมาร้าน (Google Maps)" 
-                            bg="bg-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-ink)] text-white transition-colors" 
-                            wide 
-                            id="cta-maps" 
-                        />
-                        <LinkCard 
-                            href="https://www.facebook.com/inthehausth" 
-                            icon={<ExternalLink size={14} className="text-[var(--color-hallmark-ink-muted)]" />} 
-                            title="Facebook" 
-                            bg="bg-white hover:bg-neutral-50 border border-[var(--color-hallmark-rule)]" 
-                            textColor="text-[var(--color-hallmark-ink)]"
-                            id="cta-facebook" 
-                        />
-                        <LinkCard 
-                            href="https://instagram.com/inthehausth" 
-                            icon={<ExternalLink size={14} className="text-[var(--color-hallmark-ink-muted)]" />} 
-                            title="Instagram" 
-                            bg="bg-white hover:bg-neutral-50 border border-[var(--color-hallmark-rule)]" 
-                            textColor="text-[var(--color-hallmark-ink)]"
-                            id="cta-instagram" 
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-3 my-4">
-                        <div className="h-px bg-[var(--color-hallmark-rule)] flex-1" />
-                        <span className="text-[var(--color-hallmark-ink-muted)] text-[9px] font-black tracking-[0.25em] font-mono uppercase">Delivery</span>
-                        <div className="h-px bg-[var(--color-hallmark-rule)] flex-1" />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2.5">
-                        <LinkCard href="https://lin.ee/8uqmIzZ" icon={<Utensils size={16} />} title="สั่งอาหารเดลิเวอรี Lineman" bg="bg-[var(--color-accent-green)] hover:brightness-95 text-white transition-[background-color,filter]" wide id="cta-lineman" />
-                    </div>
-
-                    <div className="pt-2">
-                        <LinkCard href="/qa" icon={<HelpCircle size={16} />} title="Q&A ถาม-ตอบ ข้อมูลร้าน" bg="bg-[var(--color-accent-blue)] hover:brightness-95 text-white transition-[background-color,filter]" wide internal id="cta-qa" />
-                    </div>
-                </section>
-
-                {/* ─── FIND US ─── */}
-                <section className="mt-6">
-                    <motion.div
-                        initial={{ opacity: 0, y: 15 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.5 }}
-                        className="bg-white rounded-3xl border border-neutral-100 p-5 shadow-soft"
-                    >
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-[10px] font-black text-neutral-400 tracking-[0.2em] font-mono uppercase mb-2">Find Us</p>
-                                <p className="text-neutral-900 font-bold text-xs md:text-sm leading-relaxed">{locationText}</p>
-                                <p className="text-neutral-700 text-xs font-bold mt-2">{hours}</p>
+                        {/* Quick Connections */}
+                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
+                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                                [ 03.1 // QUICK CONNECTIONS ]
+                            </h3>
+                            
+                            <div className="space-y-2">
+                                <LinkCard 
+                                    href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9" 
+                                    icon={<MapPin size={12} />} 
+                                    title="GOOGLE MAPS DIRECTION" 
+                                    bg="bg-[var(--color-brand)] text-white hover:opacity-90" 
+                                    wide 
+                                    id="cta-maps" 
+                                />
+                                
+                                <div className="flex gap-2">
+                                    <LinkCard 
+                                        href="https://www.facebook.com/inthehausth" 
+                                        icon={<ExternalLink size={10} />} 
+                                        title="FACEBOOK" 
+                                        bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:bg-neutral-100/50" 
+                                        id="cta-facebook" 
+                                    />
+                                    <LinkCard 
+                                        href="https://instagram.com/inthehausth" 
+                                        icon={<ExternalLink size={10} />} 
+                                        title="INSTAGRAM" 
+                                        bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:bg-neutral-100/50" 
+                                        id="cta-instagram" 
+                                    />
+                                </div>
                             </div>
-                            <a
-                                href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-shrink-0 w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-white hover:bg-neutral-700 transition-colors shadow-md"
-                            >
-                                <Navigation size={16} />
-                            </a>
                         </div>
-                    </motion.div>
-                </section>
 
-                {/* ─── ORIGINAL BOOKLET LINK (Card Style) ─── */}
-                {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
-                    <div className="mt-8">
-                        <button
-                            onClick={() => {
-                                setSelectedLightbox({
-                                    type: 'booklet_slider',
-                                    urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
-                                });
-                            }}
-                            className="w-full bg-white border-2 border-[var(--color-hallmark-ink)] rounded-3xl p-5 shadow-[4px_4px_0px_var(--color-hallmark-ink)] flex flex-col items-center justify-center gap-2 group hover:-translate-y-0.5 hover:shadow-[5px_5px_0px_var(--color-hallmark-ink)] active:translate-y-0 active:shadow-[2px_2px_0px_var(--color-hallmark-ink)] transition-[transform,box-shadow] duration-200 ease-out cursor-pointer relative z-10 overflow-hidden"
-                        >
-                            <div className="absolute -right-4 -top-4 w-16 h-16 bg-neutral-100 rounded-full opacity-50 pointer-events-none" />
-                            <span className="bg-[var(--color-brand)] text-[var(--color-hallmark-ink)] text-[10px] font-bold font-[var(--font-outlier)] tracking-[0.2em] uppercase px-3 py-1 rounded-full border-2 border-[var(--color-hallmark-ink)] shadow-[2px_2px_0px_var(--color-hallmark-ink)] mb-1">
-                                Full Menu
-                            </span>
-                            <span className="text-[var(--color-hallmark-ink)] font-black text-sm group-hover:text-neutral-700 transition-colors flex items-center gap-2 whitespace-nowrap">
-                                📖 เล่มเมนูดั้งเดิม (PDF) <span className="group-hover:translate-x-1 transition-transform">➔</span>
-                            </span>
-                        </button>
+                        {/* Delivery */}
+                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
+                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                                [ 03.2 // DELIVERY SERVICE ]
+                            </h3>
+                            <LinkCard 
+                                href="https://lin.ee/8uqmIzZ" 
+                                icon={<Utensils size={12} />} 
+                                title="ORDER DIRECT ON LINEMAN" 
+                                bg="bg-[var(--color-hallmark-ink)] text-white hover:bg-neutral-800" 
+                                wide 
+                                id="cta-lineman" 
+                            />
+                        </div>
+
+                        {/* Information Hub */}
+                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
+                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                                [ 03.3 // INFORMATION HUB ]
+                            </h3>
+                            <LinkCard 
+                                href="/qa" 
+                                icon={<HelpCircle size={12} />} 
+                                title="RESTAURANT Q&A / DETAILS" 
+                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:bg-neutral-100/50" 
+                                wide 
+                                internal 
+                                id="cta-qa" 
+                            />
+                        </div>
+
+                        {/* Address Location details */}
+                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 font-mono text-[11px] text-[var(--color-hallmark-ink)]">
+                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider pb-2 border-b border-[var(--color-hallmark-rule)] mb-3 text-[var(--color-hallmark-ink-muted)]">
+                                [ 03.4 // OFFICE ADDRESS ]
+                            </h3>
+                            <p className="font-[var(--font-body)] font-bold text-xs leading-relaxed">{locationText}</p>
+                            <p className="mt-2 text-[var(--color-hallmark-ink-muted)] font-bold">TEL: 098-528-4217</p>
+                            <p className="mt-1 text-[var(--color-hallmark-ink-muted)] font-bold font-mono">OPEN: {hours}</p>
+                            
+                            <div className="mt-4 pt-3 border-t border-[var(--color-hallmark-rule)] flex justify-end">
+                                <a
+                                    href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider hover:bg-neutral-800 transition-colors"
+                                >
+                                    <Navigation size={9} /> LAUNCH MAP
+                                </a>
+                            </div>
+                        </div>
+                        
                     </div>
                 )}
-
-                {/* ─── MOBILE BRAND ELEMENT (Star) ─── */}
-                <div className="flex justify-center items-center my-10 lg:hidden relative z-0">
-                    <motion.img 
-                        initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
-                        whileInView={{ opacity: 1, scale: 1, rotate: 12 }}
-                        src="/assets/brand-star.webp" alt="" className="w-20 animate-float drop-shadow-[2px_2px_0px_rgba(0,0,0,0.1)]" style={{ animationDelay: '2s' }} 
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
 
                 {/* ─── TAGS ─── */}
-                <section className="my-10 relative z-20">
-                    <div className="flex flex-wrap justify-center gap-2.5">
+                <div className="py-4 border-t border-[var(--color-hallmark-rule)] mt-8">
+                    <div className="flex flex-wrap justify-center gap-1.5">
                         {tags.map(tag => (
-                            <span key={tag} className="px-4 py-1.5 bg-white border-2 border-[var(--color-hallmark-ink)] text-[var(--color-hallmark-ink)] rounded-full text-[11px] font-black font-mono tracking-wider shadow-[2px_2px_0px_var(--color-hallmark-ink)] hover:scale-105 transition-transform cursor-default select-none">
+                            <span key={tag} className="px-2.5 py-1 border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] rounded-sm text-[9px] font-mono tracking-wider">
                                 {tag}
                             </span>
                         ))}
                     </div>
-                </section>
+                </div>
 
             </div>
 
-            {/* ─── FOOTER (Enhanced with Brand Elements) ─── */}
-            <footer className="bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-ink-muted)] py-10 w-full mt-auto pb-24 border-t border-[var(--color-hallmark-rule)]">
-                <div className="max-w-lg mx-auto px-5 flex flex-col items-center gap-4">
-                    {/* Geometric Logo */}
-                    <div className="w-8 h-8 opacity-30">
-                        <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" loading="lazy" />
-                    </div>
-                    {/* Slogan */}
-                    <p className="text-neutral-500 text-[10px] font-bold tracking-[0.3em] uppercase font-[var(--font-outlier)]">จริตจัด รสชัดเจน</p>
-                    {/* Separator */}
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-px bg-neutral-700" />
-                        <div className="w-1.5 h-1.5 bg-[var(--color-brand)] rounded-full opacity-60" />
-                        <div className="w-4 h-px bg-neutral-700" />
-                    </div>
-                    {/* Copyright */}
-                    <p className="text-neutral-600 text-[9px] font-[var(--font-outlier)] tracking-widest">© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
+            {/* ─── FOOTER ─── */}
+            <footer className="bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] py-8 w-full mt-auto pb-24 border-t border-[var(--color-hallmark-rule)]">
+                <div className="max-w-lg mx-auto px-5 flex flex-col items-center gap-3">
+                    <p className="font-mono text-[9px] font-bold tracking-[0.25em] text-[var(--color-hallmark-ink)] uppercase">
+                        // {shopName}
+                    </p>
+                    <div className="h-px w-8 bg-[var(--color-hallmark-rule)]" />
+                    <p className="font-[var(--font-body)] text-[9px] tracking-wider uppercase text-neutral-400">จริตจัด รสชัดเจน · Bold Attitude, Clear Taste</p>
+                    <p className="font-mono text-[8px] text-neutral-400 mt-1 uppercase tracking-widest">© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
                 </div>
             </footer>
 
-            {/* ─── STICKY FLOATING CONTACT BAR (Mobile-First / Glassmorphism) ─── */}
-            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-[440px] px-4 py-3 bg-white/70 backdrop-blur-xl border border-white/40 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex gap-3 pb-safe">
+            {/* ─── STICKY CONTACT BAR ─── */}
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-[440px] p-2 bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-ink)] rounded-sm shadow-md flex gap-2 pb-safe">
                 <a 
                     href="https://lin.ee/EuzwG7c" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex-1 bg-[var(--color-accent-green)] hover:brightness-95 text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-xs font-black shadow-sm active:scale-97 transition-[transform,background-color] duration-150 ease-out cursor-pointer"
+                    className="flex-1 bg-[var(--color-brand)] text-white hover:opacity-90 rounded-sm py-2.5 px-3 flex items-center justify-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
-                    <MessageCircle size={15} /> ทักแชต LINE
+                    <MessageCircle size={12} /> CHAT ON LINE
                 </a>
                 <a 
                     href="tel:0985284217" 
-                    className="flex-1 bg-[var(--color-accent-red)] hover:brightness-95 text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 text-xs font-black shadow-sm active:scale-97 transition-[transform,background-color] duration-150 ease-out cursor-pointer"
+                    className="flex-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 rounded-sm py-2.5 px-3 flex items-center justify-center gap-1.5 text-[10px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
-                    <Phone size={15} /> โทรสั่ง / จองโต๊ะ
+                    <Phone size={12} /> CALL / BOOK TABLE
                 </a>
             </div>
 
-            {/* ─── SIMPLE LIGHTBOX ─── */}
+            {/* ─── LIGHTBOX MODAL ─── */}
             <AnimatePresence>
                 {selectedLightbox && (
                     <motion.div
@@ -787,24 +577,30 @@ export default function AdsLandingPage() {
                     >
                         <button
                             onClick={() => setSelectedLightbox(null)}
-                            className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 transition-colors rounded-full flex items-center justify-center text-white backdrop-blur-md cursor-pointer text-lg font-bold z-50 animate-pulse"
+                            className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 transition-colors rounded-sm flex items-center justify-center text-white backdrop-blur-md cursor-pointer text-sm font-mono font-bold z-50"
                         >
-                            ✕
+                            [X]
                         </button>
 
                         {selectedLightbox.type === 'booklet_slider' ? (
                             <div 
-                                className="w-full max-w-lg bg-white rounded-3xl p-5 border-2 border-neutral-900 shadow-2xl flex flex-col items-center z-40 relative my-8" 
+                                className="w-full max-w-lg bg-[var(--color-hallmark-paper)] rounded-sm p-4 border border-[var(--color-hallmark-ink)] flex flex-col items-center z-40 relative my-8" 
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <div className="text-center mb-4 pb-2 border-b-2 border-[var(--color-hallmark-ink)] w-full">
-                                    <span className="bg-[var(--color-brand)] text-[var(--color-hallmark-ink)] text-[10px] font-black tracking-[0.25em] uppercase px-3 py-1.5 rounded-full inline-block border-2 border-[var(--color-hallmark-ink)]">
-                                        เล่มเมนูดั้งเดิม
+                                <div className="flex justify-between items-center w-full mb-3 pb-2 border-b border-[var(--color-hallmark-rule)]">
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)]">
+                                        // ORIGINAL MENU BOOKLET
                                     </span>
+                                    <button 
+                                        onClick={() => setSelectedLightbox(null)}
+                                        className="text-[10px] font-mono font-bold hover:text-[var(--color-brand)] cursor-pointer text-[var(--color-hallmark-ink)]"
+                                    >
+                                        [ CLOSE ]
+                                    </button>
                                 </div>
 
                                 {/* Tab Switcher inside Modal */}
-                                <div className="flex gap-2 p-1 bg-neutral-100 rounded-2xl mb-4 w-full text-xs font-bold border border-[var(--color-hallmark-rule)]/40">
+                                <div className="flex border border-[var(--color-hallmark-rule)] rounded-sm mb-3 w-full text-[10px] font-mono overflow-hidden">
                                     {regularMenuImages.length > 0 && (
                                         <button
                                             onClick={() => {
@@ -812,9 +608,9 @@ export default function AdsLandingPage() {
                                                 setActiveMenuIndex(0);
                                                 setMenuImageLoading(true);
                                             }}
-                                            className={`flex-1 py-2.5 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'regular' ? 'bg-white text-[var(--color-hallmark-ink)] shadow-sm border border-[var(--color-hallmark-rule)]' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)]'}`}
+                                            className={`flex-1 py-2 text-center transition-all cursor-pointer font-bold border-r border-[var(--color-hallmark-rule)] last:border-r-0 ${activeTab === 'regular' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)]' : 'text-[var(--color-hallmark-ink-muted)] bg-transparent'}`}
                                         >
-                                            📖 เมนูหลัก
+                                            MAIN MENU
                                         </button>
                                     )}
                                     {promoMenuImages.length > 0 && (
@@ -824,9 +620,9 @@ export default function AdsLandingPage() {
                                                 setActiveMenuIndex(0);
                                                 setMenuImageLoading(true);
                                             }}
-                                            className={`flex-1 py-2.5 px-4 rounded-xl text-center transition-all cursor-pointer font-black ${activeTab === 'promo' ? 'bg-[var(--color-accent-red)]/10 text-[var(--color-accent-red)] shadow-sm border border-[var(--color-accent-red)]/20' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-accent-red)]'}`}
+                                            className={`flex-1 py-2 text-center transition-all cursor-pointer font-bold border-r border-[var(--color-hallmark-rule)] last:border-r-0 ${activeTab === 'promo' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-hallmark-ink-muted)] bg-transparent'}`}
                                         >
-                                            🔥 โปรโมชั่น
+                                            PROMOTIONS
                                         </button>
                                     )}
                                 </div>
@@ -848,21 +644,21 @@ export default function AdsLandingPage() {
                                             >
                                                 {({ zoomIn, zoomOut, resetTransform }) => (
                                                     <div className="w-full flex flex-col items-center">
-                                                        <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-neutral-100 p-1 rounded-xl border border-neutral-200 shadow-sm">
+                                                        <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-[var(--color-hallmark-paper-dark)] p-1.5 rounded-sm border border-[var(--color-hallmark-rule)]">
                                                             <div className="flex items-center gap-1">
-                                                                <button type="button" onClick={() => zoomIn()} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white text-neutral-800 transition-all cursor-pointer"><ZoomIn size={14} /></button>
-                                                                <button type="button" onClick={() => zoomOut()} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white text-neutral-800 transition-all cursor-pointer"><ZoomOut size={14} /></button>
-                                                                <button type="button" onClick={() => resetTransform()} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white text-neutral-800 transition-all cursor-pointer"><RefreshCw size={11} /></button>
+                                                                <button type="button" onClick={() => zoomIn()} className="w-7 h-7 rounded-sm flex items-center justify-center hover:bg-[var(--color-hallmark-paper)] text-neutral-800 transition-all cursor-pointer border border-[var(--color-hallmark-rule)] bg-transparent"><ZoomIn size={12} /></button>
+                                                                <button type="button" onClick={() => zoomOut()} className="w-7 h-7 rounded-sm flex items-center justify-center hover:bg-[var(--color-hallmark-paper)] text-neutral-800 transition-all cursor-pointer border border-[var(--color-hallmark-rule)] bg-transparent"><ZoomOut size={12} /></button>
+                                                                <button type="button" onClick={() => resetTransform()} className="w-7 h-7 rounded-sm flex items-center justify-center hover:bg-[var(--color-hallmark-paper)] text-neutral-800 transition-all cursor-pointer border border-[var(--color-hallmark-rule)] bg-transparent"><RefreshCw size={10} /></button>
                                                             </div>
-                                                            <span className="text-[10px] font-black text-neutral-600 font-mono px-2">
-                                                                หน้า ${activeMenuIndex + 1} / ${currentImages.length}
+                                                            <span className="text-[10px] font-bold text-[var(--color-hallmark-ink)] font-mono px-2">
+                                                                PAGE {activeMenuIndex + 1} / {currentImages.length}
                                                             </span>
                                                         </div>
 
-                                                        <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden shadow-inner border border-neutral-200 bg-neutral-50 cursor-grab active:cursor-grabbing">
+                                                        <div className="relative w-full aspect-[4/5] rounded-sm overflow-hidden border border-[var(--color-hallmark-rule)] bg-neutral-50 cursor-grab active:cursor-grabbing">
                                                             {menuImageLoading && (
-                                                                <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
-                                                                    <div className="w-6 h-6 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                                                                <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center">
+                                                                    <div className="w-5 h-5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
                                                                 </div>
                                                             )}
                                                             <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full flex items-center justify-center">
@@ -886,12 +682,12 @@ export default function AdsLandingPage() {
                                                         setActiveMenuIndex(prev => Math.max(0, prev - 1));
                                                         setMenuImageLoading(true);
                                                     }}
-                                                    className="w-9 h-9 rounded-full border border-[var(--color-hallmark-rule)] flex items-center justify-center text-[var(--color-hallmark-ink-muted)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                                                    className="w-8 h-8 rounded-sm border border-[var(--color-hallmark-rule)] flex items-center justify-center text-[var(--color-hallmark-ink-muted)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100/50 active:scale-95 transition-all cursor-pointer bg-transparent"
                                                 >
-                                                    <ChevronLeft size={18} />
+                                                    <ChevronLeft size={16} />
                                                 </button>
                                                 
-                                                <div className="flex gap-1.5 overflow-x-auto max-w-[180px] no-scrollbar py-1">
+                                                <div className="flex gap-1 overflow-x-auto max-w-[180px] no-scrollbar py-1">
                                                     {currentImages.map((_, i) => (
                                                         <button
                                                             key={i}
@@ -899,7 +695,7 @@ export default function AdsLandingPage() {
                                                                 setActiveMenuIndex(i);
                                                                 setMenuImageLoading(true);
                                                             }}
-                                                            className={`w-2 h-2 rounded-full transition-all flex-shrink-0 ${activeMenuIndex === i ? 'bg-[var(--color-hallmark-ink)] scale-110' : 'bg-[var(--color-hallmark-rule)] opacity-40 hover:opacity-100'}`}
+                                                            className={`w-1.5 h-1.5 rounded-full transition-all flex-shrink-0 ${activeMenuIndex === i ? 'bg-[var(--color-brand)] scale-110' : 'bg-[var(--color-hallmark-rule)] opacity-40 hover:opacity-100'}`}
                                                         />
                                                     ))}
                                                 </div>
@@ -910,9 +706,9 @@ export default function AdsLandingPage() {
                                                         setActiveMenuIndex(prev => Math.min(currentImages.length - 1, prev + 1));
                                                         setMenuImageLoading(true);
                                                     }}
-                                                    className="w-9 h-9 rounded-full border border-[var(--color-hallmark-rule)] flex items-center justify-center text-[var(--color-hallmark-ink-muted)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 active:scale-95 transition-all cursor-pointer"
+                                                    className="w-8 h-8 rounded-sm border border-[var(--color-hallmark-rule)] flex items-center justify-center text-[var(--color-hallmark-ink-muted)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100/50 active:scale-95 transition-all cursor-pointer bg-transparent"
                                                 >
-                                                    <ChevronRight size={18} />
+                                                    <ChevronRight size={16} />
                                                 </button>
                                             </div>
                                         </div>
@@ -921,12 +717,12 @@ export default function AdsLandingPage() {
                             </div>
                         ) : (
                             <motion.img
-                                initial={{ scale: 0.9 }}
+                                initial={{ scale: 0.95 }}
                                 animate={{ scale: 1 }}
-                                exit={{ scale: 0.9 }}
+                                exit={{ scale: 0.95 }}
                                 src={optimizeImageUrl(selectedLightbox.url, 1200)}
                                 alt="Zoomed View"
-                                className="max-w-full max-h-[85vh] object-contain rounded-2xl"
+                                className="max-w-full max-h-[85vh] object-contain rounded-sm border border-[var(--color-hallmark-rule)] bg-black"
                                 onClick={(e) => e.stopPropagation()}
                             />
                         )}
@@ -943,87 +739,44 @@ export default function AdsLandingPage() {
 
 // ─── HELPER SUB-COMPONENTS ───
 
-// Floating Plate Component for Margins (with customized visible dark steam particles)
-function FloatingPlate({ src, alt, top, left, right, size = "w-36", delay = 0, hasSteam = false, isMobile = false, opacity = 1, className = "", zIndex = "z-20" }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: opacity, scale: 1 }}
-            viewport={{ once: true, margin: "-50px" }}
-            whileHover={{ opacity: 0.15, x: isMobile ? 0 : (left ? -40 : 40), scale: 0.95 }}
-            whileTap={{ opacity: 0.15, scale: 0.9 }}
-            drag
-            dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
-            dragElastic={0.2}
-            transition={{ duration: 0.8, delay }}
-            style={{ top, left, right }}
-            className={`absolute z-0 ${size} ${isMobile ? 'md:hidden' : 'hidden md:block'} ${className} cursor-grab active:cursor-grabbing`}
-        >
-            <div className="relative animate-float" style={{ animationDelay: `${delay}s` }}>
-                <img
-                    src={src}
-                    alt={alt}
-                    className="w-full h-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.12)] hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                    decoding="async"
-                />
-                
-                {/* Simulated hot steam particles (Using visible dark neutral gray with blur for light background) */}
-                {hasSteam && (
-                    <div className="steam-container">
-                        <div className="steam-particle-1" />
-                        <div className="steam-particle-2" />
-                        <div className="steam-particle-3" />
-                    </div>
-                )}
-            </div>
-        </motion.div>
-    );
-}
-
 // Menu List Item Component
 function MenuListItem({ item, index, onImageClick }) {
     const isRecommended = item.is_recommended === true;
     return (
-        <div
-            className="flex items-center justify-between gap-4 py-3.5 border-b-2 border-[var(--color-hallmark-rule)] last:border-0 group"
-        >
+        <div className="flex items-center justify-between gap-4 py-3 border-b border-[var(--color-hallmark-rule)] last:border-0 group">
             <div className="flex-1 min-w-0">
                 <div className="flex items-center flex-wrap gap-1.5">
-                    <h4 className="font-bold text-sm text-[var(--color-hallmark-ink)] tracking-tight group-hover:text-neutral-600 transition-colors duration-150">
+                    <h4 className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] tracking-tight group-hover:text-[var(--color-brand)] transition-colors duration-150">
                         {item.name}
                     </h4>
                     {isRecommended && (
-                        <span className="text-[9px] bg-[var(--color-hallmark-ink)] text-[var(--color-brand)] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase leading-none scale-90 border border-[var(--color-hallmark-ink)]">
+                        <span className="text-[8px] font-mono bg-[var(--color-brand)] text-white font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider scale-95">
                             BOLD
                         </span>
                     )}
                 </div>
                 {item.description && (
-                    <p className="text-[var(--color-hallmark-ink-muted)] text-xs mt-1 leading-relaxed line-clamp-2 pr-2 font-medium">
+                    <p className="text-[var(--color-hallmark-ink-muted)] text-[11px] mt-0.5 leading-normal line-clamp-2 pr-2 font-medium">
                         {item.description}
                     </p>
                 )}
             </div>
             
             <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="font-mono font-bold text-sm text-[var(--color-hallmark-ink)]">฿{item.price}</span>
+                <span className="font-mono font-bold text-xs text-[var(--color-hallmark-ink)]">฿{item.price}</span>
                 
                 {item.image_url && (
                     <div 
                         onClick={() => onImageClick(item.image_url)}
-                        className="w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 border-2 border-[var(--color-hallmark-ink)] shadow-[2px_2px_0px_var(--color-hallmark-ink)] cursor-zoom-in relative hover:scale-105 transition-transform duration-200 ease-out flex-shrink-0"
+                        className="w-12 h-12 rounded-sm overflow-hidden bg-neutral-100 border border-[var(--color-hallmark-ink)] cursor-zoom-in relative hover:scale-105 transition-transform duration-200 ease-out flex-shrink-0"
                     >
                         <img 
-                            src={optimizeImageUrl(item.image_url, 150)} 
+                            src={optimizeImageUrl(item.image_url, 120)} 
                             alt={item.name} 
                             className="w-full h-full object-cover"
                             loading="lazy"
                             decoding="async"
                         />
-                        <div className="absolute inset-0 bg-black/10 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <ZoomInIcon size={12} className="text-white" />
-                        </div>
                     </div>
                 )}
             </div>
@@ -1031,47 +784,15 @@ function MenuListItem({ item, index, onImageClick }) {
     );
 }
 
-// Signature Dish Card
-function SignatureDishCard({ dish, index }) {
-    const [isLoaded, setIsLoaded] = useState(false);
-    return (
-        <div
-            className="rounded-2xl overflow-hidden bg-white border-2 border-[var(--color-hallmark-ink)] shadow-[4px_4px_0px_var(--color-hallmark-ink)] flex flex-col h-full hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_var(--color-hallmark-ink)] transition-[transform,box-shadow] duration-200 ease-out group cursor-pointer"
-        >
-            <div className="aspect-square overflow-hidden relative bg-neutral-50 border-b-2 border-[var(--color-hallmark-ink)]">
-                {!isLoaded && (
-                    <div className="absolute inset-0 bg-neutral-100 animate-pulse flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-neutral-300 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                )}
-                <img
-                    src={optimizeImageUrl(dish.img, 400)}
-                    alt={dish.name}
-                    fetchPriority="high"
-                    decoding="async"
-                    onLoad={() => setIsLoaded(true)}
-                    className={`w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300 ease-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                />
-            </div>
-            {(dish.name || dish.price) && (
-                <div className="p-3 flex-1 flex flex-col justify-between bg-white">
-                    {dish.name && <p className="text-xs font-bold text-[var(--color-hallmark-ink)] leading-snug tracking-tight">{dish.name}</p>}
-                    {dish.price && <p className="text-[11px] text-[var(--color-hallmark-ink)] font-mono font-bold mt-1">฿{dish.price}</p>}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// Link Card Component
-function LinkCard({ href, icon, title, bg, wide = false, internal = false, id, textColor = "text-white" }) {
+// Link Card Component (Dieter Rams Style)
+function LinkCard({ href, icon, title, bg, wide = false, internal = false, id }) {
     return (
         <a
             href={href}
             id={id}
             target={internal ? "_self" : "_blank"}
             rel={internal ? undefined : "noopener noreferrer"}
-            className={`${bg} ${textColor} rounded-2xl p-4 flex items-center justify-center gap-2.5 shadow-sm active:scale-97 hover:scale-[1.01] transition-[transform,background-color] duration-150 ease-out cursor-pointer ${wide ? 'col-span-full' : ''} text-xs font-bold`}
+            className={`${bg} rounded-sm py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer ${wide ? 'w-full' : 'flex-1'} font-mono text-[10px] font-bold tracking-wider`}
         >
             {icon}
             <span className="whitespace-nowrap">{title}</span>

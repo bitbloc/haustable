@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-06-25",
+    "macrostructure": "Index-First",
+    "theme": "custom",
+    "theme_axes": "light / mono / chromatic-other (orange ~35°)",
+    "vibe": "Dieter Rams industrial modern slab",
+    "enrichment": "none",
+    "brief": "Redesign landing page /link in Dieter Rams Thai modern style"
+  },
+  {
+    "date": "2026-06-25",
     "macrostructure": "Workbench",
     "theme": "custom",
     "theme_axes": "light / mono / chromatic-other (yellow-green ~100°)",
