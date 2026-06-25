@@ -623,7 +623,7 @@ export default function AdsLandingPage() {
                 <section className="mt-6 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                         <LinkCard 
-                            href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic" 
+                            href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9" 
                             icon={<MapPin size={16} />} 
                             title="แผนที่นำทางมาร้าน (Google Maps)" 
                             bg="bg-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-ink)] text-white transition-colors" 
@@ -679,7 +679,7 @@ export default function AdsLandingPage() {
                                 <p className="text-neutral-700 text-xs font-bold mt-2">{hours}</p>
                             </div>
                             <a
-                                href="https://maps.app.goo.gl/fYp7pp9b4zE6oFiKA?g_st=ic"
+                                href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-shrink-0 w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-white hover:bg-neutral-700 transition-colors shadow-md"
