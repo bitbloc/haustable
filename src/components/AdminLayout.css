@@ -166,9 +166,9 @@
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 0.375rem !important;
-  width: 32px !important;
-  height: 32px !important;
+  padding: 0.25rem !important;
+  width: 26px !important;
+  height: 26px !important;
 }
 .admin-system button.p-1\.5:hover,
 .admin-system button.p-2:hover {
@@ -273,11 +273,50 @@
 
 /* --- Cards / Containers --- */
 .admin-system .card,
-.admin-system [class*="bg-white"][class*="rounded-"],
-.admin-system [class*="bg-paper"][class*="rounded-"] {
+.admin-system [class*="bg-white"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full),
+.admin-system [class*="bg-paper"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full) {
   border: 1px solid var(--ram-rule) !important;
   background-color: var(--ram-paper) !important;
   padding: 1.5rem !important;
+}
+
+/* Dieter Rams / Braun Mechanical Slide Switch */
+.admin-system button.rounded-full.w-8.h-4 {
+  width: 36px !important;
+  height: 18px !important;
+  border-radius: 2px !important; /* Sharp rect slot */
+  border: 1px solid var(--ram-ink) !important;
+  background-color: var(--ram-paper) !important;
+  padding: 1px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  position: relative !important;
+  cursor: pointer !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
+  overflow: hidden !important;
+}
+.admin-system button.rounded-full.w-8.h-4.bg-brand,
+.admin-system button.rounded-full.w-8.h-4[class*="bg-brand"] {
+  background-color: var(--ram-accent) !important;
+}
+
+/* Slide knob inside the switch */
+.admin-system button.rounded-full.w-8.h-4 div,
+.admin-system button.rounded-full.w-8.h-4 div.w-3.h-3 {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 1px !important; /* Sharp slide knob */
+  background-color: var(--ram-ink) !important; /* Charcoal knob */
+  border: 1px solid var(--ram-ink) !important;
+  padding: 0 !important; /* Reset padding to overwrite greedy container rules */
+  margin: 0 !important;
+  box-shadow: none !important;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.admin-system button.rounded-full.w-8.h-4 div.translate-x-4,
+.admin-system button.rounded-full.w-8.h-4[class*="translate-x-4"] div {
+  transform: translateX(18px) !important; /* Match the slot width */
 }
 
 /* --- Navigation sidebar & menus --- */
