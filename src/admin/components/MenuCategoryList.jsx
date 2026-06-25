@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, X, GripVertical } from 'lucide-react'
 import { Reorder, useDragControls } from 'framer-motion'
@@ -121,7 +122,7 @@ export default function MenuCategoryList() {
             </Reorder.Group>
 
             {/* Modal */}
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-paper w-full max-w-sm rounded-2xl border border-gray-200 shadow-2xl p-6">
                         <div className="flex justify-between items-center mb-6">
@@ -145,7 +146,8 @@ export default function MenuCategoryList() {
                             </button>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )

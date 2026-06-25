@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { Plus, Edit2, Trash2, Check, X, ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -252,7 +253,7 @@ export default function OptionGroupList() {
             </div>
 
             {/* Modal */}
-            {isModalOpen && (
+            {isModalOpen && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-paper w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh] text-ink">
                         {/* Header */}
@@ -391,7 +392,8 @@ export default function OptionGroupList() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )
