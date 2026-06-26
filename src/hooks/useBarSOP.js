@@ -164,6 +164,23 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                     }
                 }
 
+                // Fetch ingredients for all stockItems in a single query to avoid N+1 sequential requests
+                const { data: allRecipeData, error: allRecipeErr } = await supabase
+                    .from('recipe_ingredients')
+                    .select(`
+                        parent_stock_item_id,
+                        quantity,
+                        unit,
+                        ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
+                            id, name, usage_unit
+                        )
+                    `)
+                    .in('parent_stock_item_id', stockItems.map(item => item.id));
+
+                if (allRecipeErr) {
+                    console.error('Failed to load ingredients for sync:', allRecipeErr);
+                }
+
                 // Sync stockItems to sop_recipes
                 for (const item of stockItems) {
                     const matchedSop = uniqueSops.find(r => r.source_stock_item_id === item.id);
@@ -174,19 +191,8 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                     const categoryId = cat ? cat.id : null;
 
                     if (!matchedSop) {
-                        // Fetch ingredients from recipe_ingredients to populate the new SOP recipe
-                        const { data: recipeData } = await supabase
-                            .from('recipe_ingredients')
-                            .select(`
-                                quantity,
-                                unit,
-                                ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
-                                    id, name, usage_unit
-                                )
-                            `)
-                            .eq('parent_stock_item_id', item.id);
-                        
-                        const ingredients = (recipeData || []).map(ri => ({
+                        const recipeData = (allRecipeData || []).filter(ri => ri.parent_stock_item_id === item.id);
+                        const ingredients = recipeData.map(ri => ({
                             id: ri.ingredient?.id,
                             name: ri.ingredient?.name || 'Unknown',
                             qty: ri.quantity || 0,
@@ -261,9 +267,6 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     const fetchRecipes = useCallback(async (categoryId = null) => {
         setLoading(true);
         try {
-            // First run auto-sync to ensure everything is matched up
-            await syncCategoriesAndRecipes();
-
             let query = supabase
                 .from('sop_recipes')
                 .select('*, category:sop_categories(id, label, icon)')
@@ -772,11 +775,12 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     useEffect(() => {
         const init = async () => {
             setLoading(true);
+            await syncCategoriesAndRecipes();
             await Promise.all([fetchCategories(), fetchGlassSizes()]);
             setLoading(false);
         };
         init();
-    }, []);
+    }, [syncCategoriesAndRecipes, fetchCategories, fetchGlassSizes]);
 
     // Fetch recipes when category changes (including null for 'All')
     useEffect(() => {
@@ -811,11 +815,13 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         saveGlassSize,
 
         // Refresh
-        refresh: () => {
+        refresh: async () => {
             cacheRef.current = {};
-            fetchCategories();
-            fetchGlassSizes();
-            fetchRecipes(activeCategory);
+            setLoading(true);
+            await syncCategoriesAndRecipes();
+            await Promise.all([fetchCategories(), fetchGlassSizes()]);
+            await fetchRecipes(activeCategory);
+            setLoading(false);
         }
     };
 }
