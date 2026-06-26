@@ -136,7 +136,29 @@ export default function AdminPromotions() {
             toast.success('Promotion deleted')
             fetchCodes()
         } catch (error) {
-            toast.error('Failed to delete')
+            console.error('Error deleting promotion:', error)
+            // Error code 23503 is foreign key violation in PostgreSQL
+            if (error?.code === '23503') {
+                const deactivate = confirm(
+                    'This promotion code cannot be deleted because it is already used in existing bookings.\n\nWould you like to deactivate (disable) it instead?'
+                )
+                if (deactivate) {
+                    try {
+                        const { error: updateError } = await supabase
+                            .from('promotion_codes')
+                            .update({ is_active: false })
+                            .eq('id', id)
+                        if (updateError) throw updateError
+                        toast.success('Promotion deactivated')
+                        fetchCodes()
+                    } catch (err) {
+                        console.error('Error deactivating:', err)
+                        toast.error('Failed to deactivate promotion')
+                    }
+                }
+            } else {
+                toast.error(error?.message || 'Failed to delete')
+            }
         }
     }
 

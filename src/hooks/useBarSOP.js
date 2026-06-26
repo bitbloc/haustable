@@ -110,9 +110,15 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             for (const folder of folders) {
                 const exists = finalCats.some(c => c.label.toLowerCase() === folder.toLowerCase());
                 if (!exists) {
+                    const cleanLabel = folder.toLowerCase().trim()
+                        .replace(/\s+/g, '_')
+                        .replace(/[^a-zA-Z0-9_]/g, '');
+                    const catId = `folder_${cleanLabel || 'cat'}_${Math.random().toString(36).substring(2, 7)}`;
+
                     const { data: newCat, error: insertErr } = await supabase
                         .from('sop_categories')
                         .insert({
+                            id: catId,
                             label: folder,
                             icon: '📁',
                             department: department,

@@ -8,13 +8,7 @@ import { Analytics } from '@vercel/analytics/react';
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
 const optimizeImageUrl = (url, width = 850, quality = 75) => {
-    if (!url) return '';
-    if (url.includes('supabase.co/storage/v1/object/public/')) {
-        // Must use render/image/public for Supabase Image Transformations to work
-        // Added resize=contain to prevent Supabase from arbitrarily cropping the image when height is omitted
-        return url.replace('/object/public/', '/render/image/public/') + `?width=${width}&quality=${quality}&resize=contain&format=webp`;
-    }
-    return url;
+    return url || '';
 };
 
 export default function AdsLandingPage() {
