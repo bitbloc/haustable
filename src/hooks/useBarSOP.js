@@ -16,6 +16,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     const [activeCategory, setActiveCategory] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const cacheRef = useRef({});
+    const isInitRef = useRef(false);
 
     // ────────────────────────────────
     // Fetch Categories
@@ -770,22 +771,31 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     }, [fetchGlassSizes]);
 
     // ────────────────────────────────
-    // Initial Load
+    // Unified Load and Fetch
     // ────────────────────────────────
     useEffect(() => {
         const init = async () => {
             setLoading(true);
-            await syncCategoriesAndRecipes();
-            await Promise.all([fetchCategories(), fetchGlassSizes()]);
-            setLoading(false);
+            try {
+                if (!staffMode) {
+                    await syncCategoriesAndRecipes();
+                }
+                await Promise.all([fetchCategories(), fetchGlassSizes()]);
+                await fetchRecipes(activeCategory);
+                isInitRef.current = true;
+            } catch (err) {
+                console.error('Initialization failed:', err);
+            } finally {
+                setLoading(false);
+            }
         };
-        init();
-    }, [syncCategoriesAndRecipes, fetchCategories, fetchGlassSizes]);
 
-    // Fetch recipes when category changes (including null for 'All')
-    useEffect(() => {
-        fetchRecipes(activeCategory);
-    }, [activeCategory, fetchRecipes]);
+        if (!isInitRef.current) {
+            init();
+        } else {
+            fetchRecipes(activeCategory);
+        }
+    }, [activeCategory, staffMode, syncCategoriesAndRecipes, fetchCategories, fetchGlassSizes, fetchRecipes]);
 
     return {
         // Data
