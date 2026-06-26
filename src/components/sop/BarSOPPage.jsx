@@ -135,9 +135,9 @@ export default function BarSOPPage() {
             </header>
 
             {/* ── Main Content ── */}
-            <main className="px-4 pt-4 pb-20 safe-area-inset-bottom max-w-3xl mx-auto">
+            <main className="px-4 pt-4 pb-20 safe-area-inset-bottom max-w-6xl mx-auto">
                 {loading ? (
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[1, 2, 3, 4].map(i => (
                             <div key={i} className="h-20 bg-[#1A1A1A] rounded-2xl animate-pulse" />
                         ))}
@@ -153,7 +153,7 @@ export default function BarSOPPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {/* Count */}
                         <div className="flex items-center justify-between px-1">
                             <span className="text-xs text-[#555555] font-bold uppercase tracking-wider">
@@ -166,16 +166,18 @@ export default function BarSOPPage() {
                             )}
                         </div>
 
-                        {/* Recipe Cards */}
-                        {recipes.map(recipe => (
-                            <SOPRecipeCard
-                                key={recipe.id}
-                                recipe={recipe}
-                                glassSizes={glassSizes}
-                                scaleIngredients={scaleIngredients}
-                                darkMode={true}
-                            />
-                        ))}
+                        {/* Recipe Cards Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {recipes.map(recipe => (
+                                <SOPRecipeCard
+                                    key={recipe.id}
+                                    recipe={recipe}
+                                    glassSizes={glassSizes}
+                                    scaleIngredients={scaleIngredients}
+                                    darkMode={true}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
             </main>
