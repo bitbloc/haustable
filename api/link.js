@@ -25,7 +25,7 @@ export default async function handler(req, res) {
         let imageUrl = settings.link_og_image_url
         
         if (!imageUrl) {
-            imageUrl = "https://haustable.vercel.app/og-food-preview.png"
+            imageUrl = "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_og_image_url_1781846569771.jpg"
         }
 
         // 4. Read the production index.html file
@@ -33,10 +33,13 @@ export default async function handler(req, res) {
         let html = fs.readFileSync(indexPath, 'utf8')
 
         // 5. Build dynamic Open Graph header tags
+        const reqUrl = req.url || '/'
+        const ogUrl = `https://haustable.vercel.app${reqUrl === '/api/link' ? '/link' : reqUrl}`
+
         const dynamicMetaTags = `
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://haustable.vercel.app/link" />
+    <meta property="og:url" content="${ogUrl}" />
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${description}" />
     <meta property="og:image" content="${imageUrl}" />
@@ -45,7 +48,7 @@ export default async function handler(req, res) {
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://haustable.vercel.app/link" />
+    <meta name="twitter:url" content="${ogUrl}" />
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:image" content="${imageUrl}" />
