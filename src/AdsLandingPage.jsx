@@ -11,6 +11,25 @@ const optimizeImageUrl = (url, width = 850, quality = 75) => {
     return url || '';
 };
 
+const preloadImageWithTimeout = (url, timeoutMs = 2500) => {
+    return new Promise((resolve) => {
+        if (!url) return resolve();
+        const img = new Image();
+        const timer = setTimeout(() => {
+            resolve();
+        }, timeoutMs);
+        img.onload = () => {
+            clearTimeout(timer);
+            resolve();
+        };
+        img.onerror = () => {
+            clearTimeout(timer);
+            resolve();
+        };
+        img.src = url;
+    });
+};
+
 export default function AdsLandingPage() {
     const [settings, setSettings] = useState({});
     const [menuImages, setMenuImages] = useState([]);
@@ -31,6 +50,7 @@ export default function AdsLandingPage() {
     useEffect(() => { fetchData(); }, []);
 
     const fetchData = async () => {
+        const criticalUrls = [];
         try {
             const [settingsRes, itemsRes, catsRes] = await Promise.all([
                 supabase.from('app_settings').select('*').like('key', 'link_%'),
@@ -41,6 +61,13 @@ export default function AdsLandingPage() {
             if (settingsRes.data) {
                 const map = settingsRes.data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                 setSettings(map);
+
+                if (map.link_logo_url) {
+                    criticalUrls.push(map.link_logo_url);
+                }
+                if (map.link_hero_url) {
+                    criticalUrls.push(map.link_hero_url);
+                }
 
                 // Load Menu Images (Booklet)
                 const menus = [];
@@ -65,9 +92,13 @@ export default function AdsLandingPage() {
                 setRegularMenuImages(regularUrls);
 
                 if (promoUrls.length > 0) {
+                    criticalUrls.push(promoUrls[0]);
                     setActiveTab('promo');
                 } else {
                     setActiveTab('regular');
+                }
+                if (regularUrls.length > 0) {
+                    criticalUrls.push(regularUrls[0]);
                 }
 
                 // Extract signatures
@@ -79,6 +110,7 @@ export default function AdsLandingPage() {
                             name: map[`link_sig_name_${i}`] || '',
                             price: map[`link_sig_price_${i}`] || '',
                         });
+                        criticalUrls.push(map[`link_sig_img_${i}`]);
                     }
                 }
                 setSignatures(sigs);
@@ -96,6 +128,11 @@ export default function AdsLandingPage() {
                     }
                 }
                 setAtmImages(atms);
+                
+                // Preload first 2 atmosphere images
+                atms.slice(0, 2).forEach(url => {
+                    if (url) criticalUrls.push(url);
+                });
             }
 
             if (itemsRes.data) {
@@ -112,11 +149,21 @@ export default function AdsLandingPage() {
                     return a.name.localeCompare(b.name);
                 });
                 setMenuItems(sortedItems);
+
+                // Preload first 3 recommended menu item images
+                const recommendedItems = sortedItems.filter(item => item.is_recommended).slice(0, 3);
+                recommendedItems.forEach(item => {
+                    if (item.image_url) criticalUrls.push(item.image_url);
+                });
             }
 
             if (catsRes.data) {
                 setMenuCategories(catsRes.data);
             }
+
+            // Preload critical images in parallel (max 2.5s wait to prevent blocking slow networks)
+            const uniqueUrls = Array.from(new Set(criticalUrls.filter(Boolean)));
+            await Promise.all(uniqueUrls.map(url => preloadImageWithTimeout(url, 2500)));
 
         } catch (err) {
             console.error('Failed to load link data:', err);
@@ -150,6 +197,22 @@ export default function AdsLandingPage() {
             }
         }
     }, [hours, loading]);
+ 
+    // ─── PRELOAD ADJACENT BOOKLET PAGES FOR SMOOTH PAGE FLIPPING ───
+    useEffect(() => {
+        if (loading) return;
+        const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
+        if (currentImages && currentImages.length > 0) {
+            // Preload next page
+            if (activeMenuIndex + 1 < currentImages.length) {
+                preloadImageWithTimeout(currentImages[activeMenuIndex + 1], 3000);
+            }
+            // Preload previous page
+            if (activeMenuIndex - 1 >= 0) {
+                preloadImageWithTimeout(currentImages[activeMenuIndex - 1], 3000);
+            }
+        }
+    }, [activeMenuIndex, activeTab, promoMenuImages, regularMenuImages, loading]);
 
     // Filter only recommended items for the initial presentation (10-15 items)
     const featuredMenuItems = menuItems.filter(item => item.is_recommended).slice(0, 15);
@@ -285,7 +348,7 @@ export default function AdsLandingPage() {
                                                     src={optimizeImageUrl(dish.img, 400)} 
                                                     alt={dish.name} 
                                                     className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" 
-                                                    loading="lazy"
+                                                    fetchPriority="high"
                                                     decoding="async"
                                                 />
                                             </div>

@@ -338,9 +338,23 @@ export default function MenuItemList() {
                     const ctx = canvas.getContext('2d')
                     ctx.drawImage(img, 0, 0, width, height)
 
+                    // Detect webp support via canvas, fallback to jpeg
+                    let type = 'image/webp'
+                    let ext = '.webp'
+                    try {
+                        const testData = canvas.toDataURL('image/webp')
+                        if (!testData.startsWith('data:image/webp')) {
+                            type = 'image/jpeg'
+                            ext = '.jpg'
+                        }
+                    } catch (err) {
+                        type = 'image/jpeg'
+                        ext = '.jpg'
+                    }
+
                     canvas.toBlob((blob) => {
-                        resolve(new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg", lastModified: Date.now() }))
-                    }, 'image/jpeg', 0.85)
+                        resolve(new File([blob], file.name.replace(/\.[^/.]+$/, ext), { type, lastModified: Date.now() }))
+                    }, type, 0.8)
                 }
             }
         })
