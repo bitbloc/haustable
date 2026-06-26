@@ -1,34 +1,53 @@
-import KineticText from '../KineticText'
+import React from 'react'
 
 export default function HomeHeader({ t, status }) {
     return (
-        <div className="flex flex-col items-start text-left mt-8 mb-4 w-full">
-            {/* Secondary Logo (New) */}
-            <div className="w-20 md:w-28 mb-[-5px] z-10">
-                <img 
-                    src="/logo-secondary.png" 
-                    alt="Secondary Logo" 
-                    className="w-full h-auto object-contain drop-shadow-md opacity-90"
-                />
+        <div className="w-full flex flex-col gap-4">
+            {/* Top Identity Block */}
+            <div className="flex items-end justify-between w-full border-b border-[var(--color-hallmark-rule)] pb-3">
+                <div className="flex flex-col items-start gap-1">
+                    {/* Secondary Logo + Title */}
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src="/logo-secondary.png" 
+                            alt="Secondary Logo" 
+                            className="w-8 h-8 object-contain opacity-95 filter invert dark:invert-0"
+                        />
+                        <div className="flex flex-col">
+                            <span className="font-mono text-[10px] font-bold tracking-wider text-[var(--color-hallmark-ink)] uppercase">
+                                HAUS TABLE
+                            </span>
+                            <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)] tracking-widest">
+                                [ 17.4064° N, 104.7818° E ]
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Braun-style Instrument LED Status Bulb */}
+                <div className="flex items-center gap-2 px-3 py-1 bg-white/40 dark:bg-black/10 border border-[var(--color-hallmark-rule)] rounded-full backdrop-blur-md">
+                    <div className="relative w-2 h-2 flex items-center justify-center">
+                        <span className={`absolute inset-0 rounded-full ${
+                            status.isOpen 
+                                ? 'bg-emerald-500 shadow-[0_0_8px_oklch(64%_0.22_140)] animate-pulse' 
+                                : 'bg-red-500 shadow-[0_0_8px_oklch(62%_0.22_25)]'
+                        }`} />
+                    </div>
+                    <span className="font-mono text-[9px] font-bold tracking-widest text-[var(--color-hallmark-ink)]">
+                        {status.isOpen ? 'SYSTEM: ACTIVE' : 'SYSTEM: OFFLINE'}
+                    </span>
+                </div>
             </div>
 
-            {/* Logo Image */}
-            <div className="w-full max-w-[280px] md:max-w-[340px] pr-8 py-3 pl-0">
-                <img 
-                    src="/assets/logo-script.webp" 
-                    alt="HAUS TABLE" 
-                    className="w-full h-auto object-contain drop-shadow-xl"
-                />
-            </div>
-            
-            {/* Status Indicator */}
-            <div className="flex items-center gap-2.5 mt-2 font-[var(--font-outlier)]">
-                <div className={`relative flex items-center justify-center w-2.5 h-2.5 rounded-full ${status.isOpen ? 'bg-[var(--color-brand)] shadow-[0_0_8px_var(--color-brand)]' : 'bg-[var(--color-accent-red)]'}`}>
-                    {status.isOpen && <div className="absolute inset-0 bg-[var(--color-brand)] rounded-full animate-ping opacity-75" />}
+            {/* Main Script Logo Display */}
+            <div className="w-full py-2 flex items-center justify-start">
+                <div className="w-full max-w-[280px] pr-8 pl-0">
+                    <img 
+                        src="/assets/logo-script.webp" 
+                        alt="HAUS TABLE" 
+                        className="w-full h-auto object-contain filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.15)] opacity-95"
+                    />
                 </div>
-                <span className={`text-xs font-bold tracking-[0.25em] ${status.isOpen ? 'text-[var(--color-brand)]' : 'text-[var(--color-accent-red)]'}`}>
-                    {status.isOpen ? "OPEN NOW" : "CLOSED"}
-                </span>
             </div>
         </div>
     )

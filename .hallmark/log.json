@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-06-26",
+    "macrostructure": "Bento Grid",
+    "theme": "custom",
+    "theme_axes": "light / mono / chromatic-other (orange ~35°)",
+    "vibe": "Dieter Rams industrial modern, Thai wood warmth",
+    "enrichment": "none",
+    "brief": "Redesign main landing page / in Dieter Rams Thai modern style"
+  },
+  {
     "date": "2026-06-25",
     "macrostructure": "Index-First",
     "theme": "custom",
