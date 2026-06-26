@@ -13,8 +13,8 @@ export default function CasualLayout({ children, backgroundImage }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-hallmark-paper-dark)] via-[var(--color-hallmark-paper-dark)]/50 to-[var(--color-hallmark-paper-dark)]/30 pointer-events-none z-10" />
       </div>
 
-      {/* 2. Content Container (Asymmetric & Left-Biased) */}
-      <div className="relative z-10 flex flex-col items-start justify-center min-h-screen p-6 md:p-16 w-full max-w-lg md:max-w-xl mx-auto md:mx-0 md:ml-32">
+      {/* 2. Content Container (Centered layout) */}
+      <div className="relative z-10 flex flex-col items-start justify-center min-h-screen p-6 md:p-16 w-full max-w-lg md:max-w-xl mx-auto">
         <div className="w-full flex flex-col items-start gap-8">
             {children}
         </div>

@@ -34,28 +34,6 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
             isOpen: pickupStatus.isOpen,
             icon: <ShoppingBag size={18} />,
             accentColor: 'var(--color-brand)'
-        },
-        {
-            id: 'steak',
-            num: '03',
-            label: 'พรีออเดอร์สเต็ก',
-            labelEn: 'Steak Pre-order',
-            path: '/steak-preorder',
-            statusText: 'พรีออเดอร์เนื้อดรายเอจพิเศษ',
-            isOpen: true, // Custom dry-aged booking usually accepts requests
-            icon: <ChefHat size={18} />,
-            accentColor: 'var(--color-brand)'
-        },
-        {
-            id: 'spotify',
-            num: '04',
-            label: 'ขอเพลง 100 บาท',
-            labelEn: 'Spotify Queue Request',
-            path: '/songs',
-            statusText: 'ส่งเพลงเข้าลำโพงร้าน',
-            isOpen: true,
-            icon: <Music size={18} />,
-            accentColor: 'var(--color-brand)'
         }
     ];
 

@@ -40,8 +40,8 @@ export default function HomeHeader({ t, status }) {
             </div>
 
             {/* Main Script Logo Display */}
-            <div className="w-full py-2 flex items-center justify-start">
-                <div className="w-full max-w-[280px] pr-8 pl-0">
+            <div className="w-full py-2 flex items-center justify-center">
+                <div className="w-full max-w-[280px] flex justify-center">
                     <img 
                         src="/assets/logo-script.webp" 
                         alt="HAUS TABLE" 
