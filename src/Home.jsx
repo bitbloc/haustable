@@ -69,7 +69,7 @@ export default function Home({ session }) {
     return (
         <CasualLayout backgroundImage={settings?.home_background_url}>
             
-            <div className="haus-home-page w-full flex flex-col gap-6 text-[var(--color-hallmark-ink)] pb-28">
+            <div className="haus-home-page w-full flex flex-col gap-6 text-[var(--color-hallmark-ink)] pt-12 pb-28">
                 
                 <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
