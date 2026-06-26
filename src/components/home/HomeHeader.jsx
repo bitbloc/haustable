@@ -14,10 +14,10 @@ export default function HomeHeader({ t, status }) {
                             className="w-8 h-8 object-contain opacity-95 filter invert dark:invert-0"
                         />
                         <div className="flex flex-col">
-                            <span className="font-mono text-[10px] font-bold tracking-wider text-[var(--color-hallmark-ink)] uppercase">
+                            <span className="font-mono text-[10px] font-bold tracking-wider text-white uppercase">
                                 HAUS TABLE
                             </span>
-                            <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)] tracking-widest">
+                            <span className="font-mono text-[8px] text-white/60 tracking-widest">
                                 [ 17.4064° N, 104.7818° E ]
                             </span>
                         </div>
@@ -25,7 +25,7 @@ export default function HomeHeader({ t, status }) {
                 </div>
 
                 {/* Braun-style Instrument LED Status Bulb */}
-                <div className="flex items-center gap-2 px-3 py-1 bg-white/40 dark:bg-black/10 border border-[var(--color-hallmark-rule)] rounded-full backdrop-blur-md">
+                <div className="flex items-center gap-2 px-3 py-1 bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-full shadow-sm">
                     <div className="relative w-2 h-2 flex items-center justify-center">
                         <span className={`absolute inset-0 rounded-full ${
                             status.isOpen 
