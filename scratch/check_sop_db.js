@@ -6,23 +6,18 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function testQuery() {
-    console.log("--- Querying recipe_ingredients relation ---")
+    console.log("--- Querying app_settings ---")
     const { data, error } = await supabase
-        .from('recipe_ingredients')
-        .select(`
-            parent_stock_item_id,
-            quantity,
-            unit,
-            ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
-                id, name, usage_unit
-            )
-        `)
-        .limit(5);
+        .from('app_settings')
+        .select('*');
 
     if (error) {
         console.error("Query Error:", error)
     } else {
-        console.log("Query Success! Sample:", JSON.stringify(data, null, 2))
+        console.log("Query Success! settings:")
+        data.forEach(s => {
+            console.log(`${s.key}: ${s.value}`)
+        })
     }
 }
 

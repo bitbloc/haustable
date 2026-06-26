@@ -26,9 +26,9 @@ const qaData = [
   {
     id: 4,
     thQ: "จองโต๊ะมีค่ามัดจำไหม?",
-    thA: "ตอบ: มีค่ามัดจำในการจองขั้นต่ำคนละ 300 บาทครับ (แต่ไม่ต้องห่วงนะครับ หากทานอาหารและเครื่องดื่มไม่ถึงยอดมัดจำ ทางร้านยินดีคืนเงินส่วนต่างให้ครับ)",
+    thA: "ตอบ: มีค่ามัดจำในการจอง 150 บาทต่อท่านครับ โดยยอดมัดจำทั้งหมดจะถูกนำไปใช้เป็นเครดิตค่าอาหารและเครื่องดื่มในวันที่มาใช้บริการ (หักออกจากบิลเต็มจำนวน)",
     enQ: "Is a deposit required for reservations?",
-    enA: "A: Yes, there is a minimum deposit of 300 THB per person. (Don't worry—if your total bill is less than the deposit, we will refund the difference!)"
+    enA: "A: Yes, there is a deposit of 150 THB per person. The total deposit will be credited towards your food and beverage bill on the date of your visit."
   },
   {
     id: 5,

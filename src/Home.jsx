@@ -58,7 +58,7 @@ export default function Home({ session }) {
         },
         {
             q: "จองโต๊ะล่วงหน้ามีค่าใช้จ่ายไหม? / Is there a booking fee?",
-            a: "การจองโต๊ะปกติไม่มีค่าใช้จ่ายหรือมัดจำใดๆ ยกเว้นการสั่งจองพรีออเดอร์เนื้อสเต็กพิเศษที่จะมีขั้นตอนมัดจำล่วงหน้า"
+            a: "การจองโต๊ะมีค่ามัดจำ 150 บาทต่อท่าน ซึ่งยอดมัดจำทั้งหมดจะนำไปใช้เป็นเครดิตหักค่าอาหารและเครื่องดื่มเต็มจำนวนในวันที่เข้าใช้บริการ / There is a deposit of 150 THB per person, which will be fully credited towards your food and drinks on the date of your visit."
         },
         {
             q: "เปิดให้บริการช่วงเวลาไหน? / What are the opening hours?",
