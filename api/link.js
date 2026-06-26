@@ -33,8 +33,12 @@ export default async function handler(req, res) {
         let html = fs.readFileSync(indexPath, 'utf8')
 
         // 5. Build dynamic Open Graph header tags
-        const reqUrl = req.url || '/'
-        const ogUrl = `https://haustable.vercel.app${reqUrl === '/api/link' ? '/link' : reqUrl}`
+        const parsedUrl = new URL(req.url || '/', 'https://haustable.vercel.app')
+        let pathname = parsedUrl.pathname
+        if (pathname === '/api/link') {
+            pathname = '/link'
+        }
+        const ogUrl = `https://haustable.vercel.app${pathname}${parsedUrl.search}`
 
         const dynamicMetaTags = `
     <!-- Open Graph / Facebook -->
