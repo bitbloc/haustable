@@ -72,11 +72,11 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
 
     return (
         <div className="w-full flex flex-col gap-3 font-[var(--font-body)]">
-            <div className="flex items-center justify-between w-full border-b border-[var(--color-hallmark-rule)] pb-1 mb-1">
-                <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
+            <div className="flex items-center justify-between w-full border-b border-[var(--color-hallmark-rule)] pb-2 mb-1">
+                <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                     [ CONTROL PANEL // SERVICES ]
                 </span>
-                <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)]">
+                <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                     SELECT DIAL TO ENGAGE
                 </span>
             </div>
@@ -87,8 +87,8 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                         <div className="flex items-center justify-between w-full p-4">
                             <div className="flex items-center gap-4">
                                 {/* Braun Dial Indicator knob */}
-                                <div className="relative flex items-center justify-center w-8 h-8 rounded-full border border-[var(--color-hallmark-rule)] bg-white/60 dark:bg-black/10 flex-shrink-0 transition-transform group-hover:scale-105">
-                                    <div className="w-2.5 h-2.5 rounded-full" style={{
+                                <div className="relative flex items-center justify-center w-9 h-9 rounded-full border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex-shrink-0 transition-transform group-hover:scale-105">
+                                    <div className="w-3 h-3 rounded-full" style={{
                                         backgroundColor: act.isOpen ? 'var(--color-brand)' : 'oklch(60% 0.005 70)',
                                         boxShadow: act.isOpen ? '0 0 8px var(--color-brand)' : 'none'
                                     }} />
@@ -99,13 +99,13 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                                 </div>
 
                                 <div className="flex flex-col text-left">
-                                    <span className="font-mono text-[8px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
+                                    <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
                                         {act.num} / {act.labelEn}
                                     </span>
-                                    <span className="font-bold text-sm text-[var(--color-hallmark-ink)] leading-tight mt-0.5">
+                                    <span className="font-bold text-[16px] text-[var(--color-hallmark-ink)] leading-tight mt-1">
                                         {act.label}
                                     </span>
-                                    <span className="text-[10px] text-[var(--color-hallmark-ink-muted)] leading-none mt-1">
+                                    <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-none mt-1.5">
                                         {act.statusText}
                                     </span>
                                 </div>
@@ -113,13 +113,13 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
 
                             <div className="flex items-center gap-2">
                                 {!user ? (
-                                    <div className="p-1.5 border border-dashed border-[var(--color-hallmark-rule)] rounded-sm text-[var(--color-hallmark-ink-muted)]">
-                                        <Lock size={12} />
+                                    <div className="p-2 border border-dashed border-[var(--color-hallmark-rule)] rounded-sm text-[var(--color-hallmark-ink-muted)]">
+                                        <Lock size={14} />
                                     </div>
                                 ) : act.isOpen ? (
-                                    <ArrowRight size={14} className="text-[var(--color-hallmark-ink-muted)] group-hover:translate-x-1 transition-transform" />
+                                    <ArrowRight size={16} className="text-[var(--color-hallmark-ink-muted)] group-hover:translate-x-1 transition-transform" />
                                 ) : (
-                                    <span className="font-mono text-[8px] font-bold px-1.5 py-0.5 bg-red-100 text-red-700 rounded-sm">
+                                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded-sm">
                                         OFFLINE
                                     </span>
                                 )}
@@ -132,8 +132,8 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                             key={act.id}
                             to={act.isOpen ? act.path : '#'}
                             onClick={(e) => handleActionClick(e, act)}
-                            className={`group w-full flex flex-col justify-center rounded-lg border bg-white/40 dark:bg-black/5 hover:bg-white/70 dark:hover:bg-black/10 transition-all duration-200 border-[var(--color-hallmark-rule)] focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] ${
-                                !act.isOpen ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                            className={`group w-full flex flex-col justify-center rounded-lg border bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-all duration-200 border-[var(--color-hallmark-rule)] shadow-sm focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] ${
+                                !act.isOpen ? 'opacity-65 cursor-not-allowed' : 'cursor-pointer'
                             }`}
                         >
                             {buttonContent}

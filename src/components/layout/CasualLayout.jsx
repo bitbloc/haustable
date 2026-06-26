@@ -14,7 +14,7 @@ export default function CasualLayout({ children, backgroundImage }) {
       </div>
 
       {/* 2. Content Container (Asymmetric & Left-Biased) */}
-      <div className="relative z-10 flex flex-col items-start justify-center min-h-screen p-6 md:p-16 w-full max-w-lg mx-auto md:mx-0 md:ml-32">
+      <div className="relative z-10 flex flex-col items-start justify-center min-h-screen p-6 md:p-16 w-full max-w-lg md:max-w-xl mx-auto md:mx-0 md:ml-32">
         <div className="w-full flex flex-col items-start gap-8">
             {children}
         </div>

@@ -111,32 +111,32 @@ export default function Home({ session }) {
                 <HomeHeader t={t} status={status} />
 
                 {/* 3. Braun Info Instrument Panel */}
-                <div className="w-full glass-card p-4 flex flex-col gap-2.5 font-[var(--font-body)]">
-                    <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-1">
-                        <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
+                <div className="w-full glass-card p-4 flex flex-col gap-3 font-[var(--font-body)]">
+                    <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
+                        <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                             [ INSTRUMENT PANEL // DETAILS ]
                         </span>
-                        <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)]">
+                        <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                             HAUS STATUS
                         </span>
                     </div>
 
-                    <div className="flex flex-col gap-2 font-mono text-[10px] text-[var(--color-hallmark-ink)]">
+                    <div className="flex flex-col gap-2 font-mono text-[12px] text-[var(--color-hallmark-ink)]">
                         <div className="flex items-center justify-between">
-                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1">
-                                <Clock size={10} /> HOURS:
+                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
+                                <Clock size={12} /> HOURS:
                             </span>
                             <span className="font-bold">{settings?.link_hours || "เปิดทุกวัน 11:30 - 23:30 น."}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1">
-                                <MapPin size={10} /> LOCATION:
+                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
+                                <MapPin size={12} /> LOCATION:
                             </span>
-                            <span className="font-bold">{settings?.link_location_text || "ริมแม่น้ำโขง · นครพนม"}</span>
+                            <span className="font-bold text-right pl-4">{settings?.link_location_text || "ริมแม่น้ำโขง · นครพนม"}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1">
-                                <Phone size={10} /> TEL:
+                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
+                                <Phone size={12} /> TEL:
                             </span>
                             <span className="font-bold">098-528-4217</span>
                         </div>
@@ -157,19 +157,19 @@ export default function Home({ session }) {
                 {/* 5. Signature Menu Section */}
                 {featuredItems.length > 0 && (
                     <div className="w-full glass-card p-4 flex flex-col gap-3">
-                        <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-1">
-                            <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
+                        <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
+                            <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                                 [ 01 // SIGNATURE DISHES ]
                             </span>
-                            <span className="font-mono text-[8px] text-[var(--color-brand)] font-bold">
+                            <span className="font-mono text-[10px] text-[var(--color-brand)] font-bold">
                                 RECOMMENDED
                             </span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             {featuredItems.map((item) => (
-                                <div key={item.id} className="bg-white/40 dark:bg-black/5 border border-[var(--color-hallmark-rule)] rounded-sm overflow-hidden flex flex-col">
-                                    <div className="aspect-[4/3] w-full bg-neutral-100 dark:bg-neutral-800 relative overflow-hidden border-b border-[var(--color-hallmark-rule)]">
+                                <div key={item.id} className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm overflow-hidden flex flex-col">
+                                    <div className="aspect-[4/3] w-full bg-neutral-200 dark:bg-neutral-800 relative overflow-hidden border-b border-[var(--color-hallmark-rule)]">
                                         <img 
                                             src={item.image_url || '/logo.png'} 
                                             alt={item.name} 
@@ -177,16 +177,16 @@ export default function Home({ session }) {
                                             loading="lazy"
                                         />
                                     </div>
-                                    <div className="p-2 flex-grow flex flex-col justify-between">
+                                    <div className="p-3 flex-grow flex flex-col justify-between">
                                         <div>
-                                            <span className="font-bold text-[11px] text-[var(--color-hallmark-ink)] leading-tight block line-clamp-1">
+                                            <span className="font-bold text-[13px] text-[var(--color-hallmark-ink)] leading-tight block line-clamp-1">
                                                 {item.name}
                                             </span>
-                                            <span className="text-[9px] text-[var(--color-hallmark-ink-muted)] line-clamp-1 mt-0.5">
+                                            <span className="text-[11px] text-[var(--color-hallmark-ink-muted)] line-clamp-1 mt-1 block">
                                                 {item.description || 'สูตรต้นตำรับจริตจัด รสชัดเจน'}
                                             </span>
                                         </div>
-                                        <span className="font-mono text-[10px] font-bold text-[var(--color-brand)] mt-1.5 block">
+                                        <span className="font-mono text-[12px] font-bold text-[var(--color-brand)] mt-2 block">
                                             ฿{item.price}
                                         </span>
                                     </div>
@@ -198,31 +198,31 @@ export default function Home({ session }) {
 
                 {/* 6. How-It-Works Guide (Timeline) */}
                 <div className="w-full glass-card p-4 flex flex-col gap-3">
-                    <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-1">
-                        <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
+                    <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
+                        <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                             [ 02 // HOW TO ENGAGE ]
                         </span>
-                        <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)]">
+                        <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                             4 SIMPLE STEPS
                         </span>
                     </div>
 
-                    <div className="flex flex-col gap-3 font-sans text-xs">
+                    <div className="flex flex-col gap-4 font-sans">
                         {[
-                            { step: '01', title: 'เข้าสู่ระบบ LINE', desc: 'ลงทะเบียนเข้าสู่ระบบได้ทันทีในหน้าแรกเพื่อบันทึกประวัติ' },
+                            { step: '01', title: 'เข้าสู่ระบบ LINE', desc: 'ลงทะเบียนเข้าสู่ระบบได้ทันทีในหน้าแรกเพื่อบันทึกประวัติและสะสมสิทธิ์' },
                             { step: '02', title: 'เลือกบริการที่ต้องการ', desc: 'กดปุ่มจองโต๊ะ, สั่งอาหารกลับบ้าน หรือสั่งสเต็กพรีออเดอร์' },
                             { step: '03', title: 'ตรวจสอบคิว/ชำระเงิน', desc: 'ทำตามขั้นตอนเพื่อส่งคำขอและยืนยันข้อมูลออเดอร์ของคุณ' },
                             { step: '04', title: 'ติดตามสถานะออเดอร์', desc: 'ตรวจสอบสถานะอาหารและประวัติการสั่งได้ผ่านระบบแจ้งเตือน' }
                         ].map((item, idx) => (
-                            <div key={idx} className="flex gap-3">
-                                <span className="font-mono text-[10px] font-bold text-[var(--color-brand)] bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0">
+                            <div key={idx} className="flex gap-3 items-start">
+                                <span className="font-mono text-[11px] font-bold text-[var(--color-brand)] bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0 mt-0.5">
                                     {item.step}
                                 </span>
                                 <div className="flex flex-col text-left">
-                                    <span className="font-bold text-[11px] text-[var(--color-hallmark-ink)] leading-none mb-1">
+                                    <span className="font-bold text-[13px] text-[var(--color-hallmark-ink)] leading-none mb-1.5">
                                         {item.title}
                                     </span>
-                                    <span className="text-[10px] text-[var(--color-hallmark-ink-muted)] leading-tight">
+                                    <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-relaxed">
                                         {item.desc}
                                     </span>
                                 </div>
@@ -233,26 +233,26 @@ export default function Home({ session }) {
 
                 {/* 7. FAQ Accordion */}
                 <div className="w-full glass-card p-4 flex flex-col gap-3">
-                    <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-1">
-                        <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
+                    <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
+                        <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                             [ 03 // FREQUENTLY ASKED ]
                         </span>
-                        <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)]">
+                        <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                             Q & A
                         </span>
                     </div>
 
-                    <div className="flex flex-col gap-2 text-xs">
+                    <div className="flex flex-col gap-3">
                         {faqItems.map((item, idx) => {
                             const isOpen = faqOpen[idx]
                             return (
-                                <div key={idx} className="border-b border-[var(--color-hallmark-rule)] last:border-b-0 pb-2 last:pb-0">
+                                <div key={idx} className="border-b border-[var(--color-hallmark-rule)] last:border-b-0 pb-3 last:pb-0">
                                     <button 
                                         onClick={() => toggleFaq(idx)}
-                                        className="w-full flex items-center justify-between text-left py-1 text-[11px] font-bold text-[var(--color-hallmark-ink)] cursor-pointer"
+                                        className="w-full flex items-center justify-between text-left py-1 text-[13px] font-bold text-[var(--color-hallmark-ink)] cursor-pointer"
                                     >
                                         <span>{item.q}</span>
-                                        <ChevronDown size={12} className={`transform transition-transform duration-200 text-[var(--color-hallmark-ink-muted)] ${isOpen ? 'rotate-180' : ''}`} />
+                                        <ChevronDown size={14} className={`transform transition-transform duration-200 text-[var(--color-hallmark-ink-muted)] ${isOpen ? 'rotate-180' : ''}`} />
                                     </button>
                                     
                                     <AnimatePresence initial={false}>
@@ -264,7 +264,7 @@ export default function Home({ session }) {
                                                 transition={{ duration: 0.2 }}
                                                 className="overflow-hidden"
                                             >
-                                                <p className="text-[10px] text-[var(--color-hallmark-ink-muted)] mt-1.5 leading-relaxed">
+                                                <p className="text-[12px] text-[var(--color-hallmark-ink-muted)] mt-2 leading-relaxed">
                                                     {item.a}
                                                 </p>
                                             </motion.div>

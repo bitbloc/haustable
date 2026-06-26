@@ -216,11 +216,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .haus-home-page .glass-card {
-  background: rgba(245, 245, 242, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1.5px solid oklch(85% 0.008 70 / 40%);
+  background: var(--color-hallmark-paper);
+  border: 1.5px solid var(--color-hallmark-rule);
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
 }
 
 .haus-home-page .braun-btn {
