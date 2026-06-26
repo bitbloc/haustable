@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+// Global lock to prevent concurrent database sync runs
+let globalSyncPromise = null;
 
 /**
  * useBarSOP — Data layer hook for Bar SOP system
@@ -76,153 +78,181 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     // Auto Synchronization between Recipe Lab & SOP Recipes
     // ────────────────────────────────
     const syncCategoriesAndRecipes = useCallback(async () => {
-        try {
-            // Fetch everything in parallel
-            const [
-                { data: stockItems, error: stockErr },
-                { data: cats, error: catErr },
-                { data: sops, error: recipeErr }
-            ] = await Promise.all([
-                supabase.from('stock_items').select('*').eq('is_base_recipe', true),
-                supabase.from('sop_categories').select('*').eq('is_active', true).in('department', [department, 'all']),
-                supabase.from('sop_recipes').select('*').eq('department', department)
-            ]);
-
-            if (stockErr || catErr || recipeErr) {
-                console.error('Sync fetch error:', { stockErr, catErr, recipeErr });
-                return { categories: cats || [], recipes: sops || [] };
-            }
-
-            // Identify unique folders from Recipe Lab
-            const folders = Array.from(new Set(
-                stockItems.map(item => {
-                    const cat = item.category;
-                    if (cat && cat.startsWith('folder:')) {
-                        return cat.substring(7);
-                    }
-                    return 'ทั่วไป';
-                })
-            ));
-
-            // Ensure categories exist in sop_categories
-            let finalCats = [...(cats || [])];
-            let categoryAdded = false;
-            for (const folder of folders) {
-                const exists = finalCats.some(c => c.label.toLowerCase() === folder.toLowerCase());
-                if (!exists) {
-                    const cleanLabel = folder.toLowerCase().trim()
-                        .replace(/\s+/g, '_')
-                        .replace(/[^a-zA-Z0-9_]/g, '');
-                    const catId = `folder_${cleanLabel || 'cat'}_${Math.random().toString(36).substring(2, 7)}`;
-
-                    const { data: newCat, error: insertErr } = await supabase
-                        .from('sop_categories')
-                        .insert({
-                            id: catId,
-                            label: folder,
-                            icon: '📁',
-                            department: department,
-                            is_active: true,
-                            sort_order: 0
-                        })
-                        .select()
-                        .single();
-                    if (!insertErr && newCat) {
-                        finalCats.push(newCat);
-                        categoryAdded = true;
-                    }
-                }
-            }
-            if (categoryAdded) {
-                setCategories(finalCats);
-                cacheRef.current.categories = finalCats;
-            }
-
-            // Sync stockItems to sop_recipes
-            let recipesModified = false;
-            for (const item of stockItems) {
-                const matchedSop = sops.find(r => r.source_stock_item_id === item.id);
-                const folderName = item.category && item.category.startsWith('folder:')
-                    ? item.category.substring(7)
-                    : 'ทั่วไป';
-                const cat = finalCats.find(c => c.label.toLowerCase() === folderName.toLowerCase()) || finalCats[0];
-                const categoryId = cat ? cat.id : null;
-
-                if (!matchedSop) {
-                    // Fetch ingredients from recipe_ingredients to populate the new SOP recipe
-                    const { data: recipeData } = await supabase
-                        .from('recipe_ingredients')
-                        .select(`
-                            quantity,
-                            unit,
-                            ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
-                                id, name, usage_unit
-                            )
-                        `)
-                        .eq('parent_stock_item_id', item.id);
-                    
-                    const ingredients = (recipeData || []).map(ri => ({
-                        id: ri.ingredient?.id,
-                        name: ri.ingredient?.name || 'Unknown',
-                        qty: ri.quantity || 0,
-                        unit: ri.unit || ri.ingredient?.usage_unit || 'unit',
-                        scalable: true,
-                        isLinked: true,
-                        isHidden: false
-                    }));
-
-                    await supabase.from('sop_recipes').insert({
-                        name: item.name,
-                        source_stock_item_id: item.id,
-                        category_id: categoryId,
-                        department: department,
-                        base_glass_size_oz: 16,
-                        is_published: true,
-                        ingredients: ingredients,
-                        steps: [],
-                        scaling_rules: { "8": 0.5, "12": 0.75, "16": 1, "22": 1.375 },
-                        sort_order: 0,
-                        advanced_details: {}
-                    });
-                    recipesModified = true;
-                } else {
-                    if (matchedSop.name !== item.name || matchedSop.category_id !== categoryId) {
-                        await supabase
-                            .from('sop_recipes')
-                            .update({
-                                name: item.name,
-                                category_id: categoryId
-                            })
-                            .eq('id', matchedSop.id);
-                        recipesModified = true;
-                    }
-                }
-            }
-
-            // Cleanup orphaned SOP recipes where the Recipe Lab base recipe no longer exists
-            for (const sop of sops) {
-                if (sop.source_stock_item_id) {
-                    const exists = stockItems.some(item => item.id === sop.source_stock_item_id);
-                    if (!exists) {
-                        await supabase.from('sop_recipes').delete().eq('id', sop.id);
-                        recipesModified = true;
-                    }
-                }
-            }
-
-            if (recipesModified) {
-                const { data: refreshedSops } = await supabase
-                    .from('sop_recipes')
-                    .select('*')
-                    .eq('department', department);
-                return { categories: finalCats, recipes: refreshedSops || [] };
-            }
-
-            return { categories: finalCats, recipes: sops || [] };
-        } catch (err) {
-            console.error('Auto sync failed:', err);
-            return { categories: [], recipes: [] };
+        if (globalSyncPromise) {
+            return globalSyncPromise;
         }
+
+        globalSyncPromise = (async () => {
+            try {
+                // Fetch everything in parallel
+                const [
+                    { data: stockItems, error: stockErr },
+                    { data: cats, error: catErr },
+                    { data: sops, error: recipeErr }
+                ] = await Promise.all([
+                    supabase.from('stock_items').select('*').eq('is_base_recipe', true),
+                    supabase.from('sop_categories').select('*').eq('is_active', true).in('department', [department, 'all']),
+                    supabase.from('sop_recipes').select('*').eq('department', department)
+                ]);
+
+                if (stockErr || catErr || recipeErr) {
+                    console.error('Sync fetch error:', { stockErr, catErr, recipeErr });
+                    return { categories: cats || [], recipes: sops || [] };
+                }
+
+                // Identify unique folders from Recipe Lab
+                const folders = Array.from(new Set(
+                    stockItems.map(item => {
+                        const cat = item.category;
+                        if (cat && cat.startsWith('folder:')) {
+                            return cat.substring(7);
+                        }
+                        return 'ทั่วไป';
+                    })
+                ));
+
+                // Ensure categories exist in sop_categories
+                let finalCats = [...(cats || [])];
+                let categoryAdded = false;
+                for (const folder of folders) {
+                    const exists = finalCats.some(c => c.label.toLowerCase() === folder.toLowerCase());
+                    if (!exists) {
+                        const cleanLabel = folder.toLowerCase().trim()
+                            .replace(/\s+/g, '_')
+                            .replace(/[^a-zA-Z0-9_]/g, '');
+                        const catId = `folder_${cleanLabel || 'cat'}_${Math.random().toString(36).substring(2, 7)}`;
+
+                        const { data: newCat, error: insertErr } = await supabase
+                            .from('sop_categories')
+                            .insert({
+                                id: catId,
+                                label: folder,
+                                icon: '📁',
+                                department: department,
+                                is_active: true,
+                                sort_order: 0
+                            })
+                            .select()
+                            .single();
+                        if (!insertErr && newCat) {
+                            finalCats.push(newCat);
+                            categoryAdded = true;
+                        }
+                    }
+                }
+                if (categoryAdded) {
+                    setCategories(finalCats);
+                    cacheRef.current.categories = finalCats;
+                }
+
+                // Clean up any existing duplicate SOP recipes for the same source_stock_item_id
+                let recipesModified = false;
+                const seenStockIds = new Set();
+                const uniqueSops = [];
+                for (const sop of sops) {
+                    if (sop.source_stock_item_id) {
+                        if (seenStockIds.has(sop.source_stock_item_id)) {
+                            console.log(`Deleting duplicate SOP recipe: ${sop.name} (${sop.id})`);
+                            await supabase.from('sop_recipes').delete().eq('id', sop.id);
+                            recipesModified = true;
+                        } else {
+                            seenStockIds.add(sop.source_stock_item_id);
+                            uniqueSops.push(sop);
+                        }
+                    } else {
+                        uniqueSops.push(sop);
+                    }
+                }
+
+                // Sync stockItems to sop_recipes
+                for (const item of stockItems) {
+                    const matchedSop = uniqueSops.find(r => r.source_stock_item_id === item.id);
+                    const folderName = item.category && item.category.startsWith('folder:')
+                        ? item.category.substring(7)
+                        : 'ทั่วไป';
+                    const cat = finalCats.find(c => c.label.toLowerCase() === folderName.toLowerCase()) || finalCats[0];
+                    const categoryId = cat ? cat.id : null;
+
+                    if (!matchedSop) {
+                        // Fetch ingredients from recipe_ingredients to populate the new SOP recipe
+                        const { data: recipeData } = await supabase
+                            .from('recipe_ingredients')
+                            .select(`
+                                quantity,
+                                unit,
+                                ingredient:stock_items!recipe_ingredients_ingredient_id_fkey (
+                                    id, name, usage_unit
+                                )
+                            `)
+                            .eq('parent_stock_item_id', item.id);
+                        
+                        const ingredients = (recipeData || []).map(ri => ({
+                            id: ri.ingredient?.id,
+                            name: ri.ingredient?.name || 'Unknown',
+                            qty: ri.quantity || 0,
+                            unit: ri.unit || ri.ingredient?.usage_unit || 'unit',
+                            scalable: true,
+                            isLinked: true,
+                            isHidden: false
+                        }));
+
+                        await supabase.from('sop_recipes').insert({
+                            name: item.name,
+                            source_stock_item_id: item.id,
+                            category_id: categoryId,
+                            department: department,
+                            base_glass_size_oz: 16,
+                            is_published: true,
+                            ingredients: ingredients,
+                            steps: [],
+                            scaling_rules: { "8": 0.5, "12": 0.75, "16": 1, "22": 1.375 },
+                            sort_order: 0,
+                            advanced_details: {}
+                        });
+                        recipesModified = true;
+                    } else {
+                        if (matchedSop.name !== item.name || matchedSop.category_id !== categoryId) {
+                            await supabase
+                                .from('sop_recipes')
+                                .update({
+                                    name: item.name,
+                                    category_id: categoryId
+                                })
+                                .eq('id', matchedSop.id);
+                            recipesModified = true;
+                        }
+                    }
+                }
+
+                // Cleanup orphaned SOP recipes where the Recipe Lab base recipe no longer exists
+                for (const sop of uniqueSops) {
+                    if (sop.source_stock_item_id) {
+                        const exists = stockItems.some(item => item.id === sop.source_stock_item_id);
+                        if (!exists) {
+                            await supabase.from('sop_recipes').delete().eq('id', sop.id);
+                            recipesModified = true;
+                        }
+                    }
+                }
+
+                if (recipesModified) {
+                    const { data: refreshedSops } = await supabase
+                        .from('sop_recipes')
+                        .select('*')
+                        .eq('department', department);
+                    return { categories: finalCats, recipes: refreshedSops || [] };
+                }
+
+                return { categories: finalCats, recipes: uniqueSops };
+            } catch (err) {
+                console.error('Auto sync failed:', err);
+                return { categories: [], recipes: [] };
+            }
+        })();
+
+        const res = await globalSyncPromise;
+        globalSyncPromise = null;
+        return res;
     }, [department]);
 
     // ────────────────────────────────
