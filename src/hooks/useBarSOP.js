@@ -70,9 +70,19 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             return [];
         }
 
-        cacheRef.current.glassSizes = data || [];
-        setGlassSizes(data || []);
-        return data || [];
+        // Deduplicate glass sizes by size_oz to prevent duplicate buttons in the UI
+        const uniqueGlassSizes = [];
+        const seenSizes = new Set();
+        for (const gs of (data || [])) {
+            if (!seenSizes.has(gs.size_oz)) {
+                seenSizes.add(gs.size_oz);
+                uniqueGlassSizes.push(gs);
+            }
+        }
+
+        cacheRef.current.glassSizes = uniqueGlassSizes;
+        setGlassSizes(uniqueGlassSizes);
+        return uniqueGlassSizes;
     }, []);
 
     // ────────────────────────────────

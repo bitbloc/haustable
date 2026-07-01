@@ -19,7 +19,7 @@ export default function AdminDashboard() {
 
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup, steak
+    const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
 
@@ -235,9 +235,9 @@ export default function AdminDashboard() {
 
                 {/* --- TABS --- */}
                 <div className="flex gap-8 border-b border-gray-200 mb-8 px-2">
-                    {['overview', 'dine_in', 'pickup', 'steak'].map((tab) => {
+                    {['overview', 'dine_in', 'pickup'].map((tab) => {
                         const isActive = activeTab === tab
-                        const label = tab === 'dine_in' ? 'Dine-In Only' : tab === 'pickup' ? 'Pickup Only' : tab === 'steak' ? 'Steak Pre-order' : 'Overview'
+                        const label = tab === 'dine_in' ? 'Dine-In Only' : tab === 'pickup' ? 'Pickup Only' : 'Overview'
                         
                         return (
                             <button

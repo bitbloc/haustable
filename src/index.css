@@ -244,3 +244,22 @@ input[type="range"]::-moz-range-thumb {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
 }
+
+/* Hallmark Redesign - Dieter Rams & Thai Modern Scoped Variables for SOP */
+.sop-rams-page {
+  --color-hallmark-paper: oklch(96% 0.008 70);      /* Braun light-grey casing with teak warm tint */
+  --color-hallmark-paper-dark: oklch(93% 0.010 70); /* Secondary elevation card */
+  --color-hallmark-ink: oklch(20% 0.005 70);        /* Deep charcoal for dials & typography */
+  --color-hallmark-ink-muted: oklch(48% 0.006 70);  /* Muted lettering */
+  --color-hallmark-rule: oklch(85% 0.008 70);       /* Hairline dividers */
+  
+  --font-display: 'Space Mono', monospace;          /* Display typography (mono slab) */
+  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+  --font-outlier: 'Space Mono', monospace;
+
+  /* Braun Dial Orange Accent */
+  --color-brand: oklch(62% 0.16 35);                /* Orange dial #E05315-like */
+  --color-accent-red: oklch(62% 0.16 35);
+  --color-accent-green: oklch(62% 0.16 35);
+  --color-accent-blue: oklch(62% 0.16 35);
+}

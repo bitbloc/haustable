@@ -9,8 +9,6 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
     const tableStatus = checkStatus(settings, 'shop_mode_table');
     const pickupStatus = checkStatus(settings, 'shop_mode_pickup');
     
-    // Steak preorders are open if shop is open generally, or manual open
-    const steakStatus = checkStatus(settings, 'shop_mode_table'); 
 
     const actions = [
         {

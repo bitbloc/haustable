@@ -76,31 +76,31 @@ export default function SOPRecipeCard({
         glassPillActive: 'bg-[#DFFF00] text-[#0D0D0D] font-bold shadow-[0_0_12px_rgba(223,255,0,0.3)] rounded-md',
         sweetPillActive: 'bg-[#FF9F00] text-[#0D0D0D] font-bold shadow-[0_0_12px_rgba(255,159,0,0.3)] rounded-md',
     } : {
-        card: 'bg-white border-gray-200',
-        cardHover: 'hover:bg-gray-50',
-        cardExpanded: 'bg-white border-gray-300 shadow-xl',
-        text: 'text-gray-700',
-        textMuted: 'text-gray-400',
-        textBright: 'text-gray-900',
-        accent: 'text-purple-600',
-        accentBg: 'bg-purple-50 border border-purple-100',
+        card: 'bg-[var(--color-hallmark-paper-dark)] border-[var(--color-hallmark-rule)] rounded-lg',
+        cardHover: 'hover:bg-[var(--color-hallmark-paper)]/70',
+        cardExpanded: 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)] shadow-md rounded-lg',
+        text: 'text-[var(--color-hallmark-ink-muted)]',
+        textMuted: 'text-[var(--color-hallmark-ink-muted)]/70',
+        textBright: 'text-[var(--color-hallmark-ink)]',
+        accent: 'text-[var(--color-brand)]',
+        accentBg: 'bg-[var(--color-brand)]/10 border border-[var(--color-brand)]/20',
         sweetAccent: 'text-amber-600',
-        sweetAccentBg: 'bg-amber-50 border border-amber-100',
-        divider: 'border-gray-200',
-        badge: 'bg-gray-100 text-gray-500 group-hover:bg-gray-200',
-        badgeActive: 'bg-purple-600 text-white',
-        stepBg: 'bg-gray-50 border border-gray-100',
-        sectionLabel: 'text-gray-400 flex items-center gap-2',
-        ingredientRow: 'border-dashed border-gray-200',
-        scaledHighlight: 'text-purple-600 font-bold drop-shadow-sm',
-        sweetScaledHighlight: 'text-amber-600 font-bold drop-shadow-sm',
-        glassPill: 'text-gray-500 hover:text-gray-800',
-        glassPillActive: 'bg-white text-purple-700 font-bold shadow-sm rounded-md border border-gray-200',
-        sweetPillActive: 'bg-amber-100 text-amber-700 font-bold shadow-sm rounded-md border border-amber-200',
+        sweetAccentBg: 'bg-amber-500/10 border border-amber-500/20',
+        divider: 'border-[var(--color-hallmark-rule)]',
+        badge: 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)]',
+        badgeActive: 'bg-[var(--color-brand)] text-white border border-[var(--color-brand)]',
+        stepBg: 'bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)]',
+        sectionLabel: 'text-[var(--color-hallmark-ink-muted)] flex items-center gap-2 font-mono text-[10px] tracking-widest',
+        ingredientRow: 'border-dashed border-[var(--color-hallmark-rule)]',
+        scaledHighlight: 'text-[var(--color-brand)] font-bold',
+        sweetScaledHighlight: 'text-amber-600 font-bold',
+        glassPill: 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)]',
+        glassPillActive: 'bg-[var(--color-brand)] text-white font-bold shadow-sm rounded-md border border-[var(--color-brand)]',
+        sweetPillActive: 'bg-amber-500 text-white font-bold shadow-sm rounded-md border border-amber-500',
     };
 
     return (
-        <div className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+        <div className={`rounded-lg border transition-all duration-200 overflow-hidden ${
             expanded ? t.cardExpanded : `${t.card} ${t.cardHover}`
         }`}>
             {/* Collapsed Header — always visible */}
@@ -118,8 +118,8 @@ export default function SOPRecipeCard({
                             {recipe?.name || 'Untitled'}
                         </h3>
                         <div className={`flex items-center gap-2 mt-0.5 text-xs ${t.textMuted}`}>
-                            {recipe?.advanced_details?.prep_time && <span className={`px-2 py-0.5 rounded ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-gray-100'}`}>⏱ {recipe.advanced_details.prep_time}</span>}
-                            {recipe?.advanced_details?.ice_level && <span className={`px-2 py-0.5 rounded ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-gray-100'}`}>🧊 {recipe.advanced_details.ice_level}</span>}
+                            {recipe?.advanced_details?.prep_time && <span className={`px-2 py-0.5 rounded font-mono ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] text-[var(--color-brand)]'}`}>⏱ {recipe.advanced_details.prep_time}</span>}
+                            {recipe?.advanced_details?.ice_level && <span className={`px-2 py-0.5 rounded font-mono ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] text-[var(--color-brand)]'}`}>🧊 {recipe.advanced_details.ice_level}</span>}
                             {!recipe?.advanced_details?.prep_time && <span>{isCustomMode ? 'Custom Prep' : `${recipe?.base_glass_size_oz || 16}oz`}</span>}
                             <span>•</span>
                             <span>{steps.length} steps</span>
@@ -143,7 +143,7 @@ export default function SOPRecipeCard({
             {/* Profile Description */}
             {expanded && recipe?.advanced_details?.profile && (
                 <div className="px-5 pb-3 animate-fade-in">
-                    <div className={`text-sm italic border-l-2 pl-3 py-1 ${darkMode ? 'border-[#DFFF00] text-gray-400' : 'border-purple-400 text-gray-500'}`}>
+                    <div className={`text-sm italic border-l-2 pl-3 py-1 ${darkMode ? 'border-[#DFFF00] text-gray-400' : 'border-[var(--color-brand)] text-[var(--color-hallmark-ink-muted)]'}`}>
                         {recipe.advanced_details.profile}
                     </div>
                 </div>
@@ -157,10 +157,10 @@ export default function SOPRecipeCard({
                         {(isCustomMode ? customPresets.length > 0 : glassSizes.length > 0) && (
                             <div>
                                 <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[#DFFF00] opacity-50"></span>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-[#DFFF00]' : 'bg-[var(--color-brand)]'} opacity-50`}></span>
                                     {isCustomMode ? 'ตัวเลือกขนาด / Size' : 'ขนาดแก้ว / Glass Size'}
                                 </div>
-                                <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-gray-100 border border-gray-200'}`}>
+                                <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-inner'}`}>
                                     {isCustomMode ? (
                                         customPresets.map((preset, idx) => {
                                             const isActive = preset.name === selectedSizeOz;
@@ -207,7 +207,7 @@ export default function SOPRecipeCard({
                             <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>
                                 🥤 จำนวน / Cups
                             </div>
-                            <div className={`p-1 rounded-lg flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-gray-100 border border-gray-200'}`}>
+                            <div className={`p-1 rounded-lg flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-inner'}`}>
                                 {[1, 2, 3, 4, 5].map(num => (
                                     <button
                                         key={num}
@@ -226,10 +226,10 @@ export default function SOPRecipeCard({
                     {/* Sweetness Selector */}
                     <div>
                         <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#FF9F00] opacity-50"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 opacity-50"></span>
                             ระดับความหวาน / Sweetness Level
                         </div>
-                        <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-gray-100 border border-gray-200'}`}>
+                        <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-inner'}`}>
                             {['0%', '25%', '50%', '100%', '120%'].map(level => {
                                 const isActive = sweetness === level;
                                 return (
@@ -260,7 +260,7 @@ export default function SOPRecipeCard({
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {recipe.advanced_details.equipment.map((eq, i) => (
-                                    <span key={i} className={`text-xs px-2.5 py-1 rounded-md ${darkMode ? 'bg-[#1A1A1A] text-gray-300 border border-[#333]' : 'bg-gray-100 text-gray-600'}`}>
+                                    <span key={i} className={`text-xs px-2.5 py-1 rounded-md ${darkMode ? 'bg-[#1A1A1A] text-gray-300 border border-[#333]' : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)]'}`}>
                                         {eq}
                                     </span>
                                 ))}
@@ -312,7 +312,7 @@ export default function SOPRecipeCard({
                                                 {ing.scaledQty ?? ing.qty} <span className={`text-[10px] uppercase ml-0.5 ${t.textMuted}`}>{ing.unit}</span>
                                             </span>
                                         </div>
-                                        {ing.remark && <div className={`text-[11px] italic mt-0.5 ${darkMode ? 'text-[#888]' : 'text-gray-500'}`}>{ing.remark}</div>}
+                                        {ing.remark && <div className={`text-[11px] italic mt-0.5 ${darkMode ? 'text-[#888]' : 'text-[var(--color-hallmark-ink-muted)]/70'}`}>{ing.remark}</div>}
                                     </div>
                                 ))}
                             </div>
@@ -325,7 +325,7 @@ export default function SOPRecipeCard({
                             <div className={`text-[10px] uppercase tracking-widest font-bold mb-6 ${t.sectionLabel}`}>
                                 📋 ขั้นตอน / METHOD
                             </div>
-                            <div className={`relative ml-3 pl-6 border-l-2 space-y-6 pb-2 ${darkMode ? 'border-[#333333]' : 'border-gray-200'}`}>
+                            <div className={`relative ml-3 pl-6 border-l-2 space-y-6 pb-2 ${darkMode ? 'border-[#333333]' : 'border-[var(--color-hallmark-rule)]'}`}>
                                 {steps.map((step, i) => {
                                     const action = getActionByKey(step.action);
                                     return (
@@ -334,7 +334,7 @@ export default function SOPRecipeCard({
                                             <div className={`absolute -left-[35px] top-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold z-10 ${
                                                 darkMode 
                                                 ? 'bg-[#1A1A1A] border-2 border-[#DFFF00] text-[#DFFF00] shadow-[0_0_10px_rgba(223,255,0,0.3)]'
-                                                : 'bg-white border-2 border-purple-600 text-purple-600 shadow-sm'
+                                                : 'bg-[var(--color-hallmark-paper)] border-2 border-[var(--color-brand)] text-[var(--color-brand)] shadow-sm'
                                             }`}>
                                                 {i + 1}
                                             </div>
@@ -354,7 +354,7 @@ export default function SOPRecipeCard({
                                                             const refs = step.ingredient_refs || (step.ingredient_ref ? [step.ingredient_ref] : []);
                                                             if (refs.length === 0) return null;
                                                             return (
-                                                                <div className="mt-2 font-bold flex flex-wrap gap-x-2 gap-y-1 items-center bg-[#DFFF00]/5 p-2 rounded-lg border border-[#DFFF00]/10">
+                                                                <div className={`mt-2 font-bold flex flex-wrap gap-x-2 gap-y-1 items-center p-2 rounded-lg border ${darkMode ? 'bg-[#DFFF00]/5 border-[#DFFF00]/10' : 'bg-[var(--color-brand)]/5 border-[var(--color-brand)]/10'}`}>
                                                                     {refs.map((ref, idx) => {
                                                                         const linkedIng = scaledIngredients.find(ing => ing.name === ref);
                                                                         if (!linkedIng) return null;
@@ -377,21 +377,21 @@ export default function SOPRecipeCard({
                                                     </div>
                                                 )}
                                                 {step.key_points && (
-                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-yellow-50 border-yellow-200'}`}>
-                                                        <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-yellow-700'}`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-[#DFFF00]' : 'bg-yellow-500'}`}></span> จุดสำคัญ
+                                                    <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-amber-600'}`}>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-[#DFFF00]' : 'bg-amber-500'}`}></span> จุดสำคัญ
                                                         </div>
-                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-yellow-900'}`}>{step.key_points}</p>
+                                                        <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-[var(--color-hallmark-ink)]'}`}>{step.key_points}</p>
                                                     </div>
                                                 )}
                                                 {step.reason && (
-                                                    <div className={`mt-2 text-[11px] italic pl-2 border-l ${darkMode ? 'text-gray-500 border-gray-600' : 'text-gray-500 border-gray-300'}`}>
+                                                    <div className={`mt-2 text-[11px] italic pl-2 border-l ${darkMode ? 'text-gray-500 border-gray-600' : 'text-[var(--color-hallmark-ink-muted)]/70 border-[var(--color-hallmark-rule)]'}`}>
                                                         เหตุผล: {step.reason}
                                                     </div>
                                                 )}
                                                 {step.duration_sec && (
                                                     <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${
-                                                        darkMode ? 'bg-black/60 border-[#333333]' : 'bg-white border-gray-200'
+                                                        darkMode ? 'bg-black/60 border-[#333333]' : 'bg-[var(--color-hallmark-paper-dark)] border-[var(--color-hallmark-rule)]'
                                                     }`}>
                                                         <span className="text-[10px]">⏱</span>
                                                         <span className={`text-xs font-mono font-bold ${t.accent}`}>{step.duration_sec}s</span>
@@ -410,17 +410,17 @@ export default function SOPRecipeCard({
                       recipe?.advanced_details?.troubleshooting?.length > 0 || 
                       recipe?.advanced_details?.shelf_life?.length > 0 || 
                       recipe?.advanced_details?.checklist?.length > 0) && (
-                        <div className={`mt-6 pt-6 border-t border-dashed space-y-6 ${darkMode ? 'border-[#333]' : 'border-gray-200'}`}>
+                        <div className={`mt-6 pt-6 border-t border-dashed space-y-6 ${darkMode ? 'border-[#333]' : 'border-[var(--color-hallmark-rule)]'}`}>
                             
                             {/* QC Standards */}
                             {recipe?.advanced_details?.qc_standards?.length > 0 && (
                                 <div>
                                     <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>🎯 มาตรฐานรสชาติ (QC)</div>
-                                    <div className={`rounded-xl overflow-hidden border ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-white border-gray-200'}`}>
+                                    <div className={`rounded-xl overflow-hidden border ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)]'}`}>
                                         {recipe.advanced_details.qc_standards.map((qc, i) => (
-                                            <div key={i} className={`flex border-b last:border-0 text-sm ${darkMode ? 'border-[#222]' : 'border-gray-100'}`}>
-                                                <div className={`w-1/3 p-2.5 font-bold ${darkMode ? 'bg-[#1A1A1A] text-[#888]' : 'bg-gray-50 text-gray-500'}`}>{qc.topic}</div>
-                                                <div className={`flex-1 p-2.5 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>{qc.standard}</div>
+                                            <div key={i} className={`flex border-b last:border-0 text-sm ${darkMode ? 'border-[#222]' : 'border-[var(--color-hallmark-rule)]'}`}>
+                                                <div className={`w-1/3 p-2.5 font-bold ${darkMode ? 'bg-[#1A1A1A] text-[#888]' : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)]'}`}>{qc.topic}</div>
+                                                <div className={`flex-1 p-2.5 ${darkMode ? 'text-gray-200' : 'text-[var(--color-hallmark-ink)]'}`}>{qc.standard}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -433,10 +433,10 @@ export default function SOPRecipeCard({
                                     <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>🔧 การแก้ปัญหา</div>
                                     <div className="space-y-2">
                                         {recipe.advanced_details.troubleshooting.map((tb, i) => (
-                                            <div key={i} className={`border p-3 rounded-xl text-sm ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-red-50/30 border-red-100'}`}>
-                                                <div className={`font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>⚠ {tb.problem}</div>
-                                                <div className={`mb-2 text-xs ${darkMode ? 'text-[#888]' : 'text-gray-500'}`}>สาเหตุ: {tb.cause}</div>
-                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-green-100 text-green-800 font-bold'}`}>
+                                            <div key={i} className={`border p-3 rounded-xl text-sm ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-red-500/5 border-red-500/10'}`}>
+                                                <div className={`font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-red-400' : 'text-red-500'}`}>⚠ {tb.problem}</div>
+                                                <div className={`mb-2 text-xs ${darkMode ? 'text-[#888]' : 'text-[var(--color-hallmark-ink-muted)]'}`}>สาเหตุ: {tb.cause}</div>
+                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-emerald-500/10 text-emerald-600 font-bold'}`}>
                                                     ✓ {tb.solution}
                                                 </div>
                                             </div>
@@ -452,9 +452,9 @@ export default function SOPRecipeCard({
                                         <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>⏳ การเก็บรักษา</div>
                                         <ul className={`space-y-1.5 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                             {recipe.advanced_details.shelf_life.map((sl, i) => (
-                                                <li key={i} className={`flex justify-between items-center border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-white border-gray-200'}`}>
+                                                <li key={i} className={`flex justify-between items-center border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)]'}`}>
                                                     <span>{sl.item}</span>
-                                                    <span className={`font-mono ${darkMode ? 'text-[#888]' : 'text-gray-400'}`}>{sl.age}</span>
+                                                    <span className={`font-mono ${darkMode ? 'text-[#888]' : 'text-[var(--color-hallmark-ink-muted)]'}`}>{sl.age}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -467,8 +467,8 @@ export default function SOPRecipeCard({
                                         <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>✅ ก่อนเสิร์ฟ</div>
                                         <ul className={`space-y-1.5 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                             {recipe.advanced_details.checklist.map((cl, i) => (
-                                                <li key={i} className={`flex items-start gap-2 border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-white border-gray-200'}`}>
-                                                    <span className={`mt-0.5 ${darkMode ? 'text-[#DFFF00]' : 'text-green-500'}`}>☑</span>
+                                                <li key={i} className={`flex items-start gap-2 border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)]'}`}>
+                                                    <span className={`mt-0.5 ${darkMode ? 'text-[#DFFF00]' : 'text-emerald-500'}`}>☑</span>
                                                     <span>{cl}</span>
                                                 </li>
                                             ))}

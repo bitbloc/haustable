@@ -72,7 +72,6 @@ export default function AdminLayout({ children }) {
         { path: '/admin/costing', icon: Calculator, label: 'Costing' }, // NEW
         { path: '/admin/lab', icon: FlaskConical, label: 'Recipe Lab' }, // NEW
         { path: '/admin/sop', icon: BookOpen, label: 'Bar SOP' }, // NEW: SOP
-        { path: '/admin/steaks', icon: ChefHat, label: 'Steaks' },
         { path: '/admin/tables', icon: LayoutGrid, label: 'Tables' },
         { path: '/admin/promotions', icon: Tag, label: 'Promotions' }, // NEW
         { path: '/admin/editor', icon: Move, label: 'Floor Plan' },

@@ -23,8 +23,7 @@ import AdminBookings from './AdminBookings'
 import AdminMembers from './AdminMembers'
 import AdminPromotions from './components/admin/AdminPromotions' // NEW
 import AdminTableManager from './admin/AdminTableManager' // NEW
-import AdminSteakDashboard from './admin/AdminSteakDashboard' // NEW
-import SteakBookingPage from './SteakBookingPage' // NEW
+
 import LoginPage from './LoginPage' // NEW
 import StaffDashboard from './StaffDashboard'
 import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
@@ -149,7 +148,7 @@ function App() {
               <Route path="/pickup" element={<PickupPage />} />
               <Route path="/tracking/:token" element={<TrackingPage />} />
               <Route path="/t/:token" element={<TrackingPage />} />
-              <Route path="/steak-preorder" element={<SteakBookingPage />} />
+
             </Route>
 
             {/* Admin Routes */}
@@ -160,7 +159,7 @@ function App() {
               <Route path="menu" element={<AdminMenu />} />
               <Route path="costing" element={<MenuCostPage />} />
               <Route path="lab" element={<RecipeLabPage />} />
-              <Route path="steaks" element={<AdminSteakDashboard />} />
+
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="tables" element={<AdminTableManager />} />
               <Route path="editor" element={<AdminTableEditor />} />

@@ -96,7 +96,7 @@ export default function BookingMenu() {
                             onRemove={removeFromCart} 
                             qty={cart.find(c => c.id === item.id)?.qty || 0} 
                             t={t}
-                            sideDishes={item.category === 'Steak Pre-order' || item.category === 'Steak' ? settings.sideDishes : []}
+                            sideDishes={item.category === 'Steak' ? settings.sideDishes : []}
                             sideDishEnabled={settings.sideDishEnabled}
                         />
                     ))}
