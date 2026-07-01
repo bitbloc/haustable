@@ -445,7 +445,13 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         }
 
         return ingredients.map(ing => {
-            let finalMultiplier = sizeMultiplier * cups;
+            const unitLower = (ing.unit || '').toLowerCase();
+            // Solid/piece items units that do not scale with glass size, only scale with cups count
+            const isPieceItem = ['pcs', 'glass', 'cup', 'pack', 'กล่อง', 'ถุง', 'ขวด', 'แผ่น', 'หลอด', 'ชิ้น', 'อัน', 'ฝา'].includes(unitLower) || 
+                                ing.unit === 'GLASS' || 
+                                ing.unit === 'PCS';
+
+            let finalMultiplier = isPieceItem ? cups : (sizeMultiplier * cups);
             
             // Check if ingredient is a sweetener
             const isSweet = ing.is_sweetener === true;
@@ -455,8 +461,15 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
 
             const isScalable = ing.scalable !== false;
 
+            let name = ing.name || '';
+            if (isPieceItem && name.includes('แก้ว')) {
+                // Dynamically recommend correct cup size in the name
+                name = name.replace(/\d+\s*(ออนซ์|oz)/i, `${targetSizeOrPreset} $1`);
+            }
+
             return {
                 ...ing,
+                name,
                 scaledQty: isScalable
                     ? Math.round((ing.qty * finalMultiplier) * 100) / 100
                     : ing.qty,
