@@ -6,9 +6,9 @@ const corsHeaders = {
 }
 
 function formatStockQty(qty: number, unit: string): string {
-  const safeQty = Math.max(0, qty);
-  const fullUnits = Math.floor(safeQty);
-  const remainder = Number((safeQty - fullUnits).toFixed(4));
+  const roundedQty = Math.max(0, Number(qty.toFixed(4)));
+  const fullUnits = Math.floor(roundedQty);
+  const remainder = Number((roundedQty - fullUnits).toFixed(4));
   const percent = Math.round(remainder * 100);
   const hasOpen = percent > 0;
   const openedUnits = hasOpen ? 1 : 0;
@@ -491,7 +491,8 @@ Deno.serve(async (req) => {
                };
                
                transactions.forEach((tx: any, index: number) => {
-                 const sign = tx.quantity_change > 0 ? '+' : ''
+                 const qtyChange = Number(Number(tx.quantity_change).toFixed(4));
+                 const sign = qtyChange > 0 ? '+' : '';
                  
                  let time = ""
                  try {
@@ -528,7 +529,7 @@ Deno.serve(async (req) => {
                      rowBgColor = '#FFF6EB';
                  }
 
-                 const changeColor = tx.quantity_change > 0 ? '#1B4D3E' : tx.quantity_change < 0 ? '#8B0000' : '#666666';
+                 const changeColor = qtyChange > 0 ? '#1B4D3E' : qtyChange < 0 ? '#8B0000' : '#666666';
 
                  currentItems.push({
                       type: "box",
@@ -566,7 +567,7 @@ Deno.serve(async (req) => {
                               margin: "md",
                               contents: [
                                   { type: "text", text: itemName, weight: "bold", size: "sm", color: "#1A1A1A", wrap: true },
-                                  { type: "text", text: `${sign}${tx.quantity_change} ${itemUnit}`, color: changeColor, size: "xs", weight: "bold", margin: "xs" },
+                                  { type: "text", text: `${sign}${qtyChange} ${itemUnit}`, color: changeColor, size: "xs", weight: "bold", margin: "xs" },
                                   ...(tx.note ? [{
                                       type: "text", text: `NOTE: ${tx.note}`, color: "#777777", size: "xxs", margin: "xs", wrap: true
                                   }] : [])

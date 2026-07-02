@@ -8,7 +8,7 @@
  */
 export const formatStockDisplay = (quantity, unit = '', usageUnit = null, factor = 1) => {
   // Safe Number conversion
-  const qty = Number(quantity) || 0;
+  const qty = Number(Number(quantity).toFixed(4)) || 0;
   
   // Integer part (Unopened/Full)
   const fullUnits = Math.floor(qty);

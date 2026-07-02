@@ -144,15 +144,16 @@ export default function StockPage() {
 
     const handleAdjustment = async (itemId, changeAmount, type, meta = {}) => {
         const item = items.find(i => i.id === itemId) || { current_quantity: 0 };
-        const currentQty = Number(item.current_quantity || 0);
+        const currentQty = Number(Number(item.current_quantity || 0).toFixed(4));
+        const roundedChange = Number(Number(changeAmount).toFixed(4));
         let newQty = currentQty;
 
         // Optimistic Update
         setItems(prev => prev.map(i => {
             if (i.id === itemId) {
                 newQty = type === 'set' 
-                    ? changeAmount 
-                    : Number(i.current_quantity || 0) + changeAmount;
+                    ? roundedChange 
+                    : Number((Number(i.current_quantity || 0) + roundedChange).toFixed(4));
                 return { ...i, current_quantity: newQty };
             }
             return i;
@@ -167,7 +168,7 @@ export default function StockPage() {
                  // Absolute Update (Audit/Count) - Use RPC to calculate diff and log transaction
                  const { error } = await supabase.rpc('set_stock_quantity', {
                      p_item_id: itemId,
-                     p_new_quantity: changeAmount,
+                     p_new_quantity: roundedChange,
                      p_reason: diagNote, 
                      p_performed_by: performedBy
                  });
@@ -178,7 +179,7 @@ export default function StockPage() {
                       const { error: directError } = await supabase.from('stock_transactions').insert({
                         stock_item_id: itemId,
                         transaction_type: 'set',
-                        quantity_change: changeAmount - currentQty,
+                        quantity_change: Number((roundedChange - currentQty).toFixed(4)),
                         performed_by: performedBy, 
                         note: diagNote + ' (Fallback)'
                       });
@@ -189,7 +190,7 @@ export default function StockPage() {
                  const { error } = await supabase.from('stock_transactions').insert({
                     stock_item_id: itemId,
                     transaction_type: type,
-                    quantity_change: changeAmount,
+                    quantity_change: roundedChange,
                     performed_by: performedBy, 
                     note: diagNote
                 });
@@ -273,28 +274,37 @@ export default function StockPage() {
 
             // 3. Format Message
             let message = `📦 สรุปอัพเดทสต็อก (1 ชม. ล่าสุด)\n\n`;
-            
             const flexItems = [];
+            const filteredStaff = Array.from(performers).filter(name => 
+                !name.toLowerCase().includes('antigravity') && 
+                !name.toLowerCase().includes('debug')
+            );
+            const staffNames = filteredStaff.length > 0 ? filteredStaff.join(', ') : 'Staff';
             
             let index = 1;
             Object.values(itemMap).forEach(({ item, types }) => {
                 // Determine Status (Logic should match StockCard and Dashboard)
-                const qty = Number(item.current_quantity) || 0;
-                const minThreshold = Number(item.min_stock_threshold) || 0;
-                const reorderPoint = Number(item.reorder_point) || 0;
+                const qty = Number(Number(item.current_quantity).toFixed(4)) || 0;
+                const minThreshold = Number(Number(item.min_stock_threshold).toFixed(4)) || 0;
+                const reorderPoint = Number(Number(item.reorder_point).toFixed(4)) || 0;
                 const EPSILON = 0.0001;
                 
                 let statusEmoji = '🟢';
-                let statusColor = '#2D804E';
+                let statusText = 'OK';
+                let statusColor = '#1C6C38'; // Muted Braun Green
+
                 if (qty <= EPSILON) {
                     statusEmoji = '⚫ หมด';
-                    statusColor = '#1A1A1A';
-                } else if (minThreshold > 0 && qty <= minThreshold + EPSILON) {
+                    statusText = 'OUT';
+                    statusColor = '#1C1C1C'; // Dark gray/black
+                } else if ((minThreshold > 0 && qty <= minThreshold + EPSILON) || qty <= minThreshold) {
                     statusEmoji = '🔴 วิกฤต';
+                    statusText = 'CRITICAL';
+                    statusColor = '#B71C1C'; // Braun Accent Red
                 } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
                     statusEmoji = '🟠 ต้องเติม';
-                } else if (qty <= minThreshold) {
-                    statusEmoji = '🔴 วิกฤต';
+                    statusText = 'REORDER';
+                    statusColor = '#D05D00'; // Braun Clock Orange
                 }
                 
                 // Friendly Format (Unopened + Opened)
@@ -308,74 +318,72 @@ export default function StockPage() {
                     return t;
                 }).join(', ');
 
-                let indicatorBarColor = '#2D804E';
-                let rowBgColor = '#FFFFFF';
-                if (qty <= EPSILON) {
-                    indicatorBarColor = '#4B4B4B';
-                    rowBgColor = '#F5F5F5';
-                } else if ((minThreshold > 0 && qty <= minThreshold + EPSILON) || qty <= minThreshold) {
-                    indicatorBarColor = '#E63946'; // CRIT
-                    rowBgColor = '#FFEBEB'; // Light red highlight
-                } else if (reorderPoint > 0 && qty <= reorderPoint + EPSILON) {
-                    indicatorBarColor = '#F4A261'; // WARN
-                    rowBgColor = '#FFF6EB'; // Light orange highlight
-                }
-
                 message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${display} ${statusEmoji}\n\n`;
+                
+                const displayIndex = String(index).padStart(2, '0');
                 
                 flexItems.push({
                     type: "box",
                     layout: "horizontal",
-                    backgroundColor: rowBgColor,
-                    cornerRadius: "md",
-                    paddingAll: "md",
-                    margin: "sm",
+                    margin: "md",
                     contents: [
-                        // Left indicator bar
                         {
                             type: "box",
                             layout: "vertical",
-                            width: "4px",
-                            backgroundColor: indicatorBarColor,
-                            cornerRadius: "sm",
-                            contents: []
-                        },
-                        // Details content
-                        {
-                            type: "box",
-                            layout: "vertical",
-                            margin: "md",
-                            flex: 1,
+                            flex: 6,
                             contents: [
                                 {
                                     type: "text",
-                                    text: `${index}. ${item.name}`,
+                                    text: `${displayIndex} // ${item.name}`,
                                     weight: "bold",
                                     size: "sm",
-                                    color: "#1A1A1A",
+                                    color: "#1C1C1C",
                                     wrap: true
                                 },
                                 {
+                                    type: "text",
+                                    text: `ACTION: ${actionLabels.toUpperCase()}`,
+                                    size: "xxs",
+                                    color: "#8C8C8C",
+                                    margin: "xs"
+                                }
+                            ]
+                        },
+                        {
+                            type: "box",
+                            layout: "vertical",
+                            flex: 5,
+                            alignItems: "end",
+                            contents: [
+                                {
+                                    type: "text",
+                                    text: display,
+                                    size: "sm",
+                                    weight: "bold",
+                                    color: "#1C1C1C",
+                                    align: "end"
+                                },
+                                {
                                     type: "box",
-                                    layout: "baseline",
+                                    layout: "horizontal",
+                                    spacing: "xs",
+                                    alignItems: "center",
                                     margin: "xs",
                                     contents: [
                                         {
                                             type: "text",
-                                            text: `ทำรายการ: ${actionLabels}`,
-                                            color: "#555555",
-                                            size: "xs",
-                                            flex: 2
+                                            text: "●",
+                                            color: statusColor,
+                                            size: "xxs",
+                                            flex: 0
                                         },
                                         {
                                             type: "text",
-                                            text: `${display} ${statusEmoji}`,
-                                            color: indicatorBarColor === "#2A9D8F" ? "#2D804E" : indicatorBarColor,
-                                            size: "sm",
-                                            align: "end",
+                                            text: statusText,
+                                            size: "xxs",
+                                            color: "#8C8C8C",
                                             weight: "bold",
-                                            flex: 3,
-                                            wrap: true
+                                            flex: 0
                                         }
                                     ]
                                 }
@@ -387,73 +395,109 @@ export default function StockPage() {
                 index++;
             });
 
-            const filteredStaff = Array.from(performers).filter(name => 
-                !name.toLowerCase().includes('antigravity') && 
-                !name.toLowerCase().includes('debug')
-            );
-            const staffNames = filteredStaff.length > 0 ? filteredStaff.join(', ') : 'Staff';
             message += `โดย: ${staffNames}`;
 
             const bubbles = [];
             const chunkSize = 8;
             for (let i = 0; i < flexItems.length; i += chunkSize) {
                 const chunk = flexItems.slice(i, i + chunkSize);
+                
+                // Add elegant separators between elements in the chunk
+                const chunkContents = [];
+                chunk.forEach((itemBox, itemIdx) => {
+                    if (itemIdx > 0) {
+                        chunkContents.push({
+                            type: "separator",
+                            color: "#EAEAEA",
+                            margin: "md"
+                        });
+                    }
+                    chunkContents.push(itemBox);
+                });
+
                 bubbles.push({
                     type: "bubble",
                     size: "mega",
-                    header: {
-                        type: "box",
-                        layout: "vertical",
-                        contents: [
-                            {
-                                type: "text",
-                                text: "📦 สรุปอัพเดทสต็อก",
-                                weight: "bold",
-                                size: "md",
-                                color: "#1A1A1A"
-                            },
-                            {
-                                type: "text",
-                                text: `1 ชั่วโมงล่าสุด (หน้า ${bubbles.length + 1})`,
-                                color: "#666666",
-                                size: "xs",
-                                margin: "xs"
-                            }
-                        ]
+                    styles: {
+                        body: {
+                            backgroundColor: "#F4F4F4"
+                        },
+                        footer: {
+                            backgroundColor: "#F4F4F4",
+                            separator: true,
+                            separatorColor: "#EAEAEA"
+                        }
                     },
                     body: {
                         type: "box",
                         layout: "vertical",
-                        paddingAll: "20px",
-                        contents: chunk
-                    },
-                    footer: {
-                        type: "box",
-                        layout: "horizontal",
+                        paddingAll: "xl",
+                        spacing: "md",
                         contents: [
                             {
                                 type: "text",
-                                text: `โดย: ${staffNames}`,
-                                color: "#888888",
-                                size: "xs",
-                                align: "end"
+                                text: "SYSTEM // STOCK UPDATE",
+                                size: "xxs",
+                                color: "#8C8C8C",
+                                weight: "bold"
+                            },
+                            {
+                                type: "text",
+                                text: `1 ชั่วโมงล่าสุด (หน้า ${bubbles.length + 1})`,
+                                size: "xl",
+                                weight: "bold",
+                                color: "#1C1C1C"
+                            },
+                            {
+                                type: "box",
+                                layout: "horizontal",
+                                spacing: "xs",
+                                alignItems: "center",
+                                contents: [
+                                    {
+                                        type: "text",
+                                        text: "●",
+                                        color: "#1C6C38",
+                                        size: "xs",
+                                        flex: 0
+                                    },
+                                    {
+                                        type: "text",
+                                        text: "REPORT GENERATED",
+                                        size: "xs",
+                                        weight: "bold",
+                                        color: "#1C1C1C",
+                                        flex: 1
+                                    }
+                                ]
+                            },
+                            {
+                                type: "separator",
+                                color: "#EAEAEA",
+                                margin: "md"
+                            },
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                spacing: "md",
+                                contents: chunkContents
                             }
                         ]
                     },
-                    styles: {
-                        header: {
-                            backgroundColor: "#F4F4F3",
-                            separator: true,
-                            separatorColor: "#E2E2E0"
-                        },
-                        body: {
-                            backgroundColor: "#FFFFFF"
-                        },
-                        footer: {
-                            backgroundColor: "#F4F4F3",
-                            separator: true,
-                            separatorColor: "#E2E2E0"
-                        }
+                    footer: {
+                        type: "box",
+                        layout: "vertical",
+                        paddingAll: "md",
+                        contents: [
+                            {
+                                type: "text",
+                                text: `ITH-STOCK // MODEL ET-2026 // BY ${staffNames.toUpperCase()}`,
+                                size: "xxs",
+                                color: "#A5A5A5",
+                                weight: "bold",
+                                align: "center"
+                            }
+                        ]
                     }
                 });
             }
