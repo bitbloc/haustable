@@ -353,7 +353,7 @@ export default function StockPage() {
                             type: "box",
                             layout: "vertical",
                             flex: 5,
-                            alignItems: "end",
+                            alignItems: "flex-end",
                             contents: [
                                 {
                                     type: "text",
