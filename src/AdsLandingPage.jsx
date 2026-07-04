@@ -49,6 +49,34 @@ export default function AdsLandingPage() {
 
     useEffect(() => { fetchData(); }, []);
 
+    // Inject Google Tag Manager (GTM-NPVTXNM9) dynamically for this landing page
+    useEffect(() => {
+        // Inject GTM script to <head>
+        const script = document.createElement('script');
+        script.innerHTML = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NPVTXNM9');`;
+        document.head.appendChild(script);
+
+        // Inject GTM noscript iframe to <body>
+        const noscript = document.createElement('noscript');
+        noscript.innerHTML = `<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
+height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
+        document.body.insertBefore(noscript, document.body.firstChild);
+
+        return () => {
+            // Clean up elements on unmount
+            if (document.head.contains(script)) {
+                document.head.removeChild(script);
+            }
+            if (document.body.contains(noscript)) {
+                document.body.removeChild(noscript);
+            }
+        };
+    }, []);
+
     const fetchData = async () => {
         const criticalUrls = [];
         try {
@@ -161,9 +189,9 @@ export default function AdsLandingPage() {
                 setMenuCategories(catsRes.data);
             }
 
-            // Preload critical images in parallel (max 2.5s wait to prevent blocking slow networks)
+            // Preload critical images in parallel in background (non-blocking for faster page load)
             const uniqueUrls = Array.from(new Set(criticalUrls.filter(Boolean)));
-            await Promise.all(uniqueUrls.map(url => preloadImageWithTimeout(url, 2500)));
+            Promise.all(uniqueUrls.map(url => preloadImageWithTimeout(url, 2500)));
 
         } catch (err) {
             console.error('Failed to load link data:', err);
