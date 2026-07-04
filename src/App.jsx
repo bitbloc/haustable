@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core' // Added Capacitor import
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
@@ -43,6 +43,14 @@ import { Suspense, lazy } from 'react'
 
 const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
 const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
+
+function BookingProviderLayout() {
+  return (
+    <BookingProvider>
+      <Outlet />
+    </BookingProvider>
+  )
+}
 
 
 function App() {
@@ -117,30 +125,35 @@ function App() {
   return (
     <div className="app-container">
       <Toaster position="top-center" richColors closeButton />
-      <BookingProvider>
-        <Router>
-          <Routes>
-            {/* Landing Page (Standalone Custom Theme) */}
+      <Router>
+        <Routes>
+          {/* Standalone Pages (No Booking Context for fast loading) */}
+          <Route path="/link" element={<AdsLandingPage />} />
+          <Route path="/qa" element={<QnAPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/staff/login" element={<LoginPage />} />
+
+          <Route path="/arcade" element={
+            <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING PLAYGROUND...</div>}>
+              <ArcadeLobby />
+            </Suspense>
+          } />
+          <Route path="/arcade/claim" element={
+            <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING CLAIM PORTAL...</div>}>
+              <ArcadeClaim />
+            </Suspense>
+          } />
+
+          {/* Routes requiring Booking Context */}
+          <Route element={<BookingProviderLayout />}>
+            {/* Home Page */}
             <Route path="/" element={<Home session={session} />} />
-            <Route path="/qa" element={<QnAPage />} />
-            <Route path="/link" element={<AdsLandingPage />} />
+
             {/* Song Request (Login Required) */}
             <Route element={<RequireAuthLayout />}>
               <Route path="/songs" element={<SongRequestPage />} />
               <Route path="/song" element={<SongRequestPage />} />
             </Route>
-
-            {/* Arcade & Lobby Games */}
-            <Route path="/arcade" element={
-              <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING PLAYGROUND...</div>}>
-                <ArcadeLobby />
-              </Suspense>
-            } />
-            <Route path="/arcade/claim" element={
-              <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING CLAIM PORTAL...</div>}>
-                <ArcadeClaim />
-              </Suspense>
-            } />
 
             {/* Public Routes (Standard Layout) */}
             <Route element={<PublicLayout session={session} />}>
@@ -148,7 +161,6 @@ function App() {
               <Route path="/pickup" element={<PickupPage />} />
               <Route path="/tracking/:token" element={<TrackingPage />} />
               <Route path="/t/:token" element={<TrackingPage />} />
-
             </Route>
 
             {/* Admin Routes */}
@@ -159,7 +171,6 @@ function App() {
               <Route path="menu" element={<AdminMenu />} />
               <Route path="costing" element={<MenuCostPage />} />
               <Route path="lab" element={<RecipeLabPage />} />
-
               <Route path="promotions" element={<AdminPromotions />} />
               <Route path="tables" element={<AdminTableManager />} />
               <Route path="editor" element={<AdminTableEditor />} />
@@ -168,11 +179,7 @@ function App() {
               <Route path="songs" element={<AdminSongRequests />} />
             </Route>
 
-            {/* Login Route */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/staff/login" element={<LoginPage />} />
-
-            <Route path="/pos" element={<POSDashboard />} />
+            {/* Customer Table Ordering */}
             <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
             <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
             
@@ -186,9 +193,12 @@ function App() {
               <Route path="/staff/sop" element={<BarSOPPage />} />
             </Route>
 
-          </Routes>
-        </Router>
-      </BookingProvider>
+            {/* POS Dashboard */}
+            <Route path="/pos" element={<POSDashboard />} />
+          </Route>
+
+        </Routes>
+      </Router>
     </div>
   )
 }

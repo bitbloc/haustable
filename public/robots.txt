@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /staff/
+Disallow: /pos/
+
+Sitemap: https://haustable.vercel.app/sitemap.xml

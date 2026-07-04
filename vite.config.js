@@ -29,6 +29,15 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (id.includes('phaser')) {
+              return 'vendor-phaser';
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('@dnd-kit') || id.includes('dnd-kit')) {
+              return 'vendor-dnd';
+            }
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }

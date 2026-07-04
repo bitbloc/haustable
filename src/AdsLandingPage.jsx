@@ -202,9 +202,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 setMenuCategories(catsRes.data);
             }
 
-            // Preload critical images in parallel in background (non-blocking for faster page load)
-            const uniqueUrls = Array.from(new Set(criticalUrls.filter(Boolean)));
-            Promise.all(uniqueUrls.map(url => preloadImageWithTimeout(url, 2500)));
+            // Raw image preloading removed to prevent downloading 20.9MB of raw original files
 
         } catch (err) {
             console.error('Failed to load link data:', err);
@@ -244,13 +242,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
         if (loading) return;
         const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
         if (currentImages && currentImages.length > 0) {
-            // Preload next page
+            // Preload next page (optimized size)
             if (activeMenuIndex + 1 < currentImages.length) {
-                preloadImageWithTimeout(currentImages[activeMenuIndex + 1], 3000);
+                preloadImageWithTimeout(optimizeImageUrl(currentImages[activeMenuIndex + 1], 900), 3000);
             }
-            // Preload previous page
+            // Preload previous page (optimized size)
             if (activeMenuIndex - 1 >= 0) {
-                preloadImageWithTimeout(currentImages[activeMenuIndex - 1], 3000);
+                preloadImageWithTimeout(optimizeImageUrl(currentImages[activeMenuIndex - 1], 900), 3000);
             }
         }
     }, [activeMenuIndex, activeTab, promoMenuImages, regularMenuImages, loading]);
@@ -880,7 +878,8 @@ function MenuListItem({ item, index, onImageClick }) {
                             src={optimizeImageUrl(item.image_url, 120)} 
                             alt={item.name} 
                             className="w-full h-full object-cover"
-                            loading="lazy"
+                            loading={index !== undefined && index < 3 ? undefined : "lazy"}
+                            fetchPriority={index !== undefined && index < 3 ? "high" : undefined}
                             decoding="async"
                         />
                     </div>
