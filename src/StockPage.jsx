@@ -234,7 +234,7 @@ export default function StockPage() {
                     quantity_change, 
                     transaction_type,
                     performed_by,
-                    stock_items ( name, unit, current_quantity, min_stock_threshold, reorder_point )
+                    stock_items ( name, unit, current_quantity, min_stock_threshold, reorder_point, usage_unit, conversion_factor )
                 `)
                 .gt('created_at', oneHourAgo)
                 .order('created_at', { ascending: true });
@@ -307,8 +307,31 @@ export default function StockPage() {
                     statusColor = '#D05D00'; // Braun Clock Orange
                 }
                 
-                // Friendly Format (Unopened + Opened)
-                const display = formatStockDisplay(qty, item.unit).displayString;
+                // Compact format for quantities (Unopened + Opened) to fit the Flex row width perfectly
+                const { fullUnits, percent, hasOpen, remainderUsage } = formatStockDisplay(
+                    qty, 
+                    item.unit,
+                    item.usage_unit,
+                    item.conversion_factor
+                );
+
+                let qtyDisplay = '';
+                if (fullUnits > 0) {
+                    qtyDisplay = `${fullUnits} ${item.unit || ''}`;
+                    if (hasOpen) {
+                        const openText = remainderUsage !== null 
+                            ? `${remainderUsage} ${item.usage_unit}`
+                            : `${percent}%`;
+                        qtyDisplay += ` + เปิดแล้ว ${openText}`;
+                    }
+                } else if (hasOpen) {
+                    const openText = remainderUsage !== null 
+                        ? `${remainderUsage} ${item.usage_unit}`
+                        : `${percent}%`;
+                    qtyDisplay = `เปิดแล้ว ${openText}`;
+                } else {
+                    qtyDisplay = 'หมด';
+                }
                 
                 // Map Action Types
                 const actionLabels = Array.from(types).map(t => {
@@ -318,7 +341,7 @@ export default function StockPage() {
                     return t;
                 }).join(', ');
 
-                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${display} ${statusEmoji}\n\n`;
+                message += `${index}. ${item.name}\n   (ทำรายการ: ${actionLabels})\n   สถานะล่าสุด: ${qtyDisplay} ${statusEmoji} (Critical: ${minThreshold} / Reorder: ${reorderPoint})\n\n`;
                 
                 const displayIndex = String(index).padStart(2, '0');
                 
@@ -357,11 +380,12 @@ export default function StockPage() {
                             contents: [
                                 {
                                     type: "text",
-                                    text: display,
+                                    text: qtyDisplay,
                                     size: "sm",
                                     weight: "bold",
                                     color: "#1C1C1C",
-                                    align: "end"
+                                    align: "end",
+                                    wrap: true
                                 },
                                 {
                                     type: "box",
@@ -386,6 +410,14 @@ export default function StockPage() {
                                             flex: 0
                                         }
                                     ]
+                                },
+                                {
+                                    type: "text",
+                                    text: `Critical: ${minThreshold} | Reorder: ${reorderPoint}`,
+                                    size: "xxs",
+                                    color: "#8C8C8C",
+                                    align: "end",
+                                    margin: "xs"
                                 }
                             ]
                         }
@@ -491,7 +523,7 @@ export default function StockPage() {
                         contents: [
                             {
                                 type: "text",
-                                text: `ITH-STOCK // MODEL ET-2026 // BY ${staffNames.toUpperCase()}`,
+                                text: "ONHAUS SYSTEM ©",
                                 size: "xxs",
                                 color: "#A5A5A5",
                                 weight: "bold",
