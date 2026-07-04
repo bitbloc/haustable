@@ -90,6 +90,30 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
         };
     }, []);
 
+    const handleDirectionsClick = (e, url) => {
+        if (e && e.preventDefault) {
+            e.preventDefault();
+        }
+        
+        const callback = () => {
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        };
+
+        window.gtag = window.gtag || function() { (window.dataLayer = window.dataLayer || []).push(arguments); };
+        
+        window.gtag('event', 'conversion', {
+            'send_to': 'AW-11227095880/QU1qCJHHvcocEMjGv-kp',
+            'value': 1.0,
+            'currency': 'THB',
+            'event_callback': callback
+        });
+
+        // Fail-safe fallback timeout (500ms)
+        setTimeout(callback, 500);
+    };
+
     const fetchData = async () => {
         const criticalUrls = [];
         try {
@@ -542,6 +566,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                     bg="bg-[var(--color-brand)] text-white hover:opacity-90" 
                                     wide 
                                     id="cta-maps" 
+                                    onClick={(e) => handleDirectionsClick(e, "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9")}
                                 />
                                 
                                 <div className="flex gap-2">
@@ -608,6 +633,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                     href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => handleDirectionsClick(e, "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9")}
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider hover:bg-neutral-800 transition-colors"
                                 >
                                     <Navigation size={9} /> LAUNCH MAP
@@ -657,6 +683,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                     href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => handleDirectionsClick(e, "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9")}
                     className="flex-1 bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
                     <Navigation size={12} /> DIRECTIONS
@@ -890,11 +917,12 @@ function MenuListItem({ item, index, onImageClick }) {
 }
 
 // Link Card Component (Dieter Rams Style)
-function LinkCard({ href, icon, title, bg, wide = false, internal = false, id }) {
+function LinkCard({ href, icon, title, bg, wide = false, internal = false, id, onClick }) {
     return (
         <a
             href={href}
             id={id}
+            onClick={onClick}
             target={internal ? "_self" : "_blank"}
             rel={internal ? undefined : "noopener noreferrer"}
             className={`${bg} rounded-sm py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer ${wide ? 'w-full' : 'flex-1'} font-mono text-[10px] font-bold tracking-wider`}
