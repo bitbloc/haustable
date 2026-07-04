@@ -1,0 +1,10 @@
+# IN THE HAUS Booking & Menu
+
+Rim Khong, Nakhon Phanom. Southern Thai restaurant and riverside cafe.
+
+## Core Pages
+- [Home Page](https://haustable.vercel.app/)
+- [Menu and Details (Landing Page)](https://haustable.vercel.app/link)
+- [Booking Page](https://haustable.vercel.app/booking)
+- [Pickup Page](https://haustable.vercel.app/pickup)
+- [Q&A / Info Page](https://haustable.vercel.app/qa)
