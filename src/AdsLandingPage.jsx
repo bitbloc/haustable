@@ -8,7 +8,20 @@ import { Analytics } from '@vercel/analytics/react';
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
 const optimizeImageUrl = (url, width = 850, quality = 75) => {
-    return url || '';
+    if (!url) return '';
+    // Skip data URLs or local paths (relative paths)
+    if (url.startsWith('data:') || url.startsWith('/') || !url.startsWith('http')) {
+        return url;
+    }
+    try {
+        // Use wsrv.nl image CDN proxy to resize and compress on the fly
+        // Clean URL to prevent duplicate query params
+        const cleanUrl = url.split('?')[0];
+        return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`;
+    } catch (e) {
+        console.warn('Image optimization failed:', e);
+        return url;
+    }
 };
 
 const preloadImageWithTimeout = (url, timeoutMs = 2500) => {
