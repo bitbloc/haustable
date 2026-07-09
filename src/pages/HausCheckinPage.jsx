@@ -491,6 +491,7 @@ export default function HausCheckinPage() {
                                 <img
                                     src={selectedItem.image?.src}
                                     alt={selectedItem.text}
+                                    crossOrigin="anonymous"
                                     className="w-full h-full object-cover"
                                 />
                                 {/* Platform label Overlay */}
@@ -522,6 +523,7 @@ export default function HausCheckinPage() {
                                         <img
                                             src={selectedItem.user.avatar}
                                             alt={selectedItem.user.name}
+                                            crossOrigin="anonymous"
                                             className="w-10 h-10 rounded-full object-cover border border-neutral-800"
                                         />
                                         <div className="min-w-0">

@@ -811,6 +811,7 @@ export default function CheckinManager() {
                                                 <img 
                                                     src={item.image_url} 
                                                     alt={item.user_name} 
+                                                    crossOrigin="anonymous"
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>

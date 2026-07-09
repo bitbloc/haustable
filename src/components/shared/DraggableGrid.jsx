@@ -433,6 +433,7 @@ export default function DraggableGrid(props) {
                                     src={src}
                                     alt={alt}
                                     draggable={false}
+                                    crossOrigin="anonymous"
                                     onError={() => handleImageError(index)}
                                     style={{
                                         position: "absolute",
