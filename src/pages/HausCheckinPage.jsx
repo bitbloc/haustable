@@ -211,6 +211,89 @@ export default function HausCheckinPage() {
     const [loading, setLoading] = useState(true)
     const [activeFilter, setActiveFilter] = useState('all') // 'all' | 'instagram' | 'facebook' | 'google'
     const [selectedItem, setSelectedItem] = useState(null)
+    const [likedIds, setLikedIds] = useState(() => {
+        try {
+            const stored = localStorage.getItem('haus_liked_checkins')
+            return stored ? JSON.parse(stored) : []
+        } catch {
+            return []
+        }
+    })
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('haus_liked_checkins', JSON.stringify(likedIds))
+        } catch (e) {
+            console.error('Failed to save likes to localStorage:', e)
+        }
+    }, [likedIds])
+
+    const handleLikeToggle = async (e, itemId) => {
+        if (e) e.stopPropagation()
+        if (!itemId) return
+
+        const wasLiked = likedIds.includes(itemId)
+        let nextLikedIds
+        let diff = 0
+
+        if (wasLiked) {
+            nextLikedIds = likedIds.filter(id => id !== itemId)
+            diff = -1
+        } else {
+            nextLikedIds = [...likedIds, itemId]
+            diff = 1
+        }
+
+        setLikedIds(nextLikedIds)
+
+        // Optimistically update lists and selected item
+        setDbCheckins(prev => prev.map(item => {
+            if (item.id === itemId) {
+                return { ...item, likes: Math.max(0, (item.likes || 0) + diff) }
+            }
+            return item
+        }))
+
+        setFeedCheckins(prev => prev.map(item => {
+            if (item.id === itemId) {
+                return { ...item, likes: Math.max(0, (item.likes || 0) + diff) }
+            }
+            return item
+        }))
+
+        if (selectedItem && selectedItem.id === itemId) {
+            setSelectedItem(prev => ({
+                ...prev,
+                likes: Math.max(0, (prev.likes || 0) + diff)
+            }))
+        }
+
+        // Call Supabase RPC securely to adjust likes count
+        try {
+            const { data: newLikes, error } = await supabase.rpc('toggle_checkin_likes', {
+                checkin_id: itemId,
+                increment_by: diff
+            })
+
+            // If db returned updated likes, align our local state to it
+            if (!error && typeof newLikes === 'number') {
+                setDbCheckins(prev => prev.map(item => {
+                    if (item.id === itemId) {
+                        return { ...item, likes: newLikes }
+                    }
+                    return item
+                }))
+                if (selectedItem && selectedItem.id === itemId) {
+                    setSelectedItem(prev => ({
+                        ...prev,
+                        likes: newLikes
+                    }))
+                }
+            }
+        } catch (err) {
+            console.error('Failed to sync toggle likes to database:', err)
+        }
+    }
 
     useEffect(() => {
         const fetchSettingsAndImages = async () => {
@@ -604,7 +687,18 @@ export default function HausCheckinPage() {
                                         {/* Likes & Comments Counters */}
                                         {selectedItem.likes !== undefined && (
                                             <div className="flex items-center gap-3">
-                                                <span className="flex items-center gap-1"><Heart size={10} className="text-[#E1306C] fill-[#E1306C]" /> {selectedItem.likes}</span>
+                                                 <button
+                                                     onClick={(e) => handleLikeToggle(e, selectedItem.id)}
+                                                     className="flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-0 outline-none"
+                                                 >
+                                                     <Heart
+                                                         size={12}
+                                                         className={likedIds.includes(selectedItem.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
+                                                     />
+                                                     <span className={likedIds.includes(selectedItem.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}>
+                                                         {selectedItem.likes}
+                                                     </span>
+                                                 </button>
                                                 {selectedItem.comments !== undefined && (
                                                     <span className="flex items-center gap-1"><MessageCircle size={10} /> {selectedItem.comments}</span>
                                                 )}
