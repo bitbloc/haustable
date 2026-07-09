@@ -38,6 +38,7 @@ import CustomerOrderLanding from './pos/CustomerOrderLanding'
 import CustomerOrderStatus from './pos/CustomerOrderStatus'
 import SongRequestPage from './pages/SongRequestPage'
 import AdminSongRequests from './pages/AdminSongRequests'
+import HausCheckinPage from './pages/HausCheckinPage'
 import RequireAuthLayout from './components/layout/RequireAuthLayout'
 import { Suspense, lazy } from 'react'
 
@@ -129,6 +130,7 @@ function App() {
         <Routes>
           {/* Standalone Pages (No Booking Context for fast loading) */}
           <Route path="/link" element={<AdsLandingPage />} />
+          <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
           <Route path="/qa" element={<QnAPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/staff/login" element={<LoginPage />} />

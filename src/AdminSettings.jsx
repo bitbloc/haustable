@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp } from 'lucide-react'
+import CheckinManager from './components/admin/CheckinManager'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -227,6 +228,7 @@ export default function AdminSettings() {
                 {[
                     { id: 'booking', label: '🍽 ตั้งค่าระบบหลัก & การจอง', desc: 'Core Settings & Booking' },
                     { id: 'link', label: '🔗 หน้า Landing Page (/link)', desc: 'Link Page Manager' },
+                    { id: 'checkins', label: '📸 จัดการรูปเช็กอิน / รีวิว', desc: 'Manage Check-in Stream' },
                     { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' }
                 ].map(tab => (
                     <button
@@ -755,6 +757,13 @@ export default function AdminSettings() {
                         timestamp={timestamp}
                         setTimestamp={setTimestamp}
                     />
+                </div>
+            )}
+
+            {/* TAB 2.5: Check-in Stream Manager */}
+            {activeSettingsTab === 'checkins' && (
+                <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm animate-fade-in">
+                    <CheckinManager />
                 </div>
             )}
 

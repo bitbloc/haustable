@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon } from 'lucide-react';
+import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon, Compass } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
 import { Analytics } from '@vercel/analytics/react';
@@ -616,6 +616,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 wide 
                                 internal 
                                 id="cta-qa" 
+                            />
+                            <div className="mt-2.5" />
+                            <LinkCard 
+                                href="/link/hauscheckin" 
+                                icon={<Compass size={12} />} 
+                                title="HAUS CHECK-IN WALL" 
+                                bg="bg-[var(--color-brand)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:opacity-90 font-bold" 
+                                wide 
+                                internal 
+                                id="cta-checkin" 
                             />
                         </div>
 
