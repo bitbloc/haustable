@@ -248,6 +248,17 @@ export default function CheckinManager() {
             const title = data.title || ''
             const description = data.description || ''
 
+            const isLoginWall = 
+                (source === 'instagram') && 
+                (title.toLowerCase() === 'instagram' || 
+                 title.includes('Login • Instagram') ||
+                 description.includes('Create an account or log in to Instagram') ||
+                 description.includes('Log in to Instagram'))
+
+            if (isLoginWall) {
+                throw new Error('ระบบรักษาความปลอดภัยของ Instagram บล็อกการเข้าถึงอัตโนมัติชั่วคราว (Login Wall / Rate Limit) โปรดรอประมาณ 1 นาทีแล้วลองใหม่อีกครั้ง หรือระบุข้อมูลและรูปภาพในโหมด "เพิ่มด้วยตนเอง" ได้ทันที')
+            }
+
             // Extract display name, user handle, and clean text
             let user_name = data.author || 'Customer'
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
@@ -380,6 +391,17 @@ export default function CheckinManager() {
             const data = json.data
             const title = data.title || ''
             const description = data.description || ''
+
+            const isLoginWall = 
+                (source === 'instagram') && 
+                (title.toLowerCase() === 'instagram' || 
+                 title.includes('Login • Instagram') ||
+                 description.includes('Create an account or log in to Instagram') ||
+                 description.includes('Log in to Instagram'))
+
+            if (isLoginWall) {
+                throw new Error('ระบบรักษาความปลอดภัยของ Instagram บล็อกการเข้าถึงอัตโนมัติชั่วคราว (Login Wall / Rate Limit) โปรดรอประมาณ 1 นาทีแล้วลองใหม่อีกครั้ง หรือระบุข้อมูลและรูปภาพลงฟอร์มด้วยตนเอง')
+            }
 
             // Extract display name, user handle, and clean text
             let user_name = data.author || 'Customer'
