@@ -162,19 +162,38 @@ export default function CheckinManager() {
     // Download an external image via proxy and upload it directly to Supabase storage
     const uploadExternalImageToSupabase = async (externalUrl) => {
         try {
-            const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(externalUrl)}`
-            const res = await fetch(proxyUrl)
-            if (!res.ok) throw new Error('Failed to download image from proxy')
-            const blob = await res.blob()
+            let blob
+            let mimeType = 'image/jpeg'
 
-            const ext = blob.type.split('/')[1] || 'jpg'
+            if (externalUrl.startsWith('data:')) {
+                // Parse base64 data URL directly to Blob
+                const parts = externalUrl.split(',')
+                const match = parts[0].match(/:(.*?);/)
+                mimeType = match ? match[1] : 'image/png'
+                const bstr = atob(parts[1])
+                let n = bstr.length
+                const u8arr = new Uint8Array(n)
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n)
+                }
+                blob = new Blob([u8arr], { type: mimeType })
+            } else {
+                // Fetch the image through CORS proxy to get it as a Blob
+                const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(externalUrl)}`
+                const res = await fetch(proxyUrl)
+                if (!res.ok) throw new Error('Failed to download image from proxy')
+                blob = await res.blob()
+                mimeType = blob.type
+            }
+
+            const ext = mimeType.split('/')[1] || 'jpg'
             const fileName = `checkins/scraped_${Date.now()}.${ext}`
 
             const { error: uploadError } = await supabase.storage
                 .from('public-assets')
                 .upload(fileName, blob, {
                     upsert: true,
-                    contentType: blob.type,
+                    contentType: mimeType,
                     cacheControl: '15552000'
                 })
 
