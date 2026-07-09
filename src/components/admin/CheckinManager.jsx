@@ -19,6 +19,14 @@ import {
     X 
 } from 'lucide-react'
 
+const getProxiedImageUrl = (url) => {
+    if (!url) return ''
+    if (url.startsWith('/') || url.startsWith('data:') || url.includes('images.weserv.nl')) {
+        return url
+    }
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`
+}
+
 const getInstagramShortcode = (url) => {
     const match = url.match(/\/(p|reel|tv)\/([a-zA-Z0-9_-]+)/)
     return match ? match[2] : null
@@ -162,17 +170,6 @@ export default function CheckinManager() {
         setQuickAddLoading(true)
         try {
             let cleanUrl = quickAddUrl.trim();
-            // Call microlink.io public API to scrape meta tags
-            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
-            const json = await res.json()
-
-            if (json.status !== 'success' || !json.data) {
-                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
-            }
-
-            const data = json.data
-            const title = data.title || ''
-            const description = data.description || ''
             
             // Determine source
             let source = 'instagram'
@@ -182,6 +179,27 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
+            // Rewrite Instagram URLs to ddinstagram.com to bypass the login wall scraper blocks
+            let fetchUrl = cleanUrl
+            if (source === 'instagram') {
+                const igShortcode = getInstagramShortcode(cleanUrl)
+                if (igShortcode) {
+                    fetchUrl = `https://www.ddinstagram.com/p/${igShortcode}/`
+                }
+            }
+
+            // Call microlink.io public API to scrape meta tags
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(fetchUrl)}`)
+            const json = await res.json()
+
+            if (json.status !== 'success' || !json.data) {
+                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
+            }
+
+            const data = json.data
+            const title = data.title || ''
+            const description = data.description || ''
+
             // Extract display name, user handle, and clean text
             let user_name = 'Customer'
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
@@ -189,21 +207,27 @@ export default function CheckinManager() {
             
             // Parsing logic
             if (source === 'instagram') {
-                if (title.includes('on Instagram:')) {
-                    const parts = title.split('on Instagram:')
-                    user_name = parts[0].replace(/on Instagram$/, '').trim()
-                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
-                    
-                    const textMatch = parts[1]?.match(/'([\s\S]*)'/)
-                    if (textMatch) {
-                        text = textMatch[1]
+                if (title) {
+                    const handleMatch = title.match(/\(([^)]+)\)/)
+                    if (handleMatch) {
+                        user_handle = handleMatch[1] // e.g. "@taewaewg"
+                        user_name = title.split('(')[0].trim() // e.g. "taewaewg"
+                    } else if (title.includes('on Instagram:')) {
+                        const parts = title.split('on Instagram:')
+                        user_name = parts[0].replace(/on Instagram$/, '').trim()
+                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
                     } else {
-                        text = parts[1]?.trim().replace(/^'|'$/g, '') || text
+                        user_name = title.replace(/\s*on Instagram\s*/i, '').trim()
+                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
                     }
-                } else if (title.includes('Instagram photo by')) {
-                    const parts = title.split('Instagram photo by')
-                    user_name = parts[1]?.split('•')[0]?.trim() || 'Instagram User'
-                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
+
+                    if (user_handle && !user_handle.startsWith('@')) {
+                        user_handle = '@' + user_handle
+                    }
+                }
+
+                if (description) {
+                    text = description.trim()
                 }
             } else if (source === 'google') {
                 if (title.includes('Google Maps')) {
@@ -215,7 +239,7 @@ export default function CheckinManager() {
             // Extract image URL (with fallback)
             let image_url = data.image?.url || data.screenshot?.url || ''
             
-            // Apply the direct media redirect URL for Instagram to bypass scraping restrictions
+            // Use direct redirect URL for Instagram so it remains active forever
             const igShortcode = getInstagramShortcode(cleanUrl)
             if (igShortcode) {
                 image_url = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
@@ -269,17 +293,6 @@ export default function CheckinManager() {
         try {
             // Clean url to remove query parameters
             let cleanUrl = urlToFetch.trim();
-            // Call microlink.io public API to scrape meta tags
-            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
-            const json = await res.json()
-
-            if (json.status !== 'success' || !json.data) {
-                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
-            }
-
-            const data = json.data
-            const title = data.title || ''
-            const description = data.description || ''
             
             // Determine source
             let source = 'instagram'
@@ -289,28 +302,55 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
+            // Rewrite Instagram URLs to ddinstagram.com to bypass the login wall scraper blocks
+            let fetchUrl = cleanUrl
+            if (source === 'instagram') {
+                const igShortcode = getInstagramShortcode(cleanUrl)
+                if (igShortcode) {
+                    fetchUrl = `https://www.ddinstagram.com/p/${igShortcode}/`
+                }
+            }
+
+            // Call microlink.io public API to scrape meta tags
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(fetchUrl)}`)
+            const json = await res.json()
+
+            if (json.status !== 'success' || !json.data) {
+                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
+            }
+
+            const data = json.data
+            const title = data.title || ''
+            const description = data.description || ''
+
             // Extract display name, user handle, and clean text
             let user_name = 'Customer'
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
             let text = description || title || ''
             
-            // Meta OG Tag specific parsing logic for Instagram captions
+            // Parsing logic
             if (source === 'instagram') {
-                if (title.includes('on Instagram:')) {
-                    const parts = title.split('on Instagram:')
-                    user_name = parts[0].replace(/on Instagram$/, '').trim()
-                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
-                    
-                    const textMatch = parts[1]?.match(/'([\s\S]*)'/)
-                    if (textMatch) {
-                        text = textMatch[1]
+                if (title) {
+                    const handleMatch = title.match(/\(([^)]+)\)/)
+                    if (handleMatch) {
+                        user_handle = handleMatch[1] // e.g. "@taewaewg"
+                        user_name = title.split('(')[0].trim() // e.g. "taewaewg"
+                    } else if (title.includes('on Instagram:')) {
+                        const parts = title.split('on Instagram:')
+                        user_name = parts[0].replace(/on Instagram$/, '').trim()
+                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
                     } else {
-                        text = parts[1]?.trim().replace(/^'|'$/g, '') || text
+                        user_name = title.replace(/\s*on Instagram\s*/i, '').trim()
+                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
                     }
-                } else if (title.includes('Instagram photo by')) {
-                    const parts = title.split('Instagram photo by')
-                    user_name = parts[1]?.split('•')[0]?.trim() || 'Instagram User'
-                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
+
+                    if (user_handle && !user_handle.startsWith('@')) {
+                        user_handle = '@' + user_handle
+                    }
+                }
+
+                if (description) {
+                    text = description.trim()
                 }
             } else if (source === 'google') {
                 if (title.includes('Google Maps')) {
@@ -322,7 +362,7 @@ export default function CheckinManager() {
             // Extract image URL (with fallback)
             let image_url = data.image?.url || data.screenshot?.url || ''
 
-            // Apply direct media redirect URL for Instagram to bypass scraping restrictions
+            // Use direct redirect URL for Instagram so it remains active forever
             const igShortcode = getInstagramShortcode(cleanUrl)
             if (igShortcode) {
                 image_url = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
@@ -333,6 +373,7 @@ export default function CheckinManager() {
                 source,
                 user_name,
                 user_handle,
+                user_avatar: data.logo?.url || '',
                 text: text.slice(0, 500), // Clamp to prevent overflow
                 image_url,
                 post_url: cleanUrl,
@@ -809,7 +850,7 @@ export default function CheckinManager() {
                                         <td className="p-4">
                                             <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-gray-50 flex items-center justify-center">
                                                 <img 
-                                                    src={item.image_url} 
+                                                    src={getProxiedImageUrl(item.image_url)} 
                                                     alt={item.user_name} 
                                                     crossOrigin="anonymous"
                                                     className="w-full h-full object-cover"

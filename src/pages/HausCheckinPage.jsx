@@ -131,6 +131,14 @@ const SOCIAL_MOCK_DATA = [
     }
 ]
 
+const getProxiedImageUrl = (url) => {
+    if (!url) return ''
+    if (url.startsWith('/') || url.startsWith('data:') || url.includes('images.weserv.nl')) {
+        return url
+    }
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`
+}
+
 // Generic parser for third-party widget JSON feeds (Elfsight, EmbedSocial, Outscraper, Custom JSON)
 const parseSocialFeed = (feedData) => {
     let rawItems = []
@@ -489,7 +497,7 @@ export default function HausCheckinPage() {
                             {/* Image side */}
                             <div className="w-full md:w-1/2 aspect-square md:aspect-auto md:h-[480px] bg-neutral-950 relative border-b md:border-b-0 md:border-r border-neutral-800 flex items-center justify-center">
                                 <img
-                                    src={selectedItem.image?.src}
+                                    src={getProxiedImageUrl(selectedItem.image?.src)}
                                     alt={selectedItem.text}
                                     crossOrigin="anonymous"
                                     className="w-full h-full object-cover"
@@ -521,7 +529,7 @@ export default function HausCheckinPage() {
                                     {/* User Profile info */}
                                     <div className="flex items-center gap-3 pb-3 border-b border-neutral-900">
                                         <img
-                                            src={selectedItem.user.avatar}
+                                            src={getProxiedImageUrl(selectedItem.user.avatar)}
                                             alt={selectedItem.user.name}
                                             crossOrigin="anonymous"
                                             className="w-10 h-10 rounded-full object-cover border border-neutral-800"

@@ -66,6 +66,14 @@ const COMPONENT_DEFAULTS = {
     rotation: 0, // Set to 0 to keep the grid and photos upright (no tilt)
 }
 
+const getProxiedImageUrl = (url) => {
+    if (!url) return ''
+    if (url.startsWith('/') || url.startsWith('data:') || url.includes('images.weserv.nl')) {
+        return url
+    }
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`
+}
+
 // Distinct visible color per tile (golden-angle hue rotation) so the grid is
 // always visible even when images don't load.
 function getItemColor(index) {
@@ -430,7 +438,7 @@ export default function DraggableGrid(props) {
                             
                             {src && !failed ? (
                                 <img
-                                    src={src}
+                                    src={getProxiedImageUrl(src)}
                                     alt={alt}
                                     draggable={false}
                                     crossOrigin="anonymous"
