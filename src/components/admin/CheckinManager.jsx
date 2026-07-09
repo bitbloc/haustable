@@ -319,7 +319,19 @@ export default function CheckinManager() {
             let primaryImageUrl = scrapedImageUrl
             
             if (source === 'instagram' && igShortcode) {
-                primaryImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+                const targetUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+                try {
+                    const resolveRes = await fetch(`/api/resolve-image?url=${encodeURIComponent(targetUrl)}`)
+                    const resolveJson = await resolveRes.json()
+                    if (resolveJson && resolveJson.resolvedUrl) {
+                        primaryImageUrl = resolveJson.resolvedUrl
+                    } else {
+                        primaryImageUrl = targetUrl
+                    }
+                } catch (e) {
+                    console.error('Failed to resolve redirect server-side:', e)
+                    primaryImageUrl = targetUrl
+                }
             }
 
             if (!primaryImageUrl && !scrapedImageUrl) {
@@ -476,7 +488,19 @@ export default function CheckinManager() {
             let primaryImageUrl = scrapedImageUrl
             
             if (source === 'instagram' && igShortcode) {
-                primaryImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+                const targetUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+                try {
+                    const resolveRes = await fetch(`/api/resolve-image?url=${encodeURIComponent(targetUrl)}`)
+                    const resolveJson = await resolveRes.json()
+                    if (resolveJson && resolveJson.resolvedUrl) {
+                        primaryImageUrl = resolveJson.resolvedUrl
+                    } else {
+                        primaryImageUrl = targetUrl
+                    }
+                } catch (e) {
+                    console.error('Failed to resolve redirect server-side:', e)
+                    primaryImageUrl = targetUrl
+                }
             }
 
             if (!primaryImageUrl && !scrapedImageUrl) {
