@@ -159,6 +159,38 @@ export default function CheckinManager() {
         }
     }
 
+    // Download an external image via proxy and upload it directly to Supabase storage
+    const uploadExternalImageToSupabase = async (externalUrl) => {
+        try {
+            const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(externalUrl)}`
+            const res = await fetch(proxyUrl)
+            if (!res.ok) throw new Error('Failed to download image from proxy')
+            const blob = await res.blob()
+
+            const ext = blob.type.split('/')[1] || 'jpg'
+            const fileName = `checkins/scraped_${Date.now()}.${ext}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('public-assets')
+                .upload(fileName, blob, {
+                    upsert: true,
+                    contentType: blob.type,
+                    cacheControl: '15552000'
+                })
+
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('public-assets')
+                .getPublicUrl(fileName)
+
+            return publicUrl
+        } catch (err) {
+            console.error('Failed to proxy upload external image:', err)
+            return null
+        }
+    }
+
     const handleQuickAdd = async (e) => {
         if (e && e.preventDefault) e.preventDefault()
         
@@ -236,17 +268,24 @@ export default function CheckinManager() {
                 }
             }
 
-            // Extract image URL (with fallback)
-            let image_url = data.image?.url || data.screenshot?.url || ''
+            // Extract raw scraped image URL from Microlink metadata
+            let rawImageUrl = data.image?.url || data.screenshot?.url || ''
             
-            // Use direct redirect URL for Instagram so it remains active forever
             const igShortcode = getInstagramShortcode(cleanUrl)
-            if (igShortcode) {
-                image_url = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            if (!rawImageUrl && igShortcode) {
+                rawImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
             }
 
-            if (!image_url) {
+            if (!rawImageUrl) {
                 throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
+            }
+
+            // Download the image and upload it permanently to our own Supabase storage bucket!
+            let image_url = await uploadExternalImageToSupabase(rawImageUrl)
+            
+            // If upload failed, fallback to the raw scraped image URL
+            if (!image_url) {
+                image_url = rawImageUrl
             }
 
             const ratingValue = source === 'google' ? 5 : null
@@ -359,13 +398,20 @@ export default function CheckinManager() {
                 }
             }
 
-            // Extract image URL (with fallback)
-            let image_url = data.image?.url || data.screenshot?.url || ''
+            // Extract raw scraped image URL from Microlink metadata
+            let rawImageUrl = data.image?.url || data.screenshot?.url || ''
 
-            // Use direct redirect URL for Instagram so it remains active forever
             const igShortcode = getInstagramShortcode(cleanUrl)
-            if (igShortcode) {
-                image_url = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            if (!rawImageUrl && igShortcode) {
+                rawImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            }
+
+            // Download the image and upload it permanently to our own Supabase storage bucket!
+            let image_url = await uploadExternalImageToSupabase(rawImageUrl)
+
+            // If upload failed, fallback to the raw scraped image URL
+            if (!image_url) {
+                image_url = rawImageUrl
             }
 
             setFormData(prev => ({
