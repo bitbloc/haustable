@@ -31,6 +31,11 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+    // Skip requests to other origins (like Instagram, Supabase, Facebook, Google)
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
     // API Requests: Network Only (or Network First) - managed by app mostly
     if (event.request.url.includes('/rest/v1/') || 
         event.request.url.includes('/functions/v1/') || 
