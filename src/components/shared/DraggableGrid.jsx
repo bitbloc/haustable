@@ -63,6 +63,7 @@ const COMPONENT_DEFAULTS = {
     gap: 5,
     enableWheel: false,
     placeholderColor: "#1a1a1f",
+    rotation: 0, // Set to 0 to keep the grid and photos upright (no tilt)
 }
 
 // Distinct visible color per tile (golden-angle hue rotation) so the grid is
@@ -128,6 +129,7 @@ export default function DraggableGrid(props) {
         enableWheel,
         onItemClick,
         style,
+        rotation,
     } = finalProps
 
     const containerRef = useRef(null)
@@ -143,6 +145,20 @@ export default function DraggableGrid(props) {
     const wheelAnimY = useRef(null)
     const failedImages = useRef(new Set())
     const [, forceRender] = useState(0)
+
+    // Screensaver drift speed (px per frame) - matching magnitudes make the diagonal angle exactly 45 degrees
+    const driftX = useRef(0.15) 
+    const driftY = useRef(-0.15)
+    const isInteracting = useRef(false)
+    const interactionTimeout = useRef(null)
+
+    const triggerInteraction = useCallback(() => {
+        isInteracting.current = true
+        if (interactionTimeout.current) clearTimeout(interactionTimeout.current)
+        interactionTimeout.current = setTimeout(() => {
+            isInteracting.current = false
+        }, 2000) // Resume drift after 2 seconds of inactivity
+    }, [])
 
     const safeItems =
         Array.isArray(items) && items.length > 0 ? items : defaultItems
@@ -205,17 +221,63 @@ export default function DraggableGrid(props) {
         bottom: maxY,
     }
 
-    // Pin the grid to the top-left corner so there are no centering margins —
-    // the only spacing is the configured gap between images. Set once; after
-    // that drag/wheel own the motion values.
+    // Center the grid initially and start the auto-drift screensaver loop
     useEffect(() => {
         if (initializedRef.current) return
         if (containerSize.w === 0 || containerSize.h === 0) return
 
-        x.set(maxX)
-        y.set(maxY)
+        const initialX = minX + (maxX - minX) / 2
+        const initialY = minY + (maxY - minY) / 2
+        x.set(initialX)
+        y.set(initialY)
         initializedRef.current = true
-    }, [containerSize.w, containerSize.h, maxX, maxY, x, y])
+    }, [containerSize.w, containerSize.h, minX, maxX, minY, maxY, x, y])
+
+    // Auto-drift screensaver effect loop
+    useEffect(() => {
+        let animationFrameId
+        
+        const updateDrift = () => {
+            if (!isDragging && !isInteracting.current) {
+                const curX = x.get()
+                const curY = y.get()
+                
+                let nextX = curX + driftX.current
+                let nextY = curY + driftY.current
+
+                // Bounce off boundaries in X direction
+                if (minX < maxX) {
+                    if (nextX >= maxX) {
+                        nextX = maxX
+                        driftX.current = -Math.abs(driftX.current)
+                    } else if (nextX <= minX) {
+                        nextX = minX
+                        driftX.current = Math.abs(driftX.current)
+                    }
+                    x.set(nextX)
+                }
+
+                // Bounce off boundaries in Y direction
+                if (minY < maxY) {
+                    if (nextY >= maxY) {
+                        nextY = maxY
+                        driftY.current = -Math.abs(driftY.current)
+                    } else if (nextY <= minY) {
+                        nextY = minY
+                        driftY.current = Math.abs(driftY.current)
+                    }
+                    y.set(nextY)
+                }
+            }
+            animationFrameId = requestAnimationFrame(updateDrift)
+        }
+
+        animationFrameId = requestAnimationFrame(updateDrift)
+        return () => {
+            cancelAnimationFrame(animationFrameId)
+            if (interactionTimeout.current) clearTimeout(interactionTimeout.current)
+        }
+    }, [isDragging, minX, maxX, minY, maxY, x, y])
 
     // Wheel scrolling
     useEffect(() => {
@@ -228,6 +290,7 @@ export default function DraggableGrid(props) {
 
         const onWheel = (e) => {
             e.preventDefault()
+            triggerInteraction()
             const curX = x.get()
             const curY = y.get()
             const targetX = clamp(curX - e.deltaX, minX, maxX)
@@ -250,11 +313,12 @@ export default function DraggableGrid(props) {
             if (wheelAnimX.current) wheelAnimX.current.stop()
             if (wheelAnimY.current) wheelAnimY.current.stop()
         }
-    }, [enableWheel, minX, maxX, minY, maxY, x, y])
+    }, [enableWheel, minX, maxX, minY, maxY, x, y, triggerInteraction])
 
     const handlePointerDown = useCallback((e) => {
+        triggerInteraction()
         pointerDownPos.current = { x: e.clientX, y: e.clientY, t: Date.now() }
-    }, [])
+    }, [triggerInteraction])
 
     const handlePointerUp = useCallback(
         (e, item, index) => {
@@ -303,6 +367,8 @@ export default function DraggableGrid(props) {
         gridAutoRows: `${safeImageHeight}px`,
         gap: `${safeGap}px`,
         willChange: "transform",
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: "center center",
     }
 
     return (
@@ -313,8 +379,12 @@ export default function DraggableGrid(props) {
                 dragConstraints={dragConstraints}
                 dragElastic={0}
                 dragMomentum={true}
-                onDragStart={() => setIsDragging(true)}
+                onDragStart={() => {
+                    setIsDragging(true)
+                    triggerInteraction()
+                }}
                 onDragEnd={() => setIsDragging(false)}
+                onDrag={() => triggerInteraction()}
             >
                 {displayItems.map((item, index) => {
                     const src = item?.image?.src
@@ -349,6 +419,8 @@ export default function DraggableGrid(props) {
                                 ),
                                 fontWeight: 600,
                                 cursor: isDragging ? "grabbing" : "pointer",
+                                transform: `rotate(${-rotation}deg)`,
+                                transformOrigin: "center center",
                             }}
                         >
                             {/* Hidden index helper, overlays check-in type if loaded */}

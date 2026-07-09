@@ -380,139 +380,85 @@ export default function HausCheckinPage() {
     }
 
     return (
-        <div className="haus-checkin-page w-full min-h-screen flex flex-col bg-[#0e0f0a] text-neutral-100 font-sans relative overflow-x-hidden pb-24">
+        <div className="haus-checkin-page w-screen h-screen bg-[#0e0f0a] text-neutral-100 font-sans relative overflow-hidden fixed inset-0">
             
             {/* Background noise grid for modern technical look */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.015)_1px,_transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(255,255,255,0.012)_1px,_transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0" />
             
-            <div className="w-full max-w-5xl mx-auto px-4 pt-6 relative z-10 flex-grow flex flex-col gap-6">
-                
-                {/* ─── NAVIGATION BACK BUTTON ─── */}
-                <div className="flex items-center">
-                    <a
-                        href="/link"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-neutral-900 border border-neutral-800 text-[10px] font-mono tracking-wider text-neutral-400 hover:text-white hover:border-neutral-700 transition-all active:scale-95 cursor-pointer uppercase"
-                    >
-                        <ArrowLeft size={10} /> BACK TO DIRECTORY
-                    </a>
-                </div>
-
-                {/* ─── HEADER SECTION ─── */}
-                <header className="border-b border-neutral-800 pb-5">
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-brand)] font-bold uppercase tracking-[0.2em] mb-1">
-                                <Compass size={12} className="animate-spin-slow" /> COMMUNITY STREAM
-                            </div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white uppercase font-mono">
-                                HAUS CHECK-IN
-                            </h1>
-                            <p className="text-xs text-neutral-400 font-sans mt-1">
-                                Moments captured and shared by our guests on <span className="text-[#E1306C] font-semibold">Instagram</span>, <span className="text-[#1877F2] font-semibold">Facebook</span>, and <span className="text-[#4285F4] font-semibold">Google Maps</span>
-                            </p>
-                        </div>
-                        
-                        {/* Stats block */}
-                        <div className="flex items-center gap-4 text-left font-mono">
-                            <div className="bg-neutral-900/80 border border-neutral-800 p-2.5 rounded-sm flex flex-col justify-center min-w-[100px]">
-                                <span className="text-[8px] text-neutral-500 uppercase tracking-wider">Rating</span>
-                                <span className="text-sm font-bold text-white flex items-center gap-1 mt-0.5">
-                                    4.9 <Star size={11} className="fill-[var(--color-brand)] text-[var(--color-brand)]" />
-                                </span>
-                            </div>
-                            <div className="bg-neutral-900/80 border border-neutral-800 p-2.5 rounded-sm flex flex-col justify-center min-w-[100px]">
-                                <span className="text-[8px] text-neutral-500 uppercase tracking-wider">Posts</span>
-                                <span className="text-sm font-bold text-white mt-0.5">1,200+</span>
-                            </div>
-                        </div>
+            {/* ─── IMMERSIVE FULLSCREEN GRID ─── */}
+            <div className="w-full h-full relative z-10 overflow-hidden">
+                {filteredItems.length > 0 ? (
+                    <DraggableGrid 
+                        items={filteredItems}
+                        columns={14}
+                        imageWidth={340}
+                        imageHeight={340}
+                        rounded={4}
+                        gap={4}
+                        enableWheel={true}
+                        onItemClick={handleItemClick}
+                    />
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center font-mono">
+                        <Compass className="w-8 h-8 text-[var(--color-brand)] animate-spin-slow" />
+                        <p className="text-xs text-neutral-500 uppercase tracking-widest">No atmosphere posts found</p>
                     </div>
-                </header>
+                )}
+            </div>
 
-                {/* ─── PLATFORM FILTERS (Braun Style Panel) ─── */}
-                <div className="w-full bg-neutral-900/50 border border-neutral-800 rounded-sm p-1.5 flex flex-wrap gap-1 items-center sticky top-2 z-30 backdrop-blur-md">
+            {/* ─── FLOATING OVERLAY: TOP LEFT BACK BUTTON ─── */}
+            <div className="absolute top-4 left-4 z-40">
+                <a
+                    href="/link"
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+                    title="BACK TO DIRECTORY"
+                >
+                    <ArrowLeft size={16} />
+                </a>
+            </div>
+
+            {/* ─── FLOATING OVERLAY: TOP CENTER TITLE PILL ─── */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-black/60 backdrop-blur-md border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 text-[10px] font-mono select-none shadow-lg whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-[var(--color-brand)] animate-pulse" />
+                <span className="text-white font-extrabold tracking-wider uppercase">{shopName} STREAM</span>
+                <span className="text-neutral-600">|</span>
+                <span className="text-neutral-400 flex items-center gap-1 font-bold">4.9 <Star size={11} className="fill-[var(--color-brand)] text-[var(--color-brand)]" /></span>
+                <span className="text-neutral-600">|</span>
+                <span className="text-neutral-400 font-bold">1.2K+ POSTS</span>
+            </div>
+
+            {/* ─── FLOATING OVERLAY: BOTTOM CENTER PLATFORM FILTERS (Minimalist Pill) ─── */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-lg border border-neutral-800 p-1.5 rounded-full flex items-center gap-1 shadow-2xl">
+                {[
+                    { id: 'all', label: 'All', icon: <Compass size={11} /> },
+                    { id: 'instagram', label: 'Instagram', icon: <Instagram size={11} /> },
+                    { id: 'facebook', label: 'Facebook', icon: <Facebook size={11} /> },
+                    { id: 'google', label: 'Google', icon: <Star size={11} /> }
+                ].map(tab => (
                     <button
-                        onClick={() => setActiveFilter('all')}
-                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider cursor-pointer text-center transition-all ${activeFilter === 'all' ? 'bg-[var(--color-brand)] text-neutral-900' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-800/40'}`}
+                        key={tab.id}
+                        onClick={() => setActiveFilter(tab.id)}
+                        className={`px-3 py-2 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-brand)] text-neutral-900' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-900/60'}`}
                     >
-                        ALL MEDIA
+                        {tab.icon}
+                        <span className="hidden sm:inline">{tab.label}</span>
                     </button>
-                    <button
-                        onClick={() => setActiveFilter('instagram')}
-                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider cursor-pointer text-center transition-all flex items-center justify-center gap-1.5 ${activeFilter === 'instagram' ? 'bg-[#E1306C] text-white' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-800/40'}`}
-                    >
-                        <Instagram size={10} /> INSTAGRAM
-                    </button>
-                    <button
-                        onClick={() => setActiveFilter('facebook')}
-                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider cursor-pointer text-center transition-all flex items-center justify-center gap-1.5 ${activeFilter === 'facebook' ? 'bg-[#1877F2] text-white' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-800/40'}`}
-                    >
-                        <Facebook size={10} /> FACEBOOK
-                    </button>
-                    <button
-                        onClick={() => setActiveFilter('google')}
-                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider cursor-pointer text-center transition-all flex items-center justify-center gap-1.5 ${activeFilter === 'google' ? 'bg-[#4285F4] text-white' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-800/40'}`}
-                    >
-                        <Star size={10} /> GOOGLE MAPS
-                    </button>
-                </div>
+                ))}
+            </div>
 
-                {/* ─── INSTRUCTION ACCENT BANNER ─── */}
-                <div className="bg-neutral-900/60 border border-neutral-800 rounded-sm p-3 flex items-center gap-3 text-xs text-neutral-300">
-                    <Info size={14} className="text-[var(--color-brand)] flex-shrink-0" />
-                    <p className="font-sans leading-relaxed text-[11px]">
-                        💡 <span className="font-bold text-white">Interactive Board:</span> Click and drag or scroll anywhere on the grid below to browse photos. Click a photo to read the full check-in detail.
-                    </p>
+            {/* ─── FLOATING OVERLAY: BOTTOM RIGHT JOIN PILL ─── */}
+            <div className="absolute bottom-6 right-6 z-40 hidden md:flex items-center gap-2">
+                <div className="bg-black/60 backdrop-blur-md border border-neutral-800 px-4 py-2.5 rounded-2xl text-[10px] text-neutral-400 max-w-[220px] text-right shadow-lg leading-relaxed">
+                    <span className="block font-extrabold text-white uppercase tracking-wider text-[9px] mb-0.5">📸 ร่วมแชร์บรรยากาศ</span>
+                    แท็ก <span className="text-white font-bold font-mono">@inthehaus.th</span> บน Instagram หรือเช็กอินที่ร้านเพื่อนำรูปขึ้นบอร์ดนี้!
                 </div>
+            </div>
 
-                {/* ─── DRAGGABLE GRID CONTAINER ─── */}
-                <div className="w-full h-[580px] md:h-[650px] bg-neutral-950/80 border border-neutral-800 rounded-sm overflow-hidden relative shadow-inner">
-                    {filteredItems.length > 0 ? (
-                        <DraggableGrid 
-                            items={filteredItems}
-                            columns={12}
-                            imageWidth={240}
-                            imageHeight={240}
-                            rounded={2}
-                            gap={2.5}
-                            enableWheel={true}
-                            onItemClick={handleItemClick}
-                        />
-                    ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center font-mono p-4">
-                            <span className="text-3xl">📭</span>
-                            <p className="text-neutral-500 uppercase tracking-widest text-xs mt-3">No check-ins matches the filter</p>
-                        </div>
-                    )}
+            {/* ─── FLOATING OVERLAY: BOTTOM LEFT HELP MOUSE DRAG INDICATOR ─── */}
+            <div className="absolute bottom-6 left-6 z-40 hidden lg:flex items-center gap-2 select-none pointer-events-none">
+                <div className="bg-black/40 backdrop-blur-sm border border-neutral-800/60 px-3 py-1.5 rounded-full text-[9px] text-neutral-500 font-mono flex items-center gap-2 uppercase tracking-wider">
+                    <span>🖱️ Click & Drag to explore</span>
                 </div>
-
-                {/* ─── CTA: JOIN THE WALL ─── */}
-                <div className="border border-dashed border-neutral-800 rounded-sm p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-900/20 mt-4">
-                    <div className="space-y-1">
-                        <h3 className="font-bold text-xs uppercase font-mono tracking-wider text-[var(--color-brand)]">Want to be featured on the wall?</h3>
-                        <p className="text-[11px] text-neutral-400 font-sans">
-                            Just tag our account <span className="text-white font-semibold">@inthehaus.th</span> or hashtag <span className="text-white font-semibold">#inthehaus</span> on Instagram, or check-in on Facebook or Google Maps when visiting our restaurant!
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <a 
-                            href="https://instagram.com/inthehaus.th" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-[#E1306C] text-white rounded-sm py-2 px-3 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-all hover:opacity-90 active:scale-95 cursor-pointer"
-                        >
-                            <Instagram size={12} /> TAG ON IG
-                        </a>
-                        <a 
-                            href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-800 rounded-sm py-2 px-3 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-all active:scale-95 cursor-pointer"
-                        >
-                            <MapPin size={12} /> MAP PIN
-                        </a>
-                    </div>
-                </div>
-
             </div>
 
             {/* ─── LIGHTBOX MODAL / DETAIL DRAWER ─── */}

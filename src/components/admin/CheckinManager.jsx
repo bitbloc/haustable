@@ -19,6 +19,11 @@ import {
     X 
 } from 'lucide-react'
 
+const getInstagramShortcode = (url) => {
+    const match = url.match(/\/(p|reel|tv)\/([a-zA-Z0-9_-]+)/)
+    return match ? match[2] : null
+}
+
 export default function CheckinManager() {
     const [checkins, setCheckins] = useState([])
     const [loading, setLoading] = useState(false)
@@ -208,7 +213,14 @@ export default function CheckinManager() {
             }
 
             // Extract image URL (with fallback)
-            const image_url = data.image?.url || data.screenshot?.url || ''
+            let image_url = data.image?.url || data.screenshot?.url || ''
+            
+            // Apply the direct media redirect URL for Instagram to bypass scraping restrictions
+            const igShortcode = getInstagramShortcode(cleanUrl)
+            if (igShortcode) {
+                image_url = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            }
+
             if (!image_url) {
                 throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
             }
@@ -308,7 +320,13 @@ export default function CheckinManager() {
             }
 
             // Extract image URL (with fallback)
-            const image_url = data.image?.url || data.screenshot?.url || ''
+            let image_url = data.image?.url || data.screenshot?.url || ''
+
+            // Apply direct media redirect URL for Instagram to bypass scraping restrictions
+            const igShortcode = getInstagramShortcode(cleanUrl)
+            if (igShortcode) {
+                image_url = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            }
 
             setFormData(prev => ({
                 ...prev,
