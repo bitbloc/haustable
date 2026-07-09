@@ -537,14 +537,19 @@ export default function HausCheckinPage() {
                 </a>
             </div>
 
-            {/* ─── FLOATING OVERLAY: TOP CENTER TITLE PILL ─── */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-black/60 backdrop-blur-md border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 text-[10px] font-mono select-none shadow-lg whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-[var(--color-brand)] animate-pulse" />
-                <span className="text-white font-extrabold tracking-wider uppercase">{shopName} STREAM</span>
-                <span className="text-neutral-600">|</span>
-                <span className="text-neutral-400 flex items-center gap-1 font-bold">4.9 <Star size={11} className="fill-[var(--color-brand)] text-[var(--color-brand)]" /></span>
-                <span className="text-neutral-600">|</span>
-                <span className="text-neutral-400 font-bold">1.2K+ POSTS</span>
+            {/* ─── FLOATING OVERLAY: TOP CENTER TITLE / SHARE PILL ─── */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-md border border-neutral-800/80 px-4 py-2.5 rounded-full flex items-center gap-2 text-[10px] font-mono select-none shadow-lg whitespace-nowrap max-w-[90vw] overflow-hidden">
+                <div className="flex md:hidden items-center gap-1.5 text-neutral-300">
+                    <span className="text-white font-extrabold">📸 แท็ก</span>
+                    <span className="text-[var(--color-brand)] font-extrabold">@inthehaus</span>
+                    <span>หรือ</span>
+                    <span className="text-[var(--color-brand)] font-extrabold">#inthehaus</span>
+                    <span>บน IG / เช็กอินขึ้นบอร์ด!</span>
+                </div>
+                <div className="hidden md:flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-[var(--color-brand)] animate-pulse" />
+                    <span className="text-white font-extrabold tracking-wider uppercase">{shopName} STREAM</span>
+                </div>
             </div>
 
             {/* ─── FLOATING OVERLAY: BOTTOM CENTER PLATFORM FILTERS (Minimalist Pill) ─── */}

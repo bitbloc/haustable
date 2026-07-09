@@ -312,6 +312,8 @@ export default function DraggableGrid(props) {
     const [isPinching, setIsPinching] = useState(false)
     const touchStartDist = useRef(0)
     const touchStartScale = useRef(1.0)
+    const touchStartMid = useRef({ x: 0, y: 0 })
+    const touchStartPos = useRef({ x: 0, y: 0 })
     const initializedRef = useRef(false)
 
     const pointerDownPos = useRef(null)
@@ -493,12 +495,16 @@ export default function DraggableGrid(props) {
                 e.preventDefault()
                 setIsPinching(true)
                 triggerInteraction()
-                const dist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                )
+                const t0 = e.touches[0]
+                const t1 = e.touches[1]
+                const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
                 touchStartDist.current = dist
                 touchStartScale.current = zoomScale
+                
+                const midX = (t0.clientX + t1.clientX) / 2
+                const midY = (t0.clientY + t1.clientY) / 2
+                touchStartMid.current = { x: midX, y: midY }
+                touchStartPos.current = { x: x.get(), y: y.get() }
             }
         }
 
@@ -518,14 +524,10 @@ export default function DraggableGrid(props) {
                 const midX = (t0.clientX + t1.clientX) / 2
                 const midY = (t0.clientY + t1.clientY) / 2
 
-                const oldX = x.get()
-                const oldY = y.get()
-                const oldScale = zoomScale
-
-                if (oldScale > 0) {
-                    const scaleRatio = nextScale / oldScale
-                    let newX = midX - (midX - oldX) * scaleRatio
-                    let newY = midY - (midY - oldY) * scaleRatio
+                if (touchStartScale.current > 0) {
+                    const ratio = nextScale / touchStartScale.current
+                    let newX = midX - (touchStartMid.current.x - touchStartPos.current.x) * ratio
+                    let newY = midY - (touchStartMid.current.y - touchStartPos.current.y) * ratio
 
                     // Clamp positions to match bounds for nextScale
                     const nextMaxX = safeGap * nextScale
