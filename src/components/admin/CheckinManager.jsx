@@ -25,6 +25,10 @@ export default function CheckinManager() {
     const [actionLoading, setActionLoading] = useState(false)
     const [uploadingImage, setUploadingImage] = useState(false)
 
+    // Quick URL Fetch State
+    const [urlToFetch, setUrlToFetch] = useState('')
+    const [fetchLoading, setFetchLoading] = useState(false)
+
     // Form State
     const [editingId, setEditingId] = useState(null)
     const [showForm, setShowForm] = useState(false)
@@ -138,9 +142,94 @@ export default function CheckinManager() {
         }
     }
 
+    const handleFetchUrl = async () => {
+        if (!urlToFetch) {
+            alert('โปรดวางลิงก์โพสต์ Instagram/Facebook หรือ Google Reviews ก่อน')
+            return
+        }
+
+        setFetchLoading(true)
+        try {
+            // Clean url to remove query parameters
+            let cleanUrl = urlToFetch.trim();
+            // Call microlink.io public API to scrape meta tags
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
+            const json = await res.json()
+
+            if (json.status !== 'success' || !json.data) {
+                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
+            }
+
+            const data = json.data
+            const title = data.title || ''
+            const description = data.description || ''
+            
+            // Determine source
+            let source = 'instagram'
+            if (cleanUrl.includes('facebook.com') || cleanUrl.includes('fb.watch')) {
+                source = 'facebook'
+            } else if (cleanUrl.includes('google.com') || cleanUrl.includes('maps.app.goo.gl')) {
+                source = 'google'
+            }
+
+            // Extract display name, user handle, and clean text
+            let user_name = 'Customer'
+            let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
+            let text = description || title || ''
+            
+            // Meta OG Tag specific parsing logic for Instagram captions
+            if (source === 'instagram') {
+                if (title.includes('on Instagram:')) {
+                    const parts = title.split('on Instagram:')
+                    user_name = parts[0].replace(/on Instagram$/, '').trim()
+                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
+                    
+                    const textMatch = parts[1]?.match(/'([\s\S]*)'/)
+                    if (textMatch) {
+                        text = textMatch[1]
+                    } else {
+                        text = parts[1]?.trim().replace(/^'|'$/g, '') || text
+                    }
+                } else if (title.includes('Instagram photo by')) {
+                    const parts = title.split('Instagram photo by')
+                    user_name = parts[1]?.split('•')[0]?.trim() || 'Instagram User'
+                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
+                }
+            } else if (source === 'google') {
+                if (title.includes('Google Maps')) {
+                    user_name = 'Google Reviewer'
+                    user_handle = 'Local Guide'
+                }
+            }
+
+            // Extract image URL (with fallback)
+            const image_url = data.image?.url || data.screenshot?.url || ''
+
+            setFormData(prev => ({
+                ...prev,
+                source,
+                user_name,
+                user_handle,
+                text: text.slice(0, 500), // Clamp to prevent overflow
+                image_url,
+                post_url: cleanUrl,
+                likes: data.likes || 0,
+                comments: 0
+            }))
+
+            alert('ดึงข้อมูลจากลิงก์สำเร็จ! โปรดตรวจทานความถูกต้องแล้วกดบันทึก')
+        } catch (err) {
+            console.error('Failed to parse URL metadata:', err)
+            alert('ดึงข้อมูลอัตโนมัติไม่สำเร็จ: ' + err.message + '\n(หมายเหตุ: คุณยังคงสามารถกรอกข้อมูล แหล่งที่มา, ชื่อ, และรูปภาพลงในฟอร์มเองได้)')
+        } finally {
+            setFetchLoading(false)
+        }
+    }
+
     const resetForm = () => {
         setEditingId(null)
         setShowForm(false)
+        setUrlToFetch('')
         setFormData({
             source: 'instagram',
             user_name: '',
@@ -301,6 +390,39 @@ export default function CheckinManager() {
                             <X size={14} />
                         </button>
                     </div>
+
+                    {/* Auto-fetch from URL tool */}
+                    {!editingId && (
+                        <div className="bg-canvas border border-gray-200 p-4 rounded-2xl flex flex-col md:flex-row md:items-end gap-3 mb-2">
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-bold text-subInk uppercase mb-1">🔗 ดึงข้อมูลอัตโนมัติจากลิงก์ (Instagram / Facebook / Google Maps)</label>
+                                <input
+                                    type="text"
+                                    value={urlToFetch}
+                                    onChange={(e) => setUrlToFetch(e.target.value)}
+                                    placeholder="วางลิงก์โพสต์หรือรีวิว เช่น https://www.instagram.com/p/..."
+                                    className="w-full bg-paper border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleFetchUrl}
+                                disabled={fetchLoading}
+                                className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white font-bold text-xs py-2.5 px-5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[40px] whitespace-nowrap"
+                            >
+                                {fetchLoading ? (
+                                    <>
+                                        <Loader2 size={13} className="animate-spin" />
+                                        <span>กำลังดึงข้อมูล...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>ดึงข้อมูล (Fetch)</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
 
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         
