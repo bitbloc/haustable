@@ -405,8 +405,8 @@ export default function HausCheckinPage() {
                     <DraggableGrid 
                         items={filteredItems}
                         columns={14}
-                        imageWidth={270}
-                        imageHeight={270}
+                        imageWidth={256}
+                        imageHeight={320}
                         rounded={4}
                         gap={4}
                         enableWheel={true}
