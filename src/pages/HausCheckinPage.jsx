@@ -131,10 +131,69 @@ const SOCIAL_MOCK_DATA = [
     }
 ]
 
+// Generic parser for third-party widget JSON feeds (Elfsight, EmbedSocial, Outscraper, Custom JSON)
+const parseSocialFeed = (feedData) => {
+    let rawItems = []
+    if (Array.isArray(feedData)) {
+        rawItems = feedData
+    } else if (feedData.posts && Array.isArray(feedData.posts)) {
+        rawItems = feedData.posts
+    } else if (feedData.data && Array.isArray(feedData.data)) {
+        rawItems = feedData.data
+    } else if (feedData.items && Array.isArray(feedData.items)) {
+        rawItems = feedData.items
+    }
+
+    return rawItems.map((item, index) => {
+        const rawSource = (item.source || item.platform || item.type || '').toLowerCase()
+        let source = 'instagram'
+        if (rawSource.includes('fb') || rawSource.includes('facebook')) source = 'facebook'
+        if (rawSource.includes('google') || rawSource.includes('maps') || rawSource.includes('review') || rawSource.includes('star')) source = 'google'
+
+        const name = item.user_name || item.author_name || item.user?.name || item.author?.name || 'Customer'
+        const handle = item.user_handle || item.author_handle || item.user?.username || item.author?.username || (source === 'google' ? 'Google Reviewer' : '')
+        const avatar = item.user_avatar || item.author_avatar || item.user?.avatar || item.author?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop'
+        const text = item.text || item.caption || item.message || item.content || ''
+        const image_url = item.image_url || item.media_url || item.image || item.media || ''
+        const post_url = item.post_url || item.link || item.url || ''
+        const rating = item.rating || item.stars || item.score || null
+
+        // Format date dynamically if possible
+        let dateText = 'Recently'
+        const rawDate = item.date || item.created_at || item.timestamp
+        if (rawDate) {
+            try {
+                dateText = new Date(rawDate).toLocaleDateString('th-TH', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                })
+            } catch (e) {
+                dateText = String(rawDate)
+            }
+        }
+
+        return {
+            id: item.id || index,
+            source,
+            user: { name, handle, avatar },
+            text,
+            rating: rating ? parseInt(rating) : null,
+            location: item.location || 'IN THE HAUS ในบ้าน นครพนม',
+            date: dateText,
+            likes: parseInt(item.likes || item.likes_count || 0),
+            comments: parseInt(item.comments || item.comments_count || 0),
+            image_url,
+            url: post_url
+        }
+    }).filter(item => item.image_url) // Filter out items with no images
+}
+
 export default function HausCheckinPage() {
     const [settings, setSettings] = useState({})
     const [streamImages, setStreamImages] = useState([])
     const [dbCheckins, setDbCheckins] = useState([])
+    const [feedCheckins, setFeedCheckins] = useState([])
     const [loading, setLoading] = useState(true)
     const [activeFilter, setActiveFilter] = useState('all') // 'all' | 'instagram' | 'facebook' | 'google'
     const [selectedItem, setSelectedItem] = useState(null)
@@ -148,8 +207,9 @@ export default function HausCheckinPage() {
                     .select('*')
                     .like('key', 'link_%')
 
+                let map = {}
                 if (data) {
-                    const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
+                    map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
                     setSettings(map)
 
                     // Collect all active images in settings
@@ -199,6 +259,20 @@ export default function HausCheckinPage() {
                     console.warn('haus_checkins table might not be initialized yet:', dbErr)
                 }
 
+                // Fetch third-party social feed (e.g. Elfsight, EmbedSocial widget data) if configured
+                if (map.link_social_feed_url) {
+                    try {
+                        const response = await fetch(map.link_social_feed_url)
+                        const feedData = await response.json()
+                        const parsed = parseSocialFeed(feedData)
+                        if (parsed && parsed.length > 0) {
+                            setFeedCheckins(parsed)
+                        }
+                    } catch (feedErr) {
+                        console.error('Failed to fetch third-party social feed:', feedErr)
+                    }
+                }
+
             } catch (err) {
                 console.error('Failed to fetch check-in stream images:', err)
             } finally {
@@ -211,7 +285,18 @@ export default function HausCheckinPage() {
 
     // Prepare grid items with matched images
     const gridItems = useMemo(() => {
-        // If we have database check-ins, use them
+        // 1. If we have third-party feed check-ins, use them first (automates 100%)
+        if (feedCheckins.length > 0) {
+            return feedCheckins.map(item => ({
+                ...item,
+                image: {
+                    src: optimizeImageUrl(item.image_url, 600),
+                    alt: item.text
+                }
+            }))
+        }
+
+        // 2. Otherwise, if we have database check-ins, use them
         if (dbCheckins.length > 0) {
             return dbCheckins.map(item => {
                 // Calculate display date format
@@ -250,7 +335,7 @@ export default function HausCheckinPage() {
             })
         }
 
-        // Otherwise fallback to mock data
+        // 3. Otherwise fallback to mock data
         const imagePool = streamImages.length > 0 ? streamImages : FALLBACK_STREAM_IMAGES
         return SOCIAL_MOCK_DATA.map((mockItem, index) => {
             const imgUrl = imagePool[index % imagePool.length]
@@ -262,7 +347,7 @@ export default function HausCheckinPage() {
                 }
             }
         })
-    }, [dbCheckins, streamImages])
+    }, [feedCheckins, dbCheckins, streamImages])
 
     // Filter items based on selected tab
     const filteredItems = useMemo(() => {

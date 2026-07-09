@@ -1192,6 +1192,12 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                 <p className="text-[10px] text-gray-400 mt-1">ใส่ # นำหน้า คั่นด้วย comma เช่น #tag1, #tag2, #tag3</p>
             </div>
             <div>
+                <label className="block text-xs font-bold text-brandDark uppercase mb-1">🔗 ลิงก์ฟีดรูปภาพเช็กอิน (Social Media Feed JSON URL)</label>
+                <input type="text" value={settings.link_social_feed_url || ''} onChange={(e) => handleSave('link_social_feed_url', e.target.value)}
+                    placeholder="เช่น https://widgets.elfsight.com/... หรือ JSON Feed URL" className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono text-sm" />
+                <p className="text-[10px] text-gray-400 mt-1">วางลิงก์ JSON Feed จากผู้ให้บริการภายนอก (เช่น Elfsight, EmbedSocial, Outscraper) เพื่อดึงรูปภาพเช็กอินอัปเดตอัตโนมัติ 100%</p>
+            </div>
+            <div>
                 <label className="block text-xs font-bold text-brandDark uppercase mb-1">📝 คำอธิบายสำหรับแชร์โซเชียล (Social Share Description)</label>
                 <textarea rows={3} value={settings.link_og_description || ''} onChange={(e) => handleSave('link_og_description', e.target.value)}
                     placeholder="ป้อนคำอธิบายของร้านสำหรับแสดงเวลาแชร์ลิงก์ลงโซเชียล เช่น Facebook, LINE..." className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand text-sm" />
