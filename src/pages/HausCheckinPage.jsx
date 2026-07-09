@@ -259,19 +259,42 @@ export default function HausCheckinPage() {
                     setStreamImages(uniqueImages)
                 }
 
-                // Fetch check-ins from database (failsafe)
-                try {
-                    const { data: checkinData, error: checkinErr } = await supabase
-                        .from('haus_checkins')
-                        .select('*')
-                        .eq('is_visible', true)
-                        .order('created_at', { ascending: false })
-                    if (!checkinErr && checkinData) {
-                        setDbCheckins(checkinData)
+                // Progressive paginated fetching (50 rows per batch) to load 1000+ items fast
+                const fetchDbCheckinsProgressively = async (offset = 0) => {
+                    try {
+                        const pageSize = 50
+                        const { data: batch, error: checkinErr } = await supabase
+                            .from('haus_checkins')
+                            .select('*')
+                            .eq('is_visible', true)
+                            .order('created_at', { ascending: false })
+                            .range(offset, offset + pageSize - 1)
+
+                        if (!checkinErr && batch && batch.length > 0) {
+                            setDbCheckins(prev => {
+                                const existingIds = new Set(prev.map(x => x.id))
+                                const merged = [...prev]
+                                batch.forEach(item => {
+                                    if (!existingIds.has(item.id)) {
+                                        merged.push(item)
+                                    }
+                                })
+                                return merged
+                            })
+
+                            // If we fetched a full page, schedule the next batch progressively in the background
+                            if (batch.length === pageSize) {
+                                setTimeout(() => {
+                                    fetchDbCheckinsProgressively(offset + pageSize)
+                                }, 800) // Delay slightly to prioritize page animations
+                            }
+                        }
+                    } catch (dbErr) {
+                        console.warn('haus_checkins table progressive fetch error:', dbErr)
                     }
-                } catch (dbErr) {
-                    console.warn('haus_checkins table might not be initialized yet:', dbErr)
                 }
+
+                fetchDbCheckinsProgressively(0)
 
                 // Fetch third-party social feed (e.g. Elfsight, EmbedSocial widget data) if configured
                 if (map.link_social_feed_url) {

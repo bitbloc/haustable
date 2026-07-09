@@ -100,13 +100,35 @@ function mulberry32(seed) {
     }
 }
 
-// Fill a target length by repeating items, shuffled so neighbours don't
-// duplicate the same source item where possible.
-function fillAndShuffle(items, target, seed) {
+// Fill a target length by repeating items, shuffled so neighbors don't
+// duplicate the same source item in a 3x3 grid neighborhood where possible.
+function fillAndShuffle(items, target, columns, seed) {
     if (items.length === 0) return []
     const rand = mulberry32(seed)
+    const cols = columns || 14
     const out = []
-    // Build a pool: one shuffled copy of items, refilled when exhausted.
+    
+    const getAt = (r, c) => {
+        if (r < 0 || c < 0 || c >= cols) return null
+        const idx = r * cols + c
+        return idx < out.length ? out[idx] : null
+    }
+
+    // Check if an item exists in the immediate 2D neighborhood (up, left, and diagonals)
+    const hasDuplicateInNeighborhood = (item, r, c) => {
+        // Check horizontally left (c-1, c-2)
+        if (getAt(r, c - 1) === item || getAt(r, c - 2) === item) return true
+        
+        // Check vertically up (r-1, r-2)
+        if (getAt(r - 1, c) === item || getAt(r - 2, c) === item) return true
+        
+        // Check diagonals up-left/up-right (r-1, c-1), (r-1, c+1)
+        if (getAt(r - 1, c - 1) === item || getAt(r - 1, c + 1) === item) return true
+        if (getAt(r - 2, c - 1) === item || getAt(r - 2, c + 1) === item) return true
+        
+        return false
+    }
+
     const refill = () => {
         const pool = items.slice()
         for (let i = pool.length - 1; i > 0; i--) {
@@ -115,20 +137,154 @@ function fillAndShuffle(items, target, seed) {
         }
         return pool
     }
+
     let pool = refill()
-    while (out.length < target) {
-        if (pool.length === 0) pool = refill()
-        const next = pool.pop()
-        // Try to avoid placing the same item immediately after itself.
-        if (out.length > 0 && next === out[out.length - 1] && pool.length > 0) {
-            const swap = pool.pop()
-            out.push(swap)
-            pool.push(next)
-        } else {
+
+    for (let idx = 0; idx < target; idx++) {
+        const r = Math.floor(idx / cols)
+        const c = idx % cols
+
+        let foundIdx = -1
+        // Look through the pool for a non-conflicting item
+        for (let p = pool.length - 1; p >= 0; p--) {
+            if (!hasDuplicateInNeighborhood(pool[p], r, c)) {
+                foundIdx = p
+                break
+            }
+        }
+
+        // If not found in the current pool, try refilling and searching in a fresh pool
+        if (foundIdx === -1) {
+            const extraPool = refill()
+            for (let p = extraPool.length - 1; p >= 0; p--) {
+                if (!hasDuplicateInNeighborhood(extraPool[p], r, c)) {
+                    pool.push(...extraPool.slice(0, p), ...extraPool.slice(p + 1))
+                    out.push(extraPool[p])
+                    foundIdx = -2 // Mark as found in extraPool
+                    break
+                }
+            }
+        }
+
+        if (foundIdx >= 0) {
+            const next = pool[foundIdx]
+            pool.splice(foundIdx, 1)
             out.push(next)
+        } else if (foundIdx === -1) {
+            // Hard fallback to avoid infinite loops: grab the last pool item
+            if (pool.length === 0) pool = refill()
+            out.push(pool.pop())
+        }
+
+        if (pool.length === 0) {
+            pool = refill()
         }
     }
+
     return out
+}
+
+// Viewport-aware lazy loaded card to prevent memory leaks and slow down loading for 1000+ items
+function LazyCard({
+    item,
+    index,
+    safeImageWidth,
+    safeImageHeight,
+    radius,
+    isDragging,
+    failed,
+    getProxiedImageUrl,
+    handleImageError,
+    handlePointerDown,
+    handlePointerUp,
+    rotation,
+}) {
+    const cardRef = useRef(null)
+    const [isVisible, setIsVisible] = useState(false)
+
+    useEffect(() => {
+        const el = cardRef.current
+        if (!el) return
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true)
+                    observer.disconnect()
+                }
+            },
+            {
+                root: el.closest('.draggable-container-viewport') || null,
+                rootMargin: '250px', // Fetch 250px before entering viewport for smooth experience
+            }
+        )
+
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [])
+
+    const src = item?.image?.src
+    const alt = item?.alt ?? item?.image?.alt ?? ""
+
+    return (
+        <div
+            ref={cardRef}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            style={{
+                position: "relative",
+                width: safeImageWidth,
+                height: safeImageHeight,
+                overflow: "hidden",
+                borderRadius: radius,
+                backgroundColor: getItemColor(index),
+                color: "rgba(255,255,255,0.85)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+                fontSize: Math.max(
+                    14,
+                    Math.round(Math.min(safeImageWidth, safeImageHeight) * 0.16)
+                ),
+                fontWeight: 600,
+                cursor: isDragging ? "grabbing" : "pointer",
+                transform: `rotate(${-rotation}deg)`,
+                transformOrigin: "center center",
+            }}
+        >
+            {/* Hidden index helper, overlays check-in type if loaded */}
+            <div className="absolute inset-0 bg-black/10 flex flex-col justify-between p-3 z-10 text-white select-none pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{item.source || 'tag'}</span>
+            </div>
+            
+            {isVisible && src && !failed ? (
+                <img
+                    src={getProxiedImageUrl(src)}
+                    alt={alt}
+                    draggable={false}
+                    crossOrigin="anonymous"
+                    onError={handleImageError}
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        pointerEvents: "none",
+                        userSelect: "none",
+                        display: "block",
+                        zIndex: 1,
+                    }}
+                />
+            ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
+                    <span className="text-xl">📸</span>
+                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || "Check-in"}</span>
+                </div>
+            )}
+        </div>
+    )
 }
 
 export default function DraggableGrid(props) {
@@ -190,13 +346,12 @@ export default function DraggableGrid(props) {
     const r = Math.max(0, Math.min(20, rounded ?? 3))
     const radius = (r / 20) * (Math.min(safeImageWidth, safeImageHeight) / 2)
 
-    // Square grid: rows === columns. Fill all cells by repeating items in a
-    // shuffled order, so a small source list still produces a full grid.
-    const rows = safeColumns
+    // Calculate grid rows dynamically to fit all loaded items (at least safeColumns size)
+    const rows = Math.max(safeColumns, Math.ceil(safeItems.length / safeColumns))
     const totalCells = safeColumns * rows
     const displayItems = useMemo(
-        () => fillAndShuffle(safeItems, totalCells, 0xc0ffee),
-        [safeItems, totalCells]
+        () => fillAndShuffle(safeItems, totalCells, safeColumns, 0xc0ffee),
+        [safeItems, totalCells, safeColumns]
     )
 
     const gridW = safeColumns * safeImageWidth + (safeColumns - 1) * safeGap
@@ -483,7 +638,7 @@ export default function DraggableGrid(props) {
     }
 
     return (
-        <div ref={containerRef} style={wrapperStyle}>
+        <div ref={containerRef} className="draggable-container-viewport" style={wrapperStyle}>
             <motion.div
                 style={{ ...gridStyle, x, y, scale: zoomScale }}
                 drag
@@ -498,73 +653,23 @@ export default function DraggableGrid(props) {
                 onDrag={() => triggerInteraction()}
             >
                 {displayItems.map((item, index) => {
-                    const src = item?.image?.src
-                    const alt = item?.alt ?? item?.image?.alt ?? ""
                     const failed = failedImages.current.has(index)
                     return (
-                        <div
+                        <LazyCard
                             key={index}
-                            onPointerDown={handlePointerDown}
-                            onPointerUp={(e) => handlePointerUp(e, item, index)}
-                            style={{
-                                position: "relative",
-                                width: safeImageWidth,
-                                height: safeImageHeight,
-                                overflow: "hidden",
-                                borderRadius: radius,
-                                backgroundColor: getItemColor(index),
-                                color: "rgba(255,255,255,0.85)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontFamily:
-                                    "Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-                                fontSize: Math.max(
-                                    14,
-                                    Math.round(
-                                        Math.min(
-                                            safeImageWidth,
-                                            safeImageHeight
-                                        ) * 0.16
-                                    )
-                                ),
-                                fontWeight: 600,
-                                cursor: isDragging ? "grabbing" : "pointer",
-                                transform: `rotate(${-rotation}deg)`,
-                                transformOrigin: "center center",
-                            }}
-                        >
-                            {/* Hidden index helper, overlays check-in type if loaded */}
-                            <div className="absolute inset-0 bg-black/10 flex flex-col justify-between p-3 z-10 text-white select-none pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{item.source || 'tag'}</span>
-                            </div>
-                            
-                            {src && !failed ? (
-                                <img
-                                    src={getProxiedImageUrl(src)}
-                                    alt={alt}
-                                    draggable={false}
-                                    crossOrigin="anonymous"
-                                    onError={() => handleImageError(index)}
-                                    style={{
-                                        position: "absolute",
-                                        inset: 0,
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
-                                        pointerEvents: "none",
-                                        userSelect: "none",
-                                        display: "block",
-                                        zIndex: 1,
-                                    }}
-                                />
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
-                                    <span className="text-xl">📸</span>
-                                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || "Check-in"}</span>
-                                </div>
-                            )}
-                        </div>
+                            item={item}
+                            index={index}
+                            safeImageWidth={safeImageWidth}
+                            safeImageHeight={safeImageHeight}
+                            radius={radius}
+                            isDragging={isDragging}
+                            failed={failed}
+                            getProxiedImageUrl={getProxiedImageUrl}
+                            handleImageError={() => handleImageError(index)}
+                            handlePointerDown={handlePointerDown}
+                            handlePointerUp={(e) => handlePointerUp(e, item, index)}
+                            rotation={rotation}
+                        />
                     )
                 })}
             </motion.div>
