@@ -21,7 +21,13 @@ import {
 
 const getProxiedImageUrl = (url) => {
     if (!url) return ''
-    if (url.startsWith('/') || url.startsWith('data:') || url.includes('images.weserv.nl')) {
+    if (
+        url.startsWith('/') || 
+        url.startsWith('data:') || 
+        url.includes('images.weserv.nl') || 
+        url.includes('wsrv.nl') || 
+        url.includes('supabase.co')
+    ) {
         return url
     }
     return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`

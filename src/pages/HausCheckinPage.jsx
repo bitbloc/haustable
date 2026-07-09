@@ -133,7 +133,13 @@ const SOCIAL_MOCK_DATA = [
 
 const getProxiedImageUrl = (url) => {
     if (!url) return ''
-    if (url.startsWith('/') || url.startsWith('data:') || url.includes('images.weserv.nl')) {
+    if (
+        url.startsWith('/') || 
+        url.startsWith('data:') || 
+        url.includes('images.weserv.nl') || 
+        url.includes('wsrv.nl') || 
+        url.includes('supabase.co')
+    ) {
         return url
     }
     return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`
@@ -399,8 +405,8 @@ export default function HausCheckinPage() {
                     <DraggableGrid 
                         items={filteredItems}
                         columns={14}
-                        imageWidth={340}
-                        imageHeight={340}
+                        imageWidth={270}
+                        imageHeight={270}
                         rounded={4}
                         gap={4}
                         enableWheel={true}

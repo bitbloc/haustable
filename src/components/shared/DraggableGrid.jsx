@@ -68,7 +68,13 @@ const COMPONENT_DEFAULTS = {
 
 const getProxiedImageUrl = (url) => {
     if (!url) return ''
-    if (url.startsWith('/') || url.startsWith('data:') || url.includes('images.weserv.nl')) {
+    if (
+        url.startsWith('/') || 
+        url.startsWith('data:') || 
+        url.includes('images.weserv.nl') || 
+        url.includes('wsrv.nl') || 
+        url.includes('supabase.co')
+    ) {
         return url
     }
     return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`
@@ -146,6 +152,9 @@ export default function DraggableGrid(props) {
 
     const [containerSize, setContainerSize] = useState({ w: 800, h: 600 })
     const [isDragging, setIsDragging] = useState(false)
+    const [zoomScale, setZoomScale] = useState(1.0)
+    const touchStartDist = useRef(0)
+    const touchStartScale = useRef(1.0)
     const initializedRef = useRef(false)
 
     const pointerDownPos = useRef(null)
@@ -287,6 +296,82 @@ export default function DraggableGrid(props) {
         }
     }, [isDragging, minX, maxX, minY, maxY, x, y])
 
+    // Global listener to ensure isDragging is reset to false even if drag events
+    // are canceled or bubble out of the container (critical for mobile browsers).
+    useEffect(() => {
+        const handleGlobalRelease = () => {
+            setIsDragging(false)
+        }
+        window.addEventListener('pointerup', handleGlobalRelease)
+        window.addEventListener('touchend', handleGlobalRelease)
+        return () => {
+            window.removeEventListener('pointerup', handleGlobalRelease)
+            window.removeEventListener('touchend', handleGlobalRelease)
+        }
+    }, [])
+
+    // Pinch-to-zoom and Trackpad zoom gestures (clamped 0.4x to 2.5x)
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault()
+                triggerInteraction()
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                )
+                touchStartDist.current = dist
+                touchStartScale.current = zoomScale
+            }
+        }
+
+        const handleTouchMove = (e) => {
+            if (e.touches.length === 2 && touchStartDist.current > 0) {
+                e.preventDefault()
+                triggerInteraction()
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                )
+                const factor = dist / touchStartDist.current
+                let nextScale = touchStartScale.current * factor
+                nextScale = Math.max(0.4, Math.min(2.5, nextScale))
+                setZoomScale(nextScale)
+            }
+        }
+
+        const handleTouchEnd = (e) => {
+            if (e.touches.length < 2) {
+                touchStartDist.current = 0
+            }
+        }
+
+        const handleWheelZoom = (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault()
+                triggerInteraction()
+                let nextScale = zoomScale - e.deltaY * 0.01
+                nextScale = Math.max(0.4, Math.min(2.5, nextScale))
+                setZoomScale(nextScale)
+            }
+        }
+
+        el.addEventListener('touchstart', handleTouchStart, { passive: false })
+        el.addEventListener('touchmove', handleTouchMove, { passive: false })
+        el.addEventListener('touchend', handleTouchEnd)
+        el.addEventListener('wheel', handleWheelZoom, { passive: false })
+
+        return () => {
+            el.removeEventListener('touchstart', handleTouchStart)
+            el.removeEventListener('touchmove', handleTouchMove)
+            el.removeEventListener('touchend', handleTouchEnd)
+            el.removeEventListener('wheel', handleWheelZoom)
+        }
+    }, [zoomScale, triggerInteraction])
+
     // Wheel scrolling
     useEffect(() => {
         if (!enableWheel) return
@@ -297,6 +382,7 @@ export default function DraggableGrid(props) {
             Math.min(Math.max(v, mn), mx)
 
         const onWheel = (e) => {
+            if (e.ctrlKey) return // Skip if trackpad pinch-to-zoom is active
             e.preventDefault()
             triggerInteraction()
             const curX = x.get()
@@ -382,7 +468,7 @@ export default function DraggableGrid(props) {
     return (
         <div ref={containerRef} style={wrapperStyle}>
             <motion.div
-                style={{ ...gridStyle, x, y }}
+                style={{ ...gridStyle, x, y, scale: zoomScale }}
                 drag
                 dragConstraints={dragConstraints}
                 dragElastic={0}
