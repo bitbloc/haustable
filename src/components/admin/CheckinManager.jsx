@@ -300,6 +300,12 @@ export default function CheckinManager() {
                         }
                     }
                 }
+            } else if (source === 'facebook') {
+                if (title && title !== 'Facebook' && !title.includes('log in') && !title.includes('Log In')) {
+                    user_name = title.trim()
+                }
+                user_handle = 'Facebook User'
+                text = description || ''
             } else if (source === 'google') {
                 if (title.includes('Google Maps')) {
                     user_name = 'Google Reviewer'
@@ -307,25 +313,31 @@ export default function CheckinManager() {
                 }
             }
 
-            // Extract raw scraped image URL from Microlink metadata
-            let rawImageUrl = ''
+            // Three-tier robust image fetching fallback
+            const scrapedImageUrl = data.image?.url || data.screenshot?.url || ''
             const igShortcode = getInstagramShortcode(cleanUrl)
+            let primaryImageUrl = scrapedImageUrl
+            
             if (source === 'instagram' && igShortcode) {
-                rawImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
-            } else {
-                rawImageUrl = data.image?.url || data.screenshot?.url || ''
+                primaryImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
             }
 
-            if (!rawImageUrl) {
+            if (!primaryImageUrl && !scrapedImageUrl) {
                 throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
             }
 
-            // Download the image and upload it permanently to our own Supabase storage bucket!
-            let image_url = await uploadExternalImageToSupabase(rawImageUrl)
+            // 1. Try uploading the primary (uncropped) image URL
+            let image_url = await uploadExternalImageToSupabase(primaryImageUrl)
             
-            // If upload failed, fallback to the raw scraped image URL
+            // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
+            if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
+                console.log('Uncropped media URL failed, falling back to scraped image URL...')
+                image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
+            }
+
+            // 3. If that also fails, use the scraped image URL directly
             if (!image_url) {
-                image_url = rawImageUrl
+                image_url = scrapedImageUrl || primaryImageUrl
             }
 
             const ratingValue = source === 'google' ? 5 : null
@@ -445,6 +457,12 @@ export default function CheckinManager() {
                         }
                     }
                 }
+            } else if (source === 'facebook') {
+                if (title && title !== 'Facebook' && !title.includes('log in') && !title.includes('Log In')) {
+                    user_name = title.trim()
+                }
+                user_handle = 'Facebook User'
+                text = description || ''
             } else if (source === 'google') {
                 if (title.includes('Google Maps')) {
                     user_name = 'Google Reviewer'
@@ -452,21 +470,31 @@ export default function CheckinManager() {
                 }
             }
 
-            // Extract raw scraped image URL from Microlink metadata
-            let rawImageUrl = ''
+            // Three-tier robust image fetching fallback
+            const scrapedImageUrl = data.image?.url || data.screenshot?.url || ''
             const igShortcode = getInstagramShortcode(cleanUrl)
+            let primaryImageUrl = scrapedImageUrl
+            
             if (source === 'instagram' && igShortcode) {
-                rawImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
-            } else {
-                rawImageUrl = data.image?.url || data.screenshot?.url || ''
+                primaryImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
             }
 
-            // Download the image and upload it permanently to our own Supabase storage bucket!
-            let image_url = await uploadExternalImageToSupabase(rawImageUrl)
+            if (!primaryImageUrl && !scrapedImageUrl) {
+                throw new Error('ไม่พบรูปภาพในลิงก์นี้')
+            }
 
-            // If upload failed, fallback to the raw scraped image URL
+            // 1. Try uploading the primary (uncropped) image URL
+            let image_url = await uploadExternalImageToSupabase(primaryImageUrl)
+            
+            // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
+            if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
+                console.log('Uncropped media URL failed, falling back to scraped image URL...')
+                image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
+            }
+
+            // 3. If that also fails, use the scraped image URL directly
             if (!image_url) {
-                image_url = rawImageUrl
+                image_url = scrapedImageUrl || primaryImageUrl
             }
 
             setFormData(prev => ({
