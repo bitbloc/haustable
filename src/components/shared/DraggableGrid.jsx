@@ -309,6 +309,7 @@ export default function DraggableGrid(props) {
     const [containerSize, setContainerSize] = useState({ w: 800, h: 600 })
     const [isDragging, setIsDragging] = useState(false)
     const [zoomScale, setZoomScale] = useState(1.0)
+    const [isPinching, setIsPinching] = useState(false)
     const touchStartDist = useRef(0)
     const touchStartScale = useRef(1.0)
     const initializedRef = useRef(false)
@@ -482,7 +483,7 @@ export default function DraggableGrid(props) {
         }
     }, [])
 
-    // Pinch-to-zoom and Trackpad zoom gestures (clamped 0.4x to 2.5x)
+    // Pinch-to-zoom and Trackpad zoom gestures centered around fingers midpoint
     useEffect(() => {
         const el = containerRef.current
         if (!el) return
@@ -490,6 +491,7 @@ export default function DraggableGrid(props) {
         const handleTouchStart = (e) => {
             if (e.touches.length === 2) {
                 e.preventDefault()
+                setIsPinching(true)
                 triggerInteraction()
                 const dist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
@@ -504,13 +506,40 @@ export default function DraggableGrid(props) {
             if (e.touches.length === 2 && touchStartDist.current > 0) {
                 e.preventDefault()
                 triggerInteraction()
-                const dist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                )
+
+                const t0 = e.touches[0]
+                const t1 = e.touches[1]
+
+                const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
                 const factor = dist / touchStartDist.current
                 let nextScale = touchStartScale.current * factor
                 nextScale = Math.max(minScale, Math.min(2.5, nextScale))
+
+                const midX = (t0.clientX + t1.clientX) / 2
+                const midY = (t0.clientY + t1.clientY) / 2
+
+                const oldX = x.get()
+                const oldY = y.get()
+                const oldScale = zoomScale
+
+                if (oldScale > 0) {
+                    const scaleRatio = nextScale / oldScale
+                    let newX = midX - (midX - oldX) * scaleRatio
+                    let newY = midY - (midY - oldY) * scaleRatio
+
+                    // Clamp positions to match bounds for nextScale
+                    const nextMaxX = safeGap * nextScale
+                    const nextMinX = Math.min(nextMaxX, containerSize.w - gridW * nextScale - safeGap * nextScale)
+                    const nextMaxY = safeGap * nextScale
+                    const nextMinY = Math.min(nextMaxY, containerSize.h - gridH * nextScale - safeGap * nextScale)
+
+                    newX = Math.max(nextMinX, Math.min(nextMaxX, newX))
+                    newY = Math.max(nextMinY, Math.min(nextMaxY, newY))
+
+                    x.set(newX)
+                    y.set(newY)
+                }
+
                 setZoomScale(nextScale)
             }
         }
@@ -518,6 +547,7 @@ export default function DraggableGrid(props) {
         const handleTouchEnd = (e) => {
             if (e.touches.length < 2) {
                 touchStartDist.current = 0
+                setIsPinching(false)
             }
         }
 
@@ -525,8 +555,34 @@ export default function DraggableGrid(props) {
             if (e.ctrlKey) {
                 e.preventDefault()
                 triggerInteraction()
+
+                const midX = e.clientX
+                const midY = e.clientY
+
                 let nextScale = zoomScale - e.deltaY * 0.01
                 nextScale = Math.max(minScale, Math.min(2.5, nextScale))
+
+                const oldX = x.get()
+                const oldY = y.get()
+                const oldScale = zoomScale
+
+                if (oldScale > 0) {
+                    const scaleRatio = nextScale / oldScale
+                    let newX = midX - (midX - oldX) * scaleRatio
+                    let newY = midY - (midY - oldY) * scaleRatio
+
+                    const nextMaxX = safeGap * nextScale
+                    const nextMinX = Math.min(nextMaxX, containerSize.w - gridW * nextScale - safeGap * nextScale)
+                    const nextMaxY = safeGap * nextScale
+                    const nextMinY = Math.min(nextMaxY, containerSize.h - gridH * nextScale - safeGap * nextScale)
+
+                    newX = Math.max(nextMinX, Math.min(nextMaxX, newX))
+                    newY = Math.max(nextMinY, Math.min(nextMaxY, newY))
+
+                    x.set(newX)
+                    y.set(newY)
+                }
+
                 setZoomScale(nextScale)
             }
         }
@@ -542,7 +598,7 @@ export default function DraggableGrid(props) {
             el.removeEventListener('touchend', handleTouchEnd)
             el.removeEventListener('wheel', handleWheelZoom)
         }
-    }, [zoomScale, minScale, triggerInteraction])
+    }, [zoomScale, minScale, containerSize, gridW, gridH, safeGap, triggerInteraction, x, y])
 
     // Wheel scrolling
     useEffect(() => {
@@ -641,7 +697,7 @@ export default function DraggableGrid(props) {
         <div ref={containerRef} className="draggable-container-viewport" style={wrapperStyle}>
             <motion.div
                 style={{ ...gridStyle, x, y, scale: zoomScale }}
-                drag
+                drag={!isPinching}
                 dragConstraints={dragConstraints}
                 dragElastic={0}
                 dragMomentum={true}

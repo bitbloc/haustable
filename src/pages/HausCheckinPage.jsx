@@ -568,9 +568,11 @@ export default function HausCheckinPage() {
 
             {/* ─── FLOATING OVERLAY: BOTTOM RIGHT JOIN PILL ─── */}
             <div className="absolute bottom-6 right-6 z-40 hidden md:flex items-center gap-2">
-                <div className="bg-black/60 backdrop-blur-md border border-neutral-800 px-4 py-2.5 rounded-2xl text-[10px] text-neutral-400 max-w-[220px] text-right shadow-lg leading-relaxed">
-                    <span className="block font-extrabold text-white uppercase tracking-wider text-[9px] mb-0.5">📸 ร่วมแชร์บรรยากาศ</span>
-                    แท็ก <span className="text-white font-bold font-mono">@inthehaus.th</span> บน Instagram หรือเช็กอินที่ร้านเพื่อนำรูปขึ้นบอร์ดนี้!
+                <div className="bg-black/85 backdrop-blur-lg border-l-4 border-l-[var(--color-brand)] border-y border-r border-neutral-850 px-4.5 py-3 rounded-r-xl rounded-l-sm text-[11px] text-neutral-300 max-w-[260px] text-left shadow-[0_12px_40px_rgba(0,0,0,0.6)] leading-relaxed">
+                    <span className="block font-black text-white uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
+                        <span className="text-[12px]">📸</span> ร่วมแชร์บรรยากาศ
+                    </span>
+                    แท็ก <span className="text-[var(--color-brand)] font-extrabold font-mono">@inthehaus</span> หรือ <span className="text-[var(--color-brand)] font-extrabold font-mono">#inthehaus</span> บน Instagram หรือเช็กอินที่ร้านเพื่อนำรูปขึ้นบอร์ดนี้!
                 </div>
             </div>
 
