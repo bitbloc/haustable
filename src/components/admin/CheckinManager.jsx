@@ -211,17 +211,8 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            // Rewrite Instagram URLs to ddinstagram.com to bypass the login wall scraper blocks
-            let fetchUrl = cleanUrl
-            if (source === 'instagram') {
-                const igShortcode = getInstagramShortcode(cleanUrl)
-                if (igShortcode) {
-                    fetchUrl = `https://www.ddinstagram.com/p/${igShortcode}/`
-                }
-            }
-
             // Call microlink.io public API to scrape meta tags
-            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(fetchUrl)}`)
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
             const json = await res.json()
 
             if (json.status !== 'success' || !json.data) {
@@ -233,7 +224,7 @@ export default function CheckinManager() {
             const description = data.description || ''
 
             // Extract display name, user handle, and clean text
-            let user_name = 'Customer'
+            let user_name = data.author || 'Customer'
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
             let text = description || title || ''
             
@@ -243,23 +234,35 @@ export default function CheckinManager() {
                     const handleMatch = title.match(/\(([^)]+)\)/)
                     if (handleMatch) {
                         user_handle = handleMatch[1] // e.g. "@taewaewg"
-                        user_name = title.split('(')[0].trim() // e.g. "taewaewg"
-                    } else if (title.includes('on Instagram:')) {
-                        const parts = title.split('on Instagram:')
-                        user_name = parts[0].replace(/on Instagram$/, '').trim()
-                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
-                    } else {
-                        user_name = title.replace(/\s*on Instagram\s*/i, '').trim()
-                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
-                    }
-
-                    if (user_handle && !user_handle.startsWith('@')) {
-                        user_handle = '@' + user_handle
                     }
                 }
 
+                // Clean up hidden unicode directional marks from name and handle
+                if (user_name) {
+                    user_name = user_name.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
+                }
+                if (user_handle) {
+                    user_handle = user_handle.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
+                }
+
+                // Fallback for user name
+                if (!user_name || user_name === 'Customer') {
+                    user_name = user_handle ? user_handle.replace(/^@/, '') : 'Instagram User'
+                }
+
                 if (description) {
-                    text = description.trim()
+                    // Extract the text inside the quotation marks at the end of the Instagram description meta tag
+                    const captionMatch = description.match(/:\s*[”"“‟]([\s\S]*?)[”"”‟]\.?$/)
+                    if (captionMatch) {
+                        text = captionMatch[1].trim()
+                    } else {
+                        const simpleQuoteMatch = description.match(/[”"“‟]([\s\S]*?)[”"”‟]/)
+                        if (simpleQuoteMatch) {
+                            text = simpleQuoteMatch[1].trim()
+                        } else {
+                            text = description.trim()
+                        }
+                    }
                 }
             } else if (source === 'google') {
                 if (title.includes('Google Maps')) {
@@ -341,17 +344,8 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            // Rewrite Instagram URLs to ddinstagram.com to bypass the login wall scraper blocks
-            let fetchUrl = cleanUrl
-            if (source === 'instagram') {
-                const igShortcode = getInstagramShortcode(cleanUrl)
-                if (igShortcode) {
-                    fetchUrl = `https://www.ddinstagram.com/p/${igShortcode}/`
-                }
-            }
-
             // Call microlink.io public API to scrape meta tags
-            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(fetchUrl)}`)
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
             const json = await res.json()
 
             if (json.status !== 'success' || !json.data) {
@@ -363,7 +357,7 @@ export default function CheckinManager() {
             const description = data.description || ''
 
             // Extract display name, user handle, and clean text
-            let user_name = 'Customer'
+            let user_name = data.author || 'Customer'
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
             let text = description || title || ''
             
@@ -373,23 +367,35 @@ export default function CheckinManager() {
                     const handleMatch = title.match(/\(([^)]+)\)/)
                     if (handleMatch) {
                         user_handle = handleMatch[1] // e.g. "@taewaewg"
-                        user_name = title.split('(')[0].trim() // e.g. "taewaewg"
-                    } else if (title.includes('on Instagram:')) {
-                        const parts = title.split('on Instagram:')
-                        user_name = parts[0].replace(/on Instagram$/, '').trim()
-                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
-                    } else {
-                        user_name = title.replace(/\s*on Instagram\s*/i, '').trim()
-                        user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
-                    }
-
-                    if (user_handle && !user_handle.startsWith('@')) {
-                        user_handle = '@' + user_handle
                     }
                 }
 
+                // Clean up hidden unicode directional marks from name and handle
+                if (user_name) {
+                    user_name = user_name.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
+                }
+                if (user_handle) {
+                    user_handle = user_handle.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
+                }
+
+                // Fallback for user name
+                if (!user_name || user_name === 'Customer') {
+                    user_name = user_handle ? user_handle.replace(/^@/, '') : 'Instagram User'
+                }
+
                 if (description) {
-                    text = description.trim()
+                    // Extract the text inside the quotation marks at the end of the Instagram description meta tag
+                    const captionMatch = description.match(/:\s*[”"“‟]([\s\S]*?)[”"”‟]\.?$/)
+                    if (captionMatch) {
+                        text = captionMatch[1].trim()
+                    } else {
+                        const simpleQuoteMatch = description.match(/[”"“‟]([\s\S]*?)[”"”‟]/)
+                        if (simpleQuoteMatch) {
+                            text = simpleQuoteMatch[1].trim()
+                        } else {
+                            text = description.trim()
+                        }
+                    }
                 }
             } else if (source === 'google') {
                 if (title.includes('Google Maps')) {
