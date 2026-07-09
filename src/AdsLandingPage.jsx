@@ -376,19 +376,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                         {/* Live Check-in Ticker Callout */}
                         <a
                             href="/link/hauscheckin"
-                            className="flex items-center justify-between gap-3 bg-[var(--color-brand)] border border-[var(--color-hallmark-rule)] px-3 py-2.5 rounded-sm hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer text-neutral-900 group shadow-sm mt-3"
+                            className="flex items-center justify-between gap-3 bg-[var(--color-brand)] border border-[var(--color-hallmark-rule)] px-3 py-2.5 rounded-sm hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer text-white group shadow-sm mt-3"
                         >
                             <span className="flex items-center gap-2 flex-shrink-0">
                                 <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-650"></span>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                 </span>
-                                <span className="font-mono text-[9px] font-extrabold uppercase tracking-wider text-neutral-800">
+                                <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-white">
                                     LIVE CUSTOMER FEED
                                 </span>
                             </span>
-                            <span className="font-[var(--font-body)] font-bold text-[10px] flex items-center gap-1 min-w-0 truncate text-right">
-                                <span className="truncate">ชมรูปภาพเช็กอินของลูกค้า 1,200+ รูป!</span> <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                            <span className="font-[var(--font-body)] font-bold text-xs flex items-center gap-1 min-w-0 truncate text-right text-white">
+                                <span className="truncate">ชมรูปภาพเช็กอินของลูกค้า</span> <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0 text-white" />
                             </span>
                         </a>
 
@@ -627,10 +627,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 <div className="mt-4">
                                     <a
                                         href="/link/hauscheckin"
-                                        className="w-full bg-[var(--color-brand)] text-neutral-900 border border-[var(--color-hallmark-rule)] rounded-sm py-3 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer font-mono text-[10px] font-extrabold tracking-wider uppercase text-center"
+                                        className="w-full bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] rounded-sm py-3 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer font-mono text-[11px] font-extrabold tracking-wider uppercase text-center"
                                     >
-                                        <Compass size={12} />
-                                        <span>ดูบอร์ดรูปเช็กอินแบบเต็มจอ (1,200+ รูป)</span>
+                                        <Compass size={13} />
+                                        <span>ดูบอร์ดรูปเช็กอินแบบเต็มจอ</span>
                                     </a>
                                 </div>
                             </div>
@@ -712,7 +712,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 href="/link/hauscheckin" 
                                 icon={<Compass size={12} />} 
                                 title="HAUS CHECK-IN WALL" 
-                                bg="bg-[var(--color-brand)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:opacity-90 font-bold" 
+                                bg="bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] hover:opacity-90 font-bold" 
                                 wide 
                                 internal 
                                 id="cta-checkin" 
@@ -1009,9 +1009,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 {/* Check-in Wall CTA */}
                                 <a 
                                     href="/link/hauscheckin"
-                                    className="w-full bg-[var(--color-brand)] text-neutral-900 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 flex items-center justify-center gap-1.5 font-mono text-[9px] font-extrabold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer mt-2 text-center"
+                                    className="w-full bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 flex items-center justify-center gap-1.5 font-mono text-[11px] font-extrabold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer mt-2 text-center"
                                 >
-                                    <Compass size={11} />
+                                    <Compass size={13} />
                                     <span>เข้าสู่บอร์ดเช็กอินแบบลากซูม (ชมรูปเพิ่ม)</span>
                                 </a>
                             </div>
