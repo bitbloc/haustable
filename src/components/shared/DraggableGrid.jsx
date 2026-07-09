@@ -226,10 +226,27 @@ export default function DraggableGrid(props) {
     // minX/minY: grid's far edge `gap` from the bottom-right border.
     // When the grid is smaller than the container the range collapses to the
     // top-left position (min clamped to max), so it can't drift.
-    const maxX = safeGap
-    const minX = Math.min(maxX, containerSize.w - gridW - safeGap)
-    const maxY = safeGap
-    const minY = Math.min(maxY, containerSize.h - gridH - safeGap)
+    // Calculate the minimum scale dynamically to ensure the grid always fills the container
+    const minScale = useMemo(() => {
+        const scaleX = containerSize.w / (gridW + safeGap * 2)
+        const scaleY = containerSize.h / (gridH + safeGap * 2)
+        // Ensure we don't divide by zero and provide a 5% safety margin
+        return Math.max(0.1, Math.max(scaleX, scaleY)) * 1.05
+    }, [containerSize.w, containerSize.h, gridW, gridH, safeGap])
+
+    // Keep zoomScale constrained to minScale
+    useEffect(() => {
+        if (zoomScale < minScale) {
+            setZoomScale(minScale)
+        }
+    }, [minScale, zoomScale])
+
+    // Scale boundaries: adjust maxX/minX/maxY/minY for zoomScale.
+    // Origin is at "0 0" (top left), so scale moves the right and bottom boundaries accordingly.
+    const maxX = safeGap * zoomScale
+    const minX = Math.min(maxX, containerSize.w - gridW * zoomScale - safeGap * zoomScale)
+    const maxY = safeGap * zoomScale
+    const minY = Math.min(maxY, containerSize.h - gridH * zoomScale - safeGap * zoomScale)
 
     const dragConstraints = {
         left: minX,
@@ -338,7 +355,7 @@ export default function DraggableGrid(props) {
                 )
                 const factor = dist / touchStartDist.current
                 let nextScale = touchStartScale.current * factor
-                nextScale = Math.max(0.4, Math.min(2.5, nextScale))
+                nextScale = Math.max(minScale, Math.min(2.5, nextScale))
                 setZoomScale(nextScale)
             }
         }
@@ -354,7 +371,7 @@ export default function DraggableGrid(props) {
                 e.preventDefault()
                 triggerInteraction()
                 let nextScale = zoomScale - e.deltaY * 0.01
-                nextScale = Math.max(0.4, Math.min(2.5, nextScale))
+                nextScale = Math.max(minScale, Math.min(2.5, nextScale))
                 setZoomScale(nextScale)
             }
         }
@@ -370,7 +387,7 @@ export default function DraggableGrid(props) {
             el.removeEventListener('touchend', handleTouchEnd)
             el.removeEventListener('wheel', handleWheelZoom)
         }
-    }, [zoomScale, triggerInteraction])
+    }, [zoomScale, minScale, triggerInteraction])
 
     // Wheel scrolling
     useEffect(() => {
@@ -462,7 +479,7 @@ export default function DraggableGrid(props) {
         gap: `${safeGap}px`,
         willChange: "transform",
         transform: `rotate(${rotation}deg)`,
-        transformOrigin: "center center",
+        transformOrigin: "0 0",
     }
 
     return (
