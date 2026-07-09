@@ -29,6 +29,10 @@ export default function CheckinManager() {
     const [urlToFetch, setUrlToFetch] = useState('')
     const [fetchLoading, setFetchLoading] = useState(false)
 
+    // Quick Add State
+    const [quickAddUrl, setQuickAddUrl] = useState('')
+    const [quickAddLoading, setQuickAddLoading] = useState(false)
+
     // Form State
     const [editingId, setEditingId] = useState(null)
     const [showForm, setShowForm] = useState(false)
@@ -139,6 +143,107 @@ export default function CheckinManager() {
             alert('Upload failed: ' + err.message)
         } finally {
             setUploadingImage(false)
+        }
+    }
+
+    const handleQuickAdd = async (e) => {
+        if (e && e.preventDefault) e.preventDefault()
+        
+        if (!quickAddUrl) {
+            alert('โปรดวางลิงก์โพสต์ Instagram/Facebook หรือ Google Reviews ก่อน')
+            return
+        }
+
+        setQuickAddLoading(true)
+        try {
+            let cleanUrl = quickAddUrl.trim();
+            // Call microlink.io public API to scrape meta tags
+            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
+            const json = await res.json()
+
+            if (json.status !== 'success' || !json.data) {
+                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
+            }
+
+            const data = json.data
+            const title = data.title || ''
+            const description = data.description || ''
+            
+            // Determine source
+            let source = 'instagram'
+            if (cleanUrl.includes('facebook.com') || cleanUrl.includes('fb.watch')) {
+                source = 'facebook'
+            } else if (cleanUrl.includes('google.com') || cleanUrl.includes('maps.app.goo.gl')) {
+                source = 'google'
+            }
+
+            // Extract display name, user handle, and clean text
+            let user_name = 'Customer'
+            let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
+            let text = description || title || ''
+            
+            // Parsing logic
+            if (source === 'instagram') {
+                if (title.includes('on Instagram:')) {
+                    const parts = title.split('on Instagram:')
+                    user_name = parts[0].replace(/on Instagram$/, '').trim()
+                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
+                    
+                    const textMatch = parts[1]?.match(/'([\s\S]*)'/)
+                    if (textMatch) {
+                        text = textMatch[1]
+                    } else {
+                        text = parts[1]?.trim().replace(/^'|'$/g, '') || text
+                    }
+                } else if (title.includes('Instagram photo by')) {
+                    const parts = title.split('Instagram photo by')
+                    user_name = parts[1]?.split('•')[0]?.trim() || 'Instagram User'
+                    user_handle = '@' + user_name.toLowerCase().replace(/[^a-z0-9_.]/g, '')
+                }
+            } else if (source === 'google') {
+                if (title.includes('Google Maps')) {
+                    user_name = 'Google Reviewer'
+                    user_handle = 'Local Guide'
+                }
+            }
+
+            // Extract image URL (with fallback)
+            const image_url = data.image?.url || data.screenshot?.url || ''
+            if (!image_url) {
+                throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
+            }
+
+            const ratingValue = source === 'google' ? 5 : null
+            
+            const payload = {
+                source,
+                user_name,
+                user_handle,
+                user_avatar: data.logo?.url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+                text: text.slice(0, 500), // Clamp to prevent overflow
+                rating: ratingValue,
+                location: 'IN THE HAUS ในบ้าน นครพนม',
+                image_url,
+                post_url: cleanUrl,
+                likes: parseInt(data.likes || 0),
+                comments: 0,
+                is_visible: true
+            }
+
+            const { error: insertErr } = await supabase
+                .from('haus_checkins')
+                .insert([payload])
+
+            if (insertErr) throw insertErr
+
+            setQuickAddUrl('')
+            alert('🚀 เพิ่มโพสต์เช็กอินออโต้สำเร็จ!')
+            fetchCheckins()
+        } catch (err) {
+            console.error('Quick Add failed:', err)
+            alert('เพิ่มด่วนอัตโนมัติไม่สำเร็จ: ' + err.message + '\n\n(คุณสามารถกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการแอดข้อมูลมือได้)')
+        } finally {
+            setQuickAddLoading(false)
         }
     }
 
@@ -366,15 +471,50 @@ export default function CheckinManager() {
                     <h2 className="text-xl font-bold text-ink">📸 Check-in Wall Stream</h2>
                     <p className="text-xs text-subInk mt-0.5">จัดการรูปภาพเช็กอิน โพสต์โซเชียลมีเดีย และรีวิวที่แสดงหน้าบอร์ด</p>
                 </div>
-                {!showForm && (
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="bg-brand text-zinc-900 border border-brand hover:opacity-95 font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                        <Plus size={14} /> เพิ่มข้อมูลเช็กอินใหม่
-                    </button>
-                )}
             </div>
+
+            {/* Quick Add Bar (Always visible when not editing/showing full form) */}
+            {!showForm && (
+                <div className="bg-paper border border-gray-200 shadow-sm rounded-3xl p-5 flex flex-col md:flex-row items-stretch md:items-end gap-3 animate-fade-in">
+                    <div className="flex-1 min-w-0">
+                        <label className="block text-[10px] font-bold text-subInk uppercase mb-1">⚡ วางลิงก์เพื่อเพิ่มออโต้ทันที (Instagram / Facebook / Google Maps)</label>
+                        <input
+                            type="text"
+                            value={quickAddUrl}
+                            onChange={(e) => setQuickAddUrl(e.target.value)}
+                            placeholder="วางลิงก์โพสต์ เช่น https://www.instagram.com/p/..."
+                            className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-ink font-bold text-xs outline-none focus:border-brand font-mono h-[42px]"
+                        />
+                    </div>
+                    <div className="flex gap-2 items-center justify-end">
+                        <button
+                            type="button"
+                            onClick={handleQuickAdd}
+                            disabled={quickAddLoading}
+                            className="bg-brand text-zinc-900 border border-brand hover:opacity-95 font-bold text-xs py-2 px-6 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
+                        >
+                            {quickAddLoading ? (
+                                <>
+                                    <Loader2 size={13} className="animate-spin" />
+                                    <span>กำลังเพิ่ม...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>🚀 เพิ่มด่วน (Add)</span>
+                                </>
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowForm(true)}
+                            className="bg-canvas border border-gray-200 hover:bg-gray-100 text-ink font-bold text-xs py-2 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer h-[42px] whitespace-nowrap"
+                            title="เปิดฟอร์มเพื่ออัปโหลดรูปเองหรือใส่ข้อมูลด้วยมือ"
+                        >
+                            <Plus size={13} /> เพิ่มด้วยตนเอง (Manual)
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* FORM CONTAINER (Add/Edit) */}
             {showForm && (
