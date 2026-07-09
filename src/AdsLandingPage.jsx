@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon, Compass } from 'lucide-react';
+import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon, Compass, Instagram, Facebook, Star } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
 import { Analytics } from '@vercel/analytics/react';
@@ -53,6 +53,7 @@ export default function AdsLandingPage() {
     const [menuCategories, setMenuCategories] = useState([]);
     const [atmImages, setAtmImages] = useState([]);
     const [signatures, setSignatures] = useState([]);
+    const [customerCheckins, setCustomerCheckins] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedLightbox, setSelectedLightbox] = useState(null);
     const [activeMenuIndex, setActiveMenuIndex] = useState(0);
@@ -226,6 +227,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 setMenuCategories(catsRes.data);
             }
 
+            // Fetch latest visible check-ins for landing page stream preview
+            try {
+                const { data: checkins } = await supabase
+                    .from('haus_checkins')
+                    .select('*')
+                    .eq('is_visible', true)
+                    .order('created_at', { ascending: false })
+                    .limit(8);
+                if (checkins) {
+                    setCustomerCheckins(checkins);
+                }
+            } catch (checkinErr) {
+                console.error('Failed to fetch check-ins for landing page:', checkinErr);
+            }
+
             // Raw image preloading removed to prevent downloading 20.9MB of raw original files
 
         } catch (err) {
@@ -356,6 +372,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 <span className="font-bold">{locationText}</span>
                             </div>
                         </div>
+
+                        {/* Live Check-in Ticker Callout */}
+                        <a
+                            href="/link/hauscheckin"
+                            className="flex items-center justify-between gap-3 bg-[var(--color-brand)] border border-[var(--color-hallmark-rule)] px-3 py-2.5 rounded-sm hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer text-neutral-900 group shadow-sm mt-3"
+                        >
+                            <span className="flex items-center gap-2 flex-shrink-0">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-650"></span>
+                                </span>
+                                <span className="font-mono text-[9px] font-extrabold uppercase tracking-wider text-neutral-800">
+                                    LIVE CUSTOMER FEED
+                                </span>
+                            </span>
+                            <span className="font-[var(--font-body)] font-bold text-[10px] flex items-center gap-1 min-w-0 truncate text-right">
+                                <span className="truncate">ชมรูปภาพเช็กอินของลูกค้า 1,200+ รูป!</span> <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+                            </span>
+                        </a>
+
                     </div>
                 </header>
 
@@ -517,34 +553,88 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 )}
 
                 {/* ─── SECTION 2: VIBE / ATMOSPHERE ─── */}
-                {activeSection === 'atmosphere' && atmImages.length > 0 && (
-                    <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 animate-fade-in flex-grow">
-                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
-                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                [ 02 // ATMOSPHERE IMAGES ]
-                            </h3>
-                            <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
-                                {atmImages.length} VIEWS
-                            </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            {atmImages.map((url, i) => (
-                                <div
-                                    key={i}
-                                    onClick={() => setSelectedLightbox({ type: 'atm', url })}
-                                    className="border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] rounded-sm overflow-hidden aspect-square cursor-pointer hover:border-[var(--color-brand)] transition-colors duration-150"
-                                >
-                                    <img 
-                                        src={optimizeImageUrl(url, 500)} 
-                                        alt={`Atmosphere ${i + 1}`} 
-                                        className="w-full h-full object-cover hover:scale-102 transition-transform duration-300" 
-                                        loading="lazy"
-                                        decoding="async"
-                                    />
+                {activeSection === 'atmosphere' && (
+                    <div className="space-y-6 flex-grow animate-fade-in">
+                        {/* Official Atmosphere Photos */}
+                        {atmImages.length > 0 && (
+                            <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
+                                <div className="flex items-center justify-between pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                        [ 02.1 // ATMOSPHERE IMAGES ]
+                                    </h3>
+                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                        {atmImages.length} VIEWS
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                    {atmImages.map((url, i) => (
+                                        <div
+                                            key={i}
+                                            onClick={() => setSelectedLightbox({ type: 'atm', url })}
+                                            className="border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] rounded-sm overflow-hidden aspect-square cursor-pointer hover:border-[var(--color-brand)] transition-colors duration-150"
+                                        >
+                                            <img 
+                                                src={optimizeImageUrl(url, 500)} 
+                                                alt={`Atmosphere ${i + 1}`} 
+                                                className="w-full h-full object-cover hover:scale-102 transition-transform duration-300" 
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Customer Live Check-in Photos */}
+                        {customerCheckins.length > 0 && (
+                            <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
+                                <div className="flex items-center justify-between pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                        [ 02.2 // CUSTOMER MOMENTS // ภาพความประทับใจ ]
+                                    </h3>
+                                    <span className="font-mono text-[9px] text-[var(--color-brand)] font-bold animate-pulse">
+                                        ● LIVE STREAM
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {customerCheckins.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => setSelectedLightbox({ type: 'checkin', item })}
+                                            className="border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] rounded-sm overflow-hidden aspect-square cursor-pointer hover:border-[var(--color-brand)] transition-all duration-150 relative group"
+                                        >
+                                            <img 
+                                                src={optimizeImageUrl(item.image_url, 400)} 
+                                                alt={item.text || 'Customer Check-in'} 
+                                                className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300" 
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                            {/* Source Badge */}
+                                            <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-sm p-1 flex items-center justify-center text-white">
+                                                {item.source === 'instagram' && <Instagram size={10} />}
+                                                {item.source === 'facebook' && <Facebook size={10} />}
+                                                {item.source === 'google' && <Star size={10} className="text-[#F4B400] fill-[#F4B400]" />}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Call to action to view the full draggable board */}
+                                <div className="mt-4">
+                                    <a
+                                        href="/link/hauscheckin"
+                                        className="w-full bg-[var(--color-brand)] text-neutral-900 border border-[var(--color-hallmark-rule)] rounded-sm py-3 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer font-mono text-[10px] font-extrabold tracking-wider uppercase text-center"
+                                    >
+                                        <Compass size={12} />
+                                        <span>ดูบอร์ดรูปเช็กอินแบบเต็มจอ (1,200+ รูป)</span>
+                                    </a>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -855,6 +945,75 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                         </div>
                                     );
                                 })()}
+                            </div>
+                        ) : selectedLightbox.type === 'checkin' ? (
+                            <div 
+                                className="w-full max-w-sm bg-[var(--color-hallmark-paper)] rounded-sm p-4 border border-[var(--color-hallmark-ink)] flex flex-col z-40 relative my-8 text-[var(--color-hallmark-ink)] cursor-default select-text" 
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex justify-between items-center w-full mb-3 pb-2 border-b border-[var(--color-hallmark-rule)]">
+                                    <span className="font-mono text-[9px] font-bold text-[var(--color-brand)] uppercase tracking-wider">
+                                        // CUSTOMER CHECK-IN
+                                    </span>
+                                    <button 
+                                        onClick={() => setSelectedLightbox(null)}
+                                        className="text-[9px] font-mono font-bold hover:text-[var(--color-brand)] cursor-pointer text-[var(--color-hallmark-ink)] bg-transparent border-0 outline-none"
+                                    >
+                                        [ CLOSE ]
+                                    </button>
+                                </div>
+
+                                {/* Header with customer name and platform */}
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-[10px] text-white font-mono font-bold">
+                                            {selectedLightbox.item.user_name?.slice(0, 1).toUpperCase() || 'C'}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold font-mono tracking-tight leading-none">
+                                                {selectedLightbox.item.user_name || 'Customer'}
+                                            </span>
+                                            {selectedLightbox.item.user_username && (
+                                                <span className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-none mt-0.5">
+                                                    @{selectedLightbox.item.user_username}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-sm border border-[var(--color-hallmark-rule)]">
+                                        {selectedLightbox.item.source === 'instagram' && <Instagram size={10} className="text-[#E1306C]" />}
+                                        {selectedLightbox.item.source === 'facebook' && <Facebook size={10} className="text-[#1877F2]" />}
+                                        {selectedLightbox.item.source === 'google' && <Star size={10} className="text-[#F4B400] fill-[#F4B400]" />}
+                                        <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-neutral-600">
+                                            {selectedLightbox.item.source}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Main image */}
+                                <div className="relative w-full aspect-[4/5] rounded-sm overflow-hidden border border-[var(--color-hallmark-rule)] bg-black mb-3">
+                                    <img 
+                                        src={optimizeImageUrl(selectedLightbox.item.image_url, 600)} 
+                                        alt="Customer Check-in" 
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+
+                                {/* Review content */}
+                                {selectedLightbox.item.text && (
+                                    <p className="text-[11px] text-[var(--color-hallmark-ink)] leading-relaxed italic border-l-2 border-[var(--color-brand)] pl-2 mb-4 font-medium font-[var(--font-body)]">
+                                        "{selectedLightbox.item.text}"
+                                    </p>
+                                )}
+
+                                {/* Check-in Wall CTA */}
+                                <a 
+                                    href="/link/hauscheckin"
+                                    className="w-full bg-[var(--color-brand)] text-neutral-900 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 flex items-center justify-center gap-1.5 font-mono text-[9px] font-extrabold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer mt-2 text-center"
+                                >
+                                    <Compass size={11} />
+                                    <span>เข้าสู่บอร์ดเช็กอินแบบลากซูม (ชมรูปเพิ่ม)</span>
+                                </a>
                             </div>
                         ) : (
                             <motion.img
