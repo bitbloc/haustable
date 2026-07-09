@@ -308,11 +308,12 @@ export default function CheckinManager() {
             }
 
             // Extract raw scraped image URL from Microlink metadata
-            let rawImageUrl = data.image?.url || data.screenshot?.url || ''
-            
+            let rawImageUrl = ''
             const igShortcode = getInstagramShortcode(cleanUrl)
-            if (!rawImageUrl && igShortcode) {
+            if (source === 'instagram' && igShortcode) {
                 rawImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            } else {
+                rawImageUrl = data.image?.url || data.screenshot?.url || ''
             }
 
             if (!rawImageUrl) {
@@ -452,11 +453,12 @@ export default function CheckinManager() {
             }
 
             // Extract raw scraped image URL from Microlink metadata
-            let rawImageUrl = data.image?.url || data.screenshot?.url || ''
-
+            let rawImageUrl = ''
             const igShortcode = getInstagramShortcode(cleanUrl)
-            if (!rawImageUrl && igShortcode) {
+            if (source === 'instagram' && igShortcode) {
                 rawImageUrl = `https://www.instagram.com/p/${igShortcode}/media/?size=l`
+            } else {
+                rawImageUrl = data.image?.url || data.screenshot?.url || ''
             }
 
             // Download the image and upload it permanently to our own Supabase storage bucket!
