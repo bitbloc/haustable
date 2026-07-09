@@ -523,24 +523,47 @@ export default function DraggableGrid(props) {
                             </div>
                             
                             {src && !failed ? (
-                                <img
-                                    src={getProxiedImageUrl(src)}
-                                    alt={alt}
-                                    draggable={false}
-                                    crossOrigin="anonymous"
-                                    onError={() => handleImageError(index)}
-                                    style={{
-                                        position: "absolute",
-                                        inset: 0,
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
-                                        pointerEvents: "none",
-                                        userSelect: "none",
-                                        display: "block",
-                                        zIndex: 1,
-                                    }}
-                                />
+                                <>
+                                    {/* 1. Blurred Background Copy to fill the 4:5 frame dynamically */}
+                                    <img
+                                        src={getProxiedImageUrl(src)}
+                                        alt=""
+                                        draggable={false}
+                                        crossOrigin="anonymous"
+                                        style={{
+                                            position: "absolute",
+                                            inset: 0,
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            filter: "blur(20px) brightness(0.55)",
+                                            pointerEvents: "none",
+                                            userSelect: "none",
+                                            display: "block",
+                                            zIndex: 1,
+                                            transform: "scale(1.25)",
+                                        }}
+                                    />
+                                    {/* 2. Centered Foreground Copy (100% visible, uncropped) */}
+                                    <img
+                                        src={getProxiedImageUrl(src)}
+                                        alt={alt}
+                                        draggable={false}
+                                        crossOrigin="anonymous"
+                                        onError={() => handleImageError(index)}
+                                        style={{
+                                            position: "absolute",
+                                            inset: 0,
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "contain",
+                                            pointerEvents: "none",
+                                            userSelect: "none",
+                                            display: "block",
+                                            zIndex: 2,
+                                        }}
+                                    />
+                                </>
                             ) : (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
                                     <span className="text-xl">📸</span>
