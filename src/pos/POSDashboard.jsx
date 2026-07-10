@@ -22,26 +22,82 @@ export default function POSDashboard() {
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
     const [activeSlipType, setActiveSlipType] = useState('billing');
 
-    const playSystemAlertSound = async () => {
-        try {
+    const [alertSoundUrl, setAlertSoundUrl] = useState(null);
+    const [audioContext, setAudioContext] = useState(null);
+
+    useEffect(() => {
+        // Fetch sound setting once at mount
+        const fetchSound = async () => {
             const { data } = await supabase
                 .from('app_settings')
                 .select('value')
                 .eq('key', 'alert_sound_url')
-                .single();
-            if (data && data.value) {
-                const audio = new Audio(data.value);
-                await audio.play();
-                return;
+                .maybeSingle();
+            if (data?.value) {
+                setAlertSoundUrl(data.value);
             }
-        } catch (e) {
-            console.warn("Custom audio play failed, using synth beep:", e);
-        }
+        };
+        fetchSound();
 
+        // Warning toast to unlock sound
+        toast.info("🔊 กรุณาแตะที่ใดก็ได้บนหน้าจอ 1 ครั้ง เพื่อเปิดระบบเสียงแจ้งเตือนออเดอร์");
+
+        // Unlock audio context on first click/touch
+        const unlock = () => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    const ctx = new AudioContext();
+                    if (ctx.state === 'suspended') {
+                        ctx.resume();
+                    }
+                    // Silent osc to trigger browser permissions
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    gain.gain.value = 0;
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(0);
+                    osc.stop(0.01);
+                    setAudioContext(ctx);
+                }
+                window.removeEventListener('click', unlock);
+                window.removeEventListener('touchstart', unlock);
+            } catch (err) {
+                console.error("Failed to unlock audio context:", err);
+            }
+        };
+        window.addEventListener('click', unlock);
+        window.addEventListener('touchstart', unlock);
+
+        return () => {
+            window.removeEventListener('click', unlock);
+            window.removeEventListener('touchstart', unlock);
+        };
+    }, []);
+
+    const playSystemAlertSound = () => {
+        if (alertSoundUrl) {
+            try {
+                const audio = new Audio(alertSoundUrl);
+                audio.play().catch(e => {
+                    console.warn("Failed to play custom sound, playing synth beep:", e);
+                    playSynthChime();
+                });
+                return;
+            } catch (e) {
+                console.warn("Custom sound play error:", e);
+            }
+        }
+        playSynthChime();
+    };
+
+    const playSynthChime = () => {
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
+            const ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
             
             const osc1 = ctx.createOscillator();
             const gain1 = ctx.createGain();
