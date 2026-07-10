@@ -203,7 +203,28 @@ function LazyCard({
     onLikeToggle,
 }) {
     const cardRef = useRef(null)
+    const overlayRef = useRef(null)
     const [isVisible, setIsVisible] = useState(false)
+
+    useEffect(() => {
+        const el = overlayRef.current
+        if (!el) return
+
+        const stop = (e) => {
+            e.stopPropagation()
+        }
+
+        // Native DOM interception before Framer Motion grabs the event
+        el.addEventListener('pointerdown', stop, { capture: true })
+        el.addEventListener('mousedown', stop, { capture: true })
+        el.addEventListener('touchstart', stop, { capture: true, passive: true })
+
+        return () => {
+            el.removeEventListener('pointerdown', stop, { capture: true })
+            el.removeEventListener('mousedown', stop, { capture: true })
+            el.removeEventListener('touchstart', stop, { capture: true })
+        }
+    }, [isVisible])
 
     useEffect(() => {
         const el = cardRef.current
@@ -341,9 +362,8 @@ function LazyCard({
                     
                     {/* Minimalist Rams Caption & Interactive Likes overlay */}
                     <div 
+                        ref={overlayRef}
                         className="absolute bottom-0 left-0 right-0 z-10 bg-[#111111]/90 border-t border-white/5 px-4 pt-2.5 pb-3.5 flex items-center justify-between gap-2 pointer-events-auto select-none"
-                        onPointerDown={(e) => e.stopPropagation()} // Stop drag initiation from this area
-                        onPointerUp={(e) => e.stopPropagation()} // Stop click initiation from this area
                         style={{ 
                             boxSizing: "border-box",
                             borderBottomLeftRadius: radius,
