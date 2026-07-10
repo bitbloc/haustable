@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, animate } from "framer-motion"
 import { useEffect, useMemo, useRef, useState, useCallback } from "react"
+import { Heart } from "lucide-react"
 
 const defaultItems = [
     {
@@ -198,6 +199,8 @@ function LazyCard({
     handlePointerDown,
     handlePointerUp,
     rotation,
+    likedIds,
+    onLikeToggle,
 }) {
     const cardRef = useRef(null)
     const [isVisible, setIsVisible] = useState(false)
@@ -225,6 +228,58 @@ function LazyCard({
 
     const src = item?.image?.src
     const alt = item?.alt ?? item?.image?.alt ?? ""
+    const isNote = item?.source === 'note' || item?.image_url === 'text_only' || item?.image_url?.startsWith('text_only')
+
+    if (isNote) {
+        return (
+            <div
+                ref={cardRef}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                className="select-none flex flex-col justify-between p-3 border border-neutral-800/25 shadow-sm text-left"
+                style={{
+                    position: "relative",
+                    width: safeImageWidth,
+                    height: safeImageHeight,
+                    borderRadius: 4, // Minimalist Rams clean rounding (rounded-sm)
+                    backgroundColor: "#FAF9F5", // Warm Hallmark Paper color
+                    color: "#1a1a1a", // Deep hallmark ink
+                    cursor: isDragging ? "grabbing" : "pointer",
+                    transform: `rotate(${-rotation}deg)`,
+                    transformOrigin: "center center",
+                    boxSizing: "border-box",
+                }}
+            >
+                {/* Header label in typewriter style */}
+                <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase select-none pointer-events-none">
+                    <span>// GUEST NOTE</span>
+                    <span>POSTED</span>
+                </div>
+
+                {/* Central body text in center-aligned slab mono */}
+                <div className="flex-grow flex items-center justify-center p-1 select-none pointer-events-none">
+                    <p 
+                        className="font-mono text-center leading-relaxed text-[11px] text-neutral-800 break-words w-full"
+                        style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 8,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            fontFamily: "Space Mono, Courier New, Courier, monospace",
+                            fontWeight: 500,
+                        }}
+                    >
+                        {item.text || "Hello IN THE HAUS!"}
+                    </p>
+                </div>
+
+                {/* Footer label with guest user name */}
+                <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
+                    BY {item.user?.name || item.user_name || "GUEST"}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div
@@ -259,28 +314,65 @@ function LazyCard({
             </div>
             
             {isVisible && src && !failed ? (
-                <img
-                    src={getProxiedImageUrl(src)}
-                    alt={alt}
-                    draggable={false}
-                    crossOrigin="anonymous"
-                    onError={handleImageError}
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        pointerEvents: "none",
-                        userSelect: "none",
-                        display: "block",
-                        zIndex: 1,
-                    }}
-                />
+                <>
+                    <img
+                        src={getProxiedImageUrl(src)}
+                        alt={alt}
+                        draggable={false}
+                        crossOrigin="anonymous"
+                        onError={handleImageError}
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            pointerEvents: "none",
+                            userSelect: "none",
+                            display: "block",
+                            zIndex: 1,
+                        }}
+                    />
+                    
+                    {/* Minimalist Rams Caption & Interactive Likes overlay */}
+                    <div 
+                        className="absolute bottom-0 left-0 right-0 z-10 bg-black/75 backdrop-blur-sm border-t border-white/10 p-2 flex items-center justify-between gap-2 pointer-events-auto select-none"
+                        onPointerDown={(e) => e.stopPropagation()} // Stop drag initiation from this area
+                        onPointerUp={(e) => e.stopPropagation()} // Stop click initiation from this area
+                        style={{ boxSizing: "border-box" }}
+                    >
+                        <div className="flex-1 min-w-0">
+                            {/* Short caption text */}
+                            <p className="font-mono text-[8px] text-neutral-300 leading-tight truncate">
+                                {item.text ? item.text : `@${item.user?.name || item.user_name || "Customer"}`}
+                            </p>
+                            {/* Platform source */}
+                            <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest block mt-0.5">
+                                {item.source || "post"}
+                            </span>
+                        </div>
+
+                        {/* Interactive heart button */}
+                        {onLikeToggle && (
+                            <button
+                                onClick={(e) => onLikeToggle(e, item.id)}
+                                className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-1 outline-none select-none animate-fade-in"
+                            >
+                                <Heart
+                                    size={10}
+                                    className={likedIds && likedIds.includes(item.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
+                                />
+                                <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}`}>
+                                    {item.likes || 0}
+                                </span>
+                            </button>
+                        )}
+                    </div>
+                </>
             ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
                     <span className="text-xl">📸</span>
-                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || "Check-in"}</span>
+                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
                 </div>
             )}
         </div>
@@ -300,6 +392,8 @@ export default function DraggableGrid(props) {
         onItemClick,
         style,
         rotation,
+        likedIds,
+        onLikeToggle,
     } = finalProps
 
     const containerRef = useRef(null)
@@ -727,6 +821,8 @@ export default function DraggableGrid(props) {
                             handlePointerDown={handlePointerDown}
                             handlePointerUp={(e) => handlePointerUp(e, item, index)}
                             rotation={rotation}
+                            likedIds={likedIds}
+                            onLikeToggle={onLikeToggle}
                         />
                     )
                 })}

@@ -307,9 +307,26 @@ export default function CheckinManager() {
                 user_handle = 'Facebook User'
                 text = description || ''
             } else if (source === 'google') {
-                if (title.includes('Google Maps')) {
-                    user_name = 'Google Reviewer'
-                    user_handle = 'Local Guide'
+                // Parse reviewer name from title. Google reviews title usually contains "by [Author]" or "โดย [Author]"
+                const authorMatch = title.match(/by\s+([^,|-]+)/i) || title.match(/โดย\s+([^,|-]+)/);
+                if (authorMatch) {
+                    user_name = authorMatch[1].trim();
+                    user_handle = 'Google Local Guide';
+                } else if (title.includes('Google Maps') || title.includes('Google review of')) {
+                    user_name = 'Google Reviewer';
+                    user_handle = 'Local Guide';
+                }
+                
+                // Clean up star ratings and meta information from description for cleaner comments
+                if (description) {
+                    let cleanText = description.replace(/[★☆⭐]/g, '').replace(/^[·\s\-\u2022]+/g, '').trim();
+                    const quoteMatch = cleanText.match(/^[”"“‟]([\s\S]*?)[”"”‟]$/);
+                    if (quoteMatch) {
+                        cleanText = quoteMatch[1].trim();
+                    }
+                    text = cleanText || 'รีวิวระดับ 5 ดาวจาก Google Maps';
+                } else {
+                    text = 'รีวิวระดับ 5 ดาวจาก Google Maps';
                 }
             }
 
@@ -352,7 +369,14 @@ export default function CheckinManager() {
                 image_url = scrapedImageUrl || primaryImageUrl
             }
 
-            const ratingValue = source === 'google' ? 5 : null
+            let ratingValue = source === 'google' ? 5 : null
+            if (source === 'google' && description) {
+                // Dynamically count stars in description (e.g. ★★★★★ or ⭐⭐⭐⭐⭐)
+                const starCount = (description.match(/[★⭐]/g) || []).length;
+                if (starCount >= 1 && starCount <= 5) {
+                    ratingValue = starCount;
+                }
+            }
             
             const payload = {
                 source,
@@ -476,9 +500,26 @@ export default function CheckinManager() {
                 user_handle = 'Facebook User'
                 text = description || ''
             } else if (source === 'google') {
-                if (title.includes('Google Maps')) {
-                    user_name = 'Google Reviewer'
-                    user_handle = 'Local Guide'
+                // Parse reviewer name from title. Google reviews title usually contains "by [Author]" or "โดย [Author]"
+                const authorMatch = title.match(/by\s+([^,|-]+)/i) || title.match(/โดย\s+([^,|-]+)/);
+                if (authorMatch) {
+                    user_name = authorMatch[1].trim();
+                    user_handle = 'Google Local Guide';
+                } else if (title.includes('Google Maps') || title.includes('Google review of')) {
+                    user_name = 'Google Reviewer';
+                    user_handle = 'Local Guide';
+                }
+                
+                // Clean up star ratings and meta information from description for cleaner comments
+                if (description) {
+                    let cleanText = description.replace(/[★☆⭐]/g, '').replace(/^[·\s\-\u2022]+/g, '').trim();
+                    const quoteMatch = cleanText.match(/^[”"“‟]([\s\S]*?)[”"”‟]$/);
+                    if (quoteMatch) {
+                        cleanText = quoteMatch[1].trim();
+                    }
+                    text = cleanText || 'รีวิวระดับ 5 ดาวจาก Google Maps';
+                } else {
+                    text = 'รีวิวระดับ 5 ดาวจาก Google Maps';
                 }
             }
 
@@ -521,6 +562,15 @@ export default function CheckinManager() {
                 image_url = scrapedImageUrl || primaryImageUrl
             }
 
+            let ratingValue = source === 'google' ? 5 : null
+            if (source === 'google' && description) {
+                // Dynamically count stars in description (e.g. ★★★★★ or ⭐⭐⭐⭐⭐)
+                const starCount = (description.match(/[★⭐]/g) || []).length;
+                if (starCount >= 1 && starCount <= 5) {
+                    ratingValue = starCount;
+                }
+            }
+
             setFormData(prev => ({
                 ...prev,
                 source,
@@ -531,7 +581,8 @@ export default function CheckinManager() {
                 image_url,
                 post_url: cleanUrl,
                 likes: data.likes || 0,
-                comments: 0
+                comments: 0,
+                rating: ratingValue
             }))
 
             alert('ดึงข้อมูลจากลิงก์สำเร็จ! โปรดตรวจทานความถูกต้องแล้วกดบันทึก')
@@ -1001,13 +1052,17 @@ export default function CheckinManager() {
                                 {checkins.map(item => (
                                     <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
                                         <td className="p-4">
-                                            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-gray-50 flex items-center justify-center">
-                                                <img 
-                                                    src={getProxiedImageUrl(item.image_url)} 
-                                                    alt={item.user_name} 
-                                                    crossOrigin="anonymous"
-                                                    className="w-full h-full object-cover"
-                                                />
+                                            <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-gray-50 flex items-center justify-center font-mono p-1.5 text-center text-[9px] leading-tight select-none">
+                                                {item.image_url === 'text_only' ? (
+                                                    <span className="text-gray-400 font-bold">📝 POST-IT</span>
+                                                ) : (
+                                                    <img 
+                                                        src={getProxiedImageUrl(item.image_url)} 
+                                                        alt={item.user_name} 
+                                                        crossOrigin="anonymous"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )}
                                             </div>
                                         </td>
                                         <td className="p-4 space-y-1">
@@ -1024,6 +1079,9 @@ export default function CheckinManager() {
                                                 )}
                                                 {item.source === 'google' && (
                                                     <span className="inline-flex items-center gap-1 text-[#4285F4] font-semibold"><Star size={10} className="fill-[#4285F4]" /> Google Maps</span>
+                                                )}
+                                                {item.source === 'note' && (
+                                                    <span className="inline-flex items-center gap-1 text-indigo-600 font-semibold"><MessageSquare size={10} /> Post-it Note</span>
                                                 )}
                                                 {item.rating && (
                                                     <span className="bg-yellow-100 text-yellow-800 font-bold px-1 rounded-sm">⭐{item.rating}</span>

@@ -13,10 +13,13 @@ import {
     Compass,
     Navigation,
     Phone,
-    Info
+    Info,
+    Plus,
+    X
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import DraggableGrid from '../components/shared/DraggableGrid'
+import { toast } from 'sonner'
 
 // Helper for image compression proxy (similar to AdsLandingPage)
 const optimizeImageUrl = (url, width = 800, quality = 75) => {
@@ -211,6 +214,41 @@ export default function HausCheckinPage() {
     const [loading, setLoading] = useState(true)
     const [activeFilter, setActiveFilter] = useState('all') // 'all' | 'instagram' | 'facebook' | 'google'
     const [selectedItem, setSelectedItem] = useState(null)
+    const [showAddTextModal, setShowAddTextModal] = useState(false)
+    const [noteName, setNoteName] = useState('')
+    const [noteText, setNoteText] = useState('')
+    const [isSubmittingNote, setIsSubmittingNote] = useState(false)
+
+    const handleNoteSubmit = async (e) => {
+        if (e) e.preventDefault()
+        if (!noteText.trim()) return
+
+        setIsSubmittingNote(true)
+        try {
+            const { error } = await supabase
+                .from('haus_checkins')
+                .insert({
+                    source: 'note',
+                    user_name: noteName.trim() || 'GUEST',
+                    text: noteText.trim(),
+                    image_url: 'text_only',
+                    is_visible: false // Requires admin approval!
+                })
+
+            if (error) throw error
+
+            toast.success('ส่งข้อความเรียบร้อย! รอตรวจสอบจาก Admin ครับ 📝✨')
+            setNoteName('')
+            setNoteText('')
+            setShowAddTextModal(false)
+        } catch (err) {
+            console.error('Failed to submit guest note:', err)
+            toast.error('ล้มเหลวในการส่งข้อความ: ' + err.message)
+        } finally {
+            setIsSubmittingNote(false)
+        }
+    }
+
     const [likedIds, setLikedIds] = useState(() => {
         try {
             const stored = localStorage.getItem('haus_liked_checkins')
@@ -403,23 +441,14 @@ export default function HausCheckinPage() {
         fetchSettingsAndImages()
     }, [])
 
-    // Prepare grid items with matched images
+    // Prepare grid items with matched images and combined sources
     const gridItems = useMemo(() => {
-        // 1. If we have third-party feed check-ins, use them first (automates 100%)
-        if (feedCheckins.length > 0) {
-            return feedCheckins.map(item => ({
-                ...item,
-                image: {
-                    src: optimizeImageUrl(item.image_url, 600),
-                    alt: item.text
-                }
-            }))
-        }
+        const combined = []
+        const existingUrls = new Set()
 
-        // 2. Otherwise, if we have database check-ins, use them
+        // 1. Process database check-ins first (gives priority to guest notes and custom uploads)
         if (dbCheckins.length > 0) {
-            return dbCheckins.map(item => {
-                // Calculate display date format
+            dbCheckins.forEach(item => {
                 let displayDate = 'Recently'
                 if (item.created_at) {
                     try {
@@ -432,7 +461,10 @@ export default function HausCheckinPage() {
                         displayDate = 'Recently'
                     }
                 }
-                return {
+                if (item.image_url && item.image_url !== 'text_only') {
+                    existingUrls.add(item.image_url)
+                }
+                combined.push({
                     id: item.id,
                     source: item.source,
                     user: {
@@ -447,12 +479,33 @@ export default function HausCheckinPage() {
                     likes: item.likes,
                     comments: item.comments,
                     url: item.post_url,
+                    image_url: item.image_url,
                     image: {
-                        src: optimizeImageUrl(item.image_url, 600),
-                        alt: item.text
+                        src: item.image_url === 'text_only' ? '' : optimizeImageUrl(item.image_url, 600),
+                        alt: item.text || ''
                     }
+                })
+            })
+        }
+
+        // 2. Add feed check-ins that are not duplicates
+        if (feedCheckins.length > 0) {
+            feedCheckins.forEach(item => {
+                if (!existingUrls.has(item.image_url)) {
+                    combined.push({
+                        ...item,
+                        image_url: item.image_url,
+                        image: {
+                            src: optimizeImageUrl(item.image_url, 600),
+                            alt: item.text || ''
+                        }
+                    })
                 }
             })
+        }
+
+        if (combined.length > 0) {
+            return combined
         }
 
         // 3. Otherwise fallback to mock data
@@ -517,6 +570,8 @@ export default function HausCheckinPage() {
                         gap={4}
                         enableWheel={true}
                         onItemClick={handleItemClick}
+                        likedIds={likedIds}
+                        onLikeToggle={handleLikeToggle}
                     />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center font-mono">
@@ -581,12 +636,112 @@ export default function HausCheckinPage() {
                 </div>
             </div>
 
+            {/* ─── FLOATING OVERLAY: ADD TEXT (POST-IT NOTE) (+) BUTTON ─── */}
+            <div className="absolute bottom-6 right-6 md:right-[290px] z-40">
+                <button
+                    onClick={() => setShowAddTextModal(true)}
+                    className="flex items-center justify-center w-12 h-12 rounded-full bg-black/90 hover:bg-neutral-900 border border-neutral-800 text-[var(--color-brand)] hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_8px_30px_rgba(0,0,0,0.5)] outline-none"
+                    title="ฝากข้อความบนบอร์ด"
+                >
+                    <Plus size={20} />
+                </button>
+            </div>
+
             {/* ─── FLOATING OVERLAY: BOTTOM LEFT HELP MOUSE DRAG INDICATOR ─── */}
             <div className="absolute bottom-6 left-6 z-40 hidden lg:flex items-center gap-2 select-none pointer-events-none">
                 <div className="bg-black/40 backdrop-blur-sm border border-neutral-800/60 px-3 py-1.5 rounded-full text-[9px] text-neutral-500 font-mono flex items-center gap-2 uppercase tracking-wider">
                     <span>🖱️ Click & Drag to explore</span>
                 </div>
             </div>
+
+            {/* ─── ADD TEXT (POST-IT NOTE) MODAL ─── */}
+            <AnimatePresence>
+                {showAddTextModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                        onClick={() => setShowAddTextModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 10 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="w-full max-w-sm bg-[#FAF9F5] border border-neutral-800 p-6 rounded-sm shadow-2xl relative text-[#1a1a1a]"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Close button */}
+                            <button
+                                onClick={() => setShowAddTextModal(false)}
+                                className="absolute top-4 right-4 text-xs font-mono font-bold hover:text-red-650 cursor-pointer text-neutral-400 border-0 bg-transparent outline-none p-1"
+                            >
+                                [ CLOSE ]
+                            </button>
+
+                            {/* Header */}
+                            <div className="border-b border-neutral-200 pb-3 mb-4">
+                                <h3 className="font-mono text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
+                                    // WRITE A NOTE / ฝากข้อความ
+                                </h3>
+                            </div>
+
+                            <form onSubmit={handleNoteSubmit} className="space-y-4">
+                                {/* Name Input */}
+                                <div className="space-y-1">
+                                    <label className="block font-mono text-[8px] uppercase tracking-wider text-neutral-400 font-bold">
+                                        Your Name (ชื่อของคุณ)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={noteName}
+                                        onChange={(e) => setNoteName(e.target.value)}
+                                        placeholder="Guest"
+                                        maxLength={25}
+                                        className="w-full bg-white border border-neutral-250 p-2.5 rounded-sm font-mono text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors"
+                                    />
+                                </div>
+
+                                {/* Message Input */}
+                                <div className="space-y-1">
+                                    <label className="block font-mono text-[8px] uppercase tracking-wider text-neutral-400 font-bold">
+                                        Your Message (ข้อความของคุณ) *
+                                    </label>
+                                    <textarea
+                                        value={noteText}
+                                        onChange={(e) => setNoteText(e.target.value)}
+                                        placeholder="พิมพ์ข้อความของคุณที่นี่..."
+                                        required
+                                        maxLength={140}
+                                        rows={4}
+                                        style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}
+                                        className="w-full bg-white border border-neutral-250 p-2.5 rounded-sm text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors resize-none leading-relaxed"
+                                    />
+                                    <div className="flex justify-between items-center text-[8px] font-mono text-neutral-400 mt-1">
+                                        <span>* สูงสุด 140 ตัวอักษร</span>
+                                        <span>{noteText.length}/140</span>
+                                    </div>
+                                </div>
+
+                                {/* Submit Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingNote || !noteText.trim()}
+                                    className="w-full bg-[#DFFF00] hover:bg-[#d4f200] disabled:bg-neutral-200 disabled:text-neutral-400 text-neutral-900 border border-neutral-800 font-mono text-[9px] font-extrabold uppercase tracking-widest py-3 rounded-sm cursor-pointer disabled:cursor-not-allowed transition-all select-none"
+                                >
+                                    {isSubmittingNote ? "SUBMITTING..." : "[ POST NOTE // ส่งข้อความ ]"}
+                                </button>
+
+                                {/* Footer Disclaimer */}
+                                <p className="text-[8px] font-mono text-neutral-400 leading-normal text-center mt-2">
+                                    * ข้อความจะถูกตรวจสอบโดย Admin ก่อนนำขึ้นแสดงบนบอร์ดนี้
+                                </p>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ─── LIGHTBOX MODAL / DETAIL DRAWER ─── */}
             <AnimatePresence>
@@ -615,12 +770,24 @@ export default function HausCheckinPage() {
 
                             {/* Image side */}
                             <div className="w-full md:w-1/2 aspect-square md:aspect-auto md:h-[480px] bg-neutral-950 relative border-b md:border-b-0 md:border-r border-neutral-800 flex items-center justify-center">
-                                <img
-                                    src={getProxiedImageUrl(selectedItem.image?.src)}
-                                    alt={selectedItem.text}
-                                    crossOrigin="anonymous"
-                                    className="w-full h-full object-cover"
-                                />
+                                {selectedItem.image_url === 'text_only' ? (
+                                    <div className="w-full h-full bg-[#FAF9F5] p-8 flex flex-col justify-between text-[#1a1a1a] select-text">
+                                        <span className="font-mono text-[9px] text-neutral-400 tracking-widest">// GUEST NOTE</span>
+                                        <p className="font-mono text-center leading-relaxed text-sm text-neutral-800 break-words w-full my-auto" style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}>
+                                            "{selectedItem.text}"
+                                        </p>
+                                        <span className="font-mono text-[9px] text-neutral-400 text-center tracking-wider uppercase border-t border-neutral-200/50 pt-3">
+                                            BY {selectedItem.user.name}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <img
+                                        src={getProxiedImageUrl(selectedItem.image?.src)}
+                                        alt={selectedItem.text}
+                                        crossOrigin="anonymous"
+                                        className="w-full h-full object-cover"
+                                    />
+                                )}
                                 {/* Platform label Overlay */}
                                 <div className="absolute bottom-4 left-4 z-10">
                                     {selectedItem.source === 'instagram' && (
@@ -636,6 +803,11 @@ export default function HausCheckinPage() {
                                     {selectedItem.source === 'google' && (
                                         <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#4285F4] text-white rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
                                             <Star size={10} className="fill-white" /> GOOGLE REVIEWS
+                                        </span>
+                                    )}
+                                    {selectedItem.source === 'note' && (
+                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-650 text-white rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
+                                            <MessageCircle size={10} /> GUEST NOTE
                                         </span>
                                     )}
                                 </div>
@@ -657,9 +829,11 @@ export default function HausCheckinPage() {
                                             <h4 className="text-xs font-bold text-white tracking-tight uppercase">
                                                 {selectedItem.user.name}
                                             </h4>
-                                            <span className="text-[10px] font-mono text-neutral-500 block">
-                                                {selectedItem.user.handle}
-                                            </span>
+                                            {selectedItem.user.handle && (
+                                                <span className="text-[10px] font-mono text-neutral-500 block">
+                                                    {selectedItem.user.handle}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -714,14 +888,16 @@ export default function HausCheckinPage() {
                                     </div>
 
                                     {/* Direct Action Link */}
-                                    <a
-                                        href={selectedItem.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full py-2.5 rounded-sm bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/40 text-white font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                                    >
-                                        <ExternalLink size={11} /> VIEW ORIGINAL POST
-                                    </a>
+                                    {selectedItem.url && (
+                                        <a
+                                            href={selectedItem.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full py-2.5 rounded-sm bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/40 text-white font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                        >
+                                            <ExternalLink size={11} /> VIEW ORIGINAL POST
+                                        </a>
+                                    )}
                                 </div>
 
                             </div>
