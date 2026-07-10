@@ -24,6 +24,25 @@ export default function POSDashboard() {
 
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
+    const [hasPendingOrders, setHasPendingOrders] = useState(false);
+
+    // Check pending orders helper
+    const checkPendingOrders = async () => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const { count, error } = await supabase
+                .from('bookings')
+                .select('id', { count: 'exact', head: true })
+                .eq('status', 'pending')
+                .gte('booking_time', `${today}T00:00:00`);
+            
+            if (!error) {
+                setHasPendingOrders((count || 0) > 0);
+            }
+        } catch (err) {
+            console.error("Check pending orders failed:", err);
+        }
+    };
 
     useEffect(() => {
         // Fetch sound setting once at mount
@@ -38,9 +57,13 @@ export default function POSDashboard() {
             }
         };
         fetchSound();
+        checkPendingOrders();
 
-        // Warning toast to unlock sound
-        toast.info("🔊 กรุณาแตะที่ใดก็ได้บนหน้าจอ 1 ครั้ง เพื่อเปิดระบบเสียงแจ้งเตือนออเดอร์");
+        // Warning toast to unlock sound (De-duplicated using id)
+        toast.info("🔊 กรุณาแตะที่ใดก็ได้บนหน้าจอ 1 ครั้ง เพื่อเปิดระบบเสียงแจ้งเตือนออเดอร์", { id: "unlock-sound-toast" });
+
+        // Poll pending orders every 8 seconds
+        const pollInterval = setInterval(checkPendingOrders, 8000);
 
         // Unlock audio context on first click/touch
         const unlock = () => {
@@ -71,10 +94,28 @@ export default function POSDashboard() {
         window.addEventListener('touchstart', unlock);
 
         return () => {
+            clearInterval(pollInterval);
             window.removeEventListener('click', unlock);
             window.removeEventListener('touchstart', unlock);
         };
     }, []);
+
+    // Repeating Sound Alert when pending orders exist
+    useEffect(() => {
+        if (!hasPendingOrders) return;
+
+        // Play alert immediately
+        playSystemAlertSound();
+
+        // Repeat every 6 seconds
+        const soundInterval = setInterval(() => {
+            playSystemAlertSound();
+        }, 6000);
+
+        return () => {
+            clearInterval(soundInterval);
+        };
+    }, [hasPendingOrders, alertSoundUrl, audioContext]);
 
     const playSystemAlertSound = () => {
         if (alertSoundUrl) {
@@ -142,6 +183,7 @@ export default function POSDashboard() {
                 schema: 'public', 
                 table: 'bookings' 
             }, async (payload) => {
+                checkPendingOrders();
                 const { eventType, new: newRow, old: oldRow } = payload;
                 const tableId = newRow?.table_id || oldRow?.table_id;
                 if (!tableId) return;
@@ -381,7 +423,7 @@ export default function POSDashboard() {
                     {/* Main Content Area */}
                     <div className="flex-1 h-full overflow-hidden relative">
                         {view === 'tables' ? (
-                            <POSTableGrid onSelectTable={handleSelectTable} />
+                            <POSTableGrid onSelectTable={handleSelectTable} hasPendingOrders={hasPendingOrders} />
                         ) : view === 'menu' ? (
                             <POSMenuGrid onAddItem={handleAddToOrder} />
                         ) : view === 'crm' ? (
@@ -404,6 +446,7 @@ export default function POSDashboard() {
                                     const success = await acceptOrder(activeBooking.id);
                                     if (success) {
                                         handleBackToTables();
+                                        checkPendingOrders();
                                     }
                                 }
                             }}

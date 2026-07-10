@@ -53,9 +53,11 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                     </nav>
                 </div>
 
-                <div className="flex flex-col gap-2.5 w-full px-2 items-center">
+                <div className="flex flex-col gap-2 w-full px-2 items-center">
+                    <NavIcon icon={LayoutGrid} onClick={() => window.location.href = '/staff'} label="Staff DB" />
+                    <NavIcon icon={Clock} onClick={() => window.location.href = '/staff/orders'} label="Live Orders" />
                     <NavIcon icon={Settings} onClick={() => window.location.href = '/admin/settings'} label="Settings" />
-                    <NavIcon icon={LogOut} onClick={() => window.location.href = '/staff'} label="Exit" />
+                    <NavIcon icon={LogOut} onClick={() => window.location.href = '/'} label="Exit" />
                     
                     {/* Subtle Side Branding */}
                     <div className="mt-3 [writing-mode:vertical-lr] text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase select-none opacity-50 text-center">

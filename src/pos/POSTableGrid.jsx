@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
-export default function POSTableGrid({ onSelectTable }) {
+export default function POSTableGrid({ onSelectTable, hasPendingOrders }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -149,14 +149,22 @@ export default function POSTableGrid({ onSelectTable }) {
                     <button 
                         type="button"
                         onClick={() => setViewMode('floorplan')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'floorplan' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                            viewMode === 'floorplan' 
+                                ? 'bg-white text-[#1A1A1A] shadow-sm' 
+                                : 'text-[#767673] hover:text-[#1A1A1A]'
+                        } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-800 border border-amber-300 font-extrabold shadow-sm' : ''}`}
                     >
                         <Map size={12} /> FLOORPLAN
                     </button>
                     <button 
                         type="button"
                         onClick={() => setViewMode('grid')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                            viewMode === 'grid' 
+                                ? 'bg-white text-[#1A1A1A] shadow-sm' 
+                                : 'text-[#767673] hover:text-[#1A1A1A]'
+                        } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-800 border border-amber-300 font-extrabold shadow-sm' : ''}`}
                     >
                         <LayoutGrid size={12} /> REGISTRY LIST
                     </button>
@@ -238,8 +246,8 @@ export default function POSTableGrid({ onSelectTable }) {
                                                     tableBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
                                                     ledColor = 'bg-[#FF3300]';
                                                 } else if (isPending) {
-                                                    tableBgClass = 'bg-[#FFF9E6] border-[#E5A900] text-[#805E00]';
-                                                    ledColor = 'bg-[#FFAA00] animate-pulse';
+                                                    tableBgClass = 'bg-[#FFF9E6] border-[#FFAA00] text-[#805E00] animate-pulse border-2 shadow-md';
+                                                    ledColor = 'bg-[#FFAA00] animate-ping';
                                                 }
                                                 
                                                 return (
@@ -327,8 +335,8 @@ export default function POSTableGrid({ onSelectTable }) {
                                         cellBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
                                         ledColor = 'bg-[#FF3300]';
                                     } else if (isPending) {
-                                        cellBgClass = 'bg-[#FFF9E6] border-[#E5A900] text-[#805E00]';
-                                        ledColor = 'bg-[#FFAA00] animate-pulse';
+                                        cellBgClass = 'bg-[#FFF9E6] border-[#FFAA00] text-[#805E00] animate-pulse border-2 shadow-md';
+                                        ledColor = 'bg-[#FFAA00] animate-ping';
                                     }
 
                                     return (
