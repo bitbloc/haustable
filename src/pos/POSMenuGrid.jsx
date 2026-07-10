@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Search, ChevronRight, Plus } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function POSMenuGrid({ onAddItem }) {
@@ -32,24 +32,30 @@ export default function POSMenuGrid({ onAddItem }) {
         return matchesCat && matchesSearch;
     });
 
+    if (loading) return (
+        <div className="flex h-full items-center justify-center bg-[#ECECE9]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5500]"></div>
+        </div>
+    );
+
     return (
-        <div className="h-full flex flex-col bg-[#121212]">
+        <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none">
             {/* Menu Header with Search and Categories */}
-            <div className="p-6 bg-[#1A1A1A] border-b border-white/5 space-y-4">
+            <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] space-y-3 shadow-sm shrink-0">
                 <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={16} />
                     <input 
                         type="search" 
-                        placeholder="Search items..." 
-                        className="w-full bg-black/30 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-orange-500/50 transition-colors"
+                        placeholder="Search menu items..." 
+                        className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#FF5500] font-medium transition-colors"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none font-mono text-[10px] font-bold uppercase tracking-wider">
                     <CategoryButton 
-                        label="All Items" 
+                        label="ALL ITEMS" 
                         active={activeCategory === 'all'} 
                         onClick={() => setActiveCategory('all')} 
                     />
@@ -65,36 +71,35 @@ export default function POSMenuGrid({ onAddItem }) {
             </div>
 
             {/* Menu Items Grid */}
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {filteredItems.map(item => (
                         <motion.button
                             key={item.id}
-                            whileHover={{ y: -4 }}
+                            whileHover={{ y: -2 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => onAddItem(item)}
-                            className="bg-[#1A1A1A] rounded-2xl border border-white/5 p-4 flex flex-col gap-3 text-left group hover:border-orange-500/30 transition-all shadow-sm"
+                            className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] transition-all cursor-pointer shadow-sm"
                         >
-                            <div className="aspect-square rounded-xl bg-black/20 overflow-hidden relative">
+                            <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
                                 {item.image_url ? (
-                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-300" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-700 font-bold text-2xl uppercase">
+                                    <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-xl uppercase">
                                         {item.name.charAt(0)}
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-                                <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
-                                    <Plus size={18} />
+                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-white border border-[#D1D1CD] flex items-center justify-center shadow-sm group-hover:bg-[#FF5500] group-hover:text-white group-hover:border-[#E04B00] transition-all">
+                                    <Plus size={14} />
                                 </div>
                             </div>
                             
-                            <div className="flex flex-col flex-1">
-                                <h4 className="font-bold text-sm line-clamp-2 leading-tight py-1">{item.name}</h4>
-                                <div className="mt-auto pt-2 flex items-center justify-between">
-                                    <span className="text-orange-500 font-bold">฿{item.price}</span>
+                            <div className="flex flex-col flex-1 min-h-[60px]">
+                                <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
+                                <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-[10px] font-mono font-bold uppercase tracking-wider">
+                                    <span className="text-[#1A1A1A]">฿{item.price}</span>
                                     {item.stock_quantity !== null && (
-                                        <span className="text-[10px] text-gray-500 uppercase font-medium">Stack: {item.stock_quantity}</span>
+                                        <span className="text-[#767673] tracking-normal font-medium">QTY: {item.stock_quantity}</span>
                                     )}
                                 </div>
                             </div>
@@ -110,10 +115,10 @@ function CategoryButton({ label, active, onClick }) {
     return (
         <button 
             onClick={onClick}
-            className={`px-6 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+            className={`px-4 py-2 rounded-lg border transition-all cursor-pointer whitespace-nowrap ${
                 active 
-                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
-                : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                ? 'bg-[#E0E0DC] text-[#1A1A1A] border-[#B0B0AC] shadow-inner font-black' 
+                : 'bg-white text-[#767673] border-[#D1D1CD] hover:text-[#1A1A1A] hover:bg-[#FDFDFD] shadow-sm'
             }`}
         >
             {label}

@@ -87,78 +87,78 @@ export default function POSTableGrid({ onSelectTable }) {
     });
 
     if (loading) return (
-        <div className="flex h-full items-center justify-center bg-[#121212]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        <div className="flex h-full items-center justify-center bg-[#ECECE9]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5500]"></div>
         </div>
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#121212] overflow-hidden select-none">
+        <div className="h-full flex flex-col bg-[#ECECE9] overflow-hidden select-none font-sans text-[#1A1A1A]">
             {/* Top Toolbar */}
-            <div className="p-6 bg-[#1A1A1A] border-b border-white/5 flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0">
+            <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0 shadow-sm">
                 {/* Search and Filters */}
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <div className="relative w-full sm:w-60">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                    <div className="relative w-full sm:w-56">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={16} />
                         <input 
                             type="search" 
                             placeholder="ค้นหาโต๊ะ..." 
-                            className="w-full bg-black/30 border border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-orange-500/50 transition-colors"
+                            className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#FF5500] font-medium transition-colors"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex bg-black/25 p-1 rounded-xl border border-white/5 text-xs font-semibold">
+                    <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] text-[10px] font-mono font-bold uppercase tracking-wider">
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-2 rounded-lg transition-all ${statusFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${statusFilter === 'all' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            ทั้งหมด
+                            ALL
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('free')}
-                            className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${statusFilter === 'free' ? 'bg-emerald-500/20 text-emerald-400' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'free' ? 'bg-white text-emerald-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            ว่าง
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00CC44]"></span>
+                            VACANT
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('occupied')}
-                            className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${statusFilter === 'occupied' ? 'bg-red-500/20 text-red-400' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'occupied' ? 'bg-white text-red-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                            ไม่ว่าง
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FF3300]"></span>
+                            OCCUPIED
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('pending')}
-                            className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${statusFilter === 'pending' ? 'bg-yellow-500/20 text-yellow-400 animate-pulse' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-                            จองใหม่
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FFAA00] animate-pulse"></span>
+                            PENDING
                         </button>
                     </div>
                 </div>
 
                 {/* Layout Mode Toggle */}
-                <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 shrink-0">
+                <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider">
                     <button 
                         type="button"
                         onClick={() => setViewMode('floorplan')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'floorplan' ? 'bg-orange-500 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'floorplan' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
-                        <Map size={14} /> แผนผังร้าน
+                        <Map size={12} /> FLOORPLAN
                     </button>
                     <button 
                         type="button"
                         onClick={() => setViewMode('grid')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-orange-500 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
-                        <LayoutGrid size={14} /> รายการโต๊ะ
+                        <LayoutGrid size={12} /> REGISTRY LIST
                     </button>
                 </div>
             </div>
@@ -168,23 +168,23 @@ export default function POSTableGrid({ onSelectTable }) {
                 {viewMode === 'floorplan' ? (
                     <div className="flex-1 w-full h-full relative">
                         {/* Status Legend Overlay */}
-                        <div className="absolute bottom-4 left-4 z-20 bg-[#1A1A1A]/90 border border-white/10 p-4 rounded-2xl shadow-xl backdrop-blur-md flex flex-col gap-2.5 text-xs text-gray-400">
-                            <span className="font-bold text-white mb-0.5">สถานะโต๊ะ (Legend)</span>
+                        <div className="absolute bottom-4 left-4 z-20 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-4 rounded-xl shadow-md backdrop-blur-md flex flex-col gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] select-none">
+                            <span className="text-[#1A1A1A] border-b border-[#D1D1CD] pb-1.5 mb-1">TABLE STATUS INDICATORS</span>
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
-                                <span>ว่าง (Free)</span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span>
+                                <span>VACANT (ว่าง)</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"></span>
-                                <span>มีลูกค้า (Occupied)</span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF3300] border border-black/10"></span>
+                                <span>OCCUPIED (มีลูกค้า)</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.5)]"></span>
-                                <span>รอยืนยัน (Pending / New)</span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#FFAA00] animate-pulse border border-black/10"></span>
+                                <span>PENDING (รอยืนยัน)</span>
                             </div>
-                            <div className="border-t border-white/5 pt-2 flex items-center gap-2">
-                                <span className="bg-emerald-500 text-black text-[8px] font-black px-1 py-0.5 rounded">SLIP</span>
-                                <span>แนบสลิปแล้ว (Slip Uploaded)</span>
+                            <div className="border-t border-[#D1D1CD] pt-2 mt-1 flex items-center gap-2">
+                                <span className="bg-[#1A1A1A] text-white text-[8px] font-black px-1 py-0.5 rounded tracking-normal">SLIP</span>
+                                <span>SLIP ATTACHED</span>
                             </div>
                         </div>
 
@@ -198,15 +198,15 @@ export default function POSTableGrid({ onSelectTable }) {
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
                                     {/* Floating Zoom Controls */}
-                                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5 bg-[#1A1A1A]/90 border border-white/10 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
-                                        <button type="button" onClick={() => zoomIn()} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white" title="Zoom In"><ZoomIn size={16} /></button>
-                                        <button type="button" onClick={() => zoomOut()} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white" title="Zoom Out"><ZoomOut size={16} /></button>
-                                        <button type="button" onClick={() => resetTransform()} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white" title="Reset View"><Maximize size={16} /></button>
+                                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-1 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-1 rounded-lg shadow-md backdrop-blur-md">
+                                        <button type="button" onClick={() => zoomIn()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom In"><ZoomIn size={14} /></button>
+                                        <button type="button" onClick={() => zoomOut()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom Out"><ZoomOut size={14} /></button>
+                                        <button type="button" onClick={() => resetTransform()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Reset View"><Maximize size={14} /></button>
                                     </div>
                                     
                                     <TransformComponent wrapperClass="w-full h-full cursor-grab active:cursor-grabbing flex items-center justify-center" contentClass="w-full h-full flex items-center justify-center">
                                         <div
-                                            className="relative transition-shadow duration-300 shadow-2xl border border-white/5 rounded-[32px] overflow-hidden bg-[#161616]"
+                                            className="relative transition-shadow duration-300 shadow-md border border-[#D1D1CD] rounded-[24px] overflow-hidden bg-[#E1E1DE]"
                                             style={{
                                                 width: '1000px',
                                                 height: '750px',
@@ -216,9 +216,9 @@ export default function POSTableGrid({ onSelectTable }) {
                                             }}
                                         >
                                             {!floorplanUrl && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 font-bold opacity-30 select-none">
-                                                    <Map size={48} className="mb-2" />
-                                                    <span>ไม่มีภาพแผนผังร้าน</span>
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#767673] font-mono font-bold uppercase tracking-widest opacity-40 select-none">
+                                                    <Map size={36} className="mb-2 text-[#767673]" />
+                                                    <span>NO FLOORPLAN SCHEMATIC</span>
                                                 </div>
                                             )}
                                             
@@ -226,44 +226,35 @@ export default function POSTableGrid({ onSelectTable }) {
                                             {filteredTables.map((table) => {
                                                 const isCircle = table.shape === 'circle';
                                                 const rotation = table.rotation || 0;
-                                                const customBg = table.table_color || '#333333';
                                                 
                                                 const isOccupied = table.status === 'occupied';
                                                 const isPending = table.status === 'pending';
                                                 
-                                                // Status rings/glows
-                                                let ringStyle = 'border-white/10';
-                                                let glowStyle = '';
+                                                // Braun style tables: Matte colors with clear LED status lights
+                                                let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
+                                                let ledColor = 'bg-[#00CC44]';
+                                                
                                                 if (isOccupied) {
-                                                    ringStyle = 'border-red-500 border-2';
-                                                    glowStyle = 'shadow-[0_0_15px_rgba(239,68,68,0.4)]';
+                                                    tableBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
+                                                    ledColor = 'bg-[#FF3300]';
                                                 } else if (isPending) {
-                                                    ringStyle = 'border-yellow-500 border-2 animate-pulse';
-                                                    glowStyle = 'shadow-[0_0_15px_rgba(234,179,8,0.5)]';
-                                                } else {
-                                                    ringStyle = 'border-[#ffffff18] hover:border-emerald-500/80';
-                                                    glowStyle = 'hover:shadow-[0_0_15px_rgba(16,185,129,0.35)]';
+                                                    tableBgClass = 'bg-[#FFF9E6] border-[#E5A900] text-[#805E00]';
+                                                    ledColor = 'bg-[#FFAA00] animate-pulse';
                                                 }
-
-                                                // Determine text color based on table theme color darkness
-                                                const isDarkColor = ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(customBg);
-                                                const textColor = isDarkColor ? 'text-white' : 'text-zinc-900';
-                                                const subTextColor = isDarkColor ? 'text-white/60' : 'text-zinc-900/60';
                                                 
                                                 return (
                                                     <motion.button
                                                         key={table.id}
-                                                        whileHover={{ scale: 1.05, zIndex: 30 }}
-                                                        whileTap={{ scale: 0.95 }}
+                                                        whileHover={{ scale: 1.03, zIndex: 30 }}
+                                                        whileTap={{ scale: 0.98 }}
                                                         onClick={() => onSelectTable(table)}
-                                                        className={`absolute select-none flex flex-col items-center justify-center transition-all p-1 cursor-pointer overflow-hidden ${isCircle ? 'rounded-full' : 'rounded-[16px]'} ${ringStyle} ${glowStyle}`}
+                                                        className={`absolute select-none flex flex-col items-center justify-center transition-all p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass}`}
                                                         style={{
                                                             left: `${table.pos_x}%`,
                                                             top: `${table.pos_y}%`,
                                                             width: `${table.width}%`,
                                                             height: `${table.height}%`,
-                                                            transform: `rotate(${rotation}deg)`,
-                                                            backgroundColor: customBg,
+                                                            transform: `rotate(${rotation}deg)`
                                                         }}
                                                     >
                                                         {/* Counter-rotate content */}
@@ -271,33 +262,29 @@ export default function POSTableGrid({ onSelectTable }) {
                                                             className="flex flex-col items-center justify-center w-full h-full text-center pointer-events-none p-1 relative"
                                                             style={{ transform: `rotate(${-rotation}deg)` }}
                                                         >
-                                                            {/* Action Badges in absolute corner */}
-                                                            <div className="absolute top-0 right-0 flex gap-0.5">
-                                                                {isPending && (
-                                                                    <span className="bg-yellow-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-md">
-                                                                        <AlertCircle size={8} /> NEW
-                                                                    </span>
-                                                                )}
+                                                            {/* LED indicator light in top-right */}
+                                                            <div className="absolute top-1 right-1 flex items-center justify-center gap-1.5">
                                                                 {isOccupied && table.booking?.payment_slip_url && (
-                                                                    <span className="bg-emerald-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-md">
-                                                                        <Receipt size={8} /> SLIP
+                                                                    <span className="bg-[#FF5500] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                                                                        SLIP
                                                                     </span>
                                                                 )}
+                                                                <span className={`w-1.5 h-1.5 rounded-full border border-black/10 ${ledColor}`}></span>
                                                             </div>
                                                             
                                                             {/* Table Name */}
-                                                            <span className={`font-black text-xs md:text-sm tracking-tight leading-tight ${textColor}`}>
+                                                            <span className="font-mono font-bold text-xs md:text-sm tracking-tight leading-tight">
                                                                 {table.table_name}
                                                             </span>
                                                             
                                                             {/* Capacity */}
-                                                            <span className={`text-[8px] md:text-[9px] font-semibold mt-0.5 ${subTextColor}`}>
-                                                                {table.capacity} Seats
+                                                            <span className="text-[8px] font-mono font-bold tracking-tight opacity-60 mt-0.5 uppercase">
+                                                                {table.capacity}p
                                                             </span>
                                                             
                                                             {/* Booking / Seated time */}
                                                             {table.booking?.booking_time && (isOccupied || isPending) && (
-                                                                <div className={`flex items-center gap-0.5 text-[8px] font-bold mt-0.5 ${isPending ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                                <div className="flex items-center gap-0.5 text-[8px] font-mono font-bold mt-1 opacity-80">
                                                                     <Clock size={8} />
                                                                     <span>
                                                                         {new Date(table.booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -316,65 +303,69 @@ export default function POSTableGrid({ onSelectTable }) {
                     </div>
                 ) : (
                     // Regular grid layout (highly stable list fallback)
-                    <div className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+                    <div className="flex-1 p-6 overflow-y-auto scrollbar-none">
                         {filteredTables.length === 0 ? (
-                            <div className="flex flex-col h-full items-center justify-center text-gray-500 gap-2">
-                                <AlertCircle size={32} />
-                                <span>ไม่พบโต๊ะที่ค้นหา</span>
+                            <div className="flex flex-col h-full items-center justify-center text-[#767673] gap-2 font-mono text-xs font-bold uppercase tracking-wider">
+                                <AlertCircle size={24} />
+                                <span>No tables found matching registry query</span>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                                {filteredTables.map((table) => (
-                                    <motion.button
-                                        key={table.id}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => onSelectTable(table)}
-                                        className={`aspect-square rounded-3xl p-6 flex flex-col items-center justify-between border-2 transition-all relative overflow-hidden ${
-                                            table.status === 'occupied' 
-                                            ? 'bg-red-500/10 border-red-500/50 text-white' 
-                                            : table.status === 'pending'
-                                            ? 'bg-yellow-500/10 border-yellow-500/50 text-white animate-pulse'
-                                            : 'bg-[#1A1A1A] border-white/5 hover:border-orange-500/50'
-                                        }`}
-                                    >
-                                        {/* Status Badges */}
-                                        {table.status === 'pending' && (
-                                            <div className="absolute top-2 left-2 bg-yellow-500 text-black text-[9px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-md z-10">
-                                                <AlertCircle size={10} /> NEW
-                                            </div>
-                                        )}
-                                        {table.status === 'occupied' && table.booking?.payment_slip_url && (
-                                            <div className="absolute top-2 left-2 bg-green-500 text-black text-[9px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-md z-10">
-                                                <Receipt size={10} /> SLIP
-                                            </div>
-                                        )}
-                
-                                        {/* Status Glow */}
-                                        <div className={`absolute top-0 right-0 w-2 h-2 rounded-full m-4 ${
-                                            table.status === 'occupied' ? 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 
-                                            table.status === 'pending' ? 'bg-yellow-500 animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.5)]' :
-                                            'bg-green-500'
-                                        }`} />
-                
-                                        <div className="flex flex-col items-center gap-2">
-                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${table.status === 'occupied' || table.status === 'pending' ? 'bg-red-500/20' : 'bg-white/5'}`}>
-                                                <Users size={24} className={table.status === 'occupied' || table.status === 'pending' ? 'text-red-400' : 'text-gray-400'} />
-                                             </div>
-                                             <span className="font-bold text-xl">{table.table_name}</span>
-                                        </div>
-                
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-xs text-gray-500 font-medium">{table.capacity} Seats</span>
-                                            {(table.status === 'occupied' || table.status === 'pending') && (
-                                                <div className="flex items-center gap-1 text-[10px] text-red-400 font-bold mt-1">
-                                                    <Clock size={10} />
-                                                    <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {filteredTables.map((table) => {
+                                    const isOccupied = table.status === 'occupied';
+                                    const isPending = table.status === 'pending';
+                                    
+                                    let cellBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A] hover:border-[#B0B0AC]';
+                                    let ledColor = 'bg-[#00CC44]';
+                                    
+                                    if (isOccupied) {
+                                        cellBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
+                                        ledColor = 'bg-[#FF3300]';
+                                    } else if (isPending) {
+                                        cellBgClass = 'bg-[#FFF9E6] border-[#E5A900] text-[#805E00]';
+                                        ledColor = 'bg-[#FFAA00] animate-pulse';
+                                    }
+
+                                    return (
+                                        <motion.button
+                                            key={table.id}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => onSelectTable(table)}
+                                            className={`min-h-[135px] rounded-xl p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-200 ${cellBgClass}`}
+                                        >
+                                            {/* Top row: Status LEDs */}
+                                            <div className="flex justify-between items-center w-full">
+                                                <div className="flex gap-1 items-center">
+                                                    {isPending && (
+                                                        <span className="bg-yellow-500 text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">NEW</span>
+                                                    )}
+                                                    {isOccupied && table.booking?.payment_slip_url && (
+                                                        <span className="bg-[#FF5500] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    </motion.button>
-                                ))}
+                                                <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
+                                            </div>
+                    
+                                            {/* Center row: Table Info */}
+                                            <div className="flex flex-col items-center gap-1 my-3 select-none">
+                                                 <span className="font-mono font-black text-2xl tracking-tighter">{table.table_name}</span>
+                                                 <span className="text-[9px] font-mono font-bold tracking-widest text-[#767673] uppercase">TABLE UNIT</span>
+                                            </div>
+                    
+                                            {/* Bottom row: Capacity / Timing */}
+                                            <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
+                                                <span>CAPACITY: {table.capacity}P</span>
+                                                {(isOccupied || isPending) && (
+                                                    <div className="flex items-center gap-1 text-[#1A1A1A] dark:text-inherit">
+                                                        <Clock size={10} />
+                                                        <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.button>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

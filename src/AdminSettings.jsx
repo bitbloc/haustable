@@ -217,7 +217,25 @@ export default function AdminSettings() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto pb-20 animate-fade-in pl-6 md:pl-0">
+        <div className="max-w-4xl mx-auto pb-20 animate-fade-in pl-6 md:pl-0 pt-4">
+            {/* Back Navigation Bar */}
+            <div className="flex flex-wrap items-center gap-3 mb-6 font-sans">
+                <button 
+                    type="button"
+                    onClick={() => window.location.href = '/pos'}
+                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-zinc-200 cursor-pointer shadow-sm"
+                >
+                    ← Back to POS (กลับหน้า POS)
+                </button>
+                <button 
+                    type="button"
+                    onClick={() => window.location.href = '/staff'}
+                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-zinc-200 cursor-pointer shadow-sm"
+                >
+                    ← Back to Staff (กลับหน้า Staff)
+                </button>
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
                 <h1 className="text-3xl font-bold text-ink tracking-tight">System Settings</h1>
                 <InstallPWA />

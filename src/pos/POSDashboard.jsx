@@ -7,6 +7,7 @@ import POSOrderPanel from './POSOrderPanel';
 import { usePOSOrder } from '../hooks/usePOSOrder';
 import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
+import POSCRMPanel from './POSCRMPanel';
 import SlipModal from '../components/shared/SlipModal';
 
 export default function POSDashboard() {
@@ -144,21 +145,21 @@ export default function POSDashboard() {
         }));
     };
 
-    const handleCheckout = async (paymentMethod) => {
+    const handleCheckout = async (paymentMethod, includeTax) => {
         if (currentOrder.items.length === 0) return;
 
         let bookingId = activeBooking?.id;
+        let currentBooking = activeBooking;
 
         // 1. Create walk-in if no active booking
         if (!bookingId) {
             const newBooking = await createWalkIn(selectedTable);
             if (!newBooking) return;
             bookingId = newBooking.id;
+            currentBooking = newBooking;
         }
 
-        // 2. Submit items (In a more robust system, we should diff vs database)
-        // For POC, we'll just submit the new ones or re-submit?
-        // Let's assume for now any item in currentOrder that doesn't have db_id is new
+        // 2. Submit items
         const newItems = currentOrder.items.filter(i => !i.db_id);
         if (newItems.length > 0) {
             const success = await submitOrderItems(bookingId, newItems);
@@ -167,20 +168,23 @@ export default function POSDashboard() {
 
         // 3. Complete Checkout
         const subtotal = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        // In a real app, we'd pass the includeTax state or recalculate.
-        // For now, let's assume the UI total is what we want.
-        // To be precise, let's just use the subtotal if VAT is off, or subtotal * 1.07 if on.
-        // We can pass the total from the UI or just recalculate here.
-        const finalTotal = subtotal * 1.07; // Default to including tax for now or add a param
+        const finalTotal = includeTax ? subtotal * 1.07 : subtotal;
 
         const success = await completeCheckout(bookingId, finalTotal, paymentMethod);
         if (success) {
-            handleBackToTables();
+            const updatedBooking = await getActiveBooking(selectedTable.id);
+            if (updatedBooking) {
+                setActiveSlipBooking(updatedBooking);
+                setActiveSlipType('receipt');
+            } else {
+                setActiveSlipBooking(currentBooking);
+                setActiveSlipType('receipt');
+            }
         }
     };
 
     return (
-        <div className="h-screen w-full bg-[#121212] text-white overflow-hidden flex flex-col font-sans select-none">
+        <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none">
             <Toaster position="top-right" richColors />
             
             <POSLayout 
@@ -196,13 +200,15 @@ export default function POSDashboard() {
                             <POSTableGrid onSelectTable={handleSelectTable} />
                         ) : view === 'menu' ? (
                             <POSMenuGrid onAddItem={handleAddToOrder} />
+                        ) : view === 'crm' ? (
+                            <POSCRMPanel />
                         ) : (
                             <POSReportsPanel />
                         )}
                     </div>
 
                     {/* Order Panel Sidebar */}
-                    {view !== 'reports' && (
+                    {view !== 'reports' && view !== 'crm' && (
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
@@ -227,7 +233,12 @@ export default function POSDashboard() {
                 <SlipModal 
                     booking={activeSlipBooking}
                     type={activeSlipType}
-                    onClose={() => setActiveSlipBooking(null)}
+                    onClose={() => {
+                        setActiveSlipBooking(null);
+                        if (activeSlipType === 'receipt') {
+                            handleBackToTables();
+                        }
+                    }}
                 />
             )}
         </div>

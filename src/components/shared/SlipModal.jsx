@@ -156,7 +156,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
         // QR Code Section HTML
         let qrSectionHtml = ''
-        if ((activeTab === 'billing' || activeTab === 'receipt') && qrCodeUrl) {
+        if ((activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) && qrCodeUrl) {
             const qrTitleText = activeTab === 'billing' ? 'SCAN TO PAY / สแกนชำระเงิน' : 'SHOP QR CODE / คิวอาร์โค้ดร้านค้า'
             const qrOpacity = activeTab === 'receipt' ? 'opacity: 0.7;' : ''
             qrSectionHtml = `
@@ -639,7 +639,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         )}
 
                         {/* PromptPay QR Code (For Billing always, and Receipt optionally as requested) */}
-                        {(activeTab === 'billing' || activeTab === 'receipt') && qrCodeUrl && (
+                        {(activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) && qrCodeUrl && (
                             <div className={`border-t border-dashed border-black/40 pt-4 mt-4 text-center flex flex-col items-center ${activeTab === 'receipt' ? 'opacity-70' : ''}`}>
                                 <span className="text-[9px] font-black tracking-widest uppercase mb-2">
                                     {activeTab === 'billing' ? 'SCAN TO PAY / สแกนชำระเงิน' : 'SHOP QR CODE / คิวอาร์โค้ดร้านค้า'}

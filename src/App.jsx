@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core' // Added Capacitor import
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
@@ -132,8 +132,7 @@ function App() {
           <Route path="/link" element={<AdsLandingPage />} />
           <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
           <Route path="/qa" element={<QnAPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/staff/login" element={<LoginPage />} />
+          <Route path="/index.html" element={<Navigate to="/" replace />} />
 
           <Route path="/arcade" element={
             <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING PLAYGROUND...</div>}>
@@ -150,6 +149,8 @@ function App() {
           <Route element={<BookingProviderLayout />}>
             {/* Home Page */}
             <Route path="/" element={<Home session={session} />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/staff/login" element={<LoginPage />} />
 
             {/* Song Request (Login Required) */}
             <Route element={<RequireAuthLayout />}>

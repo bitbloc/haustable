@@ -249,34 +249,34 @@ export default function POSReportsPanel() {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 bg-[#121212] overflow-y-auto">
+        <div className="h-full flex flex-col p-6 bg-[#ECECE9] overflow-y-auto text-[#1A1A1A] font-sans select-none">
             {/* Header controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-white/5 pb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-4 border-b border-[#D1D1CD] shrink-0">
                 <div>
-                    <h3 className="text-xl font-bold">Daily Sales & Shift Report</h3>
-                    <p className="text-xs text-gray-500 font-medium">Verify daily collections, payments, and print reports</p>
+                    <h3 className="font-mono font-bold text-sm tracking-wider uppercase">Daily Sales & Shift Report</h3>
+                    <p className="text-[10px] text-[#767673] font-bold font-mono mt-0.5 uppercase tracking-tight">Verify collections, payments, and print shift reports</p>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="flex items-center gap-3 w-full md:w-auto font-mono text-[10px]">
                     <input 
                         type="date"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
-                        className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm outline-none text-white focus:border-orange-500 font-mono"
+                        className="bg-white border border-[#D1D1CD] px-3 py-2 rounded-lg text-xs outline-none text-[#1A1A1A] focus:border-[#FF5500]"
                     />
                     <button 
                         onClick={fetchReportData} 
-                        className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-colors"
+                        className="p-2 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#1A1A1A] transition-colors cursor-pointer"
                         title="Reload"
                     >
-                        <RefreshCw size={16} />
+                        <RefreshCw size={14} />
                     </button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50 space-y-4">
-                     <Loader2 className="animate-spin w-8 h-8 text-orange-500" />
-                     <p className="text-xs text-gray-400 font-bold">Generating Report...</p>
+                <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50 space-y-3 font-mono text-[10px] font-bold text-[#767673] uppercase tracking-wider">
+                     <Loader2 className="animate-spin w-8 h-8 text-[#FF5500]" />
+                     <p>Generating registry data...</p>
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -284,53 +284,53 @@ export default function POSReportsPanel() {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         
                         {/* Net Revenue */}
-                        <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-2xl relative overflow-hidden shadow-xl shadow-orange-500/5">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-yellow-500"></div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider font-bold mb-3">
-                                <TrendingUp size={14} className="text-orange-500" /> Net Sales
+                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF5500]"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
+                                <TrendingUp size={12} className="text-[#FF5500]" /> NET SALES
                             </div>
-                            <p className="text-2xl font-black font-mono">฿{totalSales.toLocaleString()}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">{completedBookings.length} Completed Bills</p>
+                            <p className="text-xl font-black font-mono text-[#1A1A1A] mt-2">฿{totalSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">{completedBookings.length} COMPLETED BILLS</p>
                         </div>
 
                         {/* Cash Sales */}
-                        <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-2xl relative overflow-hidden shadow-lg">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider font-bold mb-3">
-                                <Banknote size={14} className="text-green-400" /> Cash
+                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#00CC44]"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
+                                <Banknote size={12} className="text-[#00CC44]" /> CASH
                             </div>
-                            <p className="text-2xl font-black font-mono text-green-400">฿{cashSales.toLocaleString()}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">Physical Cash Drawer</p>
+                            <p className="text-xl font-black font-mono text-emerald-600 mt-2">฿{cashSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">PHYSICAL DRAWER</p>
                         </div>
 
                         {/* QR Sales */}
-                        <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-2xl relative overflow-hidden shadow-lg">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider font-bold mb-3">
-                                <CreditCard size={14} className="text-blue-400" /> QR Transfer
+                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-blue-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
+                                <CreditCard size={12} className="text-blue-500" /> QR TRANSFER
                             </div>
-                            <p className="text-2xl font-black font-mono text-blue-400">฿{qrSales.toLocaleString()}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">Bank Account Transfer</p>
+                            <p className="text-xl font-black font-mono text-blue-600 mt-2">฿{qrSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">BANK DEPOSIT</p>
                         </div>
 
                         {/* Discounts */}
-                        <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-2xl relative overflow-hidden shadow-lg">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider font-bold mb-3">
-                                <Percent size={14} className="text-yellow-500" /> Discounts
+                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FFAA00]"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
+                                <Percent size={12} className="text-[#FFAA00]" /> DISCOUNTS
                             </div>
-                            <p className="text-2xl font-black font-mono text-gray-300">฿{totalDiscounts.toLocaleString()}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">Promotion Applied</p>
+                            <p className="text-xl font-black font-mono text-amber-600 mt-2">฿{totalDiscounts.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">PROMO APPLIED</p>
                         </div>
 
                         {/* Active Tables value */}
-                        <div className="bg-[#1A1A1A] border border-white/5 p-5 rounded-2xl relative overflow-hidden shadow-lg col-span-2 md:col-span-1">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider font-bold mb-3">
-                                <ShoppingBag size={14} className="text-purple-400" /> Active Tables
+                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px] col-span-2 md:col-span-1">
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-purple-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
+                                <ShoppingBag size={12} className="text-purple-500" /> ACTIVE REGISTRY
                             </div>
-                            <p className="text-2xl font-black font-mono text-purple-400">฿{activeUnpaid.toLocaleString()}</p>
-                            <p className="text-[10px] text-gray-400 mt-1">{activeBookings.length} Tables Occupied</p>
+                            <p className="text-xl font-black font-mono text-purple-600 mt-2">฿{activeUnpaid.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">{activeBookings.length} TABLES UNPAID</p>
                         </div>
 
                     </div>
@@ -339,22 +339,22 @@ export default function POSReportsPanel() {
                     <div className="grid md:grid-cols-3 gap-6">
                         
                         {/* Categories Sales Card */}
-                        <div className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-6 flex flex-col">
-                            <h4 className="font-bold text-sm text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <CheckCircle2 size={16} className="text-orange-500" /> Sales By Category
+                        <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm">
+                            <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
+                                <CheckCircle2 size={14} className="text-[#FF5500]" /> Sales By Category
                             </h4>
-                            <div className="flex-1 space-y-4">
+                            <div className="flex-1 space-y-2 overflow-y-auto max-h-[300px] pr-1">
                                 {categoryList.map((c, i) => (
-                                    <div key={i} className="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
+                                    <div key={i} className="flex justify-between items-center bg-[#F5F5F2] p-2.5 rounded-lg border border-[#D1D1CD] text-xs">
                                         <div>
-                                            <p className="text-xs font-bold">{c.name}</p>
-                                            <p className="text-[10px] text-gray-500">{c.quantity} items sold</p>
+                                            <p className="font-bold text-[#1A1A1A]">{c.name}</p>
+                                            <p className="text-[9px] font-mono text-[#767673] mt-0.5 uppercase">{c.quantity} ITEMS SOLD</p>
                                         </div>
-                                        <p className="font-mono font-bold text-sm">฿{c.amount.toLocaleString()}</p>
+                                        <p className="font-mono font-bold">฿{c.amount.toLocaleString()}</p>
                                     </div>
                                 ))}
                                 {categoryList.length === 0 && (
-                                    <div className="text-center text-xs text-gray-500 py-10 italic">
+                                    <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic">
                                         No sales logged today
                                     </div>
                                 )}
@@ -362,61 +362,65 @@ export default function POSReportsPanel() {
                             
                             <button 
                                 onClick={handlePrintShiftReport}
-                                className="w-full mt-6 bg-white text-black py-3 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                                className="w-full mt-4 bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                             >
-                                <PrinterIcon size={14} /> Print Shift Summary
+                                <PrinterIcon size={12} /> PRINT SHIFT SUMMARY
                             </button>
                         </div>
 
                         {/* Completed Bills Log */}
-                        <div className="md:col-span-2 bg-[#1A1A1A] border border-white/5 rounded-2xl p-6 flex flex-col">
-                            <h4 className="font-bold text-sm text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <FileText size={16} className="text-orange-500" /> Today's Completed Bills
+                        <div className="md:col-span-2 bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm">
+                            <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
+                                <FileText size={14} className="text-[#FF5500]" /> Today's Completed Bills
                             </h4>
-                            <div className="flex-1 overflow-x-auto">
+                            <div className="flex-1 overflow-x-auto max-h-[360px] scrollbar-none">
                                 <table className="w-full text-left text-xs border-collapse">
                                     <thead>
-                                        <tr className="border-b border-white/5 text-gray-500 uppercase tracking-wider font-bold text-[10px]">
-                                            <th className="pb-3 w-16">Bill No</th>
-                                            <th className="pb-3 w-20">Time</th>
-                                            <th className="pb-3 w-16 text-center">Table</th>
-                                            <th className="pb-3 w-32">Guest</th>
-                                            <th className="pb-3 w-24">Pay Method</th>
-                                            <th className="pb-3 text-right">Amount</th>
-                                            <th className="pb-3 text-right w-16">Action</th>
+                                        <tr className="border-b border-[#D1D1CD] text-[#767673] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[#F5F5F2]">
+                                            <th className="py-2.5 px-3 w-16">Bill No</th>
+                                            <th className="py-2.5 px-3 w-20">Time</th>
+                                            <th className="py-2.5 px-3 w-16 text-center">Table</th>
+                                            <th className="py-2.5 px-3">Guest</th>
+                                            <th className="py-2.5 px-3 w-24">Pay Method</th>
+                                            <th className="py-2.5 px-3 text-right">Amount</th>
+                                            <th className="py-2.5 px-3 text-right w-16">Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                    <tbody className="divide-y divide-[#ECECE9]">
                                         {completedBookings.map((b) => {
                                             const timeStr = new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                             const isCash = isCashBooking(b);
                                             const guestName = b.profiles?.display_name || b.pickup_contact_name || 'Walk-in';
 
                                             return (
-                                                <tr key={b.id} className="hover:bg-white/5 transition-colors">
-                                                    <td className="py-3 font-mono font-bold text-gray-400">
+                                                <tr key={b.id} className="hover:bg-[#F5F5F2] transition-colors">
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-[#767673]">
                                                         #{b.tracking_token ? b.tracking_token.slice(-4).toUpperCase() : b.id.slice(0, 4)}
                                                     </td>
-                                                    <td className="py-3 font-medium text-gray-400">{timeStr}</td>
-                                                    <td className="py-3 font-bold text-center text-orange-500">
+                                                    <td className="py-2.5 px-3 font-mono text-[#767673]">{timeStr}</td>
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[#FF5500]">
                                                         {b.tables_layout?.table_name || 'PICK'}
                                                     </td>
-                                                    <td className="py-3 font-bold truncate max-w-[120px]">{guestName}</td>
-                                                    <td className="py-3">
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isCash ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                                                            {isCash ? 'Cash' : 'QR Transfer'}
+                                                    <td className="py-2.5 px-3 font-bold truncate max-w-[120px] uppercase text-[#1A1A1A]">{guestName}</td>
+                                                    <td className="py-2.5 px-3">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border ${
+                                                            isCash 
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                                                        }`}>
+                                                            {isCash ? 'Cash' : 'QR Pay'}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 text-right font-bold font-mono">
+                                                    <td className="py-2.5 px-3 text-right font-mono font-bold">
                                                         ฿{b.total_amount?.toLocaleString()}
                                                     </td>
-                                                    <td className="py-3 text-right">
+                                                    <td className="py-2.5 px-3 text-right">
                                                         <button 
                                                             onClick={() => setActiveReprintBooking(b)}
-                                                            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
                                                             title="Reprint Bill / Receipt"
                                                         >
-                                                            <PrinterIcon size={12} />
+                                                            <PrinterIcon size={10} />
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -424,7 +428,7 @@ export default function POSReportsPanel() {
                                         })}
                                         {completedBookings.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="py-10 text-center text-xs text-gray-500 italic">
+                                                <td colSpan="7" className="py-10 text-center font-mono text-[9px] text-[#767673] uppercase italic">
                                                     No completed bills logged for this day
                                                 </td>
                                             </tr>
