@@ -772,7 +772,20 @@ export default function HausCheckinPage() {
                             <div className="w-full md:w-1/2 aspect-square md:aspect-auto md:h-[480px] bg-neutral-950 relative border-b md:border-b-0 md:border-r border-neutral-800 flex items-center justify-center">
                                 {selectedItem.image_url === 'text_only' ? (
                                     <div className="w-full h-full bg-[#FAF9F5] p-8 flex flex-col justify-between text-[#1a1a1a] select-text">
-                                        <span className="font-mono text-[9px] text-neutral-400 tracking-widest">// GUEST NOTE</span>
+                                        <div className="flex justify-between items-center w-full">
+                                            <span className="font-mono text-[9px] text-neutral-400 tracking-widest">
+                                                {selectedItem.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}
+                                            </span>
+                                            {selectedItem.rating && (
+                                                <div className="flex gap-0.5 text-amber-500">
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <span key={i} className="text-xs">
+                                                            {i < selectedItem.rating ? '★' : '☆'}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                         <p className="font-mono text-center leading-relaxed text-sm text-neutral-800 break-words w-full my-auto" style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}>
                                             "{selectedItem.text}"
                                         </p>

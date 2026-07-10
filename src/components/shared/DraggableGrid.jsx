@@ -272,9 +272,20 @@ function LazyCard({
                 }}
             >
                 {/* Header label in typewriter style */}
-                <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase select-none pointer-events-none">
-                    <span>// GUEST NOTE</span>
-                    <span>POSTED</span>
+                <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
+                    <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase">
+                        <span>{item.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}</span>
+                        <span>POSTED</span>
+                    </div>
+                    {item.rating && (
+                        <div className="flex gap-0.5 mt-0.5 text-amber-500 justify-start select-none">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <span key={i} className="text-[10px] leading-none">
+                                    {i < item.rating ? '★' : '☆'}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Central body text in center-aligned slab mono */}
@@ -480,6 +491,27 @@ export default function DraggableGrid(props) {
         [safeItems, totalCells, safeColumns]
     )
 
+    const extendedColumns = safeColumns * 3
+    const extendedRows = rows * 3
+    const expandedGridW = extendedColumns * safeImageWidth + (extendedColumns - 1) * safeGap
+    const expandedGridH = extendedRows * safeImageHeight + (extendedRows - 1) * safeGap
+
+    const displayItemsExtended = useMemo(() => {
+        const out = []
+        const baseLen = displayItems.length
+        if (baseLen === 0) return []
+        
+        for (let r_ext = 0; r_ext < extendedRows; r_ext++) {
+            for (let c_ext = 0; c_ext < extendedColumns; c_ext++) {
+                const r_base = r_ext % rows
+                const c_base = c_ext % safeColumns
+                const baseIdx = r_base * safeColumns + c_base
+                out.push(displayItems[baseIdx % baseLen])
+            }
+        }
+        return out
+    }, [displayItems, safeColumns, rows, extendedColumns, extendedRows])
+
     const gridW = safeColumns * safeImageWidth + (safeColumns - 1) * safeGap
     const gridH = rows * safeImageHeight + (rows - 1) * safeGap
 
@@ -522,33 +554,70 @@ export default function DraggableGrid(props) {
         }
     }, [minScale, zoomScale])
 
-    // Scale boundaries: adjust maxX/minX/maxY/minY for zoomScale.
-    // Origin is at "0 0" (top left), so scale moves the right and bottom boundaries accordingly.
-    const maxX = safeGap * zoomScale
-    const minX = Math.min(maxX, containerSize.w - gridW * zoomScale - safeGap * zoomScale)
-    const maxY = safeGap * zoomScale
-    const minY = Math.min(maxY, containerSize.h - gridH * zoomScale - safeGap * zoomScale)
+    // Scale boundaries and cycles for infinite loops
+    const cycleW = gridW + safeGap
+    const cycleH = gridH + safeGap
 
-    const dragConstraints = {
-        left: minX,
-        right: maxX,
-        top: minY,
-        bottom: maxY,
-    }
+    // Infinite wrapping logic centered around the middle copy
+    useEffect(() => {
+        let isWrappingX = false
+        let isWrappingY = false
 
-    // Center the grid initially and start the auto-drift screensaver loop
+        const unsubscribeX = x.onChange((latest) => {
+            if (isWrappingX) return
+            const half = 0.5 * cycleW
+            const center = -cycleW
+            const minLimit = center - half
+            const maxLimit = center + half
+
+            if (latest > maxLimit) {
+                isWrappingX = true
+                x.set(latest - cycleW)
+                isWrappingX = false
+            } else if (latest < minLimit) {
+                isWrappingX = true
+                x.set(latest + cycleW)
+                isWrappingX = false
+            }
+        })
+
+        const unsubscribeY = y.onChange((latest) => {
+            if (isWrappingY) return
+            const half = 0.5 * cycleH
+            const center = -cycleH
+            const minLimit = center - half
+            const maxLimit = center + half
+
+            if (latest > maxLimit) {
+                isWrappingY = true
+                y.set(latest - cycleH)
+                isWrappingY = false
+            } else if (latest < minLimit) {
+                isWrappingY = true
+                y.set(latest + cycleH)
+                isWrappingY = false
+            }
+        })
+
+        return () => {
+            unsubscribeX()
+            unsubscribeY()
+        }
+    }, [cycleW, cycleH, x, y])
+
+    // Center the grid initially (focusing on the middle repeat copy aligned to viewport center)
     useEffect(() => {
         if (initializedRef.current) return
         if (containerSize.w === 0 || containerSize.h === 0) return
 
-        const initialX = minX + (maxX - minX) / 2
-        const initialY = minY + (maxY - minY) / 2
+        const initialX = -cycleW + (containerSize.w - safeImageWidth) / 2
+        const initialY = -cycleH + (containerSize.h - safeImageHeight) / 2
         x.set(initialX)
         y.set(initialY)
         initializedRef.current = true
-    }, [containerSize.w, containerSize.h, minX, maxX, minY, maxY, x, y])
+    }, [containerSize.w, containerSize.h, cycleW, safeImageWidth, safeImageHeight, x, y])
 
-    // Auto-drift screensaver effect loop
+    // Auto-drift screensaver effect loop (seamless drift in 2D with no bounds)
     useEffect(() => {
         let animationFrameId
         
@@ -556,33 +625,8 @@ export default function DraggableGrid(props) {
             if (!isDragging && !isInteracting.current) {
                 const curX = x.get()
                 const curY = y.get()
-                
-                let nextX = curX + driftX.current
-                let nextY = curY + driftY.current
-
-                // Bounce off boundaries in X direction
-                if (minX < maxX) {
-                    if (nextX >= maxX) {
-                        nextX = maxX
-                        driftX.current = -Math.abs(driftX.current)
-                    } else if (nextX <= minX) {
-                        nextX = minX
-                        driftX.current = Math.abs(driftX.current)
-                    }
-                    x.set(nextX)
-                }
-
-                // Bounce off boundaries in Y direction
-                if (minY < maxY) {
-                    if (nextY >= maxY) {
-                        nextY = maxY
-                        driftY.current = -Math.abs(driftY.current)
-                    } else if (nextY <= minY) {
-                        nextY = minY
-                        driftY.current = Math.abs(driftY.current)
-                    }
-                    y.set(nextY)
-                }
+                x.set(curX + driftX.current)
+                y.set(curY + driftY.current)
             }
             animationFrameId = requestAnimationFrame(updateDrift)
         }
@@ -592,7 +636,7 @@ export default function DraggableGrid(props) {
             cancelAnimationFrame(animationFrameId)
             if (interactionTimeout.current) clearTimeout(interactionTimeout.current)
         }
-    }, [isDragging, minX, maxX, minY, maxY, x, y])
+    }, [isDragging, x, y])
 
     // Global listener to ensure isDragging is reset to false even if drag events
     // are canceled or bubble out of the container (critical for mobile browsers).
@@ -649,17 +693,8 @@ export default function DraggableGrid(props) {
 
                 if (touchStartScale.current > 0) {
                     const ratio = nextScale / touchStartScale.current
-                    let newX = midX - (touchStartMid.current.x - touchStartPos.current.x) * ratio
-                    let newY = midY - (touchStartMid.current.y - touchStartPos.current.y) * ratio
-
-                    // Clamp positions to match bounds for nextScale
-                    const nextMaxX = safeGap * nextScale
-                    const nextMinX = Math.min(nextMaxX, containerSize.w - gridW * nextScale - safeGap * nextScale)
-                    const nextMaxY = safeGap * nextScale
-                    const nextMinY = Math.min(nextMaxY, containerSize.h - gridH * nextScale - safeGap * nextScale)
-
-                    newX = Math.max(nextMinX, Math.min(nextMaxX, newX))
-                    newY = Math.max(nextMinY, Math.min(nextMaxY, newY))
+                    const newX = midX - (touchStartMid.current.x - touchStartPos.current.x) * ratio
+                    const newY = midY - (touchStartMid.current.y - touchStartPos.current.y) * ratio
 
                     x.set(newX)
                     y.set(newY)
@@ -693,16 +728,8 @@ export default function DraggableGrid(props) {
 
                 if (oldScale > 0) {
                     const scaleRatio = nextScale / oldScale
-                    let newX = midX - (midX - oldX) * scaleRatio
-                    let newY = midY - (midY - oldY) * scaleRatio
-
-                    const nextMaxX = safeGap * nextScale
-                    const nextMinX = Math.min(nextMaxX, containerSize.w - gridW * nextScale - safeGap * nextScale)
-                    const nextMaxY = safeGap * nextScale
-                    const nextMinY = Math.min(nextMaxY, containerSize.h - gridH * nextScale - safeGap * nextScale)
-
-                    newX = Math.max(nextMinX, Math.min(nextMaxX, newX))
-                    newY = Math.max(nextMinY, Math.min(nextMaxY, newY))
+                    const newX = midX - (midX - oldX) * scaleRatio
+                    const newY = midY - (midY - oldY) * scaleRatio
 
                     x.set(newX)
                     y.set(newY)
@@ -731,17 +758,14 @@ export default function DraggableGrid(props) {
         const el = containerRef.current
         if (!el) return
 
-        const clamp = (v, mn, mx) =>
-            Math.min(Math.max(v, mn), mx)
-
         const onWheel = (e) => {
             if (e.ctrlKey) return // Skip if trackpad pinch-to-zoom is active
             e.preventDefault()
             triggerInteraction()
             const curX = x.get()
             const curY = y.get()
-            const targetX = clamp(curX - e.deltaX, minX, maxX)
-            const targetY = clamp(curY - e.deltaY, minY, maxY)
+            const targetX = curX - e.deltaX
+            const targetY = curY - e.deltaY
             if (wheelAnimX.current) wheelAnimX.current.stop()
             if (wheelAnimY.current) wheelAnimY.current.stop()
             wheelAnimX.current = animate(x, targetX, {
@@ -760,7 +784,7 @@ export default function DraggableGrid(props) {
             if (wheelAnimX.current) wheelAnimX.current.stop()
             if (wheelAnimY.current) wheelAnimY.current.stop()
         }
-    }, [enableWheel, minX, maxX, minY, maxY, x, y, triggerInteraction])
+    }, [enableWheel, x, y, triggerInteraction])
 
     const handlePointerDown = useCallback((e) => {
         triggerInteraction()
@@ -806,11 +830,11 @@ export default function DraggableGrid(props) {
         position: "absolute",
         top: 0,
         left: 0,
-        width: gridW,
-        height: gridH,
+        width: expandedGridW,
+        height: expandedGridH,
         boxSizing: "border-box",
         display: "grid",
-        gridTemplateColumns: `repeat(${safeColumns}, ${safeImageWidth}px)`,
+        gridTemplateColumns: `repeat(${extendedColumns}, ${safeImageWidth}px)`,
         gridAutoRows: `${safeImageHeight}px`,
         gap: `${safeGap}px`,
         willChange: "transform",
@@ -823,7 +847,6 @@ export default function DraggableGrid(props) {
             <motion.div
                 style={{ ...gridStyle, x, y, scale: zoomScale }}
                 drag={!isPinching}
-                dragConstraints={dragConstraints}
                 dragElastic={0}
                 dragMomentum={true}
                 onDragStart={() => {
@@ -833,7 +856,7 @@ export default function DraggableGrid(props) {
                 onDragEnd={() => setIsDragging(false)}
                 onDrag={() => triggerInteraction()}
             >
-                {displayItems.map((item, index) => {
+                {displayItemsExtended.map((item, index) => {
                     const failed = failedImages.current.has(index)
                     return (
                         <LazyCard

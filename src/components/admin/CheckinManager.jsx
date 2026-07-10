@@ -351,22 +351,27 @@ export default function CheckinManager() {
                 }
             }
 
+            let image_url = ''
             if (!primaryImageUrl && !scrapedImageUrl) {
-                throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
-            }
+                if (source === 'google') {
+                    image_url = 'text_only'
+                } else {
+                    throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
+                }
+            } else {
+                // 1. Try uploading the primary (uncropped) image URL
+                image_url = await uploadExternalImageToSupabase(primaryImageUrl)
+                
+                // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
+                if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
+                    console.log('Uncropped media URL failed, falling back to scraped image URL...')
+                    image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
+                }
 
-            // 1. Try uploading the primary (uncropped) image URL
-            let image_url = await uploadExternalImageToSupabase(primaryImageUrl)
-            
-            // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
-            if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
-                console.log('Uncropped media URL failed, falling back to scraped image URL...')
-                image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
-            }
-
-            // 3. If that also fails, use the scraped image URL directly
-            if (!image_url) {
-                image_url = scrapedImageUrl || primaryImageUrl
+                // 3. If that also fails, use the scraped image URL directly
+                if (!image_url) {
+                    image_url = scrapedImageUrl || primaryImageUrl
+                }
             }
 
             let ratingValue = source === 'google' ? 5 : null
@@ -548,22 +553,27 @@ export default function CheckinManager() {
                 }
             }
 
+            let image_url = ''
             if (!primaryImageUrl && !scrapedImageUrl) {
-                throw new Error('ไม่พบรูปภาพในลิงก์นี้')
-            }
+                if (source === 'google') {
+                    image_url = 'text_only'
+                } else {
+                    throw new Error('ไม่พบรูปภาพในลิงก์นี้')
+                }
+            } else {
+                // 1. Try uploading the primary (uncropped) image URL
+                image_url = await uploadExternalImageToSupabase(primaryImageUrl)
+                
+                // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
+                if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
+                    console.log('Uncropped media URL failed, falling back to scraped image URL...')
+                    image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
+                }
 
-            // 1. Try uploading the primary (uncropped) image URL
-            let image_url = await uploadExternalImageToSupabase(primaryImageUrl)
-            
-            // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
-            if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
-                console.log('Uncropped media URL failed, falling back to scraped image URL...')
-                image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
-            }
-
-            // 3. If that also fails, use the scraped image URL directly
-            if (!image_url) {
-                image_url = scrapedImageUrl || primaryImageUrl
+                // 3. If that also fails, use the scraped image URL directly
+                if (!image_url) {
+                    image_url = scrapedImageUrl || primaryImageUrl
+                }
             }
 
             let ratingValue = source === 'google' ? 5 : null

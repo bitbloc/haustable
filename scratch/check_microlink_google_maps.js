@@ -1,7 +1,7 @@
-const url = 'https://maps.app.goo.gl/7pvsxtJccsf6tcQk8';
+const url = 'https://maps.app.goo.gl/WM4vGsGxg3MTCmEt8';
 const microlinkUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}&prerender=true`;
 
-console.log('Querying microlink for the new review...');
+console.log('Querying microlink for text-only review...');
 fetch(microlinkUrl)
     .then(res => res.json())
     .then(json => {
