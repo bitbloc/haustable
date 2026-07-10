@@ -267,8 +267,8 @@ function LazyCard({
                             overflow: "hidden",
                             fontFamily: "Space Mono, Courier New, Courier, monospace",
                             fontWeight: 500,
-                            fontSize: (item.text || "").length <= 20 ? "15px" : ((item.text || "").length <= 45 ? "12.5px" : "10.5px"),
-                            lineHeight: (item.text || "").length <= 20 ? "1.4" : ((item.text || "").length <= 45 ? "1.45" : "1.5"),
+                             fontSize: (item.text || "").length <= 15 ? "20px" : ((item.text || "").length <= 30 ? "16px" : ((item.text || "").length <= 50 ? "13.5px" : "11px")),
+                            lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),
                             color: "#262626",
                         }}
                     >
@@ -295,7 +295,7 @@ function LazyCard({
                 height: safeImageHeight,
                 overflow: "hidden",
                 borderRadius: radius,
-                backgroundColor: getItemColor(index),
+                backgroundColor: src && !failed ? "#111111" : getItemColor(index),
                 color: "rgba(255,255,255,0.85)",
                 display: "flex",
                 alignItems: "center",
@@ -341,7 +341,7 @@ function LazyCard({
                     
                     {/* Minimalist Rams Caption & Interactive Likes overlay */}
                     <div 
-                        className="absolute bottom-0 left-0 right-0 z-10 bg-black/75 backdrop-blur-sm border-t border-white/10 px-4 pt-2.5 pb-3.5 flex items-center justify-between gap-2 pointer-events-auto select-none"
+                        className="absolute bottom-0 left-0 right-0 z-10 bg-[#111111]/90 border-t border-white/5 px-4 pt-2.5 pb-3.5 flex items-center justify-between gap-2 pointer-events-auto select-none"
                         onPointerDown={(e) => e.stopPropagation()} // Stop drag initiation from this area
                         onPointerUp={(e) => e.stopPropagation()} // Stop click initiation from this area
                         style={{ 
