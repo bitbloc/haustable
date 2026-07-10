@@ -713,14 +713,14 @@ export default function HausCheckinPage() {
                                         onChange={(e) => setNoteText(e.target.value)}
                                         placeholder="พิมพ์ข้อความของคุณที่นี่..."
                                         required
-                                        maxLength={140}
+                                        maxLength={70}
                                         rows={4}
                                         style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}
                                         className="w-full bg-white border border-neutral-250 p-2.5 rounded-sm text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors resize-none leading-relaxed"
                                     />
                                     <div className="flex justify-between items-center text-[8px] font-mono text-neutral-400 mt-1">
-                                        <span>* สูงสุด 140 ตัวอักษร</span>
-                                        <span>{noteText.length}/140</span>
+                                        <span>* สูงสุด 70 ตัวอักษร</span>
+                                        <span>{noteText.length}/70</span>
                                     </div>
                                 </div>
 

@@ -1,4 +1,4 @@
-const url = 'https://maps.app.goo.gl/iezqeoFYojkaob9i7';
+const url = 'https://maps.app.goo.gl/7pvsxtJccsf6tcQk8';
 fetch(url, { redirect: 'manual' })
     .then(res => {
         console.log('Status:', res.status);
