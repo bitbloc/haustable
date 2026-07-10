@@ -337,6 +337,35 @@ export default function POSDashboard() {
         setView('menu');
     };
 
+    useEffect(() => {
+        const autoSelectPending = async () => {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const { data: pendingBookings } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*)')
+                    .eq('status', 'pending')
+                    .gte('booking_time', `${today}T00:00:00`)
+                    .order('booking_time', { ascending: false });
+                    
+                if (pendingBookings && pendingBookings.length > 0) {
+                    const firstPending = pendingBookings[0];
+                    if (firstPending.tables_layout) {
+                        handleSelectTable(firstPending.tables_layout);
+                    }
+                }
+            } catch (err) {
+                console.error("Auto select pending failed:", err);
+            }
+        };
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('autoSelect') === 'pending') {
+            autoSelectPending();
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
+
     const handleBackToTables = () => {
         setView('tables');
         setSelectedTable(null);

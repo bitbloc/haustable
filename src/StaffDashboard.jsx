@@ -464,7 +464,7 @@ export default function StaffDashboard() {
                         className="sd-alert-bar"
                     >
                         <button 
-                            onClick={() => navigate('/staff/orders')}
+                            onClick={() => navigate('/pos?autoSelect=pending')}
                             className="sd-alert-bar__btn"
                         >
                             <span className="sd-alert-bar__left">
