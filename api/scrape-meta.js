@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         
         // 1. Try fetching via microlink
         try {
-            const microlinkUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}`
+            const microlinkUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}&prerender=true`
             const mRes = await fetch(microlinkUrl, { signal: AbortSignal.timeout(6000) })
             if (mRes.ok) {
                 const json = await mRes.json()

@@ -236,11 +236,26 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            // Fetch metadata via proxy API route to prevent rate limit blocks (429) on client
-            const res = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
-            const json = await res.json()
+            let json = null
+            try {
+                // 1. Try direct client-side fetch from the user's browser (no Vercel shared rate limits)
+                const clientRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&prerender=true`, { signal: AbortSignal.timeout(8000) })
+                if (clientRes.ok) {
+                    json = await clientRes.json()
+                }
+            } catch (err) {
+                console.warn('Client-side microlink query failed, trying server-side proxy:', err)
+            }
 
-            if (json.status !== 'success' || !json.data) {
+            if (!json || json.status !== 'success' || !json.data) {
+                // 2. Fallback to server-side proxy if client-side query failed or got rate-limited
+                const proxyRes = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
+                if (proxyRes.ok) {
+                    json = await proxyRes.json()
+                }
+            }
+
+            if (!json || json.status !== 'success' || !json.data) {
                 throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
             }
 
@@ -438,11 +453,26 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            // Fetch metadata via proxy API route to prevent rate limit blocks (429) on client
-            const res = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
-            const json = await res.json()
+            let json = null
+            try {
+                // 1. Try direct client-side fetch from the user's browser (no Vercel shared rate limits)
+                const clientRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&prerender=true`, { signal: AbortSignal.timeout(8000) })
+                if (clientRes.ok) {
+                    json = await clientRes.json()
+                }
+            } catch (err) {
+                console.warn('Client-side microlink query failed, trying server-side proxy:', err)
+            }
 
-            if (json.status !== 'success' || !json.data) {
+            if (!json || json.status !== 'success' || !json.data) {
+                // 2. Fallback to server-side proxy if client-side query failed or got rate-limited
+                const proxyRes = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
+                if (proxyRes.ok) {
+                    json = await proxyRes.json()
+                }
+            }
+
+            if (!json || json.status !== 'success' || !json.data) {
                 throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
             }
 
