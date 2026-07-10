@@ -124,14 +124,25 @@ export default function SlipModal({ booking, type, onClose }) {
         ` : ''
 
         const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
-        
+        const discountVal = booking.discount_amount || 0;
+        const netAfterDiscount = subtotal - discountVal;
+
+        const vatVal = (booking.total_amount && Math.abs(booking.total_amount - (netAfterDiscount * 1.07)) < 1) 
+            ? (netAfterDiscount * 0.07) 
+            : 0;
+
+        const vatHtml = vatVal > 0 ? `
+            <div class="row"><span>VAT (7%)</span> <span>${vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+        ` : '';
+
         const totalsHtml = activeTab !== 'kitchen' ? `
             <div class="totals">
                 <div class="row"><span>Subtotal</span> <span>${subtotal.toLocaleString()}</span></div>
                 ${discountHtml}
+                ${vatHtml}
                 <div class="row total-row" style="font-size: 15px; border-top: 1px dashed black; padding-top: 5px;">
                     <span>TOTAL</span>
-                    <span>${booking.total_amount?.toLocaleString()}</span>
+                    <span>${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
             </div>
         ` : ''

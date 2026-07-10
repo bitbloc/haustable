@@ -2,9 +2,29 @@ import React from 'react';
 import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { supabase } from '../lib/supabaseClient';
+
 export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder, onOpenSlip }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
+
+    React.useEffect(() => {
+        const loadDefaultVat = async () => {
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'default_vat_enabled')
+                    .single();
+                if (data && data.value) {
+                    setIncludeTax(data.value === 'true');
+                }
+            } catch (err) {
+                console.error("Error loading default VAT:", err);
+            }
+        };
+        loadDefaultVat();
+    }, []);
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const tax = includeTax ? subtotal * 0.07 : 0;
     const total = subtotal + tax;

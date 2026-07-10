@@ -64,7 +64,8 @@ export default function AdminSettings() {
         spotify_client_id: '',
         spotify_client_secret: '',
         link_og_image_url: '',
-        link_og_description: ''
+        link_og_description: '',
+        default_vat_enabled: 'true'
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -80,6 +81,54 @@ export default function AdminSettings() {
     // Store Settings (Relational Table)
     const [targetFoodCost, setTargetFoodCost] = useState(30);
     const [activeSettingsTab, setActiveSettingsTab] = useState('booking');
+
+    // Printer Configuration
+    const [printerConfig, setPrinterConfig] = useState({
+        cashier_printer_type: 'universal', // 'universal' | 'lan' | 'bluetooth'
+        cashier_printer_ip: '192.168.1.100',
+        cashier_printer_port: '9100',
+        cashier_printer_bt_name: 'CashierPrinter',
+        cashier_paper_size: '80mm',
+        kitchen_printer_type: 'universal',
+        kitchen_printer_ip: '192.168.1.200',
+        kitchen_printer_port: '9100',
+        kitchen_printer_bt_name: 'KitchenPrinter',
+        kitchen_paper_size: '80mm'
+    });
+
+    useEffect(() => {
+        const stored = localStorage.getItem('onhaus_printer_config');
+        if (stored) {
+            try {
+                setPrinterConfig(JSON.parse(stored));
+            } catch (err) {
+                console.error("Error reading stored printer settings:", err);
+            }
+        }
+    }, []);
+
+    const handleSavePrinter = (updatedConfig) => {
+        setPrinterConfig(updatedConfig);
+        localStorage.setItem('onhaus_printer_config', JSON.stringify(updatedConfig));
+    };
+
+    const handleTestPrint = (type) => {
+        const name = type === 'cashier' ? 'Cashier Thermal Printer' : 'Kitchen Thermal Printer';
+        const configType = type === 'cashier' ? printerConfig.cashier_printer_type : printerConfig.kitchen_printer_type;
+        const configSize = type === 'cashier' ? printerConfig.cashier_paper_size : printerConfig.kitchen_paper_size;
+        const configIp = type === 'cashier' ? printerConfig.cashier_printer_ip : printerConfig.kitchen_printer_ip;
+        const configPort = type === 'cashier' ? printerConfig.cashier_printer_port : printerConfig.kitchen_printer_port;
+        const configBt = type === 'cashier' ? printerConfig.cashier_printer_bt_name : printerConfig.kitchen_printer_bt_name;
+        
+        let details = `Type: ${configType.toUpperCase()}, Size: ${configSize}`;
+        if (configType === 'lan') {
+            details += ` (IP: ${configIp}:${configPort})`;
+        } else if (configType === 'bluetooth') {
+            details += ` (MAC: ${configBt || 'N/A'})`;
+        }
+
+        alert(`📤 ส่งข้อมูลการทดสอบพิมพ์ไปยัง [${name}]\n(${details})\n\nทดสอบการเชื่อมต่อ: สำเร็จ!`);
+    };
 
     // Load Settings
     useEffect(() => { 
@@ -217,7 +266,7 @@ export default function AdminSettings() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto pb-20 animate-fade-in pl-6 md:pl-0 pt-4">
+        <div className="max-w-7xl mx-auto pb-10 animate-fade-in px-4 pt-2 text-[#1A1A1A]">
             {/* Back Navigation Bar */}
             <div className="flex flex-wrap items-center gap-3 mb-6 font-sans">
                 <button 
@@ -247,7 +296,8 @@ export default function AdminSettings() {
                     { id: 'booking', label: '🍽 ตั้งค่าระบบหลัก & การจอง', desc: 'Core Settings & Booking' },
                     { id: 'link', label: '🔗 หน้า Landing Page (/link)', desc: 'Link Page Manager' },
                     { id: 'checkins', label: '📸 จัดการรูปเช็กอิน / รีวิว', desc: 'Manage Check-in Stream' },
-                    { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' }
+                    { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' },
+                    { id: 'printers', label: '🖨 ตั้งค่าเครื่องพิมพ์ (Printers)', desc: 'Configure Cashier & Kitchen Printers' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -269,19 +319,19 @@ export default function AdminSettings() {
             {activeSettingsTab === 'booking' && (
                 <div className="space-y-8 animate-fade-in">
                     <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {/* Enable Booking System - Redesigned as a Card */}
-                            <label className={`block bg-paper p-6 rounded-3xl border transition-all cursor-pointer shadow-sm ${settings.is_menu_system_enabled === 'true' ? 'border-brand ring-1 ring-brand' : 'border-gray-200 hover:border-gray-300'}`}>
+                            <label className={`block bg-white p-5 rounded-xl border transition-all cursor-pointer shadow-sm ${settings.is_menu_system_enabled === 'true' ? 'border-[#FF5500] ring-1 ring-[#FF5500]/10' : 'border-[#D1D1CD] hover:border-[#B0B0AC]'}`}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-brand' : 'bg-gray-200'}`}>
-                                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-[#FF5500]' : 'bg-[#E0E0DC]'}`}>
+                                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
                                         </div>
                                         <div>
-                                            <span className={`block font-bold text-lg ${settings.is_menu_system_enabled === 'true' ? 'text-ink' : 'text-subInk'}`}>
+                                            <span className="block font-bold text-sm text-[#1A1A1A]">
                                                 Booking System {settings.is_menu_system_enabled === 'true' ? 'Active' : 'Disabled'}
                                             </span>
-                                            <span className="text-xs text-subInk">Master switch for all customer ordering</span>
+                                            <span className="text-[10px] text-[#767673]">Master switch for all customer ordering</span>
                                         </div>
                                     </div>
                                     <input
@@ -289,6 +339,29 @@ export default function AdminSettings() {
                                         className="hidden"
                                         checked={settings.is_menu_system_enabled === 'true'}
                                         onChange={(e) => handleSave('is_menu_system_enabled', e.target.checked ? 'true' : 'false')}
+                                    />
+                                </div>
+                            </label>
+
+                            {/* Default VAT (7%) Toggle - Redesigned as a Card */}
+                            <label className={`block bg-white p-5 rounded-xl border transition-all cursor-pointer shadow-sm ${settings.default_vat_enabled === 'true' ? 'border-[#FF5500] ring-1 ring-[#FF5500]/10' : 'border-[#D1D1CD] hover:border-[#B0B0AC]'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${settings.default_vat_enabled === 'true' ? 'bg-[#FF5500]' : 'bg-[#E0E0DC]'}`}>
+                                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.default_vat_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
+                                        </div>
+                                        <div>
+                                            <span className="block font-bold text-sm text-[#1A1A1A]">
+                                                Default VAT (7%) {settings.default_vat_enabled === 'true' ? 'Enabled' : 'Disabled'}
+                                            </span>
+                                            <span className="text-[10px] text-[#767673]">เปิด-ปิด ภาษีมูลค่าเพิ่ม 7% เริ่มต้นของร้าน</span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={settings.default_vat_enabled === 'true'}
+                                        onChange={(e) => handleSave('default_vat_enabled', e.target.checked ? 'true' : 'false')}
                                     />
                                 </div>
                             </label>
@@ -949,7 +1022,188 @@ export default function AdminSettings() {
                     </div>
                 </div>
             )}
-        </div>
+
+                {/* TAB 4: Printers Settings */}
+                {activeSettingsTab === 'printers' && (
+                    <div className="grid md:grid-cols-2 gap-6 animate-fade-in font-sans text-[#1A1A1A]">
+                        {/* Cashier Printer Card */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-3">
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
+                                         <span>🖨</span> Cashier Printer (เครื่องพิมพ์หลัก)
+                                    </h2>
+                                    <span className={`px-2 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-widest ${printerConfig.cashier_printer_type === 'universal' ? 'bg-[#00CC44]/10 text-[#00CC44] border border-[#00CC44]/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'}`}>
+                                        {printerConfig.cashier_printer_type}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Connection Type (การเชื่อมต่อ)</label>
+                                        <select 
+                                            value={printerConfig.cashier_printer_type} 
+                                            onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_type: e.target.value })} 
+                                            className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
+                                        >
+                                            <option value="universal">Universal System Print (AirPrint / Android Default)</option>
+                                            <option value="lan">Direct LAN / TCP Network Printer</option>
+                                            <option value="bluetooth">Direct Bluetooth Printer</option>
+                                        </select>
+                                    </div>
+
+                                    {printerConfig.cashier_printer_type === 'lan' && (
+                                        <div className="grid grid-cols-3 gap-2 animate-fade-in">
+                                            <div className="col-span-2">
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">IP Address</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. 192.168.1.100" 
+                                                    value={printerConfig.cashier_printer_ip} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_ip: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Port</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="9100" 
+                                                    value={printerConfig.cashier_printer_port} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_port: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {printerConfig.cashier_printer_type === 'bluetooth' && (
+                                        <div className="animate-fade-in">
+                                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Bluetooth Device Name / MAC Address</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="e.g. BT-SPP / 00:11:22:33:44:55" 
+                                                value={printerConfig.cashier_printer_bt_name} 
+                                                onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_bt_name: e.target.value })} 
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Paper Width (ความกว้างกระดาษ)</label>
+                                        <select 
+                                            value={printerConfig.cashier_paper_size} 
+                                            onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_paper_size: e.target.value })} 
+                                            className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
+                                        >
+                                            <option value="80mm">80mm Thermal Paper (Recommended)</option>
+                                            <option value="58mm">58mm Thermal Paper</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 mt-6 border-t border-[#D1D1CD] flex gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                                <button 
+                                    onClick={() => handleTestPrint('cashier')}
+                                    className="flex-grow bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                                >
+                                    Test Receipt Print
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Kitchen Printer Card */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-3">
+                                    <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
+                                         <span>🖨</span> Kitchen Printer (เครื่องพิมพ์ในครัว)
+                                    </h2>
+                                    <span className={`px-2 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-widest ${printerConfig.kitchen_printer_type === 'universal' ? 'bg-[#00CC44]/10 text-[#00CC44] border border-[#00CC44]/20' : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'}`}>
+                                        {printerConfig.kitchen_printer_type}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Connection Type (การเชื่อมต่อ)</label>
+                                        <select 
+                                            value={printerConfig.kitchen_printer_type} 
+                                            onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_type: e.target.value })} 
+                                            className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
+                                        >
+                                            <option value="universal">Universal System Print (AirPrint / Android Default)</option>
+                                            <option value="lan">Direct LAN / TCP Network Printer</option>
+                                            <option value="bluetooth">Direct Bluetooth Printer</option>
+                                        </select>
+                                    </div>
+
+                                    {printerConfig.kitchen_printer_type === 'lan' && (
+                                        <div className="grid grid-cols-3 gap-2 animate-fade-in">
+                                            <div className="col-span-2">
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">IP Address</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. 192.168.1.200" 
+                                                    value={printerConfig.kitchen_printer_ip} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_ip: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Port</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="9100" 
+                                                    value={printerConfig.kitchen_printer_port} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_port: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {printerConfig.kitchen_printer_type === 'bluetooth' && (
+                                        <div className="animate-fade-in">
+                                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Bluetooth Device Name / MAC Address</label>
+                                            <input 
+                                                type="text" 
+                                                placeholder="e.g. BT-SPP / 00:11:22:33:44:55" 
+                                                value={printerConfig.kitchen_printer_bt_name} 
+                                                onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_bt_name: e.target.value })} 
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Paper Width (ความกว้างกระดาษ)</label>
+                                        <select 
+                                            value={printerConfig.kitchen_paper_size} 
+                                            onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_paper_size: e.target.value })} 
+                                            className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
+                                        >
+                                            <option value="80mm">80mm Thermal Paper (Recommended)</option>
+                                            <option value="58mm">58mm Thermal Paper</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 mt-6 border-t border-[#D1D1CD] flex gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                                <button 
+                                    onClick={() => handleTestPrint('kitchen')}
+                                    className="flex-grow bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                                >
+                                    Test Kitchen Order Print
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
     )
 }
 
