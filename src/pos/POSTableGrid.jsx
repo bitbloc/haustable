@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
-export default function POSTableGrid({ onSelectTable, hasPendingOrders }) {
+export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -40,6 +40,12 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders }) {
             supabase.removeChannel(tablesSub);
         };
     }, []);
+
+    useEffect(() => {
+        if (refreshKey > 0) {
+            fetchTables();
+        }
+    }, [refreshKey]);
 
     const fetchFloorplan = async () => {
         try {
@@ -94,6 +100,25 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders }) {
 
     return (
         <div className="h-full flex flex-col bg-[#ECECE9] overflow-hidden select-none font-sans text-[#1A1A1A]">
+            <style>{`
+                @keyframes pos-blink-orange {
+                    0%, 100% {
+                        background-color: #FFF9E6;
+                        border-color: #FFAA00;
+                        color: #805E00;
+                        box-shadow: 0 0 6px #FFAA00;
+                    }
+                    50% {
+                        background-color: #FF5500;
+                        color: #FFFFFF;
+                        border-color: #FF5500;
+                        box-shadow: 0 0 16px #FF5500;
+                    }
+                }
+                .animate-pos-blink {
+                    animation: pos-blink-orange 1.0s infinite ease-in-out !important;
+                }
+            `}</style>
             {/* Top Toolbar */}
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0 shadow-sm">
                 {/* Search and Filters */}
@@ -246,7 +271,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders }) {
                                                     tableBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
                                                     ledColor = 'bg-[#FF3300]';
                                                 } else if (isPending) {
-                                                    tableBgClass = 'bg-[#FFF9E6] border-[#FFAA00] text-[#805E00] animate-pulse border-2 shadow-md';
+                                                    tableBgClass = 'animate-pos-blink border-2 shadow-md';
                                                     ledColor = 'bg-[#FFAA00] animate-ping';
                                                 }
                                                 
@@ -335,7 +360,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders }) {
                                         cellBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
                                         ledColor = 'bg-[#FF3300]';
                                     } else if (isPending) {
-                                        cellBgClass = 'bg-[#FFF9E6] border-[#FFAA00] text-[#805E00] animate-pulse border-2 shadow-md';
+                                        cellBgClass = 'animate-pos-blink border-2 shadow-md';
                                         ledColor = 'bg-[#FFAA00] animate-ping';
                                     }
 

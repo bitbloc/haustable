@@ -21,6 +21,7 @@ export default function POSDashboard() {
     });
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
     const [activeSlipType, setActiveSlipType] = useState('billing');
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
@@ -184,6 +185,7 @@ export default function POSDashboard() {
                 table: 'bookings' 
             }, async (payload) => {
                 checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
                 const { eventType, new: newRow, old: oldRow } = payload;
                 const tableId = newRow?.table_id || oldRow?.table_id;
                 if (!tableId) return;
@@ -423,7 +425,7 @@ export default function POSDashboard() {
                     {/* Main Content Area */}
                     <div className="flex-1 h-full overflow-hidden relative">
                         {view === 'tables' ? (
-                            <POSTableGrid onSelectTable={handleSelectTable} hasPendingOrders={hasPendingOrders} />
+                            <POSTableGrid onSelectTable={handleSelectTable} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
                         ) : view === 'menu' ? (
                             <POSMenuGrid onAddItem={handleAddToOrder} />
                         ) : view === 'crm' ? (
