@@ -236,8 +236,8 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            // Call microlink.io public API to scrape meta tags
-            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
+            // Fetch metadata via proxy API route to prevent rate limit blocks (429) on client
+            const res = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
             const json = await res.json()
 
             if (json.status !== 'success' || !json.data) {
@@ -438,8 +438,8 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            // Call microlink.io public API to scrape meta tags
-            const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`)
+            // Fetch metadata via proxy API route to prevent rate limit blocks (429) on client
+            const res = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
             const json = await res.json()
 
             if (json.status !== 'success' || !json.data) {
