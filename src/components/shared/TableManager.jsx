@@ -220,7 +220,13 @@ export default function TableManager({ isStaffView = false }) {
                 className={`cursor-pointer select-none flex flex-col items-center justify-center p-1 border shadow-sm hover:scale-102 hover:shadow-md active:scale-98 transition-all ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'} ${tableBgClass}`}
             >
                 {/* Status LED */}
-                <div className="absolute top-1 right-1">
+                <div className="absolute top-1 right-1 flex items-center gap-1">
+                    {isOccupied && statusData.booking?.staff_remark?.includes('[CALL_BILL]') && (
+                        <span className="bg-[#FFAA00] text-black text-[6px] font-mono font-bold px-0.5 rounded leading-none animate-pulse">BILL</span>
+                    )}
+                    {isOccupied && statusData.booking?.payment_slip_url && (
+                        <span className="bg-[#FF5500] text-white text-[6px] font-mono font-bold px-0.5 rounded leading-none">SLIP</span>
+                    )}
                     <span className={`w-1.5 h-1.5 rounded-full border border-black/10 block ${ledColor}`}></span>
                 </div>
 

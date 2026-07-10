@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import StaffAttendanceModal from './components/staff/StaffAttendanceModal';
 import './StaffDashboard.css';
+import { toast } from 'sonner';
 
 // --- Sub-Components ---
 
@@ -114,6 +115,68 @@ export default function StaffDashboard() {
     const [refreshing, setRefreshing] = useState(false); 
     const [showAttendanceModal, setShowAttendanceModal] = useState(false);
     const { permission, isSubscribed, requestPermission } = usePushNotifications(); 
+
+    const [tablesMap, setTablesMap] = useState({});
+
+    useEffect(() => {
+        const loadTablesMap = async () => {
+            const { data } = await supabase.from('tables_layout').select('id, table_name');
+            if (data) {
+                const mapping = {};
+                data.forEach(t => {
+                    mapping[t.id] = t.table_name;
+                });
+                setTablesMap(mapping);
+            }
+        };
+        loadTablesMap();
+    }, []);
+
+    const playSystemAlertSound = async () => {
+        try {
+            const { data } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'alert_sound_url')
+                .single();
+            if (data && data.value) {
+                const audio = new Audio(data.value);
+                await audio.play();
+                return;
+            }
+        } catch (e) {
+            console.warn("Custom audio play failed, using synth beep:", e);
+        }
+
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.frequency.value = 880;
+            gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc1.start(ctx.currentTime);
+            osc1.stop(ctx.currentTime + 0.15);
+            
+            const delay = 0.12;
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.frequency.value = 1100;
+            gain2.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
+            osc2.start(ctx.currentTime + delay);
+            osc2.stop(ctx.currentTime + delay + 0.25);
+        } catch (err) {
+            console.error("Web Audio API failed:", err);
+        }
+    };
 
     // 1. Fetch Stats & Activity Logic 
     const fetchStats = useCallback(async (isBackgroundRefresh = false) => {
@@ -224,6 +287,51 @@ export default function StaffDashboard() {
                 (payload) => {
                     console.log('Booking change detected:', payload);
                     fetchStats(true); // Refetch stats quietly
+
+                    const { eventType, new: newRow, old: oldRow } = payload;
+                    const tableId = newRow?.table_id || oldRow?.table_id;
+                    if (!tableId) return;
+
+                    const tableName = tablesMap[tableId] || `Table #${tableId}`;
+
+                    if (eventType === 'INSERT') {
+                        if (newRow.status === 'pending') {
+                            toast.success(`🛎️ ออเดอร์ใหม่! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'ดูรายการ',
+                                    onClick: () => navigate('/staff')
+                                }
+                            });
+                            playSystemAlertSound();
+                        }
+                    } else if (eventType === 'UPDATE') {
+                        const oldRemark = oldRow?.staff_remark || '';
+                        const newRemark = newRow?.staff_remark || '';
+                        if (newRemark.includes('[CALL_BILL]') && !oldRemark.includes('[CALL_BILL]')) {
+                            toast.warning(`💵 โต๊ะ ${tableName} เรียกเช็คบิล!`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'เช็คบิล',
+                                    onClick: () => navigate('/staff')
+                                }
+                            });
+                            playSystemAlertSound();
+                        }
+
+                        const oldSlip = oldRow?.payment_slip_url || '';
+                        const newSlip = newRow?.payment_slip_url || '';
+                        if (newSlip && !oldSlip) {
+                            toast.success(`📸 โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว!`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'ตรวจสลิป',
+                                    onClick: () => navigate('/staff')
+                                }
+                            });
+                            playSystemAlertSound();
+                        }
+                    }
                 }
             )
             .on(

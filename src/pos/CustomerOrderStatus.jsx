@@ -12,6 +12,7 @@ export default function CustomerOrderStatus() {
     // UI States
     const [loading, setLoading] = useState(true);
     const [uploadingSlip, setUploadingSlip] = useState(false);
+    const [requestingBill, setRequestingBill] = useState(false);
     const [booking, setBooking] = useState(null);
     const [orderItems, setOrderItems] = useState([]);
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
@@ -133,6 +134,32 @@ export default function CustomerOrderStatus() {
             toast.error('อัปโหลดสลิปล้มเหลว: ' + err.message);
         } finally {
             setUploadingSlip(false);
+        }
+    };
+
+    const handleRequestBill = async () => {
+        if (!booking) return;
+        setRequestingBill(true);
+        try {
+            const currentRemark = booking.staff_remark || '';
+            const newRemark = currentRemark.includes('[CALL_BILL]') 
+                ? currentRemark 
+                : `[CALL_BILL] ${currentRemark}`.trim();
+
+            const { error } = await supabase
+                .from('bookings')
+                .update({ staff_remark: newRemark })
+                .eq('id', booking.id);
+
+            if (error) throw error;
+
+            toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
+            fetchActiveOrder(true);
+        } catch (err) {
+            console.error('Request bill failed:', err);
+            toast.error('ล้มเหลว: ' + err.message);
+        } finally {
+            setRequestingBill(false);
         }
     };
 
@@ -306,19 +333,34 @@ export default function CustomerOrderStatus() {
                             </div>
                         </div>
                     ) : (
-                        <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-black/40 border border-dashed border-white/10 hover:border-orange-500/50 rounded-2xl p-5 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
-                            <Upload size={24} className="text-gray-500 group-hover:text-orange-500 transition-colors mb-2" />
-                            <span className="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">
-                                {uploadingSlip ? 'กำลังอัปโหลด...' : 'คลิกที่นี่เพื่อส่งสลิปโอนเงิน (Upload Slip)'}
-                            </span>
-                            <input 
-                                type="file" 
-                                className="hidden" 
-                                accept="image/*" 
-                                onChange={handleUploadSlip} 
-                                disabled={uploadingSlip}
-                            />
-                        </label>
+                        <div className="w-full space-y-3">
+                            <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-black/40 border border-dashed border-white/10 hover:border-orange-500/50 rounded-2xl p-5 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
+                                <Upload size={24} className="text-gray-500 group-hover:text-orange-500 transition-colors mb-2" />
+                                <span className="text-xs font-bold text-gray-300 group-hover:text-white transition-colors">
+                                    {uploadingSlip ? 'กำลังอัปโหลด...' : 'คลิกที่นี่เพื่อส่งสลิปโอนเงิน (Upload Slip)'}
+                                </span>
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={handleUploadSlip} 
+                                    disabled={uploadingSlip}
+                                />
+                            </label>
+
+                            <button
+                                onClick={handleRequestBill}
+                                disabled={requestingBill || booking.staff_remark?.includes('[CALL_BILL]')}
+                                className={`w-full py-3.5 rounded-2xl text-xs font-black transition-all border flex items-center justify-center gap-2 cursor-pointer ${
+                                    booking.staff_remark?.includes('[CALL_BILL]')
+                                        ? 'bg-orange-500/10 border-orange-500/25 text-orange-400 cursor-not-allowed'
+                                        : 'bg-[#FF5500] hover:bg-[#E04B00] border-[#D04500] text-white active:scale-[0.99] shadow-md shadow-orange-500/5'
+                                }`}
+                            >
+                                <Receipt size={16} />
+                                {booking.staff_remark?.includes('[CALL_BILL]') ? 'เรียกพนักงานเช็คบิลแล้ว' : 'เรียกพนักงานเช็คบิล (Pay with Cash / Card)'}
+                            </button>
+                        </div>
                     )}
                 </div>
             </section>

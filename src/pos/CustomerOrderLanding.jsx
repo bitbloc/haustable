@@ -321,19 +321,19 @@ export default function CustomerOrderLanding() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0C0C0C] text-white flex flex-col items-center justify-center font-sans">
-                <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-gray-400 text-sm tracking-widest uppercase">Connecting to table...</p>
+            <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans">
+                <div className="w-12 h-12 border-4 border-[#FF5500] border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-[#767673] text-xs font-mono font-bold tracking-widest uppercase">Connecting to table...</p>
             </div>
         );
     }
 
     if (gpsChecking) {
         return (
-            <div className="min-h-screen bg-[#0C0C0C] text-white flex flex-col items-center justify-center font-sans p-6 text-center">
-                <MapPin size={48} className="text-orange-500 animate-bounce mb-6" />
-                <h3 className="font-bold text-xl mb-2">Verifying Location</h3>
-                <p className="text-gray-400 text-sm max-w-xs leading-relaxed">
+            <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans p-6 text-center">
+                <MapPin size={48} className="text-[#FF5500] animate-bounce mb-6" />
+                <h3 className="font-mono font-bold text-sm tracking-wider uppercase mb-2">Verifying Location</h3>
+                <p className="text-[#767673] text-xs max-w-xs leading-relaxed">
                     Confirming you are inside the restaurant to enable ordering at table. Please allow GPS access.
                 </p>
             </div>
@@ -353,17 +353,17 @@ export default function CustomerOrderLanding() {
         }
 
         return (
-            <div className="min-h-screen bg-[#0C0C0C] text-white flex flex-col items-center justify-center font-sans p-6 text-center">
-                <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center text-red-500 mb-6 animate-pulse">
+            <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans p-6 text-center">
+                <div className="w-20 h-20 bg-[#FF5500]/10 border border-[#FF5500]/20 rounded-full flex items-center justify-center text-[#FF5500] mb-6 animate-pulse">
                     <AlertTriangle size={36} />
                 </div>
-                <h3 className="font-bold text-2xl mb-3 text-red-400">{errorTitle}</h3>
-                <p className="text-gray-400 text-sm max-w-sm leading-relaxed mb-8">
+                <h3 className="font-mono font-bold text-sm tracking-wider uppercase mb-3 text-[#FF5500]">{errorTitle}</h3>
+                <p className="text-[#767673] text-xs max-w-sm leading-relaxed mb-8">
                     {gpsError || 'You must be physically at the restaurant to place an order.'}
                 </p>
                 <button 
                     onClick={() => window.location.reload()} 
-                    className="bg-white/5 border border-white/10 hover:border-orange-500/30 px-6 py-3 rounded-2xl text-sm font-bold active:scale-95 transition-all text-white flex items-center gap-2"
+                    className="bg-white border border-[#D1D1CD] hover:border-[#B0B0AC] px-6 py-3 rounded-xl text-xs font-mono font-bold uppercase tracking-wider active:scale-95 transition-all text-[#1A1A1A] flex items-center gap-2 cursor-pointer shadow-sm"
                 >
                     Retry Verification
                 </button>
@@ -372,55 +372,55 @@ export default function CustomerOrderLanding() {
     }
 
     return (
-        <div className="min-h-screen w-full bg-[#0C0C0C] text-white font-sans flex flex-col pb-24 selection:bg-orange-500 selection:text-white">
+        <div className="min-h-screen w-full bg-[#ECECE9] text-[#1A1A1A] font-sans flex flex-col pb-24 select-none">
             <Toaster position="top-center" richColors />
 
             {/* Premium Header */}
-            <header className="sticky top-0 bg-[#0C0C0C]/80 backdrop-blur-xl border-b border-white/5 z-40 p-5 flex items-center justify-between">
+            <header className="sticky top-0 bg-[#F5F5F2]/95 backdrop-blur-md border-b border-[#D1D1CD] z-40 p-4 flex items-center justify-between shadow-sm">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="font-black text-xl tracking-tight text-white uppercase">IN THE HAUS</span>
-                        <div className="bg-orange-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                        <span className="font-mono font-black text-lg tracking-wider text-[#1A1A1A] uppercase">IN THE HAUS</span>
+                        <div className="bg-[#FF5500] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded">
                             QR
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 font-bold tracking-wider mt-0.5">
+                    <p className="text-[9px] text-[#767673] font-mono font-bold tracking-wider mt-0.5 uppercase">
                         ORDERING AT {table ? table.table_name : 'TABLE'}
                     </p>
                 </div>
-                <div className="flex items-center gap-1 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5 text-green-400 font-extrabold text-[10px] uppercase tracking-wider">
-                    <ShieldCheck size={12} />
+                <div className="flex items-center gap-1.5 bg-[#00CC44]/10 border border-[#00CC44]/20 rounded px-2.5 py-1 text-[#00CC44] font-mono font-bold text-[9px] uppercase tracking-wider">
+                    <ShieldCheck size={10} />
                     <span>GPS Verified</span>
                 </div>
             </header>
 
             {/* Welcome banner */}
-            <div className="p-6 bg-gradient-to-r from-orange-500/10 to-transparent border-b border-white/5">
-                <h2 className="text-lg font-bold text-white mb-1">
+            <div className="p-5 bg-white border-b border-[#D1D1CD]">
+                <h2 className="text-sm font-bold text-[#1A1A1A] mb-1">
                     ยินดีต้อนรับสู่โต๊ะ {table?.table_name}
                 </h2>
-                <p className="text-xs text-gray-400">
+                <p className="text-[11px] text-[#767673] leading-relaxed">
                     เลือกรายการอาหารด้านล่างและยืนยันออเดอร์เพื่อส่งตรงไปยังห้องครัว
                 </p>
             </div>
 
             {/* Menu search and category filters */}
-            <div className="p-5 sticky top-[73px] bg-[#0C0C0C]/95 backdrop-blur-xl z-30 space-y-4 border-b border-white/5">
+            <div className="p-4 sticky top-[61px] bg-[#ECECE9]/95 backdrop-blur-md z-30 space-y-3 border-b border-[#D1D1CD]">
                 <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={16} />
                     <input 
                         type="search" 
                         placeholder="ค้นหาเมนูอร่อย..." 
-                        className="w-full bg-[#161616] border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-orange-500/50 text-sm transition-colors"
+                        className="w-full bg-white border border-[#D1D1CD] rounded-xl py-2.5 pl-10 pr-4 text-[#1A1A1A] focus:outline-none focus:border-[#FF5500] text-xs transition-colors"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                     <button 
                         onClick={() => setActiveCategory('all')} 
-                        className={`px-5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20' : 'bg-[#161616] text-gray-400 hover:text-white'}`}
+                        className={`px-4 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all border ${activeCategory === 'all' ? 'bg-[#FF5500] border-[#D04500] text-white' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                     >
                         เมนูทั้งหมด
                     </button>
@@ -428,7 +428,7 @@ export default function CustomerOrderLanding() {
                         <button 
                             key={cat.id} 
                             onClick={() => setActiveCategory(cat.id)} 
-                            className={`px-5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20' : 'bg-[#161616] text-gray-400 hover:text-white'}`}
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all border ${activeCategory === cat.id ? 'bg-[#FF5500] border-[#D04500] text-white' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                         >
                             {cat.name}
                         </button>
@@ -437,36 +437,36 @@ export default function CustomerOrderLanding() {
             </div>
 
             {/* Menu items listing */}
-            <main className="flex-1 p-5">
+            <main className="flex-1 p-4">
                 <div className="grid grid-cols-2 gap-4">
                     {filteredItems.map(item => (
                         <motion.div
                             key={item.id}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => handleAddToCart(item)}
-                            className="bg-[#161616] rounded-3xl border border-white/5 p-3 flex flex-col gap-3 text-left group cursor-pointer hover:border-orange-500/20 transition-all shadow-sm"
+                            className="bg-white rounded-2xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group cursor-pointer hover:border-[#B0B0AC] transition-all shadow-sm"
                         >
-                            <div className="aspect-[4/3] rounded-2xl bg-black/20 overflow-hidden relative">
+                            <div className="aspect-[4/3] rounded-xl bg-[#F5F5F2] overflow-hidden relative border border-[#D1D1CD]/40">
                                 {item.image_url ? (
                                     <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-700 font-bold text-2xl uppercase">
+                                    <div className="w-full h-full flex items-center justify-center text-[#767673] font-bold text-lg uppercase font-mono">
                                         {item.name.charAt(0)}
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-black/20"></div>
-                                <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-orange-500 text-black flex items-center justify-center shadow-lg transition-all">
-                                    <Plus size={16} />
+                                <div className="absolute inset-0 bg-black/5"></div>
+                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#FF5500] text-white flex items-center justify-center shadow transition-all hover:scale-105">
+                                    <Plus size={14} />
                                 </div>
                             </div>
                             
-                            <div className="flex flex-col flex-1 px-1 justify-between min-h-[70px]">
+                            <div className="flex flex-col flex-1 px-1 justify-between min-h-[60px]">
                                 <div>
-                                    <h4 className="font-bold text-sm line-clamp-1 leading-tight">{item.name}</h4>
-                                    {item.description && <p className="text-[10px] text-gray-500 line-clamp-2 mt-0.5 leading-snug">{item.description}</p>}
+                                    <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-1 leading-tight">{item.name}</h4>
+                                    {item.description && <p className="text-[9px] text-[#767673] line-clamp-2 mt-0.5 leading-snug">{item.description}</p>}
                                 </div>
                                 <div className="pt-2 flex items-center justify-between">
-                                    <span className="text-orange-500 font-bold text-sm">฿{item.price}</span>
+                                    <span className="text-[#FF5500] font-mono font-bold text-xs">฿{item.price}</span>
                                 </div>
                             </div>
                         </motion.div>
@@ -474,7 +474,7 @@ export default function CustomerOrderLanding() {
                 </div>
 
                 {filteredItems.length === 0 && (
-                    <div className="py-20 text-center text-gray-500 text-sm">
+                    <div className="py-20 text-center text-[#767673] font-mono text-xs uppercase tracking-wider font-bold">
                         ไม่พบรายการอาหารที่ค้นหา
                     </div>
                 )}
@@ -493,18 +493,18 @@ export default function CustomerOrderLanding() {
 
             {/* Bottom floating cart bar */}
             {cart.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 p-5 bg-[#0C0C0C]/80 backdrop-blur-xl border-t border-white/5 z-40 safe-area-bottom">
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#F5F5F2]/90 backdrop-blur-md border-t border-[#D1D1CD] z-40 safe-area-bottom">
                     <button 
                         onClick={() => setCartOpen(true)}
-                        className="w-full bg-orange-500 text-black py-4 px-6 rounded-2xl font-black text-sm flex items-center justify-between shadow-lg shadow-orange-500/10 active:scale-98 transition-transform"
+                        className="w-full bg-[#FF5500] text-white py-3.5 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer"
                     >
                         <div className="flex items-center gap-2">
-                            <ShoppingBag size={18} />
-                            <span className="bg-black text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            <ShoppingBag size={14} />
+                            <span className="bg-white text-[#FF5500] text-[9px] px-1.5 py-0.5 rounded font-black font-mono">
                                 {cartCount}
                             </span>
                         </div>
-                        <span>ดูตระกร้าสั่งอาหาร</span>
+                        <span>ดูตระกร้าสั่งอาหาร (View Cart)</span>
                         <span className="font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
                     </button>
                 </div>
@@ -518,7 +518,7 @@ export default function CustomerOrderLanding() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto"
+                            className="absolute inset-0 bg-black/60 pointer-events-auto"
                             onClick={() => setCartOpen(false)}
                         />
 
@@ -527,51 +527,51 @@ export default function CustomerOrderLanding() {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-                            className="bg-[#121212] w-full max-w-md rounded-t-[32px] border-t border-white/5 p-6 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[80vh]"
+                            className="bg-[#F5F5F2] w-full max-w-md rounded-t-2xl border-t border-[#D1D1CD] p-5 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[80vh] text-[#1A1A1A] font-sans"
                         >
                             {/* Drawer Header */}
-                            <div className="flex justify-between items-center mb-6">
+                            <div className="flex justify-between items-center mb-5 shrink-0">
                                 <div>
-                                    <h3 className="text-lg font-bold text-white">ตะกร้าของคุณ (Your Cart)</h3>
-                                    <p className="text-xs text-gray-500">โต๊ะ {table?.table_name}</p>
+                                    <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">ตะกร้าของคุณ (Your Cart)</h3>
+                                    <p className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-tight mt-0.5">โต๊ะ {table?.table_name}</p>
                                 </div>
                                 <button 
                                     onClick={() => setCartOpen(false)}
-                                    className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                    className="w-7 h-7 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center hover:bg-[#E0E0DC] text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
                                 >
-                                    <X size={18} />
+                                    <X size={14} />
                                 </button>
                             </div>
 
                             {/* Cart Items list */}
-                            <div className="flex-1 overflow-y-auto space-y-4 mb-6 pr-1 custom-scrollbar">
+                            <div className="flex-1 overflow-y-auto space-y-3 mb-5 pr-1 custom-scrollbar">
                                 {cart.map((item, index) => (
-                                    <div key={index} className="bg-white/5 p-4 rounded-2xl flex items-start gap-4">
+                                    <div key={index} className="bg-white p-3.5 rounded-xl border border-[#D1D1CD] flex items-start gap-4">
                                         <div className="flex-1 min-w-0">
-                                            <h5 className="font-bold text-sm truncate text-white">{item.name}</h5>
+                                            <h5 className="font-bold text-xs truncate text-[#1A1A1A]">{item.name}</h5>
                                             {item.optionsSummary && item.optionsSummary.length > 0 && (
-                                                <div className="text-[10px] text-gray-500 mt-1 space-y-0.5">
+                                                <div className="text-[9px] text-[#767673] mt-1 space-y-0.5">
                                                     {item.optionsSummary.map((opt, i) => (
                                                         <div key={i}>+ {opt.name} {opt.price > 0 && `(+฿${opt.price})`}</div>
                                                     ))}
                                                 </div>
                                             )}
-                                            <p className="text-orange-500 font-bold text-xs mt-2">฿{(item.totalPricePerUnit * item.qty).toLocaleString()}</p>
+                                            <p className="text-[#FF5500] font-mono font-bold text-xs mt-2">฿{(item.totalPricePerUnit * item.qty).toLocaleString()}</p>
                                         </div>
 
-                                        <div className="flex items-center bg-black/40 rounded-xl p-1 gap-1">
+                                        <div className="flex items-center bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg p-0.5 gap-1 shrink-0">
                                             <button 
                                                 onClick={() => handleUpdateQty(index, -1)}
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400"
+                                                className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] cursor-pointer"
                                             >
-                                                <Minus size={12} />
+                                                <Minus size={10} />
                                             </button>
-                                            <span className="w-6 text-center font-bold text-xs text-white">{item.qty}</span>
+                                            <span className="w-5 text-center font-mono font-bold text-xs text-[#1A1A1A]">{item.qty}</span>
                                             <button 
                                                 onClick={() => handleUpdateQty(index, 1)}
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400"
+                                                className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] cursor-pointer"
                                             >
-                                                <Plus size={12} />
+                                                <Plus size={10} />
                                             </button>
                                         </div>
                                     </div>
@@ -579,25 +579,25 @@ export default function CustomerOrderLanding() {
                             </div>
 
                             {/* Drawer Footer */}
-                            <div className="border-t border-white/5 pt-4 space-y-4">
+                            <div className="border-t border-[#D1D1CD] pt-4 space-y-4 shrink-0">
                                 <div className="flex justify-between items-baseline">
-                                    <span className="text-gray-400 text-xs uppercase font-bold tracking-wider">ยอดรวมสุทธิ (Subtotal)</span>
-                                    <span className="text-2xl font-black text-orange-500">฿{cartSubtotal.toLocaleString()}.-</span>
+                                    <span className="text-[#767673] text-[10px] uppercase font-mono font-bold tracking-wider">ยอดรวมสุทธิ (Subtotal)</span>
+                                    <span className="text-xl font-black text-[#FF5500] font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
                                 </div>
 
                                 <button 
                                     onClick={handleCheckout}
                                     disabled={submitting}
-                                    className="w-full bg-orange-500 disabled:bg-orange-500/50 text-black py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/10 active:scale-98"
+                                    className="w-full bg-[#FF5500] disabled:bg-[#FF5500]/50 text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                                 >
                                     {submitting ? (
                                         <>
-                                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                             <span>กำลังส่งรายการสั่งอาหาร...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <Check size={18} />
+                                            <Check size={14} />
                                             <span>ยืนยันส่งครัว (Place Order)</span>
                                         </>
                                     )}

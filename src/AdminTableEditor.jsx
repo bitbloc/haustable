@@ -274,9 +274,9 @@ export default function AdminTableEditor() {
             <div className="p-4 flex flex-col gap-6 text-[#1A1A1A] font-sans select-none bg-[#ECECE9]">
 
                 {/* --- Toolbar --- */}
-                <div className="flex flex-col md:flex-row justify-between items-center bg-[#F5F5F2] p-4 rounded-xl border border-[#D1D1CD] shadow-sm z-10 sticky top-2 text-[#1A1A1A]">
-                    <h1 className="text-xs font-mono font-bold uppercase tracking-wider">Floor Plan Editor</h1>
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-row justify-between items-center bg-[#F5F5F2] p-3 rounded-xl border border-[#D1D1CD] shadow-sm z-10 sticky top-2 text-[#1A1A1A] gap-4 w-full">
+                    <h1 className="text-xs font-mono font-bold uppercase tracking-wider hidden sm:block">Floor Plan Editor</h1>
+                    <div className="flex items-center gap-2 sm:gap-4 ml-auto">
                         <label className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] cursor-pointer bg-white p-2.5 rounded-lg border border-[#D1D1CD] select-none transition-colors">
                             <input type="checkbox" checked={snapToGrid} onChange={e => setSnapToGrid(e.target.checked)} className="accent-[#FF5500] w-4 h-4" />
                             Snap Grid (1%)
@@ -680,7 +680,7 @@ export default function AdminTableEditor() {
                                                 alert("ดาวน์โหลดไม่สำเร็จ โปรดคลิกขวาที่รูปคิวอาร์เพื่อกดบันทึกรูปภาพ");
                                             }
                                         }}
-                                        className="flex-grow bg-zinc-800 border border-zinc-700 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-zinc-700 transition-colors cursor-pointer"
+                                        className="flex-grow bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                                     >
                                         <Download size={14} /> Download PNG
                                     </button>
