@@ -39,4 +39,15 @@ subprojects {
             }
         }
     }
+    tasks.configureEach { task ->
+        if (task.class.name.contains("KotlinCompile")) {
+            try {
+                task.kotlinOptions {
+                    jvmTarget = "17"
+                }
+            } catch (Exception e) {
+                // Skip if kotlinOptions property is missing
+            }
+        }
+    }
 }
