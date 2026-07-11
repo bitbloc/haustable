@@ -510,6 +510,23 @@ export default function CustomerOrderLanding() {
                 </div>
             )}
 
+            {/* Floating session summary bar for ordering more */}
+            {cart.length === 0 && activeBooking && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#F5F5F2]/90 backdrop-blur-md border-t border-[#D1D1CD] z-40 safe-area-bottom">
+                    <button 
+                        onClick={() => navigate(`/table/${tableId}/status`)}
+                        className="w-full bg-[#3C3D40] text-white py-3.5 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer border border-[#2A2B2D]"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="bg-[#FF5500] w-1.5 h-1.5 rounded-full animate-ping" />
+                            <span className="text-[#ECECE9] font-mono text-[9px] font-bold">ACTIVE SESSION</span>
+                        </div>
+                        <span>ดูรายการที่สั่งแล้ว & เช็คบิล (Order Status / Checkout)</span>
+                        <span className="font-mono text-[#D1D1CD]">฿{activeBooking.total_amount?.toLocaleString() || 0}.-</span>
+                    </button>
+                </div>
+            )}
+
             {/* Cart drawer slide-up */}
             <AnimatePresence>
                 {cartOpen && (

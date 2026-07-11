@@ -88,100 +88,39 @@ function getItemColor(index) {
     return `hsl(${hue}, 45%, 40%)` // Slightly deeper saturation for contrast
 }
 
-// Deterministic PRNG (mulberry32) so the shuffle is stable across renders
-// once seeded — no flicker on every re-render.
-function mulberry32(seed) {
-    let a = seed >>> 0
-    return () => {
-        a = (a + 0x6d2b79f5) >>> 0
-        let t = a
-        t = Math.imul(t ^ (t >>> 15), t | 1)
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-    }
-}
-
-// Fill a target length by repeating items, shuffled so neighbors don't
-// duplicate the same source item in a 3x3 grid neighborhood where possible.
-function fillAndShuffle(items, target, columns, seed) {
+// Fill a target length by repeating items, prioritizing placing the newest items (first in list)
+// at the center of the grid (index 0,0 and surrounding cells) and moving progressively outwards.
+// This naturally prevents duplicate items from being adjacent to each other.
+function fillByDistancePriority(items, target, columns) {
     if (items.length === 0) return []
-    const rand = mulberry32(seed)
     const cols = columns || 14
-    const out = []
+    const rows = Math.ceil(target / cols)
     
-    const getAt = (r, c) => {
-        if (r < 0 || c < 0 || c >= cols) return null
-        const idx = r * cols + c
-        return idx < out.length ? out[idx] : null
-    }
-
-    // Check if an item exists in the immediate 2D neighborhood (up, left, and diagonals)
-    const hasDuplicateInNeighborhood = (item, r, c) => {
-        // Check horizontally left (c-1, c-2)
-        if (getAt(r, c - 1) === item || getAt(r, c - 2) === item) return true
-        
-        // Check vertically up (r-1, r-2)
-        if (getAt(r - 1, c) === item || getAt(r - 2, c) === item) return true
-        
-        // Check diagonals up-left/up-right (r-1, c-1), (r-1, c+1)
-        if (getAt(r - 1, c - 1) === item || getAt(r - 1, c + 1) === item) return true
-        if (getAt(r - 2, c - 1) === item || getAt(r - 2, c + 1) === item) return true
-        
-        return false
-    }
-
-    const refill = () => {
-        const pool = items.slice()
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(rand() * (i + 1))
-            ;[pool[i], pool[j]] = [pool[j], pool[i]]
-        }
-        return pool
-    }
-
-    let pool = refill()
-
+    // 1. Create list of all cells with their coordinates and wrapped distance to (0,0)
+    const cells = []
     for (let idx = 0; idx < target; idx++) {
         const r = Math.floor(idx / cols)
         const c = idx % cols
-
-        let foundIdx = -1
-        // Look through the pool for a non-conflicting item
-        for (let p = pool.length - 1; p >= 0; p--) {
-            if (!hasDuplicateInNeighborhood(pool[p], r, c)) {
-                foundIdx = p
-                break
-            }
-        }
-
-        // If not found in the current pool, try refilling and searching in a fresh pool
-        if (foundIdx === -1) {
-            const extraPool = refill()
-            for (let p = extraPool.length - 1; p >= 0; p--) {
-                if (!hasDuplicateInNeighborhood(extraPool[p], r, c)) {
-                    pool.push(...extraPool.slice(0, p), ...extraPool.slice(p + 1))
-                    out.push(extraPool[p])
-                    foundIdx = -2 // Mark as found in extraPool
-                    break
-                }
-            }
-        }
-
-        if (foundIdx >= 0) {
-            const next = pool[foundIdx]
-            pool.splice(foundIdx, 1)
-            out.push(next)
-        } else if (foundIdx === -1) {
-            // Hard fallback to avoid infinite loops: grab the last pool item
-            if (pool.length === 0) pool = refill()
-            out.push(pool.pop())
-        }
-
-        if (pool.length === 0) {
-            pool = refill()
-        }
+        
+        // Calculate wrapped distance to (0, 0)
+        const dr = Math.min(r, rows - r)
+        const dc = Math.min(c, cols - c)
+        const dist = dr * dr + dc * dc
+        
+        cells.push({ idx, r, c, dist })
     }
-
+    
+    // 2. Sort cells by distance ascending
+    cells.sort((a, b) => a.dist - b.dist)
+    
+    // 3. Assign items in chronological order to cells based on distance
+    const out = new Array(target)
+    const N = items.length
+    
+    cells.forEach((cell, i) => {
+        out[cell.idx] = items[i % N]
+    })
+    
     return out
 }
 
@@ -232,14 +171,11 @@ function LazyCard({
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsVisible(true)
-                    observer.disconnect()
-                }
+                setIsVisible(entry.isIntersecting)
             },
             {
                 root: el.closest('.draggable-container-viewport') || null,
-                rootMargin: '250px', // Fetch 250px before entering viewport for smooth experience
+                rootMargin: '300px', // Fetch 300px before entering viewport for smooth experience
             }
         )
 
@@ -368,6 +304,7 @@ function LazyCard({
                             userSelect: "none",
                             display: "block",
                             zIndex: 1,
+                            animation: "lazyCardFadeIn 0.3s ease-out forwards",
                         }}
                     />
                     
@@ -442,7 +379,7 @@ export default function DraggableGrid(props) {
 
     const [containerSize, setContainerSize] = useState({ w: 800, h: 600 })
     const [isDragging, setIsDragging] = useState(false)
-    const [zoomScale, setZoomScale] = useState(1.0)
+    const scale = useMotionValue(1.0)
     const [isPinching, setIsPinching] = useState(false)
     const touchStartDist = useRef(0)
     const touchStartScale = useRef(1.0)
@@ -487,7 +424,7 @@ export default function DraggableGrid(props) {
     const rows = Math.max(safeColumns, Math.ceil(safeItems.length / safeColumns))
     const totalCells = safeColumns * rows
     const displayItems = useMemo(
-        () => fillAndShuffle(safeItems, totalCells, safeColumns, 0xc0ffee),
+        () => fillByDistancePriority(safeItems, totalCells, safeColumns),
         [safeItems, totalCells, safeColumns]
     )
 
@@ -547,12 +484,12 @@ export default function DraggableGrid(props) {
         return Math.max(0.1, Math.max(scaleX, scaleY)) * 1.05
     }, [containerSize.w, containerSize.h, gridW, gridH, safeGap])
 
-    // Keep zoomScale constrained to minScale
+    // Keep scale constrained to minScale
     useEffect(() => {
-        if (zoomScale < minScale) {
-            setZoomScale(minScale)
+        if (scale.get() < minScale) {
+            scale.set(minScale)
         }
-    }, [minScale, zoomScale])
+    }, [minScale, scale])
 
     // Scale boundaries and cycles for infinite loops
     const cycleW = gridW + safeGap
@@ -666,7 +603,7 @@ export default function DraggableGrid(props) {
                 const t1 = e.touches[1]
                 const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
                 touchStartDist.current = dist
-                touchStartScale.current = zoomScale
+                touchStartScale.current = scale.get()
                 
                 const midX = (t0.clientX + t1.clientX) / 2
                 const midY = (t0.clientY + t1.clientY) / 2
@@ -700,7 +637,7 @@ export default function DraggableGrid(props) {
                     y.set(newY)
                 }
 
-                setZoomScale(nextScale)
+                scale.set(nextScale)
             }
         }
 
@@ -719,12 +656,13 @@ export default function DraggableGrid(props) {
                 const midX = e.clientX
                 const midY = e.clientY
 
-                let nextScale = zoomScale - e.deltaY * 0.01
+                const currentScale = scale.get()
+                let nextScale = currentScale - e.deltaY * 0.01
                 nextScale = Math.max(minScale, Math.min(2.5, nextScale))
 
                 const oldX = x.get()
                 const oldY = y.get()
-                const oldScale = zoomScale
+                const oldScale = currentScale
 
                 if (oldScale > 0) {
                     const scaleRatio = nextScale / oldScale
@@ -735,7 +673,7 @@ export default function DraggableGrid(props) {
                     y.set(newY)
                 }
 
-                setZoomScale(nextScale)
+                scale.set(nextScale)
             }
         }
 
@@ -750,7 +688,7 @@ export default function DraggableGrid(props) {
             el.removeEventListener('touchend', handleTouchEnd)
             el.removeEventListener('wheel', handleWheelZoom)
         }
-    }, [zoomScale, minScale, containerSize, gridW, gridH, safeGap, triggerInteraction, x, y])
+    }, [minScale, containerSize, gridW, gridH, safeGap, triggerInteraction, x, y])
 
     // Wheel scrolling
     useEffect(() => {
@@ -844,8 +782,14 @@ export default function DraggableGrid(props) {
 
     return (
         <div ref={containerRef} className="draggable-container-viewport" style={wrapperStyle}>
+            <style>{`
+                @keyframes lazyCardFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
             <motion.div
-                style={{ ...gridStyle, x, y, scale: zoomScale }}
+                style={{ ...gridStyle, x, y, scale }}
                 drag={!isPinching}
                 dragElastic={0}
                 dragMomentum={true}
