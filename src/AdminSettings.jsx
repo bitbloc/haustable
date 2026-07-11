@@ -3,6 +3,8 @@ import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp } from 'lucide-react'
 import CheckinManager from './components/admin/CheckinManager'
 import { printToBluetoothDirect, encodeShiftReportData } from './utils/printerHelper'
+import { BleClient } from '@capacitor-community/bluetooth-le'
+import { Capacitor } from '@capacitor/core'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -96,6 +98,9 @@ export default function AdminSettings() {
         kitchen_printer_bt_name: 'KitchenPrinter',
         kitchen_paper_size: '80mm'
     });
+    const [isScanning, setIsScanning] = useState(false);
+    const [scannedDevices, setScannedDevices] = useState([]);
+    const [scanningTargetType, setScanningTargetType] = useState(null); // 'cashier' | 'kitchen'
 
     useEffect(() => {
         const stored = localStorage.getItem('onhaus_printer_config');
@@ -151,6 +156,91 @@ export default function AdminSettings() {
             }
             alert(`📤 [Test Print Simulation]\nConfigured as [${name}]\n(${details})\n\nConnection check: OK!`);
         }
+    };
+
+    const handleScanBluetooth = async (type) => {
+        setScanningTargetType(type);
+        setScannedDevices([]);
+        setIsScanning(true);
+
+        try {
+            if (Capacitor.isNativePlatform()) {
+                await BleClient.initialize();
+                
+                await BleClient.requestLEScan(
+                    {},
+                    (result) => {
+                        if (result.device && result.device.name) {
+                            setScannedDevices(prev => {
+                                if (prev.some(d => d.deviceId === result.device.deviceId)) return prev;
+                                return [...prev, { name: result.device.name, deviceId: result.device.deviceId }];
+                            });
+                        }
+                    }
+                );
+
+                setTimeout(async () => {
+                    try {
+                        await BleClient.stopLEScan();
+                    } catch (e) {}
+                }, 10000);
+
+            } else {
+                if (!navigator.bluetooth) {
+                    alert("อุปกรณ์นี้ไม่รองรับ Web Bluetooth (ต้องเปิดใช้บน HTTPS หรือรันผ่านแอป Native)");
+                    setIsScanning(false);
+                    return;
+                }
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [
+                        '00001101-0000-1000-8000-00805f9b34fb',
+                        '0000fee7-0000-1000-8000-00805f9b34fb',
+                        '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                        '0000e7e7-0000-1000-8000-00805f9b34fb'
+                    ]
+                });
+                if (device && device.name) {
+                    const updated = type === 'cashier' 
+                        ? { ...printerConfig, cashier_printer_bt_name: device.name }
+                        : { ...printerConfig, kitchen_printer_bt_name: device.name };
+                    handleSavePrinter(updated);
+                    alert(`✅ เลือกเครื่องพิมพ์สำเร็จ: ${device.name}`);
+                }
+                setIsScanning(false);
+            }
+        } catch (err) {
+            console.error("Bluetooth scan failed:", err);
+            setIsScanning(false);
+            if (err.name !== 'NotFoundError' && err.message !== 'User cancelled') {
+                alert(`ไม่สามารถสแกนบลูทูธได้: ${err.message || err}\nโปรดเช็คว่าได้เปิด Bluetooth และสิทธิ์ของ Location บนเครื่องแท็บเล็ตแล้ว`);
+            }
+        }
+    };
+
+    const handleSelectDevice = async (device) => {
+        try {
+            if (Capacitor.isNativePlatform()) {
+                await BleClient.stopLEScan();
+            }
+        } catch (e) {}
+
+        const updated = scanningTargetType === 'cashier' 
+            ? { ...printerConfig, cashier_printer_bt_name: device.name }
+            : { ...printerConfig, kitchen_printer_bt_name: device.name };
+        
+        handleSavePrinter(updated);
+        setIsScanning(false);
+        alert(`✅ เลือกเครื่องพิมพ์สำเร็จ: ${device.name}`);
+    };
+
+    const handleCancelScan = async () => {
+        try {
+            if (Capacitor.isNativePlatform()) {
+                await BleClient.stopLEScan();
+            }
+        } catch (e) {}
+        setIsScanning(false);
     };
 
     // Load Settings
@@ -289,32 +379,32 @@ export default function AdminSettings() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto pb-10 animate-fade-in px-4 pt-2 text-[#1A1A1A]">
+        <div className="max-w-7xl mx-auto pb-6 animate-fade-in px-4 pt-1 text-[#1A1A1A]">
             {/* Back Navigation Bar */}
-            <div className="flex flex-wrap items-center gap-3 mb-6 font-sans">
+            <div className="flex flex-wrap items-center gap-2 mb-3 font-sans">
                 <button 
                     type="button"
                     onClick={() => window.location.href = '/pos'}
-                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-zinc-200 cursor-pointer shadow-sm"
+                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-zinc-200 cursor-pointer shadow-sm animate-none"
                 >
                     ← Back to POS (กลับหน้า POS)
                 </button>
                 <button 
                     type="button"
                     onClick={() => window.location.href = '/staff'}
-                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-zinc-200 cursor-pointer shadow-sm"
+                    className="flex items-center gap-1.5 bg-white hover:bg-zinc-50 text-zinc-700 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-zinc-200 cursor-pointer shadow-sm animate-none"
                 >
                     ← Back to Staff (กลับหน้า Staff)
                 </button>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-                <h1 className="text-3xl font-bold text-ink tracking-tight">System Settings</h1>
+            <div className="flex items-center justify-between mb-3 gap-2">
+                <h1 className="text-xl font-bold text-ink tracking-tight">System Settings</h1>
                 <InstallPWA />
             </div>
 
             {/* Tabs Control */}
-            <div className="flex border-b border-gray-200 mb-8 gap-6 overflow-x-auto no-scrollbar scroll-smooth">
+            <div className="flex border-b border-gray-200 mb-4 gap-4 overflow-x-auto no-scrollbar scroll-smooth">
                 {[
                     { id: 'booking', label: '🍽 ตั้งค่าระบบหลัก & การจอง', desc: 'Core Settings & Booking' },
                     { id: 'link', label: '🔗 หน้า Landing Page (/link)', desc: 'Link Page Manager' },
@@ -340,8 +430,8 @@ export default function AdminSettings() {
 
             {/* TAB 1: Booking & Core Settings */}
             {activeSettingsTab === 'booking' && (
-                <div className="space-y-8 animate-fade-in">
-                    <div className="grid lg:grid-cols-2 gap-6">
+                <div className="space-y-4 animate-fade-in">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-4">
                             {/* Enable Booking System - Redesigned as a Card */}
                             <label className={`block bg-white p-5 rounded-xl border transition-all cursor-pointer shadow-sm ${settings.is_menu_system_enabled === 'true' ? 'border-[#FF5500] ring-1 ring-[#FF5500]/10' : 'border-[#D1D1CD] hover:border-[#B0B0AC]'}`}>
@@ -1048,9 +1138,9 @@ export default function AdminSettings() {
 
                 {/* TAB 4: Printers Settings */}
                 {activeSettingsTab === 'printers' && (
-                    <div className="grid lg:grid-cols-2 gap-6 animate-fade-in font-sans text-[#1A1A1A]">
+                    <div className="grid grid-cols-2 gap-4 animate-fade-in font-sans text-[#1A1A1A]">
                         {/* Cashier Printer Card */}
-                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-4 rounded-xl shadow-sm flex flex-col justify-between">
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-3">
                                     <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
@@ -1147,7 +1237,7 @@ export default function AdminSettings() {
                         </div>
 
                         {/* Kitchen Printer Card */}
-                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-4 rounded-xl shadow-sm flex flex-col justify-between">
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-3">
                                     <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
@@ -1239,6 +1329,67 @@ export default function AdminSettings() {
                                     className="flex-grow bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                                 >
                                     Test Kitchen Order Print
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bluetooth Scanner Overlay Modal */}
+                {isScanning && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                        <div className="bg-white border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col font-sans text-[#1A1A1A]">
+                            {/* Header */}
+                            <div className="bg-[#1A1A1A] text-white p-4 flex justify-between items-center">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                    <span className="animate-pulse text-red-500">●</span> SCANNING FOR PRINTERS
+                                </span>
+                                <button 
+                                    type="button"
+                                    onClick={handleCancelScan} 
+                                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer text-sm font-bold uppercase"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                            
+                            {/* Body */}
+                            <div className="p-4 flex-1 overflow-y-auto max-h-[300px] space-y-2 no-scrollbar">
+                                <p className="text-[10px] text-[#767673] uppercase tracking-wide font-bold">
+                                    Select printer from the list below:
+                                </p>
+                                
+                                {scannedDevices.length === 0 ? (
+                                    <div className="py-12 flex flex-col items-center justify-center gap-3 text-center">
+                                        <div className="w-8 h-8 rounded-full border-2 border-t-zinc-800 border-zinc-200 animate-spin" />
+                                        <p className="text-xs text-[#767673] font-bold">Searching nearby devices...</p>
+                                        <p className="text-[10px] text-zinc-400">Make sure Bluetooth & GPS Location are turned ON.</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-[#E0E0DC] border border-[#D1D1CD] rounded-xl overflow-hidden bg-zinc-50">
+                                        {scannedDevices.map((device, idx) => (
+                                            <button
+                                                key={device.deviceId || idx}
+                                                type="button"
+                                                onClick={() => handleSelectDevice(device)}
+                                                className="w-full text-left px-4 py-3 hover:bg-white text-xs font-mono font-bold text-[#1A1A1A] flex items-center justify-between transition-colors active:bg-zinc-100 cursor-pointer"
+                                            >
+                                                <span>{device.name}</span>
+                                                <span className="text-[9px] text-[#767673] font-normal">{device.deviceId}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Footer */}
+                            <div className="bg-zinc-50 p-3 border-t border-[#D1D1CD] flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleCancelScan}
+                                    className="bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-zinc-100 px-4 py-2 rounded-lg text-xs font-bold font-mono uppercase tracking-wider cursor-pointer active:scale-95 transition-all"
+                                >
+                                    Cancel
                                 </button>
                             </div>
                         </div>
