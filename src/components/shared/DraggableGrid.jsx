@@ -175,7 +175,7 @@ function LazyCard({
             },
             {
                 root: el.closest('.draggable-container-viewport') || null,
-                rootMargin: '300px', // Fetch 300px before entering viewport for smooth experience
+                rootMargin: '450px', // Fetch 450px before entering viewport for smooth experience
             }
         )
 
@@ -185,7 +185,7 @@ function LazyCard({
 
     const src = item?.image?.src
     const alt = item?.alt ?? item?.image?.alt ?? ""
-    const isNote = item?.source === 'note' || item?.image_url === 'text_only' || item?.image_url?.startsWith('text_only')
+    const isNote = item?.source === 'note' || !src || item?.image_url === 'text_only' || item?.image_url?.startsWith('text_only')
 
     if (isNote) {
         return (
@@ -193,63 +193,67 @@ function LazyCard({
                 ref={cardRef}
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
-                whileHover={{ scale: 1.03, y: -3 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={isVisible ? { scale: 1.03, y: -3 } : undefined}
+                whileTap={isVisible ? { scale: 0.97 } : undefined}
                 transition={{ type: "spring", stiffness: 350, damping: 22 }}
-                className="select-none flex flex-col justify-between p-3 border border-neutral-800/25 shadow-sm text-left"
+                className={`select-none flex flex-col justify-between p-3 text-left ${isVisible ? "border border-neutral-800/25 shadow-sm" : ""}`}
                 style={{
                     position: "relative",
                     width: safeImageWidth,
                     height: safeImageHeight,
                     borderRadius: 2, // Minimalist Rams clean rounding (rounded-xs)
-                    backgroundColor: "#FAF9F5", // Warm Hallmark Paper color
+                    backgroundColor: isVisible ? "#FAF9F5" : "transparent", // Warm Hallmark Paper color when visible, transparent when hidden
                     color: "#1a1a1a", // Deep hallmark ink
                     cursor: isDragging ? "grabbing" : "pointer",
                     transformOrigin: "center center",
                     boxSizing: "border-box",
                 }}
             >
-                {/* Header label in typewriter style */}
-                <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
-                    <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase">
-                        <span>{item.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}</span>
-                        <span>POSTED</span>
-                    </div>
-                    {item.rating && (
-                        <div className="flex gap-0.5 mt-0.5 text-amber-500 justify-start select-none">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <span key={i} className="text-[10px] leading-none">
-                                    {i < item.rating ? '★' : '☆'}
-                                </span>
-                            ))}
+                {isVisible && (
+                    <>
+                        {/* Header label in typewriter style */}
+                        <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
+                            <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase">
+                                <span>{item.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}</span>
+                                <span>POSTED</span>
+                            </div>
+                            {item.rating && (
+                                <div className="flex gap-0.5 mt-0.5 text-amber-500 justify-start select-none">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <span key={i} className="text-[10px] leading-none">
+                                            {i < item.rating ? '★' : '☆'}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
-                {/* Central body text in center-aligned slab mono */}
-                <div className="flex-grow flex items-center justify-center p-1 select-none pointer-events-none">
-                    <p 
-                        className="font-mono text-center break-words w-full"
-                        style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 8,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                            fontFamily: "Space Mono, Courier New, Courier, monospace",
-                            fontWeight: 500,
-                             fontSize: (item.text || "").length <= 15 ? "20px" : ((item.text || "").length <= 30 ? "16px" : ((item.text || "").length <= 50 ? "13.5px" : "11px")),
-                            lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),
-                            color: "#262626",
-                        }}
-                    >
-                        {item.text || "Hello IN THE HAUS!"}
-                    </p>
-                </div>
+                        {/* Central body text in center-aligned slab mono */}
+                        <div className="flex-grow flex items-center justify-center p-1 select-none pointer-events-none">
+                            <p 
+                                className="font-mono text-center break-words w-full"
+                                style={{
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 8,
+                                    WebkitBoxOrient: "vertical",
+                                    overflow: "hidden",
+                                    fontFamily: "Space Mono, Courier New, Courier, monospace",
+                                    fontWeight: 500,
+                                     fontSize: (item.text || "").length <= 15 ? "20px" : ((item.text || "").length <= 30 ? "16px" : ((item.text || "").length <= 50 ? "13.5px" : "11px")),
+                                    lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),
+                                    color: "#262626",
+                                }}
+                            >
+                                {item.text || "Hello IN THE HAUS!"}
+                            </p>
+                        </div>
  
-                {/* Footer label with guest user name */}
-                <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
-                    BY {item.user?.name || item.user_name || "GUEST"}
-                </div>
+                        {/* Footer label with guest user name */}
+                        <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
+                            BY {item.user?.name || item.user_name || "GUEST"}
+                        </div>
+                    </>
+                )}
             </motion.div>
         )
     }
@@ -259,8 +263,8 @@ function LazyCard({
             ref={cardRef}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
-            whileHover={{ scale: 1.03, y: -3 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={isVisible ? { scale: 1.03, y: -3 } : undefined}
+            whileTap={isVisible ? { scale: 0.97 } : undefined}
             transition={{ type: "spring", stiffness: 350, damping: 22 }}
             style={{
                 position: "relative",
@@ -268,7 +272,7 @@ function LazyCard({
                 height: safeImageHeight,
                 overflow: "hidden",
                 borderRadius: radius,
-                backgroundColor: src && !failed ? "#111111" : getItemColor(index),
+                backgroundColor: isVisible && src && !failed ? "#111111" : "transparent",
                 color: "rgba(255,255,255,0.85)",
                 display: "flex",
                 alignItems: "center",
@@ -285,76 +289,80 @@ function LazyCard({
                 WebkitMaskImage: "-webkit-radial-gradient(white, black)",
             }}
         >
-            {/* Hidden index helper, overlays check-in type if loaded */}
-            <div className="absolute inset-0 bg-black/10 flex flex-col justify-between p-3 z-10 text-white select-none pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
-                <span className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{item.source || 'tag'}</span>
-            </div>
-            
-            {isVisible && src && !failed ? (
+            {isVisible && (
                 <>
-                    <img
-                        src={getProxiedImageUrl(src)}
-                        alt={alt}
-                        draggable={false}
-                        crossOrigin="anonymous"
-                        onError={handleImageError}
-                        style={{
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            pointerEvents: "none",
-                            userSelect: "none",
-                            display: "block",
-                            zIndex: 1,
-                            animation: "lazyCardFadeIn 0.3s ease-out forwards",
-                        }}
-                    />
-                    
-                    {/* Minimalist Rams Caption & Interactive Likes overlay */}
-                    <div 
-                        ref={overlayRef}
-                        className="absolute bottom-0 left-0 right-0 z-10 bg-[#111111]/90 border-t border-white/5 px-4 pt-2.5 pb-3.5 flex items-center justify-between gap-2 pointer-events-auto select-none"
-                        style={{ 
-                            boxSizing: "border-box",
-                            borderBottomLeftRadius: radius,
-                            borderBottomRightRadius: radius,
-                        }}
-                    >
-                        <div className="flex-1 min-w-0">
-                            {/* Short caption text */}
-                            <p className="font-mono text-[8px] text-neutral-300 leading-tight truncate">
-                                {item.text ? item.text : `@${item.user?.name || item.user_name || "Customer"}`}
-                            </p>
-                            {/* Platform source */}
-                            <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest block mt-0.5">
-                                {item.source || "post"}
-                            </span>
-                        </div>
-
-                        {/* Interactive heart button */}
-                        {onLikeToggle && (
-                            <button
-                                onClick={(e) => onLikeToggle(e, item.id)}
-                                className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-1 outline-none select-none animate-fade-in"
-                            >
-                                <Heart
-                                    size={10}
-                                    className={likedIds && likedIds.includes(item.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
-                                />
-                                <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}`}>
-                                    {item.likes || 0}
-                                </span>
-                            </button>
-                        )}
+                    {/* Hidden index helper, overlays check-in type if loaded */}
+                    <div className="absolute inset-0 bg-black/10 flex flex-col justify-between p-3 z-10 text-white select-none pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{item.source || 'tag'}</span>
                     </div>
+                    
+                    {src && !failed ? (
+                        <>
+                            <img
+                                src={getProxiedImageUrl(src)}
+                                alt={alt}
+                                draggable={false}
+                                crossOrigin="anonymous"
+                                onError={handleImageError}
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    pointerEvents: "none",
+                                    userSelect: "none",
+                                    display: "block",
+                                    zIndex: 1,
+                                    animation: "lazyCardFadeIn 0.3s ease-out forwards",
+                                }}
+                            />
+                            
+                            {/* Minimalist Rams Caption & Interactive Likes overlay */}
+                            <div 
+                                ref={overlayRef}
+                                className="absolute bottom-0 left-0 right-0 z-10 bg-[#111111]/90 border-t border-white/5 px-4 pt-2.5 pb-3.5 flex items-center justify-between gap-2 pointer-events-auto select-none"
+                                style={{ 
+                                    boxSizing: "border-box",
+                                    borderBottomLeftRadius: radius,
+                                    borderBottomRightRadius: radius,
+                                }}
+                            >
+                                <div className="flex-1 min-w-0">
+                                    {/* Short caption text */}
+                                    <p className="font-mono text-[8px] text-neutral-300 leading-tight truncate">
+                                        {item.text ? item.text : `@${item.user?.name || item.user_name || "Customer"}`}
+                                    </p>
+                                    {/* Platform source */}
+                                    <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest block mt-0.5">
+                                        {item.source || "post"}
+                                    </span>
+                                </div>
+
+                                {/* Interactive heart button */}
+                                {onLikeToggle && (
+                                    <button
+                                        onClick={(e) => onLikeToggle(e, item.id)}
+                                        className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-1 outline-none select-none animate-fade-in"
+                                    >
+                                        <Heart
+                                            size={10}
+                                            className={likedIds && likedIds.includes(item.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
+                                        />
+                                        <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}`}>
+                                            {item.likes || 0}
+                                        </span>
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
+                            <span className="text-xl">📸</span>
+                            <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
+                        </div>
+                    )}
                 </>
-            ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
-                    <span className="text-xl">📸</span>
-                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
-                </div>
             )}
         </motion.div>
     )
