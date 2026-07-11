@@ -198,7 +198,7 @@ function LazyCard({
                     position: "relative",
                     width: safeImageWidth,
                     height: safeImageHeight,
-                    borderRadius: 4, // Minimalist Rams clean rounding (rounded-sm)
+                    borderRadius: 2, // Minimalist Rams clean rounding (rounded-xs)
                     backgroundColor: "#FAF9F5", // Warm Hallmark Paper color
                     color: "#1a1a1a", // Deep hallmark ink
                     cursor: isDragging ? "grabbing" : "pointer",

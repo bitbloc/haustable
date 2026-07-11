@@ -566,7 +566,7 @@ export default function HausCheckinPage() {
                         columns={14}
                         imageWidth={256}
                         imageHeight={320}
-                        rounded={4}
+                        rounded={1}
                         gap={4}
                         enableWheel={true}
                         onItemClick={handleItemClick}
@@ -585,40 +585,41 @@ export default function HausCheckinPage() {
             <div className="absolute top-4 left-4 z-40">
                 <a
                     href="/link"
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-md border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+                    className="flex items-center justify-center w-10 h-10 rounded-xs bg-[#12130f]/80 backdrop-blur-md border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all cursor-pointer shadow-lg"
                     title="BACK TO DIRECTORY"
                 >
-                    <ArrowLeft size={16} />
+                    <ArrowLeft size={15} />
                 </a>
             </div>
 
-            {/* ─── FLOATING OVERLAY: TOP CENTER TITLE / SHARE PILL ─── */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-md border border-neutral-800/80 px-4 py-2.5 rounded-full flex items-center gap-2 text-[10px] font-mono select-none shadow-lg whitespace-nowrap max-w-[90vw] overflow-hidden">
-                <div className="flex md:hidden items-center gap-1.5 text-neutral-300">
-                    <span className="text-white font-extrabold">📸 แท็ก</span>
-                    <span className="text-[var(--color-brand)] font-extrabold">@inthehaus</span>
-                    <span>หรือ</span>
-                    <span className="text-[var(--color-brand)] font-extrabold">#inthehaus</span>
-                    <span>บน IG / เช็กอินขึ้นบอร์ด!</span>
+            {/* ─── FLOATING OVERLAY: TOP CENTER TITLE / TUNER SCALE STATUS ─── */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[#12130f]/90 backdrop-blur-md border border-neutral-800 px-5 py-2.5 rounded-xs flex flex-col items-center gap-1.5 text-[9px] font-mono select-none shadow-lg whitespace-nowrap max-w-[90vw]">
+                {/* Tuner scale ticks */}
+                <div className="flex items-center gap-[3px] text-neutral-700 h-2 select-none pointer-events-none mb-0.5">
+                    {[...Array(19)].map((_, i) => (
+                        <span key={i} className={`w-[1px] ${i === 9 ? 'h-2 bg-[var(--color-brand)]' : i % 3 === 0 ? 'h-1.5 bg-neutral-600' : 'h-1 bg-neutral-800'}`} />
+                    ))}
                 </div>
-                <div className="hidden md:flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-[var(--color-brand)] animate-pulse" />
-                    <span className="text-white font-extrabold tracking-wider uppercase">{shopName} STREAM</span>
+                <div className="flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-xs bg-[var(--color-brand)] animate-pulse" />
+                    <span className="text-white font-extrabold tracking-widest uppercase">{shopName} STREAM // ONLINE</span>
+                    <span className="hidden md:inline text-neutral-700">|</span>
+                    <span className="hidden md:inline text-neutral-400">TAG @inthehaus #inthehaus</span>
                 </div>
             </div>
 
-            {/* ─── FLOATING OVERLAY: BOTTOM CENTER PLATFORM FILTERS (Minimalist Pill) ─── */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-lg border border-neutral-800 p-1.5 rounded-full flex items-center gap-1 shadow-2xl">
+            {/* ─── FLOATING OVERLAY: BOTTOM CENTER PLATFORM FILTERS (Rams Console Buttons) ─── */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#12130f]/95 border border-neutral-800 p-1.5 rounded-xs flex items-center gap-1 shadow-2xl">
                 {[
-                    { id: 'all', label: 'All', icon: <Compass size={11} /> },
-                    { id: 'instagram', label: 'Instagram', icon: <Instagram size={11} /> },
-                    { id: 'facebook', label: 'Facebook', icon: <Facebook size={11} /> },
-                    { id: 'google', label: 'Google', icon: <Star size={11} /> }
+                    { id: 'all', label: 'ALL', icon: <Compass size={11} /> },
+                    { id: 'instagram', label: 'INSTAGRAM', icon: <Instagram size={11} /> },
+                    { id: 'facebook', label: 'FACEBOOK', icon: <Facebook size={11} /> },
+                    { id: 'google', label: 'GOOGLE', icon: <Star size={11} /> }
                 ].map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveFilter(tab.id)}
-                        className={`px-3 py-2 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-brand)] text-neutral-900' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-900/60'}`}
+                        className={`px-3.5 py-2 rounded-xs font-mono text-[9px] font-extrabold tracking-widest flex items-center gap-1.5 cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-brand)] text-neutral-900 shadow-sm font-bold' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-[#1a1b15]'}`}
                     >
                         {tab.icon}
                         <span className="hidden sm:inline">{tab.label}</span>
@@ -626,30 +627,30 @@ export default function HausCheckinPage() {
                 ))}
             </div>
 
-            {/* ─── FLOATING OVERLAY: BOTTOM RIGHT JOIN PILL ─── */}
-            <div className="absolute bottom-6 right-6 z-40 hidden md:flex items-center gap-2">
-                <div className="bg-black/85 backdrop-blur-lg border-l-4 border-l-[var(--color-brand)] border-y border-r border-neutral-850 px-4.5 py-3 rounded-r-xl rounded-l-sm text-[11px] text-neutral-300 max-w-[260px] text-left shadow-[0_12px_40px_rgba(0,0,0,0.6)] leading-relaxed">
-                    <span className="block font-black text-white uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
-                        <span className="text-[12px]">📸</span> ร่วมแชร์บรรยากาศ
+            {/* ─── FLOATING OVERLAY: BOTTOM RIGHT JOIN CARD ─── */}
+            <div className="absolute bottom-6 right-6 z-40 hidden md:flex items-center">
+                <div className="bg-[#12130f]/95 border border-neutral-800 border-t-2 border-t-[var(--color-brand)] px-5 py-3.5 rounded-xs text-[10px] text-neutral-400 max-w-[260px] text-left shadow-2xl leading-relaxed font-mono">
+                    <span className="block font-bold text-white uppercase tracking-widest text-[9px] mb-1.5">
+                        // SHARE INSTRUCTIONS
                     </span>
-                    แท็ก <span className="text-[var(--color-brand)] font-extrabold font-mono">@inthehaus</span> หรือ <span className="text-[var(--color-brand)] font-extrabold font-mono">#inthehaus</span> บน Instagram หรือเช็กอินที่ร้านเพื่อนำรูปขึ้นบอร์ดนี้!
+                    Tag <span className="text-[var(--color-brand)] font-bold">@inthehaus</span> or <span className="text-[var(--color-brand)] font-bold">#inthehaus</span> on IG or Check-in to list your photos here.
                 </div>
             </div>
 
-            {/* ─── FLOATING OVERLAY: ADD TEXT (POST-IT NOTE) (+) BUTTON ─── */}
+            {/* ─── FLOATING OVERLAY: ADD TEXT (+) ORANGE TACTILE BUTTON ─── */}
             <div className="absolute bottom-6 right-6 md:right-[290px] z-40">
                 <button
                     onClick={() => setShowAddTextModal(true)}
-                    className="flex items-center justify-center w-12 h-12 rounded-full bg-black/90 hover:bg-neutral-900 border border-neutral-800 text-[var(--color-brand)] hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_8px_30px_rgba(0,0,0,0.5)] outline-none"
+                    className="flex items-center justify-center w-11 h-11 rounded-xs bg-[var(--color-brand)] text-neutral-900 hover:bg-[var(--color-brand)]/90 transition-all cursor-pointer shadow-lg border border-neutral-950 focus:outline-none active:scale-95"
                     title="ฝากข้อความบนบอร์ด"
                 >
-                    <Plus size={20} />
+                    <Plus size={18} strokeWidth={3} />
                 </button>
             </div>
 
-            {/* ─── FLOATING OVERLAY: BOTTOM LEFT HELP MOUSE DRAG INDICATOR ─── */}
+            {/* ─── FLOATING OVERLAY: BOTTOM LEFT HELP DRAG INDICATOR ─── */}
             <div className="absolute bottom-6 left-6 z-40 hidden lg:flex items-center gap-2 select-none pointer-events-none">
-                <div className="bg-black/40 backdrop-blur-sm border border-neutral-800/60 px-3 py-1.5 rounded-full text-[9px] text-neutral-500 font-mono flex items-center gap-2 uppercase tracking-wider">
+                <div className="bg-[#12130f]/60 border border-neutral-850 px-3.5 py-2 rounded-xs text-[9px] text-neutral-500 font-mono flex items-center gap-2 uppercase tracking-wider">
                     <span>🖱️ Click & Drag to explore</span>
                 </div>
             </div>
@@ -669,19 +670,19 @@ export default function HausCheckinPage() {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 10 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-sm bg-[#FAF9F5] border border-neutral-800 p-6 rounded-sm shadow-2xl relative text-[#1a1a1a]"
+                            className="w-full max-w-sm bg-[#FAF9F5] border border-neutral-300 p-6 rounded-xs shadow-2xl relative text-[#1a1a1a]"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Close button */}
                             <button
                                 onClick={() => setShowAddTextModal(false)}
-                                className="absolute top-4 right-4 text-xs font-mono font-bold hover:text-red-650 cursor-pointer text-neutral-400 border-0 bg-transparent outline-none p-1"
+                                className="absolute top-4 right-4 text-[9px] font-mono font-bold hover:text-red-650 cursor-pointer text-neutral-400 border-0 bg-transparent outline-none p-1 tracking-wider"
                             >
                                 [ CLOSE ]
                             </button>
 
                             {/* Header */}
-                            <div className="border-b border-neutral-200 pb-3 mb-4">
+                            <div className="border-b border-neutral-200/60 pb-3 mb-4">
                                 <h3 className="font-mono text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
                                     // WRITE A NOTE / ฝากข้อความ
                                 </h3>
@@ -699,7 +700,7 @@ export default function HausCheckinPage() {
                                         onChange={(e) => setNoteName(e.target.value)}
                                         placeholder="Guest"
                                         maxLength={25}
-                                        className="w-full bg-white border border-neutral-250 p-2.5 rounded-sm font-mono text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors"
+                                        className="w-full bg-white border border-neutral-300 p-2.5 rounded-xs font-mono text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors"
                                     />
                                 </div>
 
@@ -716,7 +717,7 @@ export default function HausCheckinPage() {
                                         maxLength={70}
                                         rows={4}
                                         style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}
-                                        className="w-full bg-white border border-neutral-250 p-2.5 rounded-sm text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors resize-none leading-relaxed"
+                                        className="w-full bg-white border border-neutral-300 p-2.5 rounded-xs text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors resize-none leading-relaxed"
                                     />
                                     <div className="flex justify-between items-center text-[8px] font-mono text-neutral-400 mt-1">
                                         <span>* สูงสุด 70 ตัวอักษร</span>
@@ -728,7 +729,7 @@ export default function HausCheckinPage() {
                                 <button
                                     type="submit"
                                     disabled={isSubmittingNote || !noteText.trim()}
-                                    className="w-full bg-[#DFFF00] hover:bg-[#d4f200] disabled:bg-neutral-200 disabled:text-neutral-400 text-neutral-900 border border-neutral-800 font-mono text-[9px] font-extrabold uppercase tracking-widest py-3 rounded-sm cursor-pointer disabled:cursor-not-allowed transition-all select-none"
+                                    className="w-full bg-[var(--color-brand)] hover:opacity-90 disabled:bg-neutral-200 disabled:text-neutral-400 text-neutral-900 border border-neutral-800 font-mono text-[9px] font-extrabold uppercase tracking-widest py-3 rounded-xs cursor-pointer disabled:cursor-not-allowed transition-all select-none"
                                 >
                                     {isSubmittingNote ? "SUBMITTING..." : "[ POST NOTE // ส่งข้อความ ]"}
                                 </button>
@@ -836,7 +837,7 @@ export default function HausCheckinPage() {
                                             src={getProxiedImageUrl(selectedItem.user.avatar)}
                                             alt={selectedItem.user.name}
                                             crossOrigin="anonymous"
-                                            className="w-10 h-10 rounded-full object-cover border border-neutral-800"
+                                            className="w-10 h-10 rounded-xs object-cover border border-neutral-800"
                                         />
                                         <div className="min-w-0">
                                             <h4 className="text-xs font-bold text-white tracking-tight uppercase">
