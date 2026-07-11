@@ -275,6 +275,61 @@ export function encodeShiftReportData(reportData, paperSize = '58mm') {
     return encoder.encode();
 }
 
+// Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
+export function encodeShiftClosureReportData(reportData, paperSize = '80mm') {
+    const encoder = new EscPosEncoder();
+    encoder.initialize();
+
+    const maxCols = paperSize === '80mm' ? 48 : 30;
+    const divider = '-'.repeat(maxCols);
+    const dateStr = new Date().toLocaleString('th-TH');
+
+    encoder.align('center')
+           .size(1, 1)
+           .bold(true)
+           .line('IN THE HAUS')
+           .size(0, 0)
+           .bold(false)
+           .line('SHIFT CLOSURE REPORT')
+           .line(divider)
+           .align('left')
+           .line(`Printed: ${dateStr}`)
+           .line(`Staff  : ${reportData.staffName}`)
+           .line(`Opened : ${new Date(reportData.openedAt).toLocaleString('th-TH')}`)
+           .line(`Closed : ${new Date(reportData.closedAt).toLocaleString('th-TH')}`)
+           .line(divider);
+
+    encoder.bold(true).line('CASH FLOW').bold(false);
+    encoder.text(`Opening Float`.padEnd(maxCols - 12, ' ') + `฿${reportData.openingFloat.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.text(`Cash Sales`.padEnd(maxCols - 12, ' ') + `฿${reportData.cashSales.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.text(`QR Sales`.padEnd(maxCols - 12, ' ') + `฿${reportData.qrSales.toLocaleString()}`.padStart(12, ' ') + '\n');
+    
+    if (reportData.totalIn > 0) {
+        encoder.text(`Petty Cash In`.padEnd(maxCols - 12, ' ') + `+฿${reportData.totalIn.toLocaleString()}`.padStart(12, ' ') + '\n');
+    }
+    if (reportData.totalOut > 0) {
+        encoder.text(`Petty Cash Out`.padEnd(maxCols - 12, ' ') + `-฿${reportData.totalOut.toLocaleString()}`.padStart(12, ' ') + '\n');
+    }
+    encoder.line(divider);
+
+    encoder.bold(true).line('RECONCILIATION').bold(false);
+    encoder.text(`Expected Cash`.padEnd(maxCols - 12, ' ') + `฿${reportData.expectedCash.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.text(`Actual Cash`.padEnd(maxCols - 12, ' ') + `฿${reportData.actualCash.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.line(divider);
+
+    const diffLabel = reportData.difference === 0 ? 'Cash Matched' : reportData.difference > 0 ? 'Cash Over' : 'Cash Short';
+    encoder.bold(true)
+           .size(0, 1)
+           .text(`DIFF (${diffLabel})`.padEnd(maxCols - 12, ' ') + `${reportData.difference >= 0 ? '+' : ''}฿${reportData.difference.toLocaleString()}`.padStart(12, ' ') + '\n')
+           .size(0, 0)
+           .bold(false)
+           .line(divider)
+           .feed(4)
+           .cut();
+
+    return encoder.encode();
+}
+
 // Connect and write raw bytes via Web Bluetooth directly
 export async function printToBluetoothDirect(targetDeviceName, rawData) {
     if (!navigator.bluetooth) {

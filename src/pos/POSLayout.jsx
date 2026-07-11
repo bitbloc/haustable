@@ -144,6 +144,14 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                 <span>พนักงาน: {activeShift.staffName}</span>
                                 <button 
                                     onClick={() => {
+                                        window.dispatchEvent(new Event('pos-trigger-cash-adjustment'));
+                                    }}
+                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#D04500] border-l border-[#FF5500]/30 pl-2 cursor-pointer transition-colors"
+                                >
+                                    เบิกจ่าย
+                                </button>
+                                <button 
+                                    onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-close-shift'));
                                     }}
                                     className="ml-1 text-[10px] uppercase font-black hover:text-[#D04500] border-l border-[#FF5500]/30 pl-2 cursor-pointer transition-colors"

@@ -9,9 +9,10 @@ import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
 import SlipModal from '../components/shared/SlipModal';
-import { getCurrentShift, startShift, closeShift } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
-import { printToSunmiBuiltIn, encodeShiftReportData } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData } from '../utils/printerHelper';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer } from 'lucide-react';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
@@ -36,34 +37,125 @@ export default function POSDashboard() {
     const [openShiftForm, setOpenShiftForm] = useState({ staffName: '', openingFloat: '1000' });
     const [closeShiftForm, setCloseShiftForm] = useState({ actualCash: '' });
 
+    // PIN and Cash Adjustment States
+    const [staffList, setStaffList] = useState([]);
+    const [selectedStaffForLogin, setSelectedStaffForLogin] = useState(null);
+    const [pinInput, setPinInput] = useState('');
+    const [showOpeningFloatModal, setShowOpeningFloatModal] = useState(false);
+    const [showCashAdjustmentModal, setShowCashAdjustmentModal] = useState(false);
+    const [cashAdjustmentForm, setCashAdjustmentForm] = useState({ amount: '', note: '', type: 'out' });
+
+    const loadStaff = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, display_name, role, pin')
+                .in('role', ['staff', 'admin']);
+            
+            if (!error && data && data.length > 0) {
+                const updatedData = [...data];
+                for (let i = 0; i < updatedData.length; i++) {
+                    const profile = updatedData[i];
+                    if (!profile.pin) {
+                        const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+                        const { error: updateErr } = await supabase
+                            .from('profiles')
+                            .update({ pin: randomPin })
+                            .eq('id', profile.id);
+                        
+                        if (!updateErr) {
+                            updatedData[i] = { ...profile, pin: randomPin };
+                        } else {
+                            const localPins = JSON.parse(localStorage.getItem('pos_staff_pins')) || {};
+                            localPins[profile.id] = randomPin;
+                            localStorage.setItem('pos_staff_pins', JSON.stringify(localPins));
+                            updatedData[i] = { ...profile, pin: randomPin };
+                        }
+                    }
+                }
+                setStaffList(updatedData);
+            } else {
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from('profiles')
+                    .select('id, display_name, role')
+                    .in('role', ['staff', 'admin']);
+                
+                if (!fallbackError && fallbackData && fallbackData.length > 0) {
+                    const localPins = JSON.parse(localStorage.getItem('pos_staff_pins')) || {};
+                    const mapped = fallbackData.map(p => {
+                        let pin = localPins[p.id];
+                        if (!pin) {
+                            pin = Math.floor(1000 + Math.random() * 9000).toString();
+                            localPins[p.id] = pin;
+                        }
+                        return { ...p, pin };
+                    });
+                    localStorage.setItem('pos_staff_pins', JSON.stringify(localPins));
+                    setStaffList(mapped);
+                } else {
+                    const DEFAULT_STAFF = [
+                        { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
+                        { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
+                        { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin', pin: '9999' }
+                    ];
+                    setStaffList(DEFAULT_STAFF);
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load staff profiles, loading mock defaults:", err);
+            const DEFAULT_STAFF = [
+                { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
+                { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
+                { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin', pin: '9999' }
+            ];
+            setStaffList(DEFAULT_STAFF);
+        }
+    };
+
     useEffect(() => {
+        loadStaff();
+
         const handleShiftChanged = () => {
             setActiveShift(getCurrentShift());
         };
         const handleTriggerClose = () => {
             setShowCloseShiftModal(true);
         };
+        const handleTriggerCashAdj = () => {
+            setShowCashAdjustmentModal(true);
+        };
+
         window.addEventListener('pos-shift-changed', handleShiftChanged);
         window.addEventListener('pos-trigger-close-shift', handleTriggerClose);
+        window.addEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
+
         return () => {
             window.removeEventListener('pos-shift-changed', handleShiftChanged);
             window.removeEventListener('pos-trigger-close-shift', handleTriggerClose);
+            window.removeEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
         };
     }, []);
 
     const getShiftSummary = () => {
-        if (!activeShift) return { cashSales: 0, qrSales: 0, totalSales: 0, expectedCash: 0 };
+        if (!activeShift) return { cashSales: 0, qrSales: 0, totalSales: 0, expectedCash: 0, totalIn: 0, totalOut: 0 };
         const cashSales = activeShift.transactions
             .filter(tx => tx.paymentMethod === 'cash')
             .reduce((sum, tx) => sum + tx.amount, 0);
         const qrSales = activeShift.transactions
             .filter(tx => tx.paymentMethod === 'qr')
             .reduce((sum, tx) => sum + tx.amount, 0);
+            
+        const adjustments = activeShift.adjustments || [];
+        const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+        const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+
         return {
             cashSales,
             qrSales,
             totalSales: cashSales + qrSales,
-            expectedCash: activeShift.openingFloat + cashSales
+            totalIn,
+            totalOut,
+            expectedCash: activeShift.openingFloat + cashSales + totalIn - totalOut
         };
     };
 
@@ -90,6 +182,8 @@ export default function POSDashboard() {
             cashSales: summary.cashSales,
             qrSales: summary.qrSales,
             totalSales: summary.totalSales,
+            totalIn: summary.totalIn,
+            totalOut: summary.totalOut,
             expectedCash: summary.expectedCash,
             actualCash: actual,
             difference: actual - summary.expectedCash
@@ -103,7 +197,7 @@ export default function POSDashboard() {
 
         // Print shift report to SUNMI
         try {
-            const rawBytes = encodeShiftReportData(reportData, '80mm');
+            const rawBytes = encodeShiftClosureReportData(reportData, '80mm');
             const printRes = await printToSunmiBuiltIn(rawBytes);
             if (printRes) {
                 toast.success('พิมพ์ใบสรุปยอดปิดกะเรียบร้อยแล้ว');
@@ -112,6 +206,24 @@ export default function POSDashboard() {
             console.error("Failed to print shift report on SUNMI:", printErr);
             toast.error('ไม่สามารถพิมพ์ใบรายงานได้ แต่ระบบทำการปิดกะสำเร็จแล้ว');
         }
+    };
+
+    const handleCashAdjustmentSubmit = (e) => {
+        e.preventDefault();
+        const amount = parseFloat(cashAdjustmentForm.amount) || 0;
+        if (amount <= 0) {
+            toast.error('กรุณาระบุจำนวนเงินที่ถูกต้อง');
+            return;
+        }
+        if (!cashAdjustmentForm.note.trim()) {
+            toast.error('กรุณาระบุเหตุผลการเบิกจ่าย/นำฝาก');
+            return;
+        }
+        
+        addShiftAdjustment(amount, cashAdjustmentForm.note.trim(), cashAdjustmentForm.type);
+        toast.success(`บันทึกรายการสำเร็จ: ${cashAdjustmentForm.type === 'in' ? 'นำฝากเงินสด' : 'เบิกจ่ายเงินสด'} ฿${amount.toLocaleString()}`);
+        setShowCashAdjustmentModal(false);
+        setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
     };
 
     // Check pending orders helper
@@ -609,56 +721,202 @@ export default function POSDashboard() {
                 />
             )}
 
-            {/* Open Shift Overlay (Full Screen) */}
+            {/* Open Shift Overlay (Full Screen PIN Pad / Staff Grid) */}
             {!activeShift && (
-                <div className="fixed inset-0 bg-[#ECECE9]/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="text-center">
-                            <div className="w-14 h-14 bg-[#FF5500]/10 text-[#FF5500] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#FF5500]/20 shadow-inner">
-                                <Users size={28} />
-                            </div>
-                            <h2 className="text-xl font-bold font-sans tracking-tight text-[#1A1A1A]">เปิดรอบการทำงานเครื่อง POS</h2>
-                            <p className="text-xs text-[#767673] font-mono mt-1 uppercase tracking-wide">Enter Cashier Name & Opening Float</p>
-                        </div>
+                        
+                        {!selectedStaffForLogin ? (
+                            /* Step 1: Select Staff Member */
+                            <div className="flex flex-col gap-5">
+                                <div className="text-center">
+                                    <div className="w-14 h-14 bg-[#FF5500]/10 text-[#FF5500] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#FF5500]/20 shadow-inner">
+                                        <Users size={28} />
+                                    </div>
+                                    <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
+                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">Select Cashier Staff Profile</p>
+                                </div>
 
-                        <form onSubmit={handleStartShiftSubmit} className="flex flex-col gap-4">
-                            <div>
-                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
-                                    ชื่อพนักงาน (Staff Name)
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="ระบุชื่อพนักงานผู้รับผิดชอบกะ"
-                                    value={openShiftForm.staffName}
-                                    onChange={(e) => setOpenShiftForm(prev => ({ ...prev, staffName: e.target.value }))}
-                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] font-bold shadow-inner"
-                                />
-                            </div>
+                                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+                                    {staffList.map(staff => (
+                                        <button
+                                            key={staff.id}
+                                            onClick={() => {
+                                                setSelectedStaffForLogin(staff);
+                                                setPinInput('');
+                                                setShowOpeningFloatModal(false);
+                                            }}
+                                            className="w-full bg-white border border-[#D1D1CD] hover:border-[#FF5500]/40 rounded-xl p-3 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-sm group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-[#EAEAEA] flex items-center justify-center font-bold text-[#FF5500] uppercase text-xs border border-[#D1D1CD] group-hover:bg-[#FF5500]/10 transition-colors">
+                                                    {staff.display_name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-[#1A1A1A] leading-tight">{staff.display_name}</p>
+                                                    <p className="text-[8px] font-mono text-[#767673] uppercase tracking-widest leading-none mt-0.5">{staff.role}</p>
+                                                </div>
+                                            </div>
+                                            <Lock size={12} className="text-[#D1D1CD] group-hover:text-[#FF5500] transition-colors" />
+                                        </button>
+                                    ))}
+                                </div>
 
-                            <div>
-                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
-                                    เงินทอนเริ่มต้น (Opening Float)
-                                </label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="0"
-                                    step="any"
-                                    value={openShiftForm.openingFloat}
-                                    onChange={(e) => setOpenShiftForm(prev => ({ ...prev, openingFloat: e.target.value }))}
-                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] font-mono font-bold shadow-inner"
-                                />
+                                {/* Debug Dev PIN Help (Manager view for easy testing) */}
+                                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight">
+                                    <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
+                                    {staffList.map(s => (
+                                        <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
+                                    ))}
+                                </div>
                             </div>
+                        ) : !showOpeningFloatModal ? (
+                            /* Step 2: Enter PIN Code */
+                            <div className="flex flex-col gap-4">
+                                <div className="text-center">
+                                    <p className="text-[9px] font-mono font-bold text-[#767673] uppercase tracking-widest">SECURITY VERIFICATION</p>
+                                    <h3 className="text-sm font-bold text-[#1A1A1A] mt-0.5">ระบุรหัส PIN ของ {selectedStaffForLogin.display_name}</h3>
+                                    
+                                    {/* PIN Dot Indicators */}
+                                    <div className="flex justify-center gap-3.5 my-4">
+                                        {[1, 2, 3, 4].map(idx => (
+                                            <div 
+                                                key={idx} 
+                                                className={`w-3.5 h-3.5 rounded-full border border-[#D1D1CD] transition-all duration-100 ${
+                                                    pinInput.length >= idx ? 'bg-[#FF5500] border-[#FF5500] scale-110 shadow-sm' : 'bg-white'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
 
-                            <button
-                                type="submit"
-                                className="w-full bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-sm tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
-                            >
-                                <Users size={16} />
-                                <span>เปิดกะระบบขาย (Start Shift)</span>
-                            </button>
-                        </form>
+                                {/* Numeric PIN Grid */}
+                                <div className="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto w-full">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                        <button
+                                            key={num}
+                                            onClick={() => {
+                                                if (pinInput.length < 4) {
+                                                    const newPin = pinInput + num;
+                                                    setPinInput(newPin);
+                                                    if (newPin.length === 4) {
+                                                        if (newPin === selectedStaffForLogin.pin) {
+                                                            setShowOpeningFloatModal(true);
+                                                        } else {
+                                                            toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                                            setPinInput('');
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                            className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setPinInput('')}
+                                        className="h-12 rounded-xl bg-[#FFF0F0] border border-[#FAD2D2] hover:bg-[#FCDCDC] active:scale-95 text-[10px] font-bold text-[#D32F2F] transition-all shadow-sm flex items-center justify-center cursor-pointer uppercase"
+                                    >
+                                        ล้าง (C)
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (pinInput.length < 4) {
+                                                const newPin = pinInput + '0';
+                                                setPinInput(newPin);
+                                                if (newPin.length === 4) {
+                                                    if (newPin === selectedStaffForLogin.pin) {
+                                                        setShowOpeningFloatModal(true);
+                                                    } else {
+                                                        toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                                        setPinInput('');
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                                    >
+                                        0
+                                    </button>
+                                    <button
+                                        onClick={() => setPinInput(prev => prev.slice(0, -1))}
+                                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                                    >
+                                        ←
+                                    </button>
+                                </div>
+
+                                <button
+                                    onClick={() => setSelectedStaffForLogin(null)}
+                                    className="w-full text-center text-[#767673] hover:text-[#1A1A1A] text-[10px] font-bold uppercase tracking-wider py-1.5 transition-colors cursor-pointer mt-2"
+                                >
+                                    ย้อนกลับเลือกพนักงาน (Change Staff)
+                                </button>
+                            </div>
+                        ) : (
+                            /* Step 3: Enter Cash Float to Open Shift */
+                            <div className="flex flex-col gap-5">
+                                <div className="text-center border-b border-[#D1D1CD] pb-4">
+                                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-100 shadow-inner">
+                                        <Key size={20} />
+                                    </div>
+                                    <h2 className="text-base font-bold text-[#1A1A1A]">ยืนยันรหัสถูกต้องเรียบร้อย</h2>
+                                    <p className="text-[10px] text-[#767673] font-mono leading-none mt-1 uppercase">Enter Cash Float for: {selectedStaffForLogin.display_name}</p>
+                                </div>
+
+                                <form 
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        startShift(selectedStaffForLogin.display_name, openShiftForm.openingFloat);
+                                        toast.success(`เปิดรอบการขายสำเร็จ: พนักงาน ${selectedStaffForLogin.display_name}`);
+                                        setSelectedStaffForLogin(null);
+                                        setPinInput('');
+                                        setShowOpeningFloatModal(false);
+                                    }} 
+                                    className="flex flex-col gap-4"
+                                >
+                                    <div>
+                                        <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                            ระบุเงินทอนเริ่มต้นในลิ้นชัก (Opening Float)
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[#767673] font-bold">฿</span>
+                                            <input
+                                                type="number"
+                                                required
+                                                min="0"
+                                                step="any"
+                                                value={openShiftForm.openingFloat}
+                                                onChange={(e) => setOpenShiftForm(prev => ({ ...prev, openingFloat: e.target.value }))}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowOpeningFloatModal(false);
+                                                setPinInput('');
+                                            }}
+                                            className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#ECECE9] text-[#1A1A1A] py-3 px-4 rounded-xl font-bold text-xs uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                        >
+                                            ย้อนหลัง (Back)
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                        >
+                                            <LogIn size={12} />
+                                            <span>เปิดรอบขาย (Start)</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
+                        
                     </div>
                 </div>
             )}
@@ -666,10 +924,11 @@ export default function POSDashboard() {
             {/* Close Shift Modal */}
             {showCloseShiftModal && activeShift && (() => {
                 const summary = getShiftSummary();
+                const adjustments = activeShift.adjustments || [];
                 return (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
-                            <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+                            <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3 shrink-0">
                                 <div>
                                     <h3 className="text-base font-bold font-sans text-[#1A1A1A]">ปิดรอบการทำงานและตรวจสอบเงินสด</h3>
                                     <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase">Shift Closure & Cash Reconciliation</p>
@@ -683,7 +942,7 @@ export default function POSDashboard() {
                             </div>
 
                             {/* Shift Information and Stats */}
-                            <div className="grid grid-cols-2 gap-3 text-xs bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm">
+                            <div className="grid grid-cols-2 gap-3 text-xs bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm shrink-0">
                                 <div>
                                     <span className="text-[#767673] font-mono font-bold uppercase text-[9px] block">Cashier Staff</span>
                                     <span className="font-bold text-[#1A1A1A]">{activeShift.staffName}</span>
@@ -694,27 +953,58 @@ export default function POSDashboard() {
                                         {new Date(activeShift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
-                                <div className="col-span-2 border-t border-[#D1D1CD]/50 pt-2 grid grid-cols-3 gap-2">
-                                    <div>
-                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px] block">Opening Float</span>
+                                <div className="col-span-2 border-t border-[#D1D1CD]/50 pt-2.5 grid grid-cols-2 gap-y-2 gap-x-4">
+                                    <div className="flex justify-between">
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Opening Float:</span>
                                         <span className="font-mono font-bold">฿{activeShift.openingFloat.toLocaleString()}.-</span>
                                     </div>
-                                    <div>
-                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px] block">Cash Sales</span>
+                                    <div className="flex justify-between">
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Cash Sales:</span>
                                         <span className="font-mono font-bold text-emerald-600">฿{summary.cashSales.toLocaleString()}.-</span>
                                     </div>
-                                    <div>
-                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px] block">QR Sales</span>
+                                    <div className="flex justify-between">
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">QR Sales:</span>
                                         <span className="font-mono font-bold text-blue-600">฿{summary.qrSales.toLocaleString()}.-</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-[#D1D1CD]/30 pt-1">
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Petty Cash In/Out:</span>
+                                        <span className={`font-mono font-bold ${summary.totalIn - summary.totalOut >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                            {summary.totalIn - summary.totalOut >= 0 ? '+' : '-'}฿{Math.abs(summary.totalIn - summary.totalOut).toLocaleString()}.-
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Petty Cash Adjustments Ledger (เบิกจ่ายเงินสด) */}
+                            <div className="flex flex-col gap-1.5">
+                                <span className="text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase px-1">ประวัติรายการเบิกจ่ายกะนี้ ({adjustments.length})</span>
+                                <div className="border border-[#D1D1CD] rounded-xl bg-white p-2.5 max-h-[110px] overflow-y-auto flex flex-col gap-1 text-[10px] shadow-inner">
+                                    {adjustments.length === 0 ? (
+                                        <div className="text-center text-[#767673] py-4 italic">ไม่มีรายการเงินเข้า-ออกระหว่างวัน</div>
+                                    ) : (
+                                        adjustments.map(adj => (
+                                            <div key={adj.id} className="flex justify-between items-center py-1 border-b border-[#D1D1CD]/30 last:border-b-0">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${adj.type === 'in' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                    <span className="text-[#1A1A1A] font-bold">{adj.note}</span>
+                                                    <span className="text-[#767673] font-mono text-[8px]">
+                                                        ({new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                                                    </span>
+                                                </div>
+                                                <span className={`font-mono font-bold ${adj.type === 'in' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                    {adj.type === 'in' ? '+' : '-'}฿{adj.amount.toLocaleString()}.-
+                                                </span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Expected Cash reconciliation */}
-                            <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-4 flex justify-between items-center shadow-sm">
+                            <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-4 flex justify-between items-center shadow-sm shrink-0">
                                 <div>
                                     <span className="text-[#805E00] font-mono font-bold uppercase text-[9px] block">Expected Cash in Drawer</span>
-                                    <span className="text-[10px] text-amber-800/80 leading-none">เงินสดตั้งต้น + ยอดขายเงินสด</span>
+                                    <span className="text-[10px] text-amber-800/80 leading-none">เงินสดตั้งต้น + ยอดขายเงินสด + เข้า - ออก</span>
                                 </div>
                                 <span className="font-mono font-black text-[#1A1A1A] text-lg">
                                     ฿{summary.expectedCash.toLocaleString()}.-
@@ -722,7 +1012,7 @@ export default function POSDashboard() {
                             </div>
 
                             {/* Input for Actual cash */}
-                            <form onSubmit={handleCloseShiftSubmit} className="flex flex-col gap-4">
+                            <form onSubmit={handleCloseShiftSubmit} className="flex flex-col gap-4 shrink-0">
                                 <div>
                                     <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
                                         เงินสดที่ตรวจนับได้จริง (Actual Cash in Drawer)
@@ -774,6 +1064,7 @@ export default function POSDashboard() {
                                         type="submit"
                                         className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 active:scale-98"
                                     >
+                                        <Printer size={12} />
                                         <span>ปิดกะและพิมพ์สรุปยอด</span>
                                     </button>
                                 </div>
@@ -782,6 +1073,119 @@ export default function POSDashboard() {
                     </div>
                 );
             })()}
+
+            {/* Petty Cash Adjustment Modal (เบิกจ่ายระหว่างวัน เข้า-ออก) */}
+            {showCashAdjustmentModal && activeShift && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
+                            <div>
+                                <h3 className="text-base font-bold font-sans text-[#1A1A1A]">บันทึกรายการเบิกจ่ายเงินสด</h3>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase">Petty Cash Deposit / Withdrawal</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowCashAdjustmentModal(false);
+                                    setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
+                                }}
+                                className="text-[#767673] hover:text-[#1A1A1A] text-xl font-bold font-mono p-1"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCashAdjustmentSubmit} className="flex flex-col gap-4">
+                            {/* Adjustment Type Selection */}
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                    ประเภทรายการ (Transaction Type)
+                                </label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCashAdjustmentForm(prev => ({ ...prev, type: 'out' }))}
+                                        className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            cashAdjustmentForm.type === 'out'
+                                            ? 'bg-red-50 border-red-200 text-red-700 shadow-sm'
+                                            : 'bg-white border-[#D1D1CD] hover:bg-[#ECECE9] text-[#767673]'
+                                        }`}
+                                    >
+                                        <Minus size={12} />
+                                        <span>เบิกจ่ายเงินสด / เงินออก (Payout)</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCashAdjustmentForm(prev => ({ ...prev, type: 'in' }))}
+                                        className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            cashAdjustmentForm.type === 'in'
+                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                                            : 'bg-white border-[#D1D1CD] hover:bg-[#ECECE9] text-[#767673]'
+                                        }`}
+                                    >
+                                        <Plus size={12} />
+                                        <span>นำฝากเงินสด / เงินเข้า (Deposit)</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Amount Input */}
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                    จำนวนเงินสด (Cash Amount)
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[#767673] font-bold">฿</span>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="0"
+                                        step="any"
+                                        placeholder="0.00"
+                                        value={cashAdjustmentForm.amount}
+                                        onChange={(e) => setCashAdjustmentForm(prev => ({ ...prev, amount: e.target.value }))}
+                                        className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Notes Input */}
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                    รายละเอียด / เหตุผล (Details & Reason)
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="เช่น ซื้อน้ำแข็ง, ทอนเงินเพิ่ม, จ่ายผู้ผลิต"
+                                    value={cashAdjustmentForm.note}
+                                    onChange={(e) => setCashAdjustmentForm(prev => ({ ...prev, note: e.target.value }))}
+                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] font-bold shadow-inner"
+                                />
+                            </div>
+
+                            {/* Form Submit */}
+                            <div className="flex gap-2.5 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowCashAdjustmentModal(false);
+                                        setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
+                                    }}
+                                    className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#ECECE9] text-[#1A1A1A] py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md active:scale-98"
+                                >
+                                    บันทึกรายการ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

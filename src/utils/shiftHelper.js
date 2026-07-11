@@ -23,6 +23,7 @@ export function startShift(staffName, openingFloat) {
         openedAt: new Date().toISOString(),
         openingFloat: floatAmount,
         transactions: [],
+        adjustments: [], // petty cash adjustments: { amount, note, type: 'in'|'out', timestamp }
         status: 'open',
         closedAt: null,
         closedCash: 0,
@@ -32,7 +33,6 @@ export function startShift(staffName, openingFloat) {
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(newShift));
     console.log('[Shift Management] Shift started:', newShift);
     
-    // Dispatch event to notify layout/POS
     window.dispatchEvent(new Event('pos-shift-changed'));
     return newShift;
 }
@@ -55,9 +55,16 @@ export function recordShiftTransaction(bookingId, totalAmount, paymentMethod) {
     
     shift.transactions.push(newTx);
     
-    // Update expected cash in drawer
+    // Recalculate expected cash
     if (newTx.paymentMethod === 'cash') {
-        shift.expectedCash = (shift.expectedCash || shift.openingFloat) + amount;
+        const cashSales = shift.transactions
+            .filter(tx => tx.paymentMethod === 'cash')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        const adjustments = shift.adjustments || [];
+        const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+        const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+        
+        shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
     }
     
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
@@ -66,7 +73,43 @@ export function recordShiftTransaction(bookingId, totalAmount, paymentMethod) {
     window.dispatchEvent(new Event('pos-shift-changed'));
 }
 
-// 4. Close the current shift
+// 4. Add cash adjustment (petty cash in/out)
+export function addShiftAdjustment(amount, note, type) {
+    const shift = getCurrentShift();
+    if (!shift) return null;
+    
+    const adjAmount = parseFloat(amount) || 0;
+    const newAdj = {
+        id: `adj_${Date.now()}`,
+        amount: adjAmount,
+        note: note || '',
+        type, // 'in' or 'out'
+        timestamp: new Date().toISOString()
+    };
+    
+    if (!shift.adjustments) {
+        shift.adjustments = [];
+    }
+    shift.adjustments.push(newAdj);
+    
+    // Recalculate expected cash in drawer
+    const cashSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'cash')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+    const adjustments = shift.adjustments || [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    
+    shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
+    
+    localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
+    console.log('[Shift Management] Cash adjustment recorded:', newAdj);
+    
+    window.dispatchEvent(new Event('pos-shift-changed'));
+    return shift;
+}
+
+// 5. Close the current shift
 export function closeShift(actualCash) {
     const shift = getCurrentShift();
     if (!shift) return null;
@@ -83,7 +126,12 @@ export function closeShift(actualCash) {
         .reduce((sum, tx) => sum + tx.amount, 0);
         
     const totalSales = cashSales + qrSales;
-    const expectedCashInDrawer = shift.openingFloat + cashSales;
+    
+    const adjustments = shift.adjustments || [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    
+    const expectedCashInDrawer = shift.openingFloat + cashSales + totalIn - totalOut;
     const diff = cashActual - expectedCashInDrawer;
     
     const closedShift = {
@@ -95,14 +143,17 @@ export function closeShift(actualCash) {
         difference: diff,
         cashSales,
         qrSales,
-        totalSales
+        totalSales,
+        totalIn,
+        totalOut,
+        adjustments
     };
     
     // Move to history
     try {
         const history = JSON.parse(localStorage.getItem(SHIFT_HISTORY_KEY)) || [];
         history.unshift(closedShift);
-        localStorage.setItem(SHIFT_HISTORY_KEY, JSON.stringify(history.slice(0, 100))); // Keep last 100
+        localStorage.setItem(SHIFT_HISTORY_KEY, JSON.stringify(history.slice(0, 100)));
     } catch (e) {
         console.error('Failed to save shift to history:', e);
     }
@@ -115,7 +166,7 @@ export function closeShift(actualCash) {
     return closedShift;
 }
 
-// 5. Get shift logs history
+// 6. Get shift logs history
 export function getShiftHistory() {
     try {
         return JSON.parse(localStorage.getItem(SHIFT_HISTORY_KEY)) || [];
