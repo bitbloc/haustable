@@ -91,36 +91,13 @@ function getItemColor(index) {
 // Fill a target length by repeating items, prioritizing placing the newest items (first in list)
 // at the center of the grid (index 0,0 and surrounding cells) and moving progressively outwards.
 // This naturally prevents duplicate items from being adjacent to each other.
-function fillByDistancePriority(items, target, columns) {
+function fillChronological(items, target, columns) {
     if (items.length === 0) return []
-    const cols = columns || 14
-    const rows = Math.ceil(target / cols)
-    
-    // 1. Create list of all cells with their coordinates and wrapped distance to (0,0)
-    const cells = []
-    for (let idx = 0; idx < target; idx++) {
-        const r = Math.floor(idx / cols)
-        const c = idx % cols
-        
-        // Calculate wrapped distance to (0, 0)
-        const dr = Math.min(r, rows - r)
-        const dc = Math.min(c, cols - c)
-        const dist = dr * dr + dc * dc
-        
-        cells.push({ idx, r, c, dist })
-    }
-    
-    // 2. Sort cells by distance ascending
-    cells.sort((a, b) => a.dist - b.dist)
-    
-    // 3. Assign items in chronological order to cells based on distance
     const out = new Array(target)
     const N = items.length
-    
-    cells.forEach((cell, i) => {
-        out[cell.idx] = items[i % N]
-    })
-    
+    for (let idx = 0; idx < target; idx++) {
+        out[idx] = items[idx % N]
+    }
     return out
 }
 
@@ -391,12 +368,6 @@ export default function DraggableGrid(props) {
 
     const [containerSize, setContainerSize] = useState({ w: 800, h: 600 })
     const [isDragging, setIsDragging] = useState(false)
-    const scale = useMotionValue(1.0)
-    const [isPinching, setIsPinching] = useState(false)
-    const touchStartDist = useRef(0)
-    const touchStartScale = useRef(1.0)
-    const touchStartMid = useRef({ x: 0, y: 0 })
-    const touchStartPos = useRef({ x: 0, y: 0 })
     const initializedRef = useRef(false)
 
     const pointerDownPos = useRef(null)
@@ -435,7 +406,7 @@ export default function DraggableGrid(props) {
     const rows = Math.max(safeColumns, Math.ceil(safeItems.length / safeColumns))
     const totalCells = safeColumns * rows
     const displayItems = useMemo(
-        () => fillByDistancePriority(safeItems, totalCells, safeColumns),
+        () => fillChronological(safeItems, totalCells, safeColumns),
         [safeItems, totalCells, safeColumns]
     )
 
@@ -487,21 +458,7 @@ export default function DraggableGrid(props) {
     // minX/minY: grid's far edge `gap` from the bottom-right border.
     // When the grid is smaller than the container the range collapses to the
     // top-left position (min clamped to max), so it can't drift.
-    // Calculate the minimum scale dynamically to ensure the grid always fills the container
-    const minScale = useMemo(() => {
-        const scaleX = containerSize.w / (gridW + safeGap * 2)
-        const scaleY = containerSize.h / (gridH + safeGap * 2)
-        // Ensure we don't divide by zero, clamp the minimum zoom level to 0.25 to prevent disappearing, and add a 5% safety margin
-        const calculatedMin = Math.max(scaleX, scaleY) * 1.05
-        return Math.max(0.25, Math.min(1.0, calculatedMin))
-    }, [containerSize.w, containerSize.h, gridW, gridH, safeGap])
 
-    // Keep scale constrained to minScale
-    useEffect(() => {
-        if (scale.get() < minScale) {
-            scale.set(minScale)
-        }
-    }, [minScale, scale])
 
     // Scale boundaries and cycles for infinite loops
     const cycleW = gridW + safeGap
@@ -582,117 +539,31 @@ export default function DraggableGrid(props) {
         }
     }, [])
 
-    // Pinch-to-zoom and Trackpad zoom gestures centered around fingers midpoint
+    // Disable native viewport zooming and overscroll bouncing on mobile device gestures
     useEffect(() => {
         const el = containerRef.current
         if (!el) return
 
-        const handleTouchStart = (e) => {
-            if (e.touches.length === 2) {
-                e.preventDefault()
-                setIsPinching(true)
-                const t0 = e.touches[0]
-                const t1 = e.touches[1]
-                const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
-                
-                // Abort if touch points are too close to prevent division-by-zero NaN bugs
-                if (dist < 15) return
-                
-                touchStartDist.current = dist
-                touchStartScale.current = scale.get()
-                
-                const midX = (t0.clientX + t1.clientX) / 2
-                const midY = (t0.clientY + t1.clientY) / 2
-                touchStartMid.current = { x: midX, y: midY }
-                touchStartPos.current = { x: x.get(), y: y.get() }
-            }
-        }
-
         const handleTouchMove = (e) => {
-            if (e.touches.length === 2 && touchStartDist.current > 15) {
-                e.preventDefault()
-
-                const t0 = e.touches[0]
-                const t1 = e.touches[1]
-
-                const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
-                const factor = dist / touchStartDist.current
-                let nextScale = touchStartScale.current * factor
-                
-                // Strict clamping of zoom levels: minScale to 2.0
-                nextScale = Math.max(minScale, Math.min(2.0, nextScale))
-
-                const midX = (t0.clientX + t1.clientX) / 2
-                const midY = (t0.clientY + t1.clientY) / 2
-
-                if (touchStartScale.current > 0) {
-                    const ratio = nextScale / touchStartScale.current
-                    const newX = midX - (touchStartMid.current.x - touchStartPos.current.x) * ratio
-                    const newY = midY - (touchStartMid.current.y - touchStartPos.current.y) * ratio
-
-                    x.set(newX)
-                    y.set(newY)
-                }
-
-                scale.set(nextScale)
-            }
-        }
-
-        const handleTouchEnd = (e) => {
-            if (e.touches.length < 2) {
-                touchStartDist.current = 0
-                setIsPinching(false)
-            }
-        }
-
-        const handleWheelZoom = (e) => {
-            if (e.ctrlKey) {
-                e.preventDefault()
-
-                const midX = e.clientX
-                const midY = e.clientY
-
-                const currentScale = scale.get()
-                let nextScale = currentScale - e.deltaY * 0.008 // Gentle wheel zoom
-                nextScale = Math.max(minScale, Math.min(2.0, nextScale))
-
-                const oldX = x.get()
-                const oldY = y.get()
-                const oldScale = currentScale
-
-                if (oldScale > 0) {
-                    const scaleRatio = nextScale / oldScale
-                    const newX = midX - (midX - oldX) * scaleRatio
-                    const newY = midY - (midY - oldY) * scaleRatio
-
-                    x.set(newX)
-                    y.set(newY)
-                }
-
-                scale.set(nextScale)
-            }
+            // Prevent all native touch actions (overscroll, body scroll bounce, standard gestures)
+            e.preventDefault()
         }
 
         const handleGesture = (e) => {
             e.preventDefault()
         }
 
-        el.addEventListener('touchstart', handleTouchStart, { passive: false })
         el.addEventListener('touchmove', handleTouchMove, { passive: false })
-        el.addEventListener('touchend', handleTouchEnd)
-        el.addEventListener('wheel', handleWheelZoom, { passive: false })
         el.addEventListener('gesturestart', handleGesture, { passive: false })
         el.addEventListener('gesturechange', handleGesture, { passive: false })
 
         return () => {
-            el.removeEventListener('touchstart', handleTouchStart)
             el.removeEventListener('touchmove', handleTouchMove)
-            el.removeEventListener('touchend', handleTouchEnd)
-            el.removeEventListener('wheel', handleWheelZoom)
             el.removeEventListener('gesturestart', handleGesture)
             el.removeEventListener('gesturechange', handleGesture)
         }
-    }, [minScale, containerSize, gridW, gridH, safeGap, x, y])
+    }, [])
+
 
     // Wheel scrolling
     useEffect(() => {
@@ -701,7 +572,10 @@ export default function DraggableGrid(props) {
         if (!el) return
 
         const onWheel = (e) => {
-            if (e.ctrlKey) return // Skip if trackpad pinch-to-zoom is active
+            if (e.ctrlKey) {
+                e.preventDefault()
+                return // Block trackpad pinch-to-zoom completely
+            }
             e.preventDefault()
             const curX = x.get()
             const curY = y.get()
@@ -791,8 +665,8 @@ export default function DraggableGrid(props) {
                 }
             `}</style>
             <motion.div
-                style={{ ...gridStyle, x, y, scale }}
-                drag={!isPinching}
+                style={{ ...gridStyle, x, y }}
+                drag={true}
                 dragElastic={0}
                 dragMomentum={true}
                 onDragStart={() => {
