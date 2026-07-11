@@ -187,7 +187,7 @@ export default function AdminLayout({ children }) {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 md:ml-72 p-4 md:p-12 bg-canvas min-h-screen flex flex-col justify-between">
+            <main className="flex-1 md:ml-72 p-4 md:p-6 lg:p-12 bg-canvas min-h-screen flex flex-col justify-between">
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}

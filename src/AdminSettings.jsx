@@ -341,7 +341,7 @@ export default function AdminSettings() {
             {/* TAB 1: Booking & Core Settings */}
             {activeSettingsTab === 'booking' && (
                 <div className="space-y-8 animate-fade-in">
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid lg:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             {/* Enable Booking System - Redesigned as a Card */}
                             <label className={`block bg-white p-5 rounded-xl border transition-all cursor-pointer shadow-sm ${settings.is_menu_system_enabled === 'true' ? 'border-[#FF5500] ring-1 ring-[#FF5500]/10' : 'border-[#D1D1CD] hover:border-[#B0B0AC]'}`}>
@@ -707,7 +707,7 @@ export default function AdminSettings() {
                     </div>
 
                     {/* QR Payment, Floor Plan, Home Background - 3 Columns Layout! */}
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="grid lg:grid-cols-3 gap-6">
                         {/* QR Code Section */}
                         <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col justify-between">
                             <div>
@@ -883,7 +883,7 @@ export default function AdminSettings() {
 
             {/* TAB 3: Integrations & APIs Settings */}
             {activeSettingsTab === 'integrations' && (
-                <div className="grid md:grid-cols-2 gap-6 animate-fade-in">
+                <div className="grid lg:grid-cols-2 gap-6 animate-fade-in">
                     <div className="space-y-6">
                         {/* Pricing Strategy Config */}
                         <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
@@ -1048,7 +1048,7 @@ export default function AdminSettings() {
 
                 {/* TAB 4: Printers Settings */}
                 {activeSettingsTab === 'printers' && (
-                    <div className="grid md:grid-cols-2 gap-6 animate-fade-in font-sans text-[#1A1A1A]">
+                    <div className="grid lg:grid-cols-2 gap-6 animate-fade-in font-sans text-[#1A1A1A]">
                         {/* Cashier Printer Card */}
                         <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm flex flex-col justify-between">
                             <div className="space-y-4">
@@ -1101,15 +1101,24 @@ export default function AdminSettings() {
                                     )}
 
                                     {printerConfig.cashier_printer_type === 'bluetooth' && (
-                                        <div className="animate-fade-in">
+                                        <div className="animate-fade-in space-y-1">
                                             <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Bluetooth Device Name / MAC Address</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="e.g. BT-SPP / 00:11:22:33:44:55" 
-                                                value={printerConfig.cashier_printer_bt_name} 
-                                                onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_bt_name: e.target.value })} 
-                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
-                                            />
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. GG-5805DD / BT-SPP" 
+                                                    value={printerConfig.cashier_printer_bt_name} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_bt_name: e.target.value })} 
+                                                    className="flex-1 px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleScanBluetooth('cashier')}
+                                                    className="px-3 py-2 bg-[#1A1A1A] hover:bg-[#333330] text-white font-mono text-[9px] font-bold uppercase rounded-lg active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                                                >
+                                                    🔍 Scan & Pair
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
 
@@ -1189,15 +1198,24 @@ export default function AdminSettings() {
                                     )}
 
                                     {printerConfig.kitchen_printer_type === 'bluetooth' && (
-                                        <div className="animate-fade-in">
+                                        <div className="animate-fade-in space-y-1">
                                             <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Bluetooth Device Name / MAC Address</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="e.g. BT-SPP / 00:11:22:33:44:55" 
-                                                value={printerConfig.kitchen_printer_bt_name} 
-                                                onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_bt_name: e.target.value })} 
-                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
-                                            />
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. GG-5805DD / BT-SPP" 
+                                                    value={printerConfig.kitchen_printer_bt_name} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_bt_name: e.target.value })} 
+                                                    className="flex-1 px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleScanBluetooth('kitchen')}
+                                                    className="px-3 py-2 bg-[#1A1A1A] hover:bg-[#333330] text-white font-mono text-[9px] font-bold uppercase rounded-lg active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                                                >
+                                                    🔍 Scan & Pair
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
 
@@ -1441,7 +1459,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             <p className="text-xs text-subInk -mt-4">จัดการรูปภาพ, เมนู และข้อความสำหรับ Landing Page (/link)</p>
 
             {/* Logo & Open Graph Image */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-2 gap-6">
                 <div className="max-w-xs">
                     <ImageUploadBlock settingKey="link_logo_url" label="Logo (โลโก้)" aspect="aspect-square" placeholder="ยังไม่มีโลโก้" />
                 </div>
@@ -1451,7 +1469,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             </div>
 
             {/* Text Fields */}
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid lg:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs font-bold text-brandDark uppercase mb-1">ชื่อร้าน EN (Shop Name)</label>
                     <input type="text" value={settings.link_shop_name || ''} onChange={(e) => handleSave('link_shop_name', e.target.value)}
