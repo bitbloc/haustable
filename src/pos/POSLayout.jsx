@@ -10,18 +10,22 @@ import {
     BarChart3
 } from 'lucide-react';
 import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
+import { getCurrentShift } from '../utils/shiftHelper';
 
 export default function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
     const [online, setOnline] = useState(isOnline());
     const [queueLength, setQueueLength] = useState(getOfflineQueue().length);
+    const [activeShift, setActiveShift] = useState(getCurrentShift());
 
     useEffect(() => {
         const handleStatus = () => setOnline(isOnline());
         const handleQueue = () => setQueueLength(getOfflineQueue().length);
+        const handleShift = () => setActiveShift(getCurrentShift());
 
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
         window.addEventListener('offline-queue-changed', handleQueue);
+        window.addEventListener('pos-shift-changed', handleShift);
 
         // Auto trigger sync on mount if online and queue has items
         if (isOnline() && getOfflineQueue().length > 0) {
@@ -32,6 +36,7 @@ export default function POSLayout({ children, activeView, onViewChange, selected
             window.removeEventListener('online', handleStatus);
             window.removeEventListener('offline', handleStatus);
             window.removeEventListener('offline-queue-changed', handleQueue);
+            window.removeEventListener('pos-shift-changed', handleShift);
         };
     }, []);
     return (
@@ -132,6 +137,22 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                             </div>
                         )}
                         
+                        {/* Active Shift Employee */}
+                        {activeShift && (
+                            <div className="flex items-center gap-1.5 bg-[#FF5500]/10 border border-[#FF5500]/20 text-[#FF5500] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                                <Users size={12} />
+                                <span>พนักงาน: {activeShift.staffName}</span>
+                                <button 
+                                    onClick={() => {
+                                        window.dispatchEvent(new Event('pos-trigger-close-shift'));
+                                    }}
+                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#D04500] border-l border-[#FF5500]/30 pl-2 cursor-pointer transition-colors"
+                                >
+                                    ปิดรอบ
+                                </button>
+                            </div>
+                        )}
+
                         {/* Sub-Branding */}
                         <span className="text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase select-none hidden md:inline">
                             ONHAUS SYSTEM ©

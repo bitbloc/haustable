@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue } from '../utils/offlineHelper';
+import { recordShiftTransaction } from '../utils/shiftHelper';
 
 export function usePOSOrder() {
     const [loading, setLoading] = useState(false);
@@ -202,7 +203,6 @@ export function usePOSOrder() {
         
         if (!isOnline()) {
             console.log('[Offline Mode] Checking out table offline');
-            // Remove booking from active bookings cache or set status to completed
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
@@ -213,6 +213,8 @@ export function usePOSOrder() {
             posCache.setBookings(updatedBookings);
 
             addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod });
+            recordShiftTransaction(bookingId, totalAmount, paymentMethod);
+            
             setLoading(false);
             toast.success('✅ เช็คบิลเรียบร้อยแล้ว (บันทึกออฟไลน์ในเครื่อง)');
             return true;
@@ -235,6 +237,9 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings().filter(b => b.id !== bookingId);
             posCache.setBookings(bookings);
 
+            // Record in current shift
+            recordShiftTransaction(bookingId, totalAmount, paymentMethod);
+
             toast.success('Order completed successfully');
             return true;
         } catch (err) {
@@ -250,6 +255,8 @@ export function usePOSOrder() {
             posCache.setBookings(updatedBookings);
 
             addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod });
+            recordShiftTransaction(bookingId, totalAmount, paymentMethod);
+
             setLoading(false);
             toast.success('✅ เช็คบิลเรียบร้อยแล้ว (เข้าคิวรอส่งเซิร์ฟเวอร์)');
             return true;

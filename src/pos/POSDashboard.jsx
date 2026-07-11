@@ -9,6 +9,9 @@ import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
 import SlipModal from '../components/shared/SlipModal';
+import { getCurrentShift, startShift, closeShift } from '../utils/shiftHelper';
+import { isOnline } from '../utils/offlineHelper';
+import { printToSunmiBuiltIn, encodeShiftReportData } from '../utils/printerHelper';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
@@ -26,6 +29,90 @@ export default function POSDashboard() {
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
+
+    // Shift Management States
+    const [activeShift, setActiveShift] = useState(getCurrentShift());
+    const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+    const [openShiftForm, setOpenShiftForm] = useState({ staffName: '', openingFloat: '1000' });
+    const [closeShiftForm, setCloseShiftForm] = useState({ actualCash: '' });
+
+    useEffect(() => {
+        const handleShiftChanged = () => {
+            setActiveShift(getCurrentShift());
+        };
+        const handleTriggerClose = () => {
+            setShowCloseShiftModal(true);
+        };
+        window.addEventListener('pos-shift-changed', handleShiftChanged);
+        window.addEventListener('pos-trigger-close-shift', handleTriggerClose);
+        return () => {
+            window.removeEventListener('pos-shift-changed', handleShiftChanged);
+            window.removeEventListener('pos-trigger-close-shift', handleTriggerClose);
+        };
+    }, []);
+
+    const getShiftSummary = () => {
+        if (!activeShift) return { cashSales: 0, qrSales: 0, totalSales: 0, expectedCash: 0 };
+        const cashSales = activeShift.transactions
+            .filter(tx => tx.paymentMethod === 'cash')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        const qrSales = activeShift.transactions
+            .filter(tx => tx.paymentMethod === 'qr')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        return {
+            cashSales,
+            qrSales,
+            totalSales: cashSales + qrSales,
+            expectedCash: activeShift.openingFloat + cashSales
+        };
+    };
+
+    const handleStartShiftSubmit = (e) => {
+        e.preventDefault();
+        if (!openShiftForm.staffName.trim()) {
+            toast.error('กรุณาระบุชื่อพนักงานเพื่อเปิดรอบ');
+            return;
+        }
+        startShift(openShiftForm.staffName.trim(), openShiftForm.openingFloat);
+        toast.success(`เปิดรอบการขายสำเร็จ: พนักงาน ${openShiftForm.staffName}`);
+    };
+
+    const handleCloseShiftSubmit = async (e) => {
+        e.preventDefault();
+        const summary = getShiftSummary();
+        const actual = parseFloat(closeShiftForm.actualCash) || 0;
+        
+        const reportData = {
+            staffName: activeShift.staffName,
+            openedAt: activeShift.openedAt,
+            closedAt: new Date().toISOString(),
+            openingFloat: activeShift.openingFloat,
+            cashSales: summary.cashSales,
+            qrSales: summary.qrSales,
+            totalSales: summary.totalSales,
+            expectedCash: summary.expectedCash,
+            actualCash: actual,
+            difference: actual - summary.expectedCash
+        };
+
+        // Close shift locally
+        closeShift(actual);
+        setShowCloseShiftModal(false);
+        setCloseShiftForm({ actualCash: '' });
+        toast.success('ปิดรอบการทำงานและบันทึกประวัติสำเร็จแล้ว');
+
+        // Print shift report to SUNMI
+        try {
+            const rawBytes = encodeShiftReportData(reportData, '80mm');
+            const printRes = await printToSunmiBuiltIn(rawBytes);
+            if (printRes) {
+                toast.success('พิมพ์ใบสรุปยอดปิดกะเรียบร้อยแล้ว');
+            }
+        } catch (printErr) {
+            console.error("Failed to print shift report on SUNMI:", printErr);
+            toast.error('ไม่สามารถพิมพ์ใบรายงานได้ แต่ระบบทำการปิดกะสำเร็จแล้ว');
+        }
+    };
 
     // Check pending orders helper
     const checkPendingOrders = async () => {
@@ -521,6 +608,180 @@ export default function POSDashboard() {
                     }}
                 />
             )}
+
+            {/* Open Shift Overlay (Full Screen) */}
+            {!activeShift && (
+                <div className="fixed inset-0 bg-[#ECECE9]/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="text-center">
+                            <div className="w-14 h-14 bg-[#FF5500]/10 text-[#FF5500] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#FF5500]/20 shadow-inner">
+                                <Users size={28} />
+                            </div>
+                            <h2 className="text-xl font-bold font-sans tracking-tight text-[#1A1A1A]">เปิดรอบการทำงานเครื่อง POS</h2>
+                            <p className="text-xs text-[#767673] font-mono mt-1 uppercase tracking-wide">Enter Cashier Name & Opening Float</p>
+                        </div>
+
+                        <form onSubmit={handleStartShiftSubmit} className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                    ชื่อพนักงาน (Staff Name)
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="ระบุชื่อพนักงานผู้รับผิดชอบกะ"
+                                    value={openShiftForm.staffName}
+                                    onChange={(e) => setOpenShiftForm(prev => ({ ...prev, staffName: e.target.value }))}
+                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] font-bold shadow-inner"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                    เงินทอนเริ่มต้น (Opening Float)
+                                </label>
+                                <input
+                                    type="number"
+                                    required
+                                    min="0"
+                                    step="any"
+                                    value={openShiftForm.openingFloat}
+                                    onChange={(e) => setOpenShiftForm(prev => ({ ...prev, openingFloat: e.target.value }))}
+                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] font-mono font-bold shadow-inner"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-sm tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                            >
+                                <Users size={16} />
+                                <span>เปิดกะระบบขาย (Start Shift)</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Close Shift Modal */}
+            {showCloseShiftModal && activeShift && (() => {
+                const summary = getShiftSummary();
+                return (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
+                                <div>
+                                    <h3 className="text-base font-bold font-sans text-[#1A1A1A]">ปิดรอบการทำงานและตรวจสอบเงินสด</h3>
+                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase">Shift Closure & Cash Reconciliation</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowCloseShiftModal(false)}
+                                    className="text-[#767673] hover:text-[#1A1A1A] text-xl font-bold font-mono p-1"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            {/* Shift Information and Stats */}
+                            <div className="grid grid-cols-2 gap-3 text-xs bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm">
+                                <div>
+                                    <span className="text-[#767673] font-mono font-bold uppercase text-[9px] block">Cashier Staff</span>
+                                    <span className="font-bold text-[#1A1A1A]">{activeShift.staffName}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[#767673] font-mono font-bold uppercase text-[9px] block">Opened Time</span>
+                                    <span className="font-mono font-bold text-[#1A1A1A]">
+                                        {new Date(activeShift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="col-span-2 border-t border-[#D1D1CD]/50 pt-2 grid grid-cols-3 gap-2">
+                                    <div>
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px] block">Opening Float</span>
+                                        <span className="font-mono font-bold">฿{activeShift.openingFloat.toLocaleString()}.-</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px] block">Cash Sales</span>
+                                        <span className="font-mono font-bold text-emerald-600">฿{summary.cashSales.toLocaleString()}.-</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[#767673] font-mono font-bold uppercase text-[8px] block">QR Sales</span>
+                                        <span className="font-mono font-bold text-blue-600">฿{summary.qrSales.toLocaleString()}.-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Expected Cash reconciliation */}
+                            <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-4 flex justify-between items-center shadow-sm">
+                                <div>
+                                    <span className="text-[#805E00] font-mono font-bold uppercase text-[9px] block">Expected Cash in Drawer</span>
+                                    <span className="text-[10px] text-amber-800/80 leading-none">เงินสดตั้งต้น + ยอดขายเงินสด</span>
+                                </div>
+                                <span className="font-mono font-black text-[#1A1A1A] text-lg">
+                                    ฿{summary.expectedCash.toLocaleString()}.-
+                                </span>
+                            </div>
+
+                            {/* Input for Actual cash */}
+                            <form onSubmit={handleCloseShiftSubmit} className="flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                        เงินสดที่ตรวจนับได้จริง (Actual Cash in Drawer)
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[#767673] font-bold">฿</span>
+                                        <input
+                                            type="number"
+                                            required
+                                            min="0"
+                                            step="any"
+                                            placeholder="กรอกเงินสดทั้งหมดที่นับได้ในลิ้นชัก"
+                                            value={closeShiftForm.actualCash}
+                                            onChange={(e) => setCloseShiftForm(prev => ({ ...prev, actualCash: e.target.value }))}
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Live Difference calculation display */}
+                                {closeShiftForm.actualCash !== '' && (() => {
+                                    const diff = (parseFloat(closeShiftForm.actualCash) || 0) - summary.expectedCash;
+                                    return (
+                                        <div className={`p-3 rounded-xl border text-xs font-mono font-bold flex justify-between items-center shadow-inner ${
+                                            diff === 0 
+                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                                            : diff > 0 
+                                            ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                                            : 'bg-red-50 border-red-200 text-red-700'
+                                        }`}>
+                                            <span>ยอดขาดเกิน (Difference):</span>
+                                            <span>
+                                                {diff === 0 ? '฿0.- (ยอดเงินสดตรงกะพอดี)' : diff > 0 ? `+฿${diff.toLocaleString()}.- (ยอดเงินเกิน)` : `-฿${Math.abs(diff).toLocaleString()}.- (ยอดเงินขาด)`}
+                                            </span>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2.5 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCloseShiftModal(false)}
+                                        className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#ECECE9] text-[#1A1A1A] py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                    >
+                                        ยกเลิก (Cancel)
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 active:scale-98"
+                                    >
+                                        <span>ปิดกะและพิมพ์สรุปยอด</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
