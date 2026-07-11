@@ -62,14 +62,14 @@ function App() {
       setSession(session)
     })
 
-    // Prepare for Native App: Redirect to /staff if running in Capacitor
+    // Prepare for Native App: Redirect to /pos if running in Capacitor
     if (Capacitor.isNativePlatform()) {
         const path = window.location.pathname
         if (path === '/' || path === '') {
             // Check if we can use history, but outside router we just set hash or pathname depending on router type.
             // Since we use BrowserRouter, direct manipulation works if server/file supports it. 
             // Capacitor serves from localhost, so pathname works.
-            window.location.replace('/staff') 
+            window.location.replace('/pos') 
         }
     }
 
