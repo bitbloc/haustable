@@ -15,7 +15,7 @@ import {
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
-import { printToBluetoothDirect, encodeShiftReportData } from '../utils/printerHelper';
+import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../utils/printerHelper';
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
@@ -130,8 +130,7 @@ export default function POSReportsPanel() {
 
     // Print Shift Report HTML
     const handlePrintShiftReport = async () => {
-        let printerType = 'universal';
-        let btDeviceName = '';
+        let paperSize = '58mm';
         
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
@@ -140,12 +139,13 @@ export default function POSReportsPanel() {
                 // Shift summary report is printed by cashier printer
                 printerType = config.cashier_printer_type || 'universal';
                 btDeviceName = config.cashier_printer_bt_name || '';
+                paperSize = config.cashier_paper_size || '58mm';
             }
         } catch (err) {
             console.error("Failed to read printer config:", err);
         }
 
-        if (printerType === 'bluetooth') {
+        if (printerType === 'sunmi') {
             try {
                 const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
                 const reportData = {
@@ -158,7 +158,47 @@ export default function POSReportsPanel() {
                     qrRevenue: qrSales,
                     netRevenue: totalSales
                 };
-                const rawBytes = encodeShiftReportData(reportData);
+                const rawBytes = encodeShiftReportData(reportData, '80mm');
+                await printToSunmiBuiltIn(rawBytes);
+                return; // successfully printed directly, exit
+            } catch (err) {
+                console.error("SUNMI shift report print failed, falling back to standard dialog:", err);
+                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน SUNMI: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+            }
+        } else if (printerType === 'rawbt') {
+            try {
+                const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
+                const reportData = {
+                    staffName: 'Cashier Staff',
+                    totalBookings: completedBookings.length,
+                    totalItems: totalItems,
+                    grossRevenue: totalSales + totalDiscounts,
+                    discounts: totalDiscounts,
+                    cashRevenue: cashSales,
+                    qrRevenue: qrSales,
+                    netRevenue: totalSales
+                };
+                const rawBytes = encodeShiftReportData(reportData, paperSize);
+                await printToRawBTWebSocket(rawBytes);
+                return; // successfully printed directly, exit
+            } catch (err) {
+                console.error("RawBT shift report print failed, falling back to standard dialog:", err);
+                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน RawBT: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+            }
+        } else if (printerType === 'bluetooth') {
+            try {
+                const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
+                const reportData = {
+                    staffName: 'Cashier Staff',
+                    totalBookings: completedBookings.length,
+                    totalItems: totalItems,
+                    grossRevenue: totalSales + totalDiscounts,
+                    discounts: totalDiscounts,
+                    cashRevenue: cashSales,
+                    qrRevenue: qrSales,
+                    netRevenue: totalSales
+                };
+                const rawBytes = encodeShiftReportData(reportData, paperSize);
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {

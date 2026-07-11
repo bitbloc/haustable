@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../../utils/printerHelper'
 
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
@@ -404,7 +404,25 @@ export default function SlipModal({ booking, type, onClose }) {
             console.error("Failed to read printer config:", err);
         }
 
-        if (printerType === 'bluetooth') {
+        if (printerType === 'sunmi') {
+            try {
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm');
+                await printToSunmiBuiltIn(rawBytes);
+                return; // successfully printed directly, exit
+            } catch (err) {
+                console.error("SUNMI print failed, falling back to standard dialog:", err);
+                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน SUNMI: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+            }
+        } else if (printerType === 'rawbt') {
+            try {
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize);
+                await printToRawBTWebSocket(rawBytes);
+                return; // successfully printed directly, exit
+            } catch (err) {
+                console.error("RawBT print failed, falling back to standard dialog:", err);
+                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน RawBT: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+            }
+        } else if (printerType === 'bluetooth') {
             try {
                 const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize);
                 await printToBluetoothDirect(btDeviceName, rawBytes);

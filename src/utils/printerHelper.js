@@ -369,3 +369,55 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
         throw err;
     }
 }
+
+// Print via RawBT Android Intent (Directly calls the main RawBT App)
+export async function printToRawBTWebSocket(rawData) {
+    try {
+        // Convert raw Uint8Array bytes to binary string
+        let binary = '';
+        const len = rawData.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(rawData[i]);
+        }
+        
+        // Encode binary string to Base64
+        const base64Data = window.btoa(binary);
+        
+        // Build the Android Intent URL targeting the RawBT main application package
+        const intentUrl = `intent:base64,${base64Data}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+        
+        // Redirect the WebView to trigger the intent
+        window.location.href = intentUrl;
+        return true;
+    } catch (e) {
+        console.error("RawBT Intent print failed:", e);
+        throw new Error("เกิดข้อผิดพลาดในการเรียกใช้แอป RawBT: " + e.message);
+    }
+}
+
+// Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service)
+export async function printToSunmiBuiltIn(rawData) {
+    try {
+        const { SunmiPrinter } = await import('@kduma-autoid/capacitor-sunmi-printer');
+        
+        // Bind to SUNMI printer service (may already be bound if bindOnLoad is true)
+        try {
+            await SunmiPrinter.bindService();
+        } catch (bindErr) {
+            // Service may already be bound, ignore bind errors
+            console.warn("SUNMI bindService warning (may already be bound):", bindErr);
+        }
+
+        // Convert Uint8Array to regular number array for the plugin
+        const dataArray = Array.from(rawData);
+        
+        // Send raw ESC/POS bytes directly to the built-in printer
+        await SunmiPrinter.sendRAWData({ data: dataArray });
+        
+        return true;
+    } catch (e) {
+        console.error("SUNMI Built-in print failed:", e);
+        throw new Error("ไม่สามารถพิมพ์ผ่านเครื่องพิมพ์ในตัว SUNMI ได้: " + e.message);
+    }
+}
+

@@ -3,6 +3,11 @@
   "appName": "InTheHaus POS",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "http"
+  },
+  "plugins": {
+    "SunmiPrinter": {
+      "bindOnLoad": true
+    }
   }
 }

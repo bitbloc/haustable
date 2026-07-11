@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp } from 'lucide-react'
 import CheckinManager from './components/admin/CheckinManager'
-import { printToBluetoothDirect, encodeShiftReportData } from './utils/printerHelper'
+import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from './utils/printerHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
@@ -127,7 +127,48 @@ export default function AdminSettings() {
         const configPort = type === 'cashier' ? printerConfig.cashier_printer_port : printerConfig.kitchen_printer_port;
         const configBt = type === 'cashier' ? printerConfig.cashier_printer_bt_name : printerConfig.kitchen_printer_bt_name;
 
-        if (configType === 'bluetooth') {
+        if (configType === 'sunmi') {
+            try {
+                const dummyReport = {
+                    staffName: 'Admin Test',
+                    totalBookings: 5,
+                    totalItems: 12,
+                    grossRevenue: 2450,
+                    discounts: 150,
+                    cashRevenue: 1300,
+                    qrRevenue: 1000,
+                    netRevenue: 2300
+                };
+                const rawBytes = encodeShiftReportData(dummyReport, '80mm');
+                await printToSunmiBuiltIn(rawBytes);
+                alert(`✅ ทดสอบพิมพ์ผ่านเครื่องพิมพ์ SUNMI ในตัวสำเร็จ!`);
+            } catch (err) {
+                console.error("Test SUNMI print failed:", err);
+                alert(`❌ SUNMI Print Error: ${err.message || err}`);
+            }
+        } else if (configType === 'rawbt') {
+            try {
+                // Generate simple test ESC/POS bytes
+                const dummyReport = {
+                    staffName: 'Admin Test',
+                    totalBookings: 5,
+                    totalItems: 12,
+                    grossRevenue: 2450,
+                    discounts: 150,
+                    cashRevenue: 1300,
+                    qrRevenue: 1000,
+                    netRevenue: 2300
+                };
+                const rawBytes = encodeShiftReportData(dummyReport, configSize);
+                
+                alert(`📤 ส่งข้อมูลพิมพ์ทดสอบไปที่แอป RawBT...\n(กรุณาเช็คว่าเปิดแอป RawBT และเปิดสิทธิ์ 'WebSocket Server' ในแอปแล้ว)`);
+                await printToRawBTWebSocket(rawBytes);
+                alert(`✅ ทดสอบพิมพ์ผ่าน RawBT สำเร็จ!`);
+            } catch (err) {
+                console.error("Test RawBT print failed:", err);
+                alert(`❌ RawBT Print Error: ${err.message || err}`);
+            }
+        } else if (configType === 'bluetooth') {
             try {
                 // Generate simple test ESC/POS bytes
                 const dummyReport = {
@@ -1231,8 +1272,10 @@ export default function AdminSettings() {
                                             className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
                                         >
                                             <option value="universal">Universal System Print (AirPrint / Android Default)</option>
-                                            <option value="lan">Direct LAN / TCP Network Printer</option>
-                                            <option value="bluetooth">Direct Bluetooth Printer</option>
+                                            <option value="sunmi">🖨️ SUNMI Built-in Printer (Auto)</option>
+                                            <option value="rawbt">Auto-Print (via RawBT Local Server)</option>
+                                            <option value="lan">Direct LAN / TCP Network Printer (Simulation)</option>
+                                            <option value="bluetooth">Direct Bluetooth Printer (Web Bluetooth)</option>
                                         </select>
                                     </div>
 
@@ -1328,8 +1371,10 @@ export default function AdminSettings() {
                                             className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
                                         >
                                             <option value="universal">Universal System Print (AirPrint / Android Default)</option>
-                                            <option value="lan">Direct LAN / TCP Network Printer</option>
-                                            <option value="bluetooth">Direct Bluetooth Printer</option>
+                                            <option value="sunmi">🖨️ SUNMI Built-in Printer (Auto)</option>
+                                            <option value="rawbt">Auto-Print (via RawBT Local Server)</option>
+                                            <option value="lan">Direct LAN / TCP Network Printer (Simulation)</option>
+                                            <option value="bluetooth">Direct Bluetooth Printer (Web Bluetooth)</option>
                                         </select>
                                     </div>
 

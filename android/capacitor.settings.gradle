@@ -7,3 +7,6 @@ project(':capacitor-community-bluetooth-le').projectDir = new File('../node_modu
 
 include ':capgo-capacitor-printer'
 project(':capgo-capacitor-printer').projectDir = new File('../node_modules/@capgo/capacitor-printer/android')
+
+include ':kduma-autoid-capacitor-sunmi-printer'
+project(':kduma-autoid-capacitor-sunmi-printer').projectDir = new File('../node_modules/@kduma-autoid/capacitor-sunmi-printer/android')
