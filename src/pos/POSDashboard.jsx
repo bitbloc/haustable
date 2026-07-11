@@ -225,6 +225,21 @@ export default function POSDashboard() {
                         playSystemAlertSound();
                     }
 
+                    if (newRemark.includes('[CALL_STAFF]') && !oldRemark.includes('[CALL_STAFF]')) {
+                        toast.warning(`🔔 โต๊ะ ${tableName} เรียกพนักงาน!`, {
+                            duration: 10000,
+                            action: {
+                                label: 'ดูรายการ',
+                                onClick: () => {
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }
+                            }
+                        });
+                        playSystemAlertSound();
+                    }
+
                     const oldSlip = oldRow?.payment_slip_url || '';
                     const newSlip = newRow?.payment_slip_url || '';
                     if (newSlip && !oldSlip) {

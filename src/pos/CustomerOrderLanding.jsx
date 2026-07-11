@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck, Check } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck, Check, Bell, Receipt } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
@@ -309,6 +309,61 @@ export default function CustomerOrderLanding() {
         }
     };
 
+    const handleCallStaff = async () => {
+        try {
+            let currentBooking = activeBooking;
+            
+            if (!currentBooking) {
+                const trackingToken = crypto.randomUUID();
+                const newBookingPayload = {
+                    table_id: parseInt(tableId),
+                    status: 'pending',
+                    booking_type: 'walk_in',
+                    booking_time: new Date().toISOString(),
+                    pax: table?.capacity || 2,
+                    staff_remark: '[CALL_STAFF]',
+                    tracking_token: trackingToken,
+                    total_amount: 0
+                };
+
+                const { data: newBooking, error: createError } = await supabase
+                    .from('bookings')
+                    .insert(newBookingPayload)
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+                currentBooking = newBooking;
+                setActiveBooking(newBooking);
+                localStorage.setItem(`table_${tableId}_token`, trackingToken);
+            } else {
+                let currentRemark = currentBooking.staff_remark || '';
+                let newRemark = currentRemark;
+                
+                if (!currentRemark.includes('[CALL_STAFF]')) {
+                    newRemark = `[CALL_STAFF] ${currentRemark}`.trim();
+                }
+
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ staff_remark: newRemark })
+                    .eq('id', currentBooking.id);
+
+                if (error) throw error;
+
+                setActiveBooking({
+                    ...currentBooking,
+                    staff_remark: newRemark
+                });
+            }
+
+            toast.success('เรียกพนักงานเรียบร้อยแล้ว กรุณารอสักครู่');
+        } catch (err) {
+            console.error("Failed to call staff:", err);
+            toast.error('ไม่สามารถเรียกพนักงานได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+        }
+    };
+
     const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0);
 
@@ -417,10 +472,10 @@ export default function CustomerOrderLanding() {
                     />
                 </div>
 
-                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
                     <button 
                         onClick={() => setActiveCategory('all')} 
-                        className={`px-4 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all border ${activeCategory === 'all' ? 'bg-[#FF5500] border-[#D04500] text-white' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                        className={`px-4 py-2 rounded-xl text-[11px] font-sans font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === 'all' ? 'bg-[#FF5500] border-[#D04500] text-white shadow-sm' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC] shadow-sm'}`}
                     >
                         เมนูทั้งหมด
                     </button>
@@ -428,7 +483,7 @@ export default function CustomerOrderLanding() {
                         <button 
                             key={cat.id} 
                             onClick={() => setActiveCategory(cat.id)} 
-                            className={`px-4 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all border ${activeCategory === cat.id ? 'bg-[#FF5500] border-[#D04500] text-white' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                            className={`px-4 py-2 rounded-xl text-[11px] font-sans font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-[#FF5500] border-[#D04500] text-white shadow-sm' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC] shadow-sm'}`}
                         >
                             {cat.name}
                         </button>
@@ -491,41 +546,68 @@ export default function CustomerOrderLanding() {
                 )}
             </AnimatePresence>
 
-            {/* Bottom floating cart bar */}
-            {cart.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#F5F5F2]/90 backdrop-blur-md border-t border-[#D1D1CD] z-40 safe-area-bottom">
+            {/* Unified Floating Actions & Cart Bar at Bottom */}
+            <div className="fixed bottom-0 left-0 right-0 p-3 bg-[#F5F5F2]/90 backdrop-blur-md border-t border-[#D1D1CD] z-40 safe-area-bottom flex flex-col gap-2 shadow-lg max-w-md mx-auto">
+                {/* Top Row: Quick Actions */}
+                <div className="flex gap-2 w-full">
+                    {/* Call Staff Button */}
+                    <button
+                        onClick={handleCallStaff}
+                        className="flex-1 bg-white border border-[#D1D1CD] hover:border-[#B0B0AC] text-[#1A1A1A] py-2.5 px-4 rounded-xl font-sans font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-sm"
+                    >
+                        <Bell size={14} className="text-[#FF5500]" />
+                        <span>เรียกพนักงาน (Call Staff)</span>
+                    </button>
+
+                    {/* View Ordered Items Button */}
+                    <button
+                        onClick={() => {
+                            if (activeBooking) {
+                                navigate(`/table/${tableId}/status`);
+                            } else {
+                                toast.info('กรุณาสั่งรายการแรกเพื่อเริ่มเซสชันก่อนครับ');
+                            }
+                        }}
+                        className={`flex-1 py-2.5 px-4 rounded-xl font-sans font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-sm ${
+                            activeBooking 
+                            ? 'bg-white border border-[#D1D1CD] hover:border-[#B0B0AC] text-[#1A1A1A]' 
+                            : 'bg-white/50 border border-[#D1D1CD]/50 text-[#767673] cursor-not-allowed'
+                        }`}
+                    >
+                        <Receipt size={14} className={activeBooking ? "text-[#767673]" : "text-[#767673]/50"} />
+                        <span>รายการที่สั่ง (Ordered)</span>
+                    </button>
+                </div>
+
+                {/* Bottom Row: Cart status or Session Balance */}
+                {cart.length > 0 ? (
                     <button 
                         onClick={() => setCartOpen(true)}
-                        className="w-full bg-[#FF5500] text-white py-3.5 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer"
+                        className="w-full bg-[#FF5500] hover:bg-[#E04B00] text-white py-3 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer"
                     >
                         <div className="flex items-center gap-2">
                             <ShoppingBag size={14} />
-                            <span className="bg-white text-[#FF5500] text-[9px] px-1.5 py-0.5 rounded font-black font-mono">
+                            <span className="bg-white text-[#FF5500] text-[9px] px-1.5 py-0.5 rounded font-black font-mono animate-pulse">
                                 {cartCount}
                             </span>
                         </div>
                         <span>ดูตระกร้าสั่งอาหาร (View Cart)</span>
                         <span className="font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
                     </button>
-                </div>
-            )}
-
-            {/* Floating session summary bar for ordering more */}
-            {cart.length === 0 && activeBooking && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#F5F5F2]/90 backdrop-blur-md border-t border-[#D1D1CD] z-40 safe-area-bottom">
-                    <button 
-                        onClick={() => navigate(`/table/${tableId}/status`)}
-                        className="w-full bg-[#3C3D40] text-white py-3.5 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer border border-[#2A2B2D]"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="bg-[#FF5500] w-1.5 h-1.5 rounded-full animate-ping" />
-                            <span className="text-[#ECECE9] font-mono text-[9px] font-bold">ACTIVE SESSION</span>
+                ) : activeBooking ? (
+                    <div className="w-full bg-[#3C3D40] text-white py-2.5 px-4 rounded-xl font-mono text-[10px] uppercase tracking-wider flex items-center justify-between border border-[#2A2B2D]">
+                        <div className="flex items-center gap-1.5">
+                            <span className="bg-[#00CC44] w-1.5 h-1.5 rounded-full animate-ping" />
+                            <span className="text-[#ECECE9] font-bold">ACTIVE SESSION</span>
                         </div>
-                        <span>ดูรายการที่สั่งแล้ว & เช็คบิล (Order Status / Checkout)</span>
-                        <span className="font-mono text-[#D1D1CD]">฿{activeBooking.total_amount?.toLocaleString() || 0}.-</span>
-                    </button>
-                </div>
-            )}
+                        <span className="text-[#D1D1CD]">ยอดสั่งรวม: ฿{activeBooking.total_amount?.toLocaleString() || 0}.-</span>
+                    </div>
+                ) : (
+                    <div className="w-full bg-[#ECECE9] text-[#767673] py-2 px-4 rounded-xl font-mono text-[9px] uppercase tracking-widest text-center border border-dashed border-[#D1D1CD]">
+                        เลือกเมนูเพื่อสั่งอาหาร
+                    </div>
+                )}
+            </div>
 
             {/* Cart drawer slide-up */}
             <AnimatePresence>

@@ -196,6 +196,14 @@ export default function TableManager({ isStaffView = false }) {
                 tableBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white';
                 ledColor = 'bg-[#FF3300]'; // Red LED
             }
+            
+            if (statusData.booking?.staff_remark?.includes('[CALL_STAFF]')) {
+                tableBgClass = 'animate-pos-blink border-2 shadow-md';
+                ledColor = 'bg-[#FF0055] animate-ping';
+            } else if (statusData.booking?.staff_remark?.includes('[CALL_BILL]')) {
+                tableBgClass = 'animate-pos-blink border-2 shadow-md';
+                ledColor = 'bg-[#FFAA00] animate-ping';
+            }
         } else if (isUpcoming) {
             tableBgClass = 'bg-[#FFF9E6] border-[#E5A900] text-[#805E00]';
             ledColor = 'bg-[#FFAA00] animate-pulse';
@@ -221,6 +229,9 @@ export default function TableManager({ isStaffView = false }) {
             >
                 {/* Status LED */}
                 <div className="absolute top-1 right-1 flex items-center gap-1">
+                    {isOccupied && statusData.booking?.staff_remark?.includes('[CALL_STAFF]') && (
+                        <span className="bg-[#FF0055] text-white text-[6px] font-mono font-bold px-0.5 rounded leading-none animate-pulse">CALL</span>
+                    )}
                     {isOccupied && statusData.booking?.staff_remark?.includes('[CALL_BILL]') && (
                         <span className="bg-[#FFAA00] text-black text-[6px] font-mono font-bold px-0.5 rounded leading-none animate-pulse">BILL</span>
                     )}

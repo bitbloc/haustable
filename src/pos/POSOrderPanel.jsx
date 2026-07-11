@@ -1,6 +1,7 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
 
@@ -61,6 +62,37 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                         className="w-full bg-[#FFAA00] hover:bg-[#E5A900] text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                     >
                         <Check size={10} /> Accept & Print Slip
+                    </button>
+                </div>
+            )}
+
+            {/* Call Staff Alert */}
+            {booking && booking.staff_remark?.includes('[CALL_STAFF]') && (
+                <div className="mx-3 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-2 shrink-0 animate-pulse">
+                    <div className="flex items-center gap-1.5 text-red-700 font-mono text-[9px] font-bold uppercase tracking-wider">
+                        <Bell size={12} className="text-red-500" />
+                        <span>เรียกพนักงาน / Help Called</span>
+                    </div>
+                    <p className="text-[9px] text-red-800/80 font-medium">ลูกค้ากำลังเรียกขอความช่วยเหลือที่โต๊ะนี้</p>
+                    <button 
+                        onClick={async () => {
+                            try {
+                                const newRemark = (booking.staff_remark || '').replace('[CALL_STAFF]', '').trim();
+                                const { error } = await supabase
+                                    .from('bookings')
+                                    .update({ staff_remark: newRemark })
+                                    .eq('id', booking.id);
+                                    
+                                if (error) throw error;
+                                toast.success("เคลียร์แจ้งเตือนเรียบร้อยแล้ว");
+                            } catch (err) {
+                                console.error("Failed to clear staff call:", err);
+                                toast.error("ไม่สามารถเคลียร์สถานะได้ในขณะนี้");
+                            }
+                        }}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                    >
+                        <Check size={10} /> Clear Assistance Alert
                     </button>
                 </div>
             )}
