@@ -4,6 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
+import { printToBluetoothDirect, encodeReceiptData } from '../../utils/printerHelper'
 
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
@@ -381,6 +382,35 @@ export default function SlipModal({ booking, type, onClose }) {
     }
 
     const handlePrint = async () => {
+        let printerType = 'universal';
+        let btDeviceName = '';
+        
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                if (activeTab === 'kitchen') {
+                    printerType = config.kitchen_printer_type || 'universal';
+                    btDeviceName = config.kitchen_printer_bt_name || '';
+                } else {
+                    printerType = config.cashier_printer_type || 'universal';
+                    btDeviceName = config.cashier_printer_bt_name || '';
+                }
+            }
+        } catch (err) {
+            console.error("Failed to read printer config:", err);
+        }
+
+        if (printerType === 'bluetooth') {
+            try {
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap);
+                await printToBluetoothDirect(btDeviceName, rawBytes);
+                return; // successfully printed directly, exit
+            } catch (err) {
+                console.error("Direct bluetooth print failed, falling back to standard dialog:", err);
+            }
+        }
+
         const htmlContent = getPrintHtml()
         
         if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Printer')) {

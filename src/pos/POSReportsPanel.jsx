@@ -15,6 +15,7 @@ import {
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
+import { printToBluetoothDirect, encodeShiftReportData } from '../utils/printerHelper';
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
@@ -129,6 +130,42 @@ export default function POSReportsPanel() {
 
     // Print Shift Report HTML
     const handlePrintShiftReport = async () => {
+        let printerType = 'universal';
+        let btDeviceName = '';
+        
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                // Shift summary report is printed by cashier printer
+                printerType = config.cashier_printer_type || 'universal';
+                btDeviceName = config.cashier_printer_bt_name || '';
+            }
+        } catch (err) {
+            console.error("Failed to read printer config:", err);
+        }
+
+        if (printerType === 'bluetooth') {
+            try {
+                const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
+                const reportData = {
+                    staffName: 'Cashier Staff',
+                    totalBookings: completedBookings.length,
+                    totalItems: totalItems,
+                    grossRevenue: totalSales + totalDiscounts,
+                    discounts: totalDiscounts,
+                    cashRevenue: cashSales,
+                    qrRevenue: qrSales,
+                    netRevenue: totalSales
+                };
+                const rawBytes = encodeShiftReportData(reportData);
+                await printToBluetoothDirect(btDeviceName, rawBytes);
+                return; // successfully printed directly, exit
+            } catch (err) {
+                console.error("Direct bluetooth shift report print failed, falling back to standard dialog:", err);
+            }
+        }
+
         const printDateStr = new Date().toLocaleString('th-TH');
 
         const catHtml = categoryList.map(c => `

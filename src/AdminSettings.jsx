@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp } from 'lucide-react'
 import CheckinManager from './components/admin/CheckinManager'
+import { printToBluetoothDirect, encodeShiftReportData } from './utils/printerHelper'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -112,22 +113,44 @@ export default function AdminSettings() {
         localStorage.setItem('onhaus_printer_config', JSON.stringify(updatedConfig));
     };
 
-    const handleTestPrint = (type) => {
+    const handleTestPrint = async (type) => {
         const name = type === 'cashier' ? 'Cashier Thermal Printer' : 'Kitchen Thermal Printer';
         const configType = type === 'cashier' ? printerConfig.cashier_printer_type : printerConfig.kitchen_printer_type;
         const configSize = type === 'cashier' ? printerConfig.cashier_paper_size : printerConfig.kitchen_paper_size;
         const configIp = type === 'cashier' ? printerConfig.cashier_printer_ip : printerConfig.kitchen_printer_ip;
         const configPort = type === 'cashier' ? printerConfig.cashier_printer_port : printerConfig.kitchen_printer_port;
         const configBt = type === 'cashier' ? printerConfig.cashier_printer_bt_name : printerConfig.kitchen_printer_bt_name;
-        
-        let details = `Type: ${configType.toUpperCase()}, Size: ${configSize}`;
-        if (configType === 'lan') {
-            details += ` (IP: ${configIp}:${configPort})`;
-        } else if (configType === 'bluetooth') {
-            details += ` (MAC: ${configBt || 'N/A'})`;
-        }
 
-        alert(`📤 ส่งข้อมูลการทดสอบพิมพ์ไปยัง [${name}]\n(${details})\n\nทดสอบการเชื่อมต่อ: สำเร็จ!`);
+        if (configType === 'bluetooth') {
+            try {
+                // Generate simple test ESC/POS bytes
+                const dummyReport = {
+                    staffName: 'Admin Test',
+                    totalBookings: 5,
+                    totalItems: 12,
+                    grossRevenue: 2450,
+                    discounts: 150,
+                    cashRevenue: 1300,
+                    qrRevenue: 1000,
+                    netRevenue: 2300
+                };
+                const rawBytes = encodeShiftReportData(dummyReport);
+                
+                alert(`📤 Connecting to Bluetooth printer [${configBt}]...\n(Please make sure Bluetooth is enabled and the printer is powered on)`);
+                
+                await printToBluetoothDirect(configBt, rawBytes);
+                alert(`✅ Test print sent successfully to [${configBt}]!`);
+            } catch (err) {
+                console.error("Test bluetooth print failed:", err);
+                alert(`❌ Bluetooth Print Error: ${err.message || err}\n\nMake sure the device matches, is turned on, and you have paired it once.`);
+            }
+        } else {
+            let details = `Type: ${configType.toUpperCase()}, Size: ${configSize}`;
+            if (configType === 'lan') {
+                details += ` (IP: ${configIp}:${configPort})`;
+            }
+            alert(`📤 [Test Print Simulation]\nConfigured as [${name}]\n(${details})\n\nConnection check: OK!`);
+        }
     };
 
     // Load Settings
