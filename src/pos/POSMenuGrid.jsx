@@ -15,15 +15,37 @@ export default function POSMenuGrid({ onAddItem }) {
     }, []);
 
     const fetchData = async () => {
-        const [catRes, itemRes] = await Promise.all([
-            supabase.from('menu_categories').select('*').order('display_order'),
-            supabase.from('menu_items').select('*').eq('is_available', true).order('name')
-        ]);
+        try {
+            const [catRes, itemRes] = await Promise.all([
+                supabase.from('menu_categories').select('*').order('display_order'),
+                supabase.from('menu_items').select('*').eq('is_available', true).order('name')
+            ]);
 
-        setCategories(catRes.data || []);
-        setMenuItems(itemRes.data || []);
-        if (catRes.data?.[0]) setActiveCategory(catRes.data[0].id);
-        setLoading(false);
+            const cats = catRes.data || [];
+            const items = itemRes.data || [];
+
+            setCategories(cats);
+            setMenuItems(items);
+
+            // Cache data in localStorage
+            localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
+            localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
+
+            if (cats[0]) setActiveCategory(cats[0].id);
+        } catch (err) {
+            console.warn('[Offline Mode] Failed to fetch menu items online, loading cache:', err);
+            try {
+                const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
+                const cachedItems = JSON.parse(localStorage.getItem('pos_cache_menu_items')) || [];
+                setCategories(cachedCats);
+                setMenuItems(cachedItems);
+                if (cachedCats[0]) setActiveCategory(cachedCats[0].id);
+            } catch (cacheErr) {
+                console.error('Failed to load menu cache:', cacheErr);
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredItems = menuItems.filter(item => {

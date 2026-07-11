@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     LayoutGrid, 
     UtensilsCrossed, 
@@ -9,8 +9,31 @@ import {
     Clock,
     BarChart3
 } from 'lucide-react';
+import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
 
 export default function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
+    const [online, setOnline] = useState(isOnline());
+    const [queueLength, setQueueLength] = useState(getOfflineQueue().length);
+
+    useEffect(() => {
+        const handleStatus = () => setOnline(isOnline());
+        const handleQueue = () => setQueueLength(getOfflineQueue().length);
+
+        window.addEventListener('online', handleStatus);
+        window.addEventListener('offline', handleStatus);
+        window.addEventListener('offline-queue-changed', handleQueue);
+
+        // Auto trigger sync on mount if online and queue has items
+        if (isOnline() && getOfflineQueue().length > 0) {
+            syncOfflineQueue();
+        }
+
+        return () => {
+            window.removeEventListener('online', handleStatus);
+            window.removeEventListener('offline', handleStatus);
+            window.removeEventListener('offline-queue-changed', handleQueue);
+        };
+    }, []);
     return (
         <div className="flex h-full w-full bg-[#ECECE9] text-[#1A1A1A] font-sans overflow-hidden">
             {/* Narrow Sidebar for Navigation */}
@@ -87,9 +110,30 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                         </h2>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
+                        {/* Offline Sync Status Badge */}
+                        {!online ? (
+                            <div className="flex items-center gap-1.5 bg-red-100 border border-red-200 text-red-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                <span>OFFLINE MODE ({queueLength} PENDING)</span>
+                            </div>
+                        ) : queueLength > 0 ? (
+                            <button
+                                onClick={syncOfflineQueue}
+                                className="flex items-center gap-1.5 bg-amber-100 border border-amber-200 text-amber-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full hover:bg-amber-200 cursor-pointer active:scale-95 transition-all shadow-sm"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                <span>SYNC PENDING ({queueLength})</span>
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span>ONLINE</span>
+                            </div>
+                        )}
+                        
                         {/* Sub-Branding */}
-                        <span className="text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase select-none">
+                        <span className="text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase select-none hidden md:inline">
                             ONHAUS SYSTEM ©
                         </span>
                         

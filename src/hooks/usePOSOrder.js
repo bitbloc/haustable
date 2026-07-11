@@ -1,108 +1,302 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue } from '../utils/offlineHelper';
 
 export function usePOSOrder() {
     const [loading, setLoading] = useState(false);
 
     const getActiveBooking = useCallback(async (tableId) => {
-        const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabase
-            .from('bookings')
-            .select('*, order_items(*, menu_items(name))')
-            .eq('table_id', tableId)
-            .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-            .gte('booking_time', `${today}T00:00:00`)
-            .order('booking_time', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (error && error.code !== 'PGRST116') {
-            console.error('Error fetching active booking:', error);
+        if (!isOnline()) {
+            console.log('[Offline Mode] Fetching active booking from local cache for table:', tableId);
+            const bookings = posCache.getBookings();
+            const booking = bookings.find(b => b.table_id === tableId && b.status !== 'completed');
+            return booking || null;
         }
-        return data;
+
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const { data, error } = await supabase
+                .from('bookings')
+                .select('*, order_items(*, menu_items(name))')
+                .eq('table_id', tableId)
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .gte('booking_time', `${today}T00:00:00`)
+                .order('booking_time', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Error fetching active booking:', error);
+            }
+
+            if (data) {
+                // Update local bookings cache
+                const currentBookings = posCache.getBookings().filter(b => b.table_id !== tableId);
+                currentBookings.push(data);
+                posCache.setBookings(currentBookings);
+            }
+            return data;
+        } catch (err) {
+            console.error('Network error fetching booking, fallback to cache:', err);
+            const bookings = posCache.getBookings();
+            return bookings.find(b => b.table_id === tableId && b.status !== 'completed') || null;
+        }
     }, []);
 
     const createWalkIn = async (table) => {
-        const { data, error } = await supabase
-            .from('bookings')
-            .insert({
+        if (!isOnline()) {
+            console.log('[Offline Mode] Creating offline walk-in session');
+            const tempId = `local_${Date.now()}`;
+            const mockBooking = {
+                id: tempId,
                 table_id: table.id,
                 status: 'seated',
                 booking_type: 'walk_in',
                 booking_time: new Date().toISOString(),
                 pax: table.capacity || 2,
-                staff_remark: 'Walk-in Guest' // Use remark as a fallback for guest name
-            })
-            .select()
-            .single();
+                staff_remark: 'Walk-in Guest (Offline)'
+            };
 
-        if (error) {
-            toast.error('Failed to create walk-in: ' + error.message);
-            return null;
+            // Save to active bookings cache
+            const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
+            bookings.push(mockBooking);
+            posCache.setBookings(bookings);
+
+            // Queue sync action
+            addToOfflineQueue('create_walkin', {
+                tableId: table.id,
+                tempBookingId: tempId,
+                pax: mockBooking.pax,
+                status: 'seated',
+                bookingTime: mockBooking.booking_time,
+                staffRemark: mockBooking.staff_remark
+            });
+
+            toast.warning('⚠️ ออฟไลน์: บันทึกข้อมูลโต๊ะในเครื่องแล้ว');
+            return mockBooking;
         }
-        return data;
+
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .insert({
+                    table_id: table.id,
+                    status: 'seated',
+                    booking_type: 'walk_in',
+                    booking_time: new Date().toISOString(),
+                    pax: table.capacity || 2,
+                    staff_remark: 'Walk-in Guest'
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            
+            // Cache locally
+            const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
+            bookings.push(data);
+            posCache.setBookings(bookings);
+
+            return data;
+        } catch (err) {
+            console.error('Failed to create walk-in online, fallback to offline queue:', err);
+            const tempId = `local_${Date.now()}`;
+            const mockBooking = {
+                id: tempId,
+                table_id: table.id,
+                status: 'seated',
+                booking_type: 'walk_in',
+                booking_time: new Date().toISOString(),
+                pax: table.capacity || 2,
+                staff_remark: 'Walk-in Guest (Offline Fallback)'
+            };
+
+            const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
+            bookings.push(mockBooking);
+            posCache.setBookings(bookings);
+
+            addToOfflineQueue('create_walkin', {
+                tableId: table.id,
+                tempBookingId: tempId,
+                pax: mockBooking.pax,
+                status: 'seated',
+                bookingTime: mockBooking.booking_time,
+                staffRemark: mockBooking.staff_remark
+            });
+
+            toast.warning('⚠️ บันทึกข้อมูลเข้าคิวออฟไลน์');
+            return mockBooking;
+        }
     };
 
     const submitOrderItems = async (bookingId, items) => {
         if (!items || items.length === 0) return true;
 
-        const itemsToInsert = items.map(item => ({
-            booking_id: bookingId,
-            menu_item_id: item.id,
-            quantity: item.quantity,
-            price_at_time: item.price,
-            selected_options: item.selected_options || []
-        }));
+        if (!isOnline()) {
+            console.log('[Offline Mode] Submitting items to offline queue');
+            // Save order items inside booking cache for local UI consistency
+            const bookings = posCache.getBookings();
+            const idx = bookings.findIndex(b => b.id === bookingId);
+            if (idx !== -1) {
+                const existingOrderItems = bookings[idx].order_items || [];
+                const newOrderItems = items.map((item, i) => ({
+                    id: `local_item_${Date.now()}_${i}`,
+                    booking_id: bookingId,
+                    menu_item_id: item.id,
+                    quantity: item.quantity,
+                    price_at_time: item.price,
+                    selected_options: item.selected_options || [],
+                    menu_items: { name: item.name } // simulate relation join
+                }));
+                bookings[idx].order_items = [...existingOrderItems, ...newOrderItems];
+                posCache.setBookings(bookings);
+            }
 
-        const { error } = await supabase.from('order_items').insert(itemsToInsert);
-
-        if (error) {
-            toast.error('Failed to add items: ' + error.message);
-            return false;
+            addToOfflineQueue('submit_items', { bookingId, items });
+            toast.warning('⚠️ ออฟไลน์: บันทึกรายการอาหารในเครื่องแล้ว');
+            return true;
         }
-        return true;
+
+        try {
+            const itemsToInsert = items.map(item => ({
+                booking_id: bookingId,
+                menu_item_id: item.id,
+                quantity: item.quantity,
+                price_at_time: item.price,
+                selected_options: item.selected_options || []
+            }));
+
+            const { error } = await supabase.from('order_items').insert(itemsToInsert);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error('Failed to submit items online, fallback to offline queue:', err);
+            
+            // Local cache update
+            const bookings = posCache.getBookings();
+            const idx = bookings.findIndex(b => b.id === bookingId);
+            if (idx !== -1) {
+                const existingOrderItems = bookings[idx].order_items || [];
+                const newOrderItems = items.map((item, i) => ({
+                    id: `local_item_${Date.now()}_${i}`,
+                    booking_id: bookingId,
+                    menu_item_id: item.id,
+                    quantity: item.quantity,
+                    price_at_time: item.price,
+                    selected_options: item.selected_options || [],
+                    menu_items: { name: item.name }
+                }));
+                bookings[idx].order_items = [...existingOrderItems, ...newOrderItems];
+                posCache.setBookings(bookings);
+            }
+
+            addToOfflineQueue('submit_items', { bookingId, items });
+            toast.warning('⚠️ บันทึกรายการอาหารเข้าคิวออฟไลน์');
+            return true;
+        }
     };
 
     const completeCheckout = async (bookingId, totalAmount, paymentMethod = 'cash') => {
         setLoading(true);
-        const { error } = await supabase
-            .from('bookings')
-            .update({
-                status: 'completed',
-                total_amount: totalAmount,
-                // Fallback for missing payment_method/status columns
-                staff_remark: `Paid by ${paymentMethod.toUpperCase()}`
-            })
-            .eq('id', bookingId);
+        
+        if (!isOnline()) {
+            console.log('[Offline Mode] Checking out table offline');
+            // Remove booking from active bookings cache or set status to completed
+            const bookings = posCache.getBookings();
+            const updatedBookings = bookings.map(b => {
+                if (b.id === bookingId) {
+                    return { ...b, status: 'completed', total_amount: totalAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
+                }
+                return b;
+            });
+            posCache.setBookings(updatedBookings);
 
-        setLoading(false);
-        if (error) {
-            console.error('Checkout Update Error:', error);
-            toast.error('Checkout failed: ' + error.message);
-            return false;
+            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod });
+            setLoading(false);
+            toast.success('✅ เช็คบิลเรียบร้อยแล้ว (บันทึกออฟไลน์ในเครื่อง)');
+            return true;
         }
-        toast.success('Order completed successfully');
-        return true;
+
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .update({
+                    status: 'completed',
+                    total_amount: totalAmount,
+                    staff_remark: `Paid by ${paymentMethod.toUpperCase()}`
+                })
+                .eq('id', bookingId);
+
+            setLoading(false);
+            if (error) throw error;
+            
+            // Remove from local active bookings cache
+            const bookings = posCache.getBookings().filter(b => b.id !== bookingId);
+            posCache.setBookings(bookings);
+
+            toast.success('Order completed successfully');
+            return true;
+        } catch (err) {
+            console.error('Failed to complete checkout online, queueing offline checkout:', err);
+            
+            const bookings = posCache.getBookings();
+            const updatedBookings = bookings.map(b => {
+                if (b.id === bookingId) {
+                    return { ...b, status: 'completed', total_amount: totalAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
+                }
+                return b;
+            });
+            posCache.setBookings(updatedBookings);
+
+            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod });
+            setLoading(false);
+            toast.success('✅ เช็คบิลเรียบร้อยแล้ว (เข้าคิวรอส่งเซิร์ฟเวอร์)');
+            return true;
+        }
     };
 
     const acceptOrder = async (bookingId) => {
         setLoading(true);
-        const { error } = await supabase
-            .from('bookings')
-            .update({ status: 'seated' })
-            .eq('id', bookingId);
-        setLoading(false);
-        if (error) {
-            toast.error('Failed to accept order: ' + error.message);
-            return false;
+        if (!isOnline()) {
+            console.log('[Offline Mode] Accepting order offline');
+            const bookings = posCache.getBookings();
+            const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
+            posCache.setBookings(updated);
+            setLoading(false);
+            toast.success('Order accepted (Offline Mode)');
+            return true;
         }
-        toast.success('Order accepted');
-        return true;
+
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .update({ status: 'seated' })
+                .eq('id', bookingId);
+            setLoading(false);
+            if (error) throw error;
+            
+            toast.success('Order accepted');
+            return true;
+        } catch (err) {
+            console.error('Failed to accept order online:', err);
+            const bookings = posCache.getBookings();
+            const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
+            posCache.setBookings(updated);
+            setLoading(false);
+            toast.success('Order accepted (Fallback offline)');
+            return true;
+        }
     };
 
     const uploadPaymentSlip = async (bookingId, slipFile) => {
         setLoading(true);
+        if (!isOnline()) {
+            setLoading(false);
+            toast.error('❌ ออฟไลน์: ไม่สามารถอัปโหลดสลิปได้ในขณะนี้');
+            return false;
+        }
+
         try {
             const fileExt = slipFile.name.split('.').pop();
             const fileName = `slip_${bookingId}_${Date.now()}.${fileExt}`;
