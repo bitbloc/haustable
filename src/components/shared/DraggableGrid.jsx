@@ -662,16 +662,24 @@ export default function DraggableGrid(props) {
             }
         }
 
+        const handleGesture = (e) => {
+            e.preventDefault()
+        }
+
         el.addEventListener('touchstart', handleTouchStart, { passive: false })
         el.addEventListener('touchmove', handleTouchMove, { passive: false })
         el.addEventListener('touchend', handleTouchEnd)
         el.addEventListener('wheel', handleWheelZoom, { passive: false })
+        el.addEventListener('gesturestart', handleGesture, { passive: false })
+        el.addEventListener('gesturechange', handleGesture, { passive: false })
 
         return () => {
             el.removeEventListener('touchstart', handleTouchStart)
             el.removeEventListener('touchmove', handleTouchMove)
             el.removeEventListener('touchend', handleTouchEnd)
             el.removeEventListener('wheel', handleWheelZoom)
+            el.removeEventListener('gesturestart', handleGesture)
+            el.removeEventListener('gesturechange', handleGesture)
         }
     }, [minScale, containerSize, gridW, gridH, safeGap, x, y])
 
