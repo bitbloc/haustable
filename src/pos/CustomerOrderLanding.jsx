@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck, Check, Bell, Receipt } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck, Check, Bell, Receipt, Smartphone, Upload, FileText, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
@@ -34,6 +34,12 @@ export default function CustomerOrderLanding() {
     const [cartOpen, setCartOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
 
+    // Tracking & Checkout States (Rams Realtime Style)
+    const [trackingOpen, setTrackingOpen] = useState(false);
+    const [uploadingSlip, setUploadingSlip] = useState(false);
+    const [requestingBill, setRequestingBill] = useState(false);
+    const [paymentQrUrl, setPaymentQrUrl] = useState(null);
+
     // Business Data
     const [table, setTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
@@ -54,8 +60,49 @@ export default function CustomerOrderLanding() {
         qr_radius: '50'
     });
 
+    const refreshActiveBooking = async () => {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const { data: bookingData } = await supabase
+                .from('bookings')
+                .select('*, order_items(*, menu_items(*))')
+                .eq('table_id', tableId)
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .gte('booking_time', `${today}T00:00:00`)
+                .order('booking_time', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            setActiveBooking(bookingData || null);
+        } catch (err) {
+            console.error('Error refreshing active booking:', err);
+        }
+    };
+
     useEffect(() => {
         initPage();
+
+        const sub = supabase.channel(`landing-session-${tableId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'bookings',
+                filter: `table_id=eq.${tableId}`
+            }, () => {
+                refreshActiveBooking();
+            })
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'order_items'
+            }, () => {
+                refreshActiveBooking();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(sub);
+        };
     }, [tableId]);
 
     const initPage = async () => {
@@ -110,6 +157,17 @@ export default function CustomerOrderLanding() {
                 .maybeSingle();
 
             setActiveBooking(bookingData || null);
+
+            // 3.5. Fetch payment QR Code
+            const { data: qrData } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'payment_qr_url')
+                .maybeSingle();
+
+            if (qrData?.value) {
+                setPaymentQrUrl(qrData.value);
+            }
 
             // 4. Geofencing check
             if (loadedSettings.qr_gps_enabled === 'true') {
@@ -181,6 +239,70 @@ export default function CustomerOrderLanding() {
             },
             options
         );
+    };
+
+    // Billing & Slip Handlers
+    const handleUploadSlip = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !activeBooking) return;
+
+        setUploadingSlip(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `slip_${activeBooking.id}_${Date.now()}.${fileExt}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('slips')
+                .upload(fileName, file, {
+                    cacheControl: '15552000'
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { error: updateError } = await supabase
+                .from('bookings')
+                .update({ 
+                    payment_slip_url: fileName 
+                })
+                .eq('id', activeBooking.id);
+
+            if (updateError) throw updateError;
+
+            toast.success('อัปโหลดสลิปเรียบร้อยแล้ว พนักงานกำลังทำการตรวจสอบ');
+            refreshActiveBooking();
+
+        } catch (err) {
+            console.error('Slip upload failed:', err);
+            toast.error('อัปโหลดสลิปล้มเหลว: ' + err.message);
+        } finally {
+            setUploadingSlip(false);
+        }
+    };
+
+    const handleRequestBill = async () => {
+        if (!activeBooking) return;
+        setRequestingBill(true);
+        try {
+            const currentRemark = activeBooking.staff_remark || '';
+            const newRemark = currentRemark.includes('[CALL_BILL]') 
+                ? currentRemark 
+                : `[CALL_BILL] ${currentRemark}`.trim();
+
+            const { error } = await supabase
+                .from('bookings')
+                .update({ staff_remark: newRemark })
+                .eq('id', activeBooking.id);
+
+            if (error) throw error;
+
+            toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
+            refreshActiveBooking();
+        } catch (err) {
+            console.error('Request bill failed:', err);
+            toast.error('ล้มเหลว: ' + err.message);
+        } finally {
+            setRequestingBill(false);
+        }
     };
 
     // Cart Operations
@@ -563,7 +685,7 @@ export default function CustomerOrderLanding() {
                     <button
                         onClick={() => {
                             if (activeBooking) {
-                                navigate(`/table/${tableId}/status`);
+                                setTrackingOpen(true);
                             } else {
                                 toast.info('กรุณาสั่งรายการแรกเพื่อเริ่มเซสชันก่อนครับ');
                             }
@@ -705,6 +827,209 @@ export default function CustomerOrderLanding() {
                         </motion.div>
                     </div>
                 )}
+            </AnimatePresence>
+
+            {/* Tracking drawer slide-up (Dieter Rams style) */}
+            <AnimatePresence>
+                {trackingOpen && activeBooking && (() => {
+                    const steps = [
+                        { key: 'pending', label: 'ส่งออเดอร์แล้ว', desc: 'รอพนักงานกดยอมรับ', time: activeBooking.booking_time },
+                        { key: 'seated', label: 'รับออเดอร์แล้ว', desc: 'กำลังจัดเตรียมอาหาร', time: activeBooking.status !== 'pending' ? activeBooking.booking_time : null },
+                        { key: 'ready', label: 'พร้อมเสิร์ฟ', desc: 'อาหารพร้อมเสิร์ฟที่โต๊ะ', time: activeBooking.status === 'ready' ? new Date().toISOString() : null },
+                    ];
+
+                    const getActiveStepIndex = () => {
+                        if (activeBooking.status === 'pending') return 0;
+                        if (activeBooking.status === 'confirmed' || activeBooking.status === 'seated') return 1;
+                        if (activeBooking.status === 'ready') return 2;
+                        return 0;
+                    };
+
+                    const activeStep = getActiveStepIndex();
+                    const orderItems = activeBooking.order_items || [];
+
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none">
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/60 pointer-events-auto"
+                                onClick={() => setTrackingOpen(false)}
+                            />
+
+                            <motion.div 
+                                initial={{ y: '100%' }}
+                                animate={{ y: 0 }}
+                                exit={{ y: '100%' }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                                className="bg-[#F0F0EC] w-full max-w-md rounded-t-2xl border-t border-[#D1D1CD] p-5 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] text-[#1A1A1A] font-sans"
+                            >
+                                {/* Dieter Rams Style Header */}
+                                <div className="flex justify-between items-center mb-5 shrink-0 border-b border-[#D1D1CD] pb-4">
+                                    <div>
+                                        <h3 className="text-sm font-sans font-black uppercase tracking-wider text-[#1A1A1A]">ติดตามสถานะออเดอร์</h3>
+                                        <p className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mt-1">
+                                            Table {table?.table_name} · Queue #{activeBooking.tracking_token ? activeBooking.tracking_token.slice(0, 4) : activeBooking.id.slice(0, 4)}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setTrackingOpen(false)}
+                                        className="w-7 h-7 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center hover:bg-[#E0E0DC] text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer shadow-sm"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+
+                                {/* Main scrollable contents */}
+                                <div className="flex-1 overflow-y-auto space-y-5 pr-1 custom-scrollbar pb-6">
+                                    {/* Timeline Steps (Rams Dial/LED style) */}
+                                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
+                                        <h4 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-5">ความคืบหน้า (ORDER STATUS)</h4>
+                                        <div className="relative pl-7 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[#D1D1CD]">
+                                            {steps.map((step, idx) => {
+                                                const isDone = idx <= activeStep;
+                                                const isCurrent = idx === activeStep;
+                                                return (
+                                                    <div key={step.key} className="relative">
+                                                        <div className="absolute -left-7 top-0.5 w-4 h-4 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center">
+                                                            {isCurrent ? (
+                                                                <span className="w-2 h-2 rounded-full bg-[#FF5500] shadow-[0_0_6px_#FF5500] animate-pulse" />
+                                                            ) : isDone ? (
+                                                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                            ) : (
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-[#D1D1CD]" />
+                                                            )}
+                                                        </div>
+
+                                                        <div className="pl-1.5">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-xs font-bold ${isDone ? 'text-[#1A1A1A]' : 'text-[#767673]'}`}>
+                                                                    {step.label}
+                                                                </span>
+                                                                {isCurrent && (
+                                                                    <span className="bg-[#FF5500]/10 text-[#FF5500] text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded leading-none">
+                                                                        กำลังเตรียม
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[10px] text-[#767673] mt-0.5 leading-relaxed">{step.desc}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Order Items Ledger */}
+                                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
+                                        <h4 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-4">รายการอาหารสุทธิ (ITEMS SUMMARY)</h4>
+                                        <div className="space-y-3.5">
+                                            {orderItems.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between items-start text-xs text-[#1A1A1A] pb-3 border-b border-[#D1D1CD]/30 last:border-b-0 last:pb-0">
+                                                    <div className="flex gap-2.5">
+                                                        <span className="font-bold text-[#FF5500]">{item.quantity}x</span>
+                                                        <div>
+                                                            <span className="font-bold text-[#1A1A1A] block leading-tight">{item.menu_items?.name}</span>
+                                                            {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
+                                                                <div className="text-[9px] text-[#767673] mt-0.5 italic font-medium">
+                                                                    {Object.values(item.selected_options).flat().join(', ')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-mono text-[#767673] font-bold">฿{(item.price_at_time * item.quantity).toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                            
+                                            {orderItems.length === 0 && (
+                                                <div className="text-center py-4 text-[#767673] font-mono text-[9px] font-bold uppercase">
+                                                    กำลังโหลดรายการอาหาร...
+                                                </div>
+                                            )}
+
+                                            <div className="border-t border-[#D1D1CD] pt-3.5 mt-2 flex justify-between items-baseline">
+                                                <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหารสุทธิ</span>
+                                                <span className="text-lg font-black text-[#FF5500] font-mono">฿{activeBooking.total_amount?.toLocaleString() || 0}.-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Checkout & PromptPay (Pay at Table) */}
+                                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm flex flex-col items-center">
+                                        <h4 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-3 self-start">ชำระเงินที่โต๊ะ (PAY AT TABLE)</h4>
+                                        
+                                        {!activeBooking.staff_remark?.includes('[CALL_BILL]') ? (
+                                            <div className="w-full text-center space-y-3.5 py-2">
+                                                <Smartphone size={28} className="text-[#767673] mx-auto animate-pulse" />
+                                                <div>
+                                                    <h5 className="font-bold text-xs text-[#1A1A1A]">ต้องการเช็คบิลชำระเงิน?</h5>
+                                                    <p className="text-[10px] text-[#767673] mt-0.5 leading-relaxed">กดปุ่มเพื่อเรียกพนักงานเช็คบิลและรับ QR Code เพื่อสแกนจ่ายได้ทันที</p>
+                                                </div>
+                                                <button
+                                                    onClick={handleRequestBill}
+                                                    disabled={requestingBill}
+                                                    className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-97"
+                                                >
+                                                    <Receipt size={12} />
+                                                    {requestingBill ? 'กำลังดำเนินการ...' : 'เรียกพนักงานเช็คบิล (Request Bill)'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="w-full space-y-4">
+                                                <div className="bg-[#00CC44]/10 border border-[#00CC44]/20 rounded-xl py-2 px-3 flex items-center gap-2 text-[#00CC44] font-mono font-bold text-[9px] uppercase tracking-wider justify-center">
+                                                    <CheckCircle size={12} />
+                                                    <span>เรียกพนักงานเช็คบิลแล้ว</span>
+                                                </div>
+
+                                                {paymentQrUrl ? (
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="mb-2 bg-white p-2 rounded-xl border border-[#D1D1CD] shadow-sm">
+                                                            <img src={paymentQrUrl} alt="PromptPay QR" className="w-32 h-32 object-contain" />
+                                                        </div>
+                                                        <p className="text-[9px] text-[#767673] text-center leading-relaxed max-w-[220px]">
+                                                            สแกน QR Code เพื่อชำระเงิน จากนั้นอัปโหลดภาพสลิปเพื่อแจ้งโอนเงิน
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full flex items-center justify-center p-4 bg-[#F5F5F2] rounded-xl text-[#767673] text-[9px] font-mono font-bold uppercase tracking-wider border border-[#D1D1CD]">
+                                                        ไม่มีรูปภาพ QR ในระบบ
+                                                    </div>
+                                                )}
+
+                                                {activeBooking.payment_slip_url ? (
+                                                    <div className="w-full bg-[#00CC44]/10 border border-[#00CC44]/20 p-3 rounded-xl flex items-center gap-3">
+                                                        <div className="w-7 h-7 bg-[#00CC44]/20 text-[#00CC44] rounded-full flex items-center justify-center shrink-0">
+                                                            <FileText size={14} />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-bold text-[#1A1A1A]">แจ้งโอนเงินสำเร็จแล้ว</p>
+                                                            <p className="text-[9px] text-[#00CC44] font-bold">พนักงานกำลังตรวจสอบเพื่อเช็คเอาท์โต๊ะ</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-white border border-dashed border-[#D1D1CD] hover:border-[#FF5500] rounded-xl p-3.5 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
+                                                        <Upload size={16} className="text-[#767673] group-hover:text-[#FF5500] transition-colors mb-1" />
+                                                        <span className="text-[9px] font-bold text-[#767673] group-hover:text-[#1A1A1A] transition-colors">
+                                                            {uploadingSlip ? 'กำลังอัปโหลด...' : 'ส่งหลักฐานโอนเงิน / อัปโหลดสลิป'}
+                                                        </span>
+                                                        <input 
+                                                            type="file" 
+                                                            className="hidden" 
+                                                            accept="image/*" 
+                                                            onChange={handleUploadSlip} 
+                                                            disabled={uploadingSlip}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
             </AnimatePresence>
         </div>
     );

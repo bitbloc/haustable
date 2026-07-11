@@ -19,7 +19,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
-    const [viewMode, setViewMode] = useState('floorplan'); // 'floorplan' or 'grid'
+    const [viewMode, setViewMode] = useState('grid'); // 'floorplan' or 'grid'
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'free', 'occupied', 'pending'
 

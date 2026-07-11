@@ -174,7 +174,7 @@ export default function CustomerOrderStatus() {
 
     if (!booking) {
         return (
-            <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans p-6 text-center">
+            <div className="min-h-screen bg-[#F0F0EC] text-[#1A1A1A] flex flex-col items-center justify-center font-sans p-6 text-center">
                 <Clock size={48} className="text-[#767673] mb-6" />
                 <h3 className="font-mono font-bold text-sm tracking-wider uppercase mb-2">No Active Order</h3>
                 <p className="text-[#767673] text-xs max-w-xs leading-relaxed mb-8">
@@ -189,7 +189,6 @@ export default function CustomerOrderStatus() {
             </div>
         );
     }
-
     // Map status to steps
     const steps = [
         { key: 'pending', label: 'ส่งออเดอร์แล้ว', desc: 'รอพนักงานกดยอมรับ', time: booking.booking_time },
@@ -207,7 +206,7 @@ export default function CustomerOrderStatus() {
     const activeStep = getActiveStepIndex();
 
     return (
-        <div className="min-h-screen w-full bg-[#ECECE9] text-[#1A1A1A] font-sans flex flex-col pb-10 selection:bg-[#FF5500] selection:text-white select-none">
+        <div className="min-h-screen w-full bg-[#F0F0EC] text-[#1A1A1A] font-sans flex flex-col pb-10 selection:bg-[#FF5500] selection:text-white select-none">
             <Toaster position="top-center" richColors />
 
             {/* Header */}
@@ -227,150 +226,154 @@ export default function CustomerOrderStatus() {
             </header>
 
             {/* Order More Section */}
-            <div className="p-4 bg-white border-b border-[#D1D1CD]">
+            <div className="p-4 bg-transparent">
                 <button
                     onClick={() => navigate(`/table/${tableId}`)}
-                    className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-98"
                 >
                     + สั่งอาหารเพิ่ม (Order More)
                 </button>
             </div>
 
-            {/* Status Timeline */}
-            <section className="p-6 border-b border-[#D1D1CD] bg-[#F5F5F2]/50">
-                <h3 className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider mb-6">ความคืบหน้า (Order Status)</h3>
-                
-                <div className="relative pl-8 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#D1D1CD]">
-                    {steps.map((step, idx) => {
-                        const isDone = idx <= activeStep;
-                        const isCurrent = idx === activeStep;
-                        return (
-                            <div key={step.key} className="relative">
-                                {/* Dot Icon */}
-                                <div className={`absolute -left-8 top-0.5 w-6 h-6 rounded-full flex items-center justify-center border transition-all ${
-                                    isDone 
-                                    ? 'bg-[#FF5500] border-[#D04500] text-white shadow-sm' 
-                                    : 'bg-white border-[#D1D1CD] text-[#767673]'
-                                }`}>
-                                    {isDone ? (
-                                        <CheckCircle size={12} className="shrink-0" />
-                                    ) : (
-                                        <div className="w-1.5 h-1.5 bg-[#767673] rounded-full" />
-                                    )}
-                                </div>
+            {/* main frame */}
+            <div className="px-4 space-y-4">
+                {/* Timeline Steps (Rams Dial/LED style) */}
+                <section className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
+                    <h3 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-5">ความคืบหน้า (ORDER STATUS)</h3>
+                    <div className="relative pl-7 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[#D1D1CD]">
+                        {steps.map((step, idx) => {
+                            const isDone = idx <= activeStep;
+                            const isCurrent = idx === activeStep;
+                            return (
+                                <div key={step.key} className="relative">
+                                    {/* Indicator light */}
+                                    <div className="absolute -left-7 top-0.5 w-4 h-4 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center">
+                                        {isCurrent ? (
+                                            <span className="w-2 h-2 rounded-full bg-[#FF5500] shadow-[0_0_6px_#FF5500] animate-pulse" />
+                                        ) : isDone ? (
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        ) : (
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[#D1D1CD]" />
+                                        )}
+                                    </div>
 
-                                <div className="pl-2">
-                                    <h4 className={`font-bold text-xs leading-none ${isDone ? 'text-[#1A1A1A] font-extrabold' : 'text-[#767673]'}`}>
-                                        {step.label}
-                                        {isCurrent && <span className="ml-2 text-[8px] bg-[#FF5500]/10 text-[#FF5500] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">กำลังเตรียม</span>}
-                                    </h4>
-                                    <p className="text-[10px] text-[#767673] mt-1">{step.desc}</p>
-                                    {step.time && isDone && (
-                                        <span className="text-[9px] text-[#767673] font-mono font-bold mt-1.5 block">
-                                            {new Date(step.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
-
-            {/* Order Items Summary */}
-            <section className="p-6 border-b border-[#D1D1CD] bg-white">
-                <h3 className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider mb-4">รายการอาหารสุทธิ (Items Summary)</h3>
-                
-                <div className="space-y-4">
-                    {orderItems.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-start text-xs text-[#1A1A1A]">
-                            <div className="flex gap-3">
-                                <span className="font-bold text-[#FF5500] text-xs">{item.quantity}x</span>
-                                <div>
-                                    <span className="font-bold text-[#1A1A1A] block">{item.menu_items?.name}</span>
-                                    {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
-                                        <div className="text-[9px] text-[#767673] mt-0.5 font-medium italic">
-                                            {Object.values(item.selected_options).flat().join(', ')}
+                                    <div className="pl-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-xs font-bold ${isDone ? 'text-[#1A1A1A]' : 'text-[#767673]'}`}>
+                                                {step.label}
+                                            </span>
+                                            {isCurrent && (
+                                                <span className="bg-[#FF5500]/10 text-[#FF5500] text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded leading-none">
+                                                    กำลังเตรียม
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
+                                        <p className="text-[10px] text-[#767673] mt-0.5 leading-relaxed">{step.desc}</p>
+                                        {step.time && isDone && (
+                                            <span className="text-[9px] text-[#767673] font-mono font-bold mt-1 block">
+                                                {new Date(step.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                            <span className="font-mono text-[#767673]">฿{(item.price_at_time * item.quantity).toLocaleString()}</span>
-                        </div>
-                    ))}
-                    
-                    {orderItems.length === 0 && (
-                        <div className="text-center py-6 text-[#767673] font-mono text-[10px] font-bold uppercase">
-                            กำลังโหลดรายละเอียดรายการอาหาร...
-                        </div>
-                    )}
-
-                    <div className="border-t border-[#D1D1CD] pt-4 mt-2 flex justify-between items-baseline">
-                        <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหารสุทธิ</span>
-                        <span className="text-lg font-black text-[#FF5500] font-mono">฿{booking.total_amount?.toLocaleString()}.-</span>
+                            );
+                        })}
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Payment Section (Pay at Table) */}
-            <section className="p-6">
-                <h3 className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider mb-4">การเช็คบิลและชำระเงิน (Checkout & Payment)</h3>
-                
-                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-5 flex flex-col items-center">
+                {/* Order Items Summary */}
+                <section className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
+                    <h3 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-4">รายการอาหารสุทธิ (ITEMS SUMMARY)</h3>
+                    
+                    <div className="space-y-3.5">
+                        {orderItems.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-xs text-[#1A1A1A] pb-3 border-b border-[#D1D1CD]/30 last:border-b-0 last:pb-0">
+                                <div className="flex gap-2.5">
+                                    <span className="font-bold text-[#FF5500]">{item.quantity}x</span>
+                                    <div>
+                                        <span className="font-bold text-[#1A1A1A] block leading-tight">{item.menu_items?.name}</span>
+                                        {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
+                                            <div className="text-[9px] text-[#767673] mt-0.5 italic font-medium">
+                                                {Object.values(item.selected_options).flat().join(', ')}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <span className="font-mono text-[#767673] font-bold">฿{(item.price_at_time * item.quantity).toLocaleString()}</span>
+                            </div>
+                        ))}
+                        
+                        {orderItems.length === 0 && (
+                            <div className="text-center py-4 text-[#767673] font-mono text-[9px] font-bold uppercase">
+                                กำลังโหลดรายละเอียดรายการอาหาร...
+                            </div>
+                        )}
+
+                        <div className="border-t border-[#D1D1CD] pt-3.5 mt-2 flex justify-between items-baseline">
+                            <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหารสุทธิ</span>
+                            <span className="text-lg font-black text-[#FF5500] font-mono">฿{booking.total_amount?.toLocaleString()}.-</span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Payment Section (Pay at Table) */}
+                <section className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm flex flex-col items-center">
+                    <h3 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-3 self-start">การเช็คบิลและชำระเงิน (Checkout & Payment)</h3>
+                    
                     {!booking.staff_remark?.includes('[CALL_BILL]') ? (
                         // Case 1: Bill not requested yet
-                        <div className="w-full text-center space-y-4">
-                            <Smartphone size={32} className="text-[#767673] mx-auto mb-2 animate-pulse" />
+                        <div className="w-full text-center space-y-3.5 py-2">
+                            <Smartphone size={28} className="text-[#767673] mx-auto animate-pulse" />
                             <div>
                                 <h4 className="font-bold text-xs text-[#1A1A1A]">ต้องการเช็คบิลชำระเงิน?</h4>
-                                <p className="text-[10px] text-[#767673] mt-1 leading-relaxed">กดปุ่มด้านล่างเพื่อเรียกพนักงานมาเช็คบิลและแสดง QR Code ชำระเงิน</p>
+                                <p className="text-[10px] text-[#767673] mt-0.5 leading-relaxed">กดปุ่มเพื่อเรียกพนักงานเช็คบิลและรับ QR Code เพื่อสแกนจ่ายได้ทันที</p>
                             </div>
                             <button
                                 onClick={handleRequestBill}
                                 disabled={requestingBill}
-                                className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-97"
                             >
-                                <Receipt size={14} />
+                                <Receipt size={12} />
                                 {requestingBill ? 'กำลังดำเนินการ...' : 'เรียกพนักงานเช็คบิล (Request Bill)'}
                             </button>
                         </div>
                     ) : (
                         // Case 2: Bill requested! Show QR and Slip upload
                         <div className="w-full space-y-4">
-                            <div className="bg-[#00CC44]/10 border border-[#00CC44]/20 rounded-xl p-3 flex items-center gap-2.5 text-[#00CC44] font-mono font-bold text-[10px] uppercase tracking-wider justify-center">
-                                <CheckCircle size={14} />
+                            <div className="bg-[#00CC44]/10 border border-[#00CC44]/20 rounded-xl py-2 px-3 flex items-center gap-2 text-[#00CC44] font-mono font-bold text-[9px] uppercase tracking-wider justify-center">
+                                <CheckCircle size={12} />
                                 <span>เรียกพนักงานเช็คบิลแล้ว</span>
                             </div>
 
                             {paymentQrUrl ? (
                                 <div className="flex flex-col items-center">
-                                    <div className="mb-3 bg-white p-2.5 rounded-xl border border-[#D1D1CD] shadow-sm">
-                                        <img src={paymentQrUrl} alt="Payment QR" className="w-36 h-36 object-contain" />
+                                    <div className="mb-2 bg-white p-2 rounded-xl border border-[#D1D1CD] shadow-sm">
+                                        <img src={paymentQrUrl} alt="Payment QR" className="w-32 h-32 object-contain" />
                                     </div>
-                                    <p className="text-[9px] text-[#767673] text-center leading-relaxed max-w-[220px] mb-2">
+                                    <p className="text-[9px] text-[#767673] text-center leading-relaxed max-w-[220px]">
                                         สแกน QR Code เพื่อชำระเงินออนไลน์ จากนั้นอัปโหลดภาพสลิปเพื่อแจ้งพนักงาน
                                     </p>
                                 </div>
                             ) : (
-                                <div className="w-full flex items-center justify-center p-6 bg-[#F5F5F2] rounded-xl text-[#767673] text-[10px] font-mono font-bold uppercase tracking-wider border border-[#D1D1CD]">
+                                <div className="w-full flex items-center justify-center p-4 bg-[#F5F5F2] rounded-xl text-[#767673] text-[9px] font-mono font-bold uppercase tracking-wider border border-[#D1D1CD]">
                                     ไม่มีรูปภาพ QR ในระบบ (ติดต่อพนักงาน)
                                 </div>
                             )}
 
                             {booking.payment_slip_url ? (
-                                <div className="w-full bg-[#00CC44]/10 border border-[#00CC44]/20 p-4 rounded-xl flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-[#00CC44]/20 text-[#00CC44] rounded-full flex items-center justify-center shrink-0">
-                                        <FileText size={16} />
+                                <div className="w-full bg-[#00CC44]/10 border border-[#00CC44]/20 p-3 rounded-xl flex items-center gap-3">
+                                    <div className="w-7 h-7 bg-[#00CC44]/20 text-[#00CC44] rounded-full flex items-center justify-center shrink-0">
+                                        <FileText size={14} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-bold text-[#1A1A1A]">แจ้งโอนเงินสำเร็จแล้ว</p>
-                                        <p className="text-[10px] text-[#00CC44] font-bold">พนักงานกำลังตรวจสอบเพื่อทำการเช็คเอาท์</p>
+                                        <p className="text-[9px] text-[#00CC44] font-bold">พนักงานกำลังตรวจสอบเพื่อทำการเช็คเอาท์</p>
                                     </div>
                                 </div>
                             ) : (
-                                <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-white border border-dashed border-[#D1D1CD] hover:border-[#FF5500] rounded-xl p-4 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
-                                    <Upload size={20} className="text-[#767673] group-hover:text-[#FF5500] transition-colors mb-1.5" />
-                                    <span className="text-[10px] font-bold text-[#767673] group-hover:text-[#1A1A1A] transition-colors">
+                                <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-white border border-dashed border-[#D1D1CD] hover:border-[#FF5500] rounded-xl p-3.5 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
+                                    <Upload size={16} className="text-[#767673] group-hover:text-[#FF5500] transition-colors mb-1" />
+                                    <span className="text-[9px] font-bold text-[#767673] group-hover:text-[#1A1A1A] transition-colors">
                                         {uploadingSlip ? 'กำลังอัปโหลด...' : 'ส่งหลักฐานโอนเงิน / อัปโหลดสลิป'}
                                     </span>
                                     <input 
@@ -384,8 +387,8 @@ export default function CustomerOrderStatus() {
                             )}
                         </div>
                     )}
-                </div>
-            </section>
+                </section>
+            </div>
         </div>
     );
 }
