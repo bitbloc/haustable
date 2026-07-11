@@ -476,7 +476,14 @@ export default function POSDashboard() {
                                 if (activeBooking) {
                                     const success = await acceptOrder(activeBooking.id);
                                     if (success) {
-                                        handleBackToTables();
+                                        const updatedBooking = await getActiveBooking(selectedTable.id);
+                                        if (updatedBooking) {
+                                            setActiveBooking(updatedBooking);
+                                            setActiveSlipBooking(updatedBooking);
+                                        } else {
+                                            setActiveSlipBooking(activeBooking);
+                                        }
+                                        setActiveSlipType('kitchen');
                                         checkPendingOrders();
                                     }
                                 }

@@ -479,34 +479,43 @@ export default function SlipModal({ booking, type, onClose }) {
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
 
+    useEffect(() => {
+        if (type === 'kitchen') {
+            const timer = setTimeout(() => {
+                handlePrint();
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, [type]);
+
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <style>{jaggedCss}</style>
-            <div className="bg-[#111] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
                 
                 {/* Header */}
-                <div className="p-4 flex justify-between items-center text-white border-b border-white/10">
-                    <h3 className="font-bold text-sm tracking-widest uppercase">Ticket Preview</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={18} /></button>
+                <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD]">
+                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Ticket Preview</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-[#E0E0DC] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors"><X size={18} /></button>
                 </div>
 
                 {/* Interactive Tabs */}
-                <div className="flex bg-white/5 p-1 rounded-xl mx-4 mt-4 gap-1">
+                <div className="flex bg-[#E0E0DC] border border-[#D1D1CD] p-1 rounded-xl mx-4 mt-4 gap-1">
                     <button 
                         onClick={() => setActiveTab('kitchen')} 
-                        className={`flex-1 py-2 rounded-lg font-bold text-[11px] transition-colors ${activeTab === 'kitchen' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider transition-colors ${activeTab === 'kitchen' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
                         ใบสั่งครัว (Kitchen)
                     </button>
                     <button 
                         onClick={() => setActiveTab('billing')} 
-                        className={`flex-1 py-2 rounded-lg font-bold text-[11px] transition-colors ${activeTab === 'billing' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider transition-colors ${activeTab === 'billing' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
                         ใบแจ้งยอด (Bill)
                     </button>
                     <button 
                         onClick={() => setActiveTab('receipt')} 
-                        className={`flex-1 py-2 rounded-lg font-bold text-[11px] transition-colors ${activeTab === 'receipt' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider transition-colors ${activeTab === 'receipt' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
                         ใบเสร็จ (Receipt)
                     </button>
@@ -514,18 +523,18 @@ export default function SlipModal({ booking, type, onClose }) {
 
                 {/* Payment Method Selector (Only for Billing / Receipt tabs) */}
                 {(activeTab === 'billing' || activeTab === 'receipt') && (
-                    <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl mx-4 mt-3">
-                        <span className="text-[11px] font-bold text-gray-400">ช่องทางชำระเงิน / Payment:</span>
+                    <div className="flex items-center justify-between bg-white border border-[#D1D1CD] p-3 rounded-xl mx-4 mt-3">
+                        <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">ช่องทางชำระเงิน / Payment:</span>
                         <div className="flex gap-2">
                             <button 
                                 onClick={() => setPaymentMethod('cash')}
-                                className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${paymentMethod === 'cash' ? 'bg-[#DFFF00] text-black font-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[#FF5500] text-white border border-[#D04500]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 เงินสด (CASH)
                             </button>
                             <button 
                                 onClick={() => setPaymentMethod('qr')}
-                                className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-colors ${paymentMethod === 'qr' ? 'bg-[#DFFF00] text-black font-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[#FF5500] text-white border border-[#D04500]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 โอนเงิน (QR)
                             </button>
@@ -534,7 +543,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 )}
 
                 {/* Preview Window */}
-                <div className="flex-1 overflow-y-auto p-12 bg-[#2d5cdb] flex justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mt-4">
+                <div className="flex-1 overflow-y-auto p-12 bg-[#ECECE9] border-t border-b border-[#D1D1CD] flex justify-center mt-4">
                     <div 
                         ref={slipRef} 
                         className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top"
@@ -677,12 +686,12 @@ export default function SlipModal({ booking, type, onClose }) {
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 bg-[#111] flex gap-3 border-t border-white/10">
-                    <button onClick={handlePrint} className="flex-1 bg-white text-black py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                        <PrinterIcon size={16} /> Print
+                <div className="p-4 bg-[#F5F5F2] flex gap-3 border-t border-[#D1D1CD]">
+                    <button onClick={handlePrint} className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                        <PrinterIcon size={14} /> Print Ticket
                     </button>
-                    <button onClick={handleSaveImage} className="flex-1 bg-white/10 text-white py-3 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2" disabled={saving}>
-                        {saving ? 'Saving...' : <><Download size={16} /> Save</>}
+                    <button onClick={handleSaveImage} className="flex-grow bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
+                        {saving ? 'Saving...' : <><Download size={14} /> Save Image</>}
                     </button>
                 </div>
             </div>
