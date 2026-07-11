@@ -5,6 +5,7 @@ import CheckinManager from './components/admin/CheckinManager'
 import { printToBluetoothDirect, encodeShiftReportData } from './utils/printerHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
+import { Printer } from '@capgo/capacitor-printer'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -148,6 +149,76 @@ export default function AdminSettings() {
             } catch (err) {
                 console.error("Test bluetooth print failed:", err);
                 alert(`❌ Bluetooth Print Error: ${err.message || err}\n\nMake sure the device matches, is turned on, and you have paired it once.`);
+            }
+        } else if (configType === 'universal') {
+            try {
+                const htmlContent = `
+                    <html>
+                        <head>
+                            <title>Test Print</title>
+                            <style>
+                                @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+                                body { 
+                                    font-family: 'Courier Prime', 'Courier New', monospace; 
+                                    background: white; 
+                                    color: black; 
+                                    font-size: 11px; 
+                                    padding: 20px 10px;
+                                    text-align: center;
+                                    width: 280px;
+                                }
+                                .header { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+                                .divider { border-top: 1px dashed black; margin: 10px 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">IN THE HAUS</div>
+                            <div>TEST RECEIPT / ใบทดสอบระบบพิมพ์</div>
+                            <div>Type: UNIVERSAL (${configSize})</div>
+                            <div class="divider"></div>
+                            <div>Date: ${new Date().toLocaleString('th-TH')}</div>
+                            <div>Status: SUCCESS / เชื่อมต่อสำเร็จ</div>
+                            <div class="divider"></div>
+                            <div style="font-size: 9px; color: #555;">smallfry.world</div>
+                        </body>
+                    </html>
+                `;
+
+                if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Printer')) {
+                    await Printer.printHtml({
+                        name: `TestPrint-${Date.now()}`,
+                        html: htmlContent
+                    });
+                } else {
+                    // Browser fallback
+                    const printWindow = window.open('', '_blank', 'width=400,height=600');
+                    if (printWindow) {
+                        printWindow.document.write(htmlContent);
+                        printWindow.document.close();
+                    } else {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.position = 'fixed';
+                        iframe.style.right = '0';
+                        iframe.style.bottom = '0';
+                        iframe.style.width = '0';
+                        iframe.style.height = '0';
+                        iframe.style.border = '0';
+                        document.body.appendChild(iframe);
+                        
+                        iframe.contentDocument.write(htmlContent);
+                        iframe.contentDocument.close();
+                        iframe.onload = () => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                            setTimeout(() => {
+                                document.body.removeChild(iframe);
+                            }, 1000);
+                        };
+                    }
+                }
+            } catch (err) {
+                console.error("Test universal print failed:", err);
+                alert(`❌ Universal Print Error: ${err.message || err}`);
             }
         } else {
             let details = `Type: ${configType.toUpperCase()}, Size: ${configSize}`;

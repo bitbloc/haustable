@@ -26,6 +26,11 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
+@rem Override JAVA_HOME to JDK 17 if it exists, to avoid incompatibility with JDK 25
+if exist "C:\Program Files\Eclipse Adoptium\jdk-17.0.17.10-hotspot" (
+    set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17.0.17.10-hotspot
+)
+
 set DIRNAME=%~dp0
 if "%DIRNAME%"=="" set DIRNAME=.
 @rem This is normally unused
