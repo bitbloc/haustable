@@ -189,10 +189,13 @@ function LazyCard({
 
     if (isNote) {
         return (
-            <div
+            <motion.div
                 ref={cardRef}
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
+                whileHover={{ scale: 1.03, y: -3 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 350, damping: 22 }}
                 className="select-none flex flex-col justify-between p-3 border border-neutral-800/25 shadow-sm text-left"
                 style={{
                     position: "relative",
@@ -202,7 +205,6 @@ function LazyCard({
                     backgroundColor: "#FAF9F5", // Warm Hallmark Paper color
                     color: "#1a1a1a", // Deep hallmark ink
                     cursor: isDragging ? "grabbing" : "pointer",
-                    transform: `rotate(${-rotation}deg)`,
                     transformOrigin: "center center",
                     boxSizing: "border-box",
                 }}
@@ -248,15 +250,18 @@ function LazyCard({
                 <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
                     BY {item.user?.name || item.user_name || "GUEST"}
                 </div>
-            </div>
+            </motion.div>
         )
     }
  
     return (
-        <div
+        <motion.div
             ref={cardRef}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
+            whileHover={{ scale: 1.03, y: -3 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 350, damping: 22 }}
             style={{
                 position: "relative",
                 width: safeImageWidth,
@@ -275,7 +280,6 @@ function LazyCard({
                 ),
                 fontWeight: 600,
                 cursor: isDragging ? "grabbing" : "pointer",
-                transform: `rotate(${-rotation}deg)`,
                 transformOrigin: "center center",
                 isolation: "isolate",
                 WebkitMaskImage: "-webkit-radial-gradient(white, black)",
@@ -352,7 +356,7 @@ function LazyCard({
                     <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
                 </div>
             )}
-        </div>
+        </motion.div>
     )
 }
 
@@ -393,19 +397,7 @@ export default function DraggableGrid(props) {
     const failedImages = useRef(new Set())
     const [, forceRender] = useState(0)
 
-    // Screensaver drift speed (px per frame) - matching magnitudes make the diagonal angle exactly 45 degrees
-    const driftX = useRef(0.15) 
-    const driftY = useRef(-0.15)
-    const isInteracting = useRef(false)
-    const interactionTimeout = useRef(null)
 
-    const triggerInteraction = useCallback(() => {
-        isInteracting.current = true
-        if (interactionTimeout.current) clearTimeout(interactionTimeout.current)
-        interactionTimeout.current = setTimeout(() => {
-            isInteracting.current = false
-        }, 2000) // Resume drift after 2 seconds of inactivity
-    }, [])
 
     const safeItems =
         Array.isArray(items) && items.length > 0 ? items : defaultItems
@@ -480,8 +472,9 @@ export default function DraggableGrid(props) {
     const minScale = useMemo(() => {
         const scaleX = containerSize.w / (gridW + safeGap * 2)
         const scaleY = containerSize.h / (gridH + safeGap * 2)
-        // Ensure we don't divide by zero and provide a 5% safety margin
-        return Math.max(0.1, Math.max(scaleX, scaleY)) * 1.05
+        // Ensure we don't divide by zero, clamp the minimum zoom level to 0.25 to prevent disappearing, and add a 5% safety margin
+        const calculatedMin = Math.max(scaleX, scaleY) * 1.05
+        return Math.max(0.25, Math.min(1.0, calculatedMin))
     }, [containerSize.w, containerSize.h, gridW, gridH, safeGap])
 
     // Keep scale constrained to minScale
@@ -554,26 +547,7 @@ export default function DraggableGrid(props) {
         initializedRef.current = true
     }, [containerSize.w, containerSize.h, cycleW, safeImageWidth, safeImageHeight, x, y])
 
-    // Auto-drift screensaver effect loop (seamless drift in 2D with no bounds)
-    useEffect(() => {
-        let animationFrameId
-        
-        const updateDrift = () => {
-            if (!isDragging && !isInteracting.current) {
-                const curX = x.get()
-                const curY = y.get()
-                x.set(curX + driftX.current)
-                y.set(curY + driftY.current)
-            }
-            animationFrameId = requestAnimationFrame(updateDrift)
-        }
 
-        animationFrameId = requestAnimationFrame(updateDrift)
-        return () => {
-            cancelAnimationFrame(animationFrameId)
-            if (interactionTimeout.current) clearTimeout(interactionTimeout.current)
-        }
-    }, [isDragging, x, y])
 
     // Global listener to ensure isDragging is reset to false even if drag events
     // are canceled or bubble out of the container (critical for mobile browsers).
@@ -598,10 +572,13 @@ export default function DraggableGrid(props) {
             if (e.touches.length === 2) {
                 e.preventDefault()
                 setIsPinching(true)
-                triggerInteraction()
                 const t0 = e.touches[0]
                 const t1 = e.touches[1]
                 const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
+                
+                // Abort if touch points are too close to prevent division-by-zero NaN bugs
+                if (dist < 15) return
+                
                 touchStartDist.current = dist
                 touchStartScale.current = scale.get()
                 
@@ -613,9 +590,8 @@ export default function DraggableGrid(props) {
         }
 
         const handleTouchMove = (e) => {
-            if (e.touches.length === 2 && touchStartDist.current > 0) {
+            if (e.touches.length === 2 && touchStartDist.current > 15) {
                 e.preventDefault()
-                triggerInteraction()
 
                 const t0 = e.touches[0]
                 const t1 = e.touches[1]
@@ -623,7 +599,9 @@ export default function DraggableGrid(props) {
                 const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY)
                 const factor = dist / touchStartDist.current
                 let nextScale = touchStartScale.current * factor
-                nextScale = Math.max(minScale, Math.min(2.5, nextScale))
+                
+                // Strict clamping of zoom levels: minScale to 2.0
+                nextScale = Math.max(minScale, Math.min(2.0, nextScale))
 
                 const midX = (t0.clientX + t1.clientX) / 2
                 const midY = (t0.clientY + t1.clientY) / 2
@@ -651,14 +629,13 @@ export default function DraggableGrid(props) {
         const handleWheelZoom = (e) => {
             if (e.ctrlKey) {
                 e.preventDefault()
-                triggerInteraction()
 
                 const midX = e.clientX
                 const midY = e.clientY
 
                 const currentScale = scale.get()
-                let nextScale = currentScale - e.deltaY * 0.01
-                nextScale = Math.max(minScale, Math.min(2.5, nextScale))
+                let nextScale = currentScale - e.deltaY * 0.008 // Gentle wheel zoom
+                nextScale = Math.max(minScale, Math.min(2.0, nextScale))
 
                 const oldX = x.get()
                 const oldY = y.get()
@@ -688,7 +665,7 @@ export default function DraggableGrid(props) {
             el.removeEventListener('touchend', handleTouchEnd)
             el.removeEventListener('wheel', handleWheelZoom)
         }
-    }, [minScale, containerSize, gridW, gridH, safeGap, triggerInteraction, x, y])
+    }, [minScale, containerSize, gridW, gridH, safeGap, x, y])
 
     // Wheel scrolling
     useEffect(() => {
@@ -699,7 +676,6 @@ export default function DraggableGrid(props) {
         const onWheel = (e) => {
             if (e.ctrlKey) return // Skip if trackpad pinch-to-zoom is active
             e.preventDefault()
-            triggerInteraction()
             const curX = x.get()
             const curY = y.get()
             const targetX = curX - e.deltaX
@@ -722,12 +698,11 @@ export default function DraggableGrid(props) {
             if (wheelAnimX.current) wheelAnimX.current.stop()
             if (wheelAnimY.current) wheelAnimY.current.stop()
         }
-    }, [enableWheel, x, y, triggerInteraction])
+    }, [enableWheel, x, y])
 
     const handlePointerDown = useCallback((e) => {
-        triggerInteraction()
         pointerDownPos.current = { x: e.clientX, y: e.clientY, t: Date.now() }
-    }, [triggerInteraction])
+    }, [])
 
     const handlePointerUp = useCallback(
         (e, item, index) => {
@@ -795,10 +770,8 @@ export default function DraggableGrid(props) {
                 dragMomentum={true}
                 onDragStart={() => {
                     setIsDragging(true)
-                    triggerInteraction()
                 }}
                 onDragEnd={() => setIsDragging(false)}
-                onDrag={() => triggerInteraction()}
             >
                 {displayItemsExtended.map((item, index) => {
                     const failed = failedImages.current.has(index)
