@@ -409,7 +409,18 @@ export default function DraggableGrid(props) {
 
     const safeItems =
         Array.isArray(items) && items.length > 0 ? items : defaultItems
-    const safeColumns = Math.max(1, Math.min(20, Math.floor(columns || 5)))
+    const safeColumns = useMemo(() => {
+        const count = safeItems.length
+        if (count === 0) return 4
+        // Dynamically reduce column count for low number of uploaded images
+        // so that they look like a nice, filled collage instead of a massive matrix of duplicates
+        let cols = columns || 14
+        if (count <= 3) cols = 3
+        else if (count <= 8) cols = 4
+        else if (count <= 15) cols = 6
+        else if (count <= 30) cols = 10
+        return Math.max(1, Math.min(20, Math.floor(cols)))
+    }, [safeItems.length, columns])
     // Image dimensions match CurveGallery (px, clamped 20–4000).
     const safeImageWidth = Math.max(20, Math.min(4000, imageWidth ?? 150))
     const safeImageHeight = Math.max(20, Math.min(4000, imageHeight ?? 210))
