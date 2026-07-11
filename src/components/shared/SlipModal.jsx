@@ -384,6 +384,7 @@ export default function SlipModal({ booking, type, onClose }) {
     const handlePrint = async () => {
         let printerType = 'universal';
         let btDeviceName = '';
+        let paperSize = '58mm';
         
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
@@ -392,9 +393,11 @@ export default function SlipModal({ booking, type, onClose }) {
                 if (activeTab === 'kitchen') {
                     printerType = config.kitchen_printer_type || 'universal';
                     btDeviceName = config.kitchen_printer_bt_name || '';
+                    paperSize = config.kitchen_paper_size || '58mm';
                 } else {
                     printerType = config.cashier_printer_type || 'universal';
                     btDeviceName = config.cashier_printer_bt_name || '';
+                    paperSize = config.cashier_paper_size || '58mm';
                 }
             }
         } catch (err) {
@@ -403,7 +406,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
         if (printerType === 'bluetooth') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap);
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize);
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {

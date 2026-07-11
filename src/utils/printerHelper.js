@@ -82,7 +82,7 @@ function encodeThaiTIS620(str) {
 }
 
 // Convert receipt/ticket details to ESC/POS binary format
-export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}) {
+export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '58mm') {
     const encoder = new EscPosEncoder();
     encoder.initialize();
 
@@ -90,6 +90,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         ? booking.tracking_token 
         : booking.id.slice(0, 4);
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
+
+    const maxCols = paperSize === '80mm' ? 48 : 30; // 58mm usually supports 30 or 32 columns. 30 is safest to avoid wrapping.
+    const divider = '-'.repeat(maxCols);
 
     // 1. Header (Omit for kitchen)
     if (activeTab !== 'kitchen') {
@@ -100,13 +103,13 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .size(0, 0)
                .bold(false)
                .line('TASTE YOUR SCENT.')
-               .line('--------------------------------');
+               .line(divider);
     } else {
         encoder.align('center')
                .bold(true)
                .line('KITCHEN ORDER / ใบสั่งอาหาร')
                .bold(false)
-               .line('--------------------------------');
+               .line(divider);
     }
 
     // 2. Queue Number
@@ -116,7 +119,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
            .line(`Queue #${queueNo}`)
            .size(0, 0)
            .bold(false)
-           .line('--------------------------------');
+           .line(divider);
 
     // 3. Meta info
     encoder.align('left')
@@ -128,7 +131,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (phone) {
         encoder.line(`PHONE: ${phone}`);
     }
-    encoder.line('--------------------------------');
+    encoder.line(divider);
 
     // 4. Items Header
     encoder.bold(true)
@@ -137,7 +140,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 5. Items List
     booking.order_items?.forEach(item => {
-        const qty = `${item.quantity}x`.padEnd(4, ' ');
+        const qty = `${item.quantity}x `.padEnd(4, ' ');
         const name = (item.menu_items?.name || 'Item').toUpperCase();
         
         let priceStr = '';
@@ -145,8 +148,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             priceStr = (item.price_at_time * item.quantity).toLocaleString();
         }
 
-        // Format name + price (32 columns max)
-        const leftSpace = 32 - qty.length - priceStr.length;
+        // Format name + price based on maxCols
+        const leftSpace = maxCols - qty.length - priceStr.length;
         let displayName = name;
         if (name.length > leftSpace) {
             displayName = name.slice(0, leftSpace - 3) + '...';
@@ -167,7 +170,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             });
         }
     });
-    encoder.line('--------------------------------');
+    encoder.line(divider);
 
     // 6. Totals
     if (activeTab !== 'kitchen') {
@@ -178,20 +181,20 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             ? (netAfterDiscount * 0.07) 
             : 0;
 
-        encoder.text(`SUBTOTAL`.padEnd(20, ' ') + subtotal.toLocaleString().padStart(12, ' ') + '\n');
+        encoder.text(`SUBTOTAL`.padEnd(maxCols - 12, ' ') + subtotal.toLocaleString().padStart(12, ' ') + '\n');
         if (discount > 0) {
-            encoder.text(`DISCOUNT`.padEnd(20, ' ') + `-${discount.toLocaleString()}`.padStart(12, ' ') + '\n');
+            encoder.text(`DISCOUNT`.padEnd(maxCols - 12, ' ') + `-${discount.toLocaleString()}`.padStart(12, ' ') + '\n');
         }
         if (vatVal > 0) {
-            encoder.text(`VAT (7%)`.padEnd(20, ' ') + vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12, ' ') + '\n');
+            encoder.text(`VAT (7%)`.padEnd(maxCols - 12, ' ') + vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12, ' ') + '\n');
         }
-        encoder.line('--------------------------------')
+        encoder.line(divider)
                .bold(true)
                .size(0, 1)
-               .text(`TOTAL`.padEnd(16, ' ') + `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`.padStart(16, ' ') + '\n')
+               .text(`TOTAL`.padEnd(maxCols - 12, ' ') + `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`.padStart(12, ' ') + '\n')
                .size(0, 0)
                .bold(false)
-               .line('--------------------------------');
+               .line(divider);
     }
 
     // 7. Payment details (Omit for kitchen)
@@ -203,7 +206,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .line('[ PAID / ชำระแล้ว ]')
                .bold(false)
-               .line('--------------------------------');
+               .line(divider);
     }
 
     // 8. Note
@@ -213,7 +216,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line('NOTE FOR KITCHEN:')
                .bold(false)
                .line(booking.customer_note)
-               .line('--------------------------------');
+               .line(divider);
     }
 
     // 9. Footer
@@ -227,10 +230,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 }
 
 // Convert shift report data to ESC/POS binary format
-export function encodeShiftReportData(reportData) {
+export function encodeShiftReportData(reportData, paperSize = '58mm') {
     const encoder = new EscPosEncoder();
     encoder.initialize();
 
+    const maxCols = paperSize === '80mm' ? 48 : 30;
+    const divider = '-'.repeat(maxCols);
     const dateStr = new Date().toLocaleString('th-TH');
 
     encoder.align('center')
@@ -240,30 +245,30 @@ export function encodeShiftReportData(reportData) {
            .size(0, 0)
            .bold(false)
            .line('SHIFT SUMMARY REPORT')
-           .line('--------------------------------')
+           .line(divider)
            .align('left')
            .line(`Printed: ${dateStr}`)
            .line(`Staff  : ${reportData.staffName}`)
-           .line('--------------------------------');
+           .line(divider);
 
     encoder.bold(true).line('SALES SUMMARY').bold(false);
-    encoder.text(`Total Bookings`.padEnd(20, ' ') + `${reportData.totalBookings}`.padStart(12, ' ') + '\n');
-    encoder.text(`Total Items`.padEnd(20, ' ') + `${reportData.totalItems}`.padStart(12, ' ') + '\n');
-    encoder.text(`Gross Revenue`.padEnd(20, ' ') + `฿${reportData.grossRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`Discounts`.padEnd(20, ' ') + `-฿${reportData.discounts.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.line('--------------------------------');
+    encoder.text(`Total Bookings`.padEnd(maxCols - 12, ' ') + `${reportData.totalBookings}`.padStart(12, ' ') + '\n');
+    encoder.text(`Total Items`.padEnd(maxCols - 12, ' ') + `${reportData.totalItems}`.padStart(12, ' ') + '\n');
+    encoder.text(`Gross Revenue`.padEnd(maxCols - 12, ' ') + `฿${reportData.grossRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.text(`Discounts`.padEnd(maxCols - 12, ' ') + `-฿${reportData.discounts.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.line(divider);
 
     encoder.bold(true).line('REVENUE BY METHOD').bold(false);
-    encoder.text(`Cash Payments`.padEnd(20, ' ') + `฿${reportData.cashRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`QR Payments`.padEnd(20, ' ') + `฿${reportData.qrRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.line('--------------------------------');
+    encoder.text(`Cash Payments`.padEnd(maxCols - 12, ' ') + `฿${reportData.cashRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.text(`QR Payments`.padEnd(maxCols - 12, ' ') + `฿${reportData.qrRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
+    encoder.line(divider);
 
     encoder.bold(true)
            .size(0, 1)
-           .text(`NET REVENUE`.padEnd(16, ' ') + `฿${reportData.netRevenue.toLocaleString()}`.padStart(16, ' ') + '\n')
+           .text(`NET REVENUE`.padEnd(maxCols - 12, ' ') + `฿${reportData.netRevenue.toLocaleString()}`.padStart(12, ' ') + '\n')
            .size(0, 0)
            .bold(false)
-           .line('--------------------------------')
+           .line(divider)
            .feed(4)
            .cut();
 
@@ -287,10 +292,13 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
         // If not in the paired list, we must prompt the device chooser (must be inside a user gesture handler)
         if (!device) {
             device = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { name: targetDeviceName }
-                ],
-                optionalServices: ['00001101-0000-1000-8000-00805f9b34fb'] // standard SPP UUID
+                acceptAllDevices: true,
+                optionalServices: [
+                    '00001101-0000-1000-8000-00805f9b34fb', // Standard SPP / Bluetooth Serial
+                    '0000fee7-0000-1000-8000-00805f9b34fb', // Generic print service (Goojprt/Zjiang)
+                    '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC transparent UART
+                    '0000e7e7-0000-1000-8000-00805f9b34fb'  // generic custom e7e7
+                ]
             });
         }
 
@@ -301,10 +309,41 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
         // Connect to GATT
         const server = await device.gatt.connect();
         
-        // Find standard SPP service
-        const service = await server.getPrimaryService('00001101-0000-1000-8000-00805f9b34fb');
-        const characteristics = await service.getCharacteristics();
+        // Find standard SPP or custom print service
+        const commonServices = [
+            '00001101-0000-1000-8000-00805f9b34fb',
+            '0000fee7-0000-1000-8000-00805f9b34fb',
+            '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+            '0000e7e7-0000-1000-8000-00805f9b34fb'
+        ];
         
+        let service;
+        for (const uuid of commonServices) {
+            try {
+                service = await server.getPrimaryService(uuid);
+                if (service) break;
+            } catch (e) {
+                // Try next service
+            }
+        }
+
+        if (!service) {
+            // Fallback: try getting all services and take the first non-generic one
+            try {
+                const services = await server.getPrimaryServices();
+                if (services && services.length > 0) {
+                    service = services.find(s => !s.uuid.startsWith('000018')) || services[0];
+                }
+            } catch (e) {
+                // Fallback failed
+            }
+        }
+
+        if (!service) {
+            throw new Error("Could not find any supported print service on this device.");
+        }
+
+        const characteristics = await service.getCharacteristics();
         // Find writable characteristic
         const characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
         if (!characteristic) {
