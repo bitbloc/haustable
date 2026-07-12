@@ -111,7 +111,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) 
         ? booking.tracking_token 
-        : booking.id.slice(0, 4);
+        : String(booking.id).slice(0, 4);
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
 
     const maxCols = paperSize === '80mm' ? 48 : 30; // 58mm usually supports 30 or 32 columns. 30 is safest to avoid wrapping.
