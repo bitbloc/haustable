@@ -121,6 +121,37 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                 </div>
             )}
 
+            {/* Call Bill Alert */}
+            {booking && booking.staff_remark?.includes('[CALL_BILL]') && (
+                <div className="mx-3 mt-3 p-3 bg-amber-50 border border-[#FFAA00] rounded-xl flex flex-col gap-2 shrink-0 animate-pulse">
+                    <div className="flex items-center gap-1.5 text-amber-800 font-mono text-[9px] font-bold uppercase tracking-wider">
+                        <Banknote size={12} className="text-[#FFAA00]" />
+                        <span>เรียกเช็คบิล / Bill Requested</span>
+                    </div>
+                    <p className="text-[9px] text-amber-800/80 font-medium">ลูกค้าโต๊ะนี้ส่งสัญญาณเรียกเช็คบิล</p>
+                    <button 
+                        onClick={async () => {
+                            try {
+                                const newRemark = (booking.staff_remark || '').replace('[CALL_BILL]', '').trim();
+                                const { error } = await supabase
+                                    .from('bookings')
+                                    .update({ staff_remark: newRemark })
+                                    .eq('id', booking.id);
+                                    
+                                if (error) throw error;
+                                toast.success("เคลียร์เรียกเช็คบิลเรียบร้อยแล้ว");
+                            } catch (err) {
+                                console.error("Failed to clear bill call:", err);
+                                toast.error("ไม่สามารถเคลียร์สถานะได้ในขณะนี้");
+                            }
+                        }}
+                        className="w-full bg-[#FFAA00] hover:bg-[#E5A900] text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                    >
+                        <Check size={10} /> Clear Bill Alert
+                    </button>
+                </div>
+            )}
+
             {/* Payment Slip Alert */}
             {booking && booking.payment_slip_url && (
                 <div className="mx-3 mt-3 p-3 bg-emerald-50 border border-[#00CC44] rounded-xl flex flex-col gap-2 shrink-0">

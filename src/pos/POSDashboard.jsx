@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import POSLayout from './POSLayout';
 import POSTableGrid from './POSTableGrid';
@@ -30,6 +30,10 @@ export default function POSDashboard() {
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
+
+    // Track unique realtime alerts to prevent audio overlap and duplicates
+    const activeNotificationsRef = useRef(new Set());
+    const lastPlayedSoundTimeRef = useRef(0);
 
     // Shift Management States
     const [activeShift, setActiveShift] = useState(getCurrentShift());
@@ -371,6 +375,13 @@ export default function POSDashboard() {
     }, [hasPendingOrders, alertSoundUrl, audioContext]);
 
     const playSystemAlertSound = () => {
+        const now = Date.now();
+        if (now - lastPlayedSoundTimeRef.current < 4000) {
+            console.log("Sound alert play throttled to prevent overlap.");
+            return;
+        }
+        lastPlayedSoundTimeRef.current = now;
+
         if (alertSoundUrl) {
             try {
                 const audio = new Audio(alertSoundUrl);
@@ -438,91 +449,126 @@ export default function POSDashboard() {
             }, async (payload) => {
                 checkPendingOrders();
                 setRefreshKey(prev => prev + 1);
-                const { eventType, new: newRow, old: oldRow } = payload;
-                const tableId = newRow?.table_id || oldRow?.table_id;
+                const { eventType, new: newRow } = payload;
+                const tableId = newRow?.table_id || payload.old?.table_id;
                 if (!tableId) return;
 
                 const tableName = tablesMap[tableId] || `Table #${tableId}`;
+                const bookingId = newRow?.id || payload.old?.id;
+                if (!bookingId) return;
+
+                const callBillKey = `${bookingId}_CALL_BILL`;
+                const callStaffKey = `${bookingId}_CALL_STAFF`;
+                const pendingOrderKey = `${bookingId}_PENDING_ORDER`;
+                const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
 
                 if (eventType === 'INSERT') {
                     if (newRow.status === 'pending') {
-                        toast.success(`🛎️ ออเดอร์ใหม่! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
-                            duration: 10000,
-                            action: {
-                                label: 'ดูรายการ',
-                                onClick: () => {
-                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
+                        if (!activeNotificationsRef.current.has(pendingOrderKey)) {
+                            activeNotificationsRef.current.add(pendingOrderKey);
+                            toast.success(`🛎️ ออเดอร์ใหม่! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'ดูรายการ',
+                                    onClick: () => {
+                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
                                 }
-                            }
-                        });
-                        playSystemAlertSound();
+                            });
+                            playSystemAlertSound();
+                        }
                     }
                 } else if (eventType === 'UPDATE') {
-                    // Alert for new QR orders / additions on active table sessions
-                    if (newRow?.status === 'pending' && oldRow?.status !== 'pending') {
-                        toast.success(`🛎️ ออเดอร์เพิ่มเติม! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
-                            duration: 10000,
-                            action: {
-                                label: 'ดูรายการ',
-                                onClick: () => {
-                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
-                                }
-                            }
-                        });
-                        playSystemAlertSound();
-                    }
-
-                    const oldRemark = oldRow?.staff_remark || '';
                     const newRemark = newRow?.staff_remark || '';
-                    if (newRemark.includes('[CALL_BILL]') && !oldRemark.includes('[CALL_BILL]')) {
-                        toast.warning(`💵 โต๊ะ ${tableName} เรียกเช็คบิล!`, {
-                            duration: 10000,
-                            action: {
-                                label: 'เช็คบิล',
-                                onClick: () => {
-                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
-                                }
-                            }
-                        });
-                        playSystemAlertSound();
-                    }
-
-                    if (newRemark.includes('[CALL_STAFF]') && !oldRemark.includes('[CALL_STAFF]')) {
-                        toast.warning(`🔔 โต๊ะ ${tableName} เรียกพนักงาน!`, {
-                            duration: 10000,
-                            action: {
-                                label: 'ดูรายการ',
-                                onClick: () => {
-                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
-                                }
-                            }
-                        });
-                        playSystemAlertSound();
-                    }
-
-                    const oldSlip = oldRow?.payment_slip_url || '';
                     const newSlip = newRow?.payment_slip_url || '';
-                    if (newSlip && !oldSlip) {
-                        toast.success(`📸 โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว!`, {
-                            duration: 10000,
-                            action: {
-                                label: 'ตรวจสลิป',
-                                onClick: () => {
-                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
+
+                    // 1. Pending Order Alert (New / Additional)
+                    if (newRow?.status === 'pending') {
+                        if (!activeNotificationsRef.current.has(pendingOrderKey)) {
+                            activeNotificationsRef.current.add(pendingOrderKey);
+                            toast.success(`🛎️ ออเดอร์เพิ่มเติม! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'ดูรายการ',
+                                    onClick: () => {
+                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
                                 }
-                            }
-                        });
-                        playSystemAlertSound();
+                            });
+                            playSystemAlertSound();
+                        }
+                    } else {
+                        // Clear pending status flag once order is accepted
+                        activeNotificationsRef.current.delete(pendingOrderKey);
+                    }
+
+                    // 2. Call Bill Alert
+                    if (newRemark.includes('[CALL_BILL]')) {
+                        if (!activeNotificationsRef.current.has(callBillKey)) {
+                            activeNotificationsRef.current.add(callBillKey);
+                            toast.warning(`💵 โต๊ะ ${tableName} เรียกเช็คบิล!`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'เช็คบิล',
+                                    onClick: () => {
+                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
+                                }
+                            });
+                            playSystemAlertSound();
+                        }
+                    } else {
+                        // Clear notification key if [CALL_BILL] is removed
+                        activeNotificationsRef.current.delete(callBillKey);
+                    }
+
+                    // 3. Call Staff Alert
+                    if (newRemark.includes('[CALL_STAFF]')) {
+                        if (!activeNotificationsRef.current.has(callStaffKey)) {
+                            activeNotificationsRef.current.add(callStaffKey);
+                            toast.warning(`🔔 โต๊ะ ${tableName} เรียกพนักงาน!`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'ดูรายการ',
+                                    onClick: () => {
+                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
+                                }
+                            });
+                            playSystemAlertSound();
+                        }
+                    } else {
+                        // Clear notification key if [CALL_STAFF] is removed
+                        activeNotificationsRef.current.delete(callStaffKey);
+                    }
+
+                    // 4. Payment Slip Alert
+                    if (newSlip) {
+                        if (!activeNotificationsRef.current.has(slipReceivedKey)) {
+                            activeNotificationsRef.current.add(slipReceivedKey);
+                            toast.success(`📸 โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว!`, {
+                                duration: 10000,
+                                action: {
+                                    label: 'ตรวจสลิป',
+                                    onClick: () => {
+                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
+                                }
+                            });
+                            playSystemAlertSound();
+                        }
+                    } else {
+                        activeNotificationsRef.current.delete(slipReceivedKey);
                     }
                 }
             })
