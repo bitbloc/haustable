@@ -1,13 +1,33 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
 
-export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder, onOpenSlip, onAttachCustomer, onDetachCustomer }) {
+export default function POSOrderPanel({ 
+    order, 
+    booking, 
+    attachedMemberCrm,
+    onUpdateQuantity, 
+    onClear, 
+    onCheckout, 
+    onAcceptOrder, 
+    onOpenSlip, 
+    onAttachCustomer, 
+    onDetachCustomer 
+}) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
+    
+    // Points states
+    const [xhausToRedeem, setXhausToRedeem] = React.useState(0);
+    const [showRedeemInput, setShowRedeemInput] = React.useState(false);
+    const [redeemInputVal, setRedeemInputVal] = React.useState('');
+    const [crmSettings, setCrmSettings] = React.useState({
+        crm_redeem_rate_xhaus: 1.0,
+        crm_min_redeem_xhaus: 10.0
+    });
 
     React.useEffect(() => {
         const loadDefaultVat = async () => {
@@ -24,35 +44,70 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                 console.error("Error loading default VAT:", err);
             }
         };
+        const loadCrmSettings = async () => {
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', ['crm_redeem_rate_xhaus', 'crm_min_redeem_xhaus']);
+                if (data) {
+                    const settingsObj = {};
+                    data.forEach(item => {
+                        settingsObj[item.key] = parseFloat(item.value);
+                    });
+                    setCrmSettings(prev => ({ ...prev, ...settingsObj }));
+                }
+            } catch (err) {
+                console.error("Error loading CRM settings:", err);
+            }
+        };
         loadDefaultVat();
+        loadCrmSettings();
     }, []);
+
+    // Reset points redemption when switching tables
+    React.useEffect(() => {
+        setXhausToRedeem(0);
+        setShowRedeemInput(false);
+        setRedeemInputVal('');
+    }, [booking?.id]);
+
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // Member Tier Discount Calculation
     const getMemberDiscount = () => {
         if (!booking || !booking.profiles) return 0;
         const role = (booking.profiles.role || 'customer').toLowerCase();
-        const completedCount = parseInt(booking.profiles.completed_bookings) || 0;
+        const tier = attachedMemberCrm?.current_tier || '';
         
         let rate = 0;
-        if (role === 'admin' || role === 'vip') {
+        if (role === 'admin' || role === 'vip' || tier === 'Inner Haus') {
             rate = 0.15; // 15%
-        } else if (role === 'gold' || completedCount >= 10) {
+        } else if (role === 'gold' || tier === 'Haus People') {
             rate = 0.10; // 10%
-        } else if (role === 'customer' || completedCount >= 3) {
+        } else if (role === 'customer' || tier === 'Haus Common') {
             rate = 0.05; // 5%
         }
         return subtotal * rate;
     };
 
     const memberDiscount = getMemberDiscount();
-    const discountLabel = booking?.profiles 
-        ? `${(booking.profiles.role || 'MEMBER').toUpperCase()}` 
-        : '';
+    const discountLabel = attachedMemberCrm?.current_tier 
+        ? attachedMemberCrm.current_tier.toUpperCase()
+        : booking?.profiles 
+            ? `${(booking.profiles.role || 'MEMBER').toUpperCase()}` 
+            : '';
         
-    const netBeforeTax = subtotal - memberDiscount;
+    // xhaus points calculations
+    const xhausDiscount = xhausToRedeem * (crmSettings.crm_redeem_rate_xhaus || 1.0);
+    const netBeforeTax = Math.max(0, subtotal - memberDiscount - xhausDiscount);
     const tax = includeTax ? netBeforeTax * 0.07 : 0;
     const total = netBeforeTax + tax;
+    
+    // xhaus points earned
+    const pointsMultiplier = attachedMemberCrm ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
+    const pointsEarned = Math.floor((total / 100) * pointsMultiplier * 100) / 100;
+    
     const hasNewItems = order.items.some(item => !item.db_id);
 
     return (
@@ -170,16 +225,31 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
 
             {/* Customer Lookup (CRM Hook) */}
             {booking?.profiles ? (
-                <div className="px-3 py-2 shrink-0">
+                <div className="px-3 py-2 shrink-0 space-y-2">
                     <div className="w-full bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-2.5 flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-3 min-w-0">
                             <div className="w-7 h-7 rounded-full bg-[#ff0000]/10 border border-[#ff0000]/20 flex items-center justify-center text-[#ff0000] shrink-0">
                                 <UserPlus size={14} />
                             </div>
                             <div className="text-left min-w-0">
-                                <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                    {attachedMemberCrm && (
+                                        <span className="px-1.5 py-0.2 bg-[#1A1A1A] text-white text-[7px] font-mono font-bold rounded uppercase tracking-wider">
+                                            {attachedMemberCrm.current_tier}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-[11px] font-bold uppercase mt-0.5 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
-                                {booking.profiles.phone && <p className="text-[8px] text-[#767673] font-mono leading-none mt-0.5">{booking.profiles.phone}</p>}
+                                <div className="flex items-center gap-2 mt-0.5 text-[8px] font-mono text-[#767673] leading-none">
+                                    <span>{booking.profiles.phone_number || booking.profiles.phone || '-'}</span>
+                                    {booking.profiles.xhaus_balance !== undefined && (
+                                        <>
+                                            <span>•</span>
+                                            <span className="text-amber-700 font-bold">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -198,6 +268,98 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                                 <Trash2 size={12} />
                             </button>
                         </div>
+                    </div>
+
+                    {/* xhaus Coins Redemption Panel */}
+                    <div className="bg-[#FFF9E6] border border-amber-200 rounded-xl p-2.5 flex flex-col gap-2 shadow-sm font-sans">
+                        {!showRedeemInput ? (
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Coins size={12} className="text-[#FFAA00]" />
+                                    <div className="text-left">
+                                        {xhausToRedeem > 0 ? (
+                                            <p className="text-[9px] font-bold text-amber-900 leading-none">
+                                                Redeemed {xhausToRedeem} xhaus (-฿{xhausDiscount.toFixed(2)})
+                                            </p>
+                                        ) : (
+                                            <p className="text-[9px] text-amber-800 font-medium leading-none">
+                                                Use xhaus for discount (1 xhaus = ฿{crmSettings.crm_redeem_rate_xhaus})
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                {xhausToRedeem > 0 ? (
+                                    <button 
+                                        onClick={() => {
+                                            setXhausToRedeem(0);
+                                            setRedeemInputVal('');
+                                        }}
+                                        className="px-2 py-0.5 bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 text-[8px] font-bold uppercase rounded cursor-pointer transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => {
+                                            setRedeemInputVal(Math.min(parseFloat(booking.profiles.xhaus_balance || 0), Math.floor(total)).toString());
+                                            setShowRedeemInput(true);
+                                        }}
+                                        className="px-2.5 py-1 bg-[#1A1A1A] hover:bg-[#333330] text-white text-[8px] font-bold uppercase rounded-lg cursor-pointer transition-all active:scale-95"
+                                    >
+                                        Redeem
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-amber-900">
+                                        Enter coins to redeem (Max: {parseFloat(booking.profiles.xhaus_balance || 0).toFixed(2)})
+                                    </span>
+                                    <button 
+                                        onClick={() => setShowRedeemInput(false)}
+                                        className="text-amber-800 hover:text-amber-950 font-bold font-mono text-[9px] uppercase cursor-pointer"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                                <div className="flex gap-1.5">
+                                    <input 
+                                        type="number"
+                                        value={redeemInputVal}
+                                        onChange={(e) => setRedeemInputVal(e.target.value)}
+                                        placeholder="e.g. 50"
+                                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-xs font-bold font-mono text-[#1A1A1A] outline-none"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            const points = parseFloat(redeemInputVal) || 0;
+                                            const maxBalance = parseFloat(booking.profiles.xhaus_balance) || 0;
+                                            const minRedeem = crmSettings.crm_min_redeem_xhaus || 10.0;
+                                            
+                                            if (points < minRedeem) {
+                                                toast.error(`จำนวนเหรียญที่แลกต้องไม่ต่ำกว่า ${minRedeem} xhaus ครับ`);
+                                                return;
+                                            }
+                                            if (points > maxBalance) {
+                                                toast.error(`คะแนนคงเหลือมีเพียง ${maxBalance.toFixed(2)} xhaus ครับ`);
+                                                return;
+                                            }
+                                            if (points > total) {
+                                                toast.error('แต้มส่วนลดห้ามเกินมูลค่ารวมของบิลอาหารครับ');
+                                                return;
+                                            }
+                                            setXhausToRedeem(points);
+                                            setShowRedeemInput(false);
+                                            toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toFixed(2)}`);
+                                        }}
+                                        className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-[8px] font-bold uppercase rounded-lg px-3 cursor-pointer transition-all active:scale-95"
+                                    >
+                                        Apply
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -274,6 +436,13 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                             <span>-฿{memberDiscount.toFixed(2)}</span>
                         </div>
                     )}
+
+                    {xhausDiscount > 0 && (
+                        <div className="flex justify-between items-center text-amber-700 font-bold py-0.5 animate-fade-in">
+                            <span>xhaus REDEEMED</span>
+                            <span>-฿{xhausDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
                     
                     {/* VAT Toggle Row */}
                     <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5">
@@ -295,6 +464,13 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                         <span className="text-[9px] font-bold pb-0.5">NET TOTAL</span>
                         <span className="text-lg font-black text-[#ff0000]">฿{total.toFixed(2)}</span>
                     </div>
+
+                    {attachedMemberCrm && pointsEarned > 0 && (
+                        <div className="flex justify-between items-center text-emerald-600 font-bold pt-1.5 border-t border-dashed border-[#D1D1CD] animate-fade-in">
+                            <span>COINS TO EARN (สะสมเพิ่ม)</span>
+                            <span>+{pointsEarned.toFixed(2)} xhaus</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Payment Method Selector / Actions */}
@@ -344,7 +520,7 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                                         <ReceiptText size={10} /> KITCHEN SLIP
                                     </button>
                                     <button 
-                                        onClick={() => onCheckout(paymentMethod, includeTax)}
+                                        onClick={() => onCheckout(paymentMethod, includeTax, pointsEarned, xhausToRedeem, xhausDiscount)}
                                         className="flex items-center justify-center gap-1 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
                                     >
                                         <Check size={10} /> CHECKOUT / ปิดโต๊ะ

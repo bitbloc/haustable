@@ -25,6 +25,7 @@ import AdminPromotions from './components/admin/AdminPromotions' // NEW
 import AdminTableManager from './admin/AdminTableManager' // NEW
 
 import LoginPage from './LoginPage' // NEW
+import MemberCard from './pages/MemberCard' // NEW
 import StaffDashboard from './StaffDashboard'
 import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
 import StockPage from './StockPage' // NEW
@@ -185,6 +186,7 @@ function App() {
             {/* Customer Table Ordering */}
             <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
             <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
+            <Route path="/member-card" element={<MemberCard />} />
             
             {/* Staff/Kitchen Route (Protected) */}
             <Route element={<StaffAuthLayout />}>

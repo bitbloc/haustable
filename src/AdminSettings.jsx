@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift } from 'lucide-react'
+import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
 import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from './utils/printerHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
@@ -69,7 +70,10 @@ export default function AdminSettings() {
         spotify_client_secret: '',
         link_og_image_url: '',
         link_og_description: '',
-        default_vat_enabled: 'true'
+        default_vat_enabled: 'true',
+        crm_welcome_xhaus: '10.00',
+        crm_redeem_rate_xhaus: '1.00',
+        crm_min_redeem_xhaus: '10.00'
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -77,6 +81,14 @@ export default function AdminSettings() {
     const [uploadingFloor, setUploadingFloor] = useState(false)
     const [uploadingSound, setUploadingSound] = useState(false)
     const [uploadingHomeBg, setUploadingHomeBg] = useState(false)
+    const [crmQrUrl, setCrmQrUrl] = useState('')
+
+    useEffect(() => {
+        const url = `${window.location.origin}/member-card`;
+        QRCode.toDataURL(url, { width: 300, margin: 2 })
+            .then(urlData => setCrmQrUrl(urlData))
+            .catch(err => console.error("Failed to generate CRM QR:", err));
+    }, []);
 
     // Blocked Dates
     const [blockedList, setBlockedList] = useState([])
@@ -522,7 +534,8 @@ export default function AdminSettings() {
                     { id: 'link', label: '🔗 หน้า Landing Page (/link)', desc: 'Link Page Manager' },
                     { id: 'checkins', label: '📸 จัดการรูปเช็กอิน / รีวิว', desc: 'Manage Check-in Stream' },
                     { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' },
-                    { id: 'printers', label: '🖨 ตั้งค่าเครื่องพิมพ์ (Printers)', desc: 'Configure Cashier & Kitchen Printers' }
+                    { id: 'printers', label: '🖨 ตั้งค่าเครื่องพิมพ์ (Printers)', desc: 'Configure Cashier & Kitchen Printers' },
+                    { id: 'crm', label: '🪙 ระบบ CRM & สะสมเหรียญ xhaus', desc: 'Manage Tiers & Coins Settings' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -1446,6 +1459,175 @@ export default function AdminSettings() {
                                 >
                                     Test Kitchen Order Print
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* TAB 5: CRM Settings */}
+                {activeSettingsTab === 'crm' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in font-sans text-[#1A1A1A] mb-8">
+                        {/* Column 1: Config Rules */}
+                        <div className="md:col-span-2 space-y-6">
+                            {/* Coins Settings Card */}
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
+                                    <Coins className="text-[#FFAA00]" size={20} />
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        xhaus Coins Configuration (เงื่อนไขเงินเหรียญ)
+                                    </h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Welcome Coins (เหรียญต้อนรับ)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                value={settings.crm_welcome_xhaus || ''} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_welcome_xhaus: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_welcome_xhaus', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">xhaus</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">จำนวนเหรียญที่สมาชิกใหม่ได้รับฟรีทันทีหลังสมัคร</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Redeem Rate (อัตราแลกส่วนลด)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                value={settings.crm_redeem_rate_xhaus || ''} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_redeem_rate_xhaus: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_redeem_rate_xhaus', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">Baht</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">มูลค่าเงินบาทที่ได้รับต่อการแลก 1 xhaus (1:1)</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Min Redeem Limit (แลกใช้ขั้นต่ำ)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                value={settings.crm_min_redeem_xhaus || ''} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_min_redeem_xhaus: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_min_redeem_xhaus', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">xhaus</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">จำนวนเหรียญขั้นต่ำที่ต้องมีจึงจะทำรายการแลกได้</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Relationship Levels Card */}
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
+                                    <Award className="text-zinc-800" size={20} />
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        Relationship Levels (ระดับความสัมพันธ์ของคนในบ้าน)
+                                    </h2>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {/* Level 1: Common */}
+                                    <div className="flex items-center justify-between p-4 bg-white border border-[#D1D1CD] rounded-xl hover:shadow-md transition-all">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-2 py-0.5 bg-amber-700/10 text-amber-800 border border-amber-700/20 text-[9px] font-mono font-bold rounded uppercase tracking-wider">Level 01</span>
+                                                <h3 className="text-xs font-bold text-[#1A1A1A]">Haus Common</h3>
+                                            </div>
+                                            <p className="text-[9px] text-[#767673]">"พื้นที่ที่เราเริ่มรู้จักกัน" — ทุกคนเริ่มต้นจากพื้นที่เดียวกัน</p>
+                                            <p className="text-[8px] text-zinc-400 font-mono">เงื่อนไข: สมัครสมาชิกและมียอดใช้จ่ายสะสม 12 เดือนแรกเริ่ม (0 – 3,999 บาท)</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs font-mono font-bold text-[#1A1A1A]">ทุก 100 บาท = 1 xhaus</p>
+                                            <p className="text-[8px] text-[#00CC44] font-bold uppercase font-mono mt-0.5">มูลค่าคืน 1.00%</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Level 2: People */}
+                                    <div className="flex items-center justify-between p-4 bg-white border border-[#D1D1CD] rounded-xl hover:shadow-md transition-all">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-2 py-0.5 bg-slate-400/10 text-slate-800 border border-slate-300/20 text-[9px] font-mono font-bold rounded uppercase tracking-wider">Level 02</span>
+                                                <h3 className="text-xs font-bold text-[#1A1A1A]">Haus People</h3>
+                                            </div>
+                                            <p className="text-[9px] text-[#767673]">"คนที่กลับมาเจอกันบ่อยขึ้น" — ไม่ได้แค่มาเยือนแต่กลับมาเจอกันเรื่อยๆ</p>
+                                            <p className="text-[8px] text-zinc-400 font-mono">เงื่อนไข: มียอดจ่ายสะสมสุทธิครบ 4,000 บาทภายใน 12 เดือน</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs font-mono font-bold text-[#1A1A1A]">ทุก 100 บาท = 1.25 xhaus</p>
+                                            <p className="text-[8px] text-[#00CC44] font-bold uppercase font-mono mt-0.5">มูลค่าคืน 1.25%</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Level 3: Inner */}
+                                    <div className="flex items-center justify-between p-4 bg-white border border-[#D1D1CD] rounded-xl hover:shadow-md transition-all">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-700 border border-amber-500/20 text-[9px] font-mono font-bold rounded uppercase tracking-wider">Level 03</span>
+                                                <h3 className="text-xs font-bold text-[#1A1A1A]">Inner Haus</h3>
+                                            </div>
+                                            <p className="text-[9px] text-[#767673]">"คนในบ้าน" — เข้ามาสัมผัสพื้นที่ข้างในบ้านอย่างอบอุ่นแล้ว</p>
+                                            <p className="text-[8px] text-zinc-400 font-mono">เงื่อนไข: มียอดจ่ายสะสมสุทธิครบ 12,000 บาทภายใน 12 เดือน</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs font-mono font-bold text-[#1A1A1A]">ทุก 100 บาท = 1.50 xhaus</p>
+                                            <p className="text-[8px] text-[#00CC44] font-bold uppercase font-mono mt-0.5">มูลค่าคืน 1.50%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 2: QR Code Registration Card */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm flex flex-col items-center text-center space-y-4 h-fit">
+                            <div className="w-full flex items-center gap-2 border-b border-[#D1D1CD] pb-3 text-left">
+                                <QrCode className="text-zinc-800" size={20} />
+                                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                    Registration QR Code
+                                </h2>
+                            </div>
+
+                            <p className="text-[9px] text-[#767673] font-medium leading-relaxed">
+                                พิมพ์ภาพหรือตั้งคิวอาร์โค้ดนี้ไว้ที่โต๊ะอาหาร เพื่อให้ลูกค้าสแกนสมัครสมาชิกด่วนผ่านมือถือได้ทันที
+                            </p>
+
+                            <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl shadow-inner flex items-center justify-center">
+                                {crmQrUrl ? (
+                                    <img src={crmQrUrl} alt="CRM Member Card Registration QR" className="w-48 h-48" />
+                                ) : (
+                                    <div className="w-48 h-48 flex items-center justify-center text-zinc-400 font-mono text-[9px]">Generating QR...</div>
+                                )}
+                            </div>
+
+                            <div className="w-full pt-4 space-y-2">
+                                <a 
+                                    href={crmQrUrl} 
+                                    download="crm-member-registration-qr.png"
+                                    className="w-full bg-[#1A1A1A] hover:bg-[#333330] text-white py-2.5 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                >
+                                    <Download size={12} /> Download QR Code Image
+                                </a>
+                                <p className="text-[8px] text-[#767673] font-mono select-all">
+                                    Target: {window.location.origin}/member-card
+                                </p>
                             </div>
                         </div>
                     </div>

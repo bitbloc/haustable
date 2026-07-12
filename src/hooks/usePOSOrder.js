@@ -19,7 +19,7 @@ export function usePOSOrder() {
             const today = new Date().toISOString().split('T')[0];
             const { data, error } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), order_items(*, menu_items(name))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .gte('booking_time', `${today}T00:00:00`)
@@ -200,7 +200,15 @@ export function usePOSOrder() {
         }
     };
 
-    const completeCheckout = async (bookingId, totalAmount, paymentMethod = 'cash', discountAmount = 0) => {
+    const completeCheckout = async (
+        bookingId, 
+        totalAmount, 
+        paymentMethod = 'cash', 
+        discountAmount = 0,
+        xhausEarned = 0,
+        xhausRedeemed = 0,
+        xhausDiscount = 0
+    ) => {
         setLoading(true);
         
         if (!isOnline()) {
@@ -208,13 +216,30 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
-                    return { ...b, status: 'completed', total_amount: totalAmount, discount_amount: discountAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
+                    return { 
+                        ...b, 
+                        status: 'completed', 
+                        total_amount: totalAmount, 
+                        discount_amount: discountAmount, 
+                        xhaus_earned: xhausEarned,
+                        xhaus_redeemed: xhausRedeemed,
+                        xhaus_discount: xhausDiscount,
+                        staff_remark: `Paid by ${paymentMethod.toUpperCase()}` 
+                    };
                 }
                 return b;
             });
             posCache.setBookings(updatedBookings);
 
-            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod, discountAmount });
+            addToOfflineQueue('complete_checkout', { 
+                bookingId, 
+                totalAmount, 
+                paymentMethod, 
+                discountAmount, 
+                xhausEarned, 
+                xhausRedeemed, 
+                xhausDiscount 
+            });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
             
             setLoading(false);
@@ -223,7 +248,8 @@ export function usePOSOrder() {
         }
 
         try {
-            const { error } = await supabase
+            // 1. Complete booking status
+            const { error: bookingErr } = await supabase
                 .from('bookings')
                 .update({
                     status: 'completed',
@@ -233,8 +259,19 @@ export function usePOSOrder() {
                 })
                 .eq('id', bookingId);
 
+            if (bookingErr) throw bookingErr;
+
+            // 2. Process xhaus transaction in database (updates profile points & dynamic tier details)
+            const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
+                p_booking_id: bookingId,
+                p_xhaus_earned: xhausEarned,
+                p_xhaus_redeemed: xhausRedeemed,
+                p_xhaus_discount: xhausDiscount
+            });
+
+            if (rpcErr) throw rpcErr;
+
             setLoading(false);
-            if (error) throw error;
             
             // Remove from local active bookings cache
             const bookings = posCache.getBookings().filter(b => b.id !== bookingId);
@@ -251,13 +288,30 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
-                    return { ...b, status: 'completed', total_amount: totalAmount, discount_amount: discountAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
+                    return { 
+                        ...b, 
+                        status: 'completed', 
+                        total_amount: totalAmount, 
+                        discount_amount: discountAmount, 
+                        xhaus_earned: xhausEarned,
+                        xhaus_redeemed: xhausRedeemed,
+                        xhaus_discount: xhausDiscount,
+                        staff_remark: `Paid by ${paymentMethod.toUpperCase()}` 
+                    };
                 }
                 return b;
             });
             posCache.setBookings(updatedBookings);
 
-            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod, discountAmount });
+            addToOfflineQueue('complete_checkout', { 
+                bookingId, 
+                totalAmount, 
+                paymentMethod, 
+                discountAmount, 
+                xhausEarned, 
+                xhausRedeemed, 
+                xhausDiscount 
+            });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
 
             setLoading(false);

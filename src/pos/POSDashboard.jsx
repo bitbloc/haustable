@@ -357,6 +357,26 @@ export default function POSDashboard() {
         };
     }, []);
 
+    const [attachedMemberCrm, setAttachedMemberCrm] = useState(null);
+
+    useEffect(() => {
+        const fetchAttachedMemberCrm = async () => {
+            if (!activeBooking?.user_id) {
+                setAttachedMemberCrm(null);
+                return;
+            }
+            try {
+                const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: activeBooking.user_id });
+                if (!error && data && data.length > 0) {
+                    setAttachedMemberCrm(data[0]);
+                }
+            } catch (err) {
+                console.error("Failed to load attached member CRM:", err);
+            }
+        };
+        fetchAttachedMemberCrm();
+    }, [activeBooking]);
+
     // Repeating Sound Alert when pending orders exist
     useEffect(() => {
         if (!hasPendingOrders) return;
@@ -731,7 +751,13 @@ export default function POSDashboard() {
         }));
     };
 
-    const handleCheckout = async (paymentMethod, includeTax) => {
+    const handleCheckout = async (
+        paymentMethod, 
+        includeTax, 
+        pointsEarned = 0, 
+        xhausToRedeem = 0, 
+        xhausDiscount = 0
+    ) => {
         if (currentOrder.items.length === 0) return;
 
         let bookingId = activeBooking?.id;
@@ -758,22 +784,31 @@ export default function POSDashboard() {
         let memberDiscount = 0;
         if (currentBooking && currentBooking.profiles) {
             const role = (currentBooking.profiles.role || 'customer').toLowerCase();
+            const tier = attachedMemberCrm?.current_tier || '';
             const completedCount = parseInt(currentBooking.profiles.completed_bookings) || 0;
             let rate = 0;
-            if (role === 'admin' || role === 'vip') {
+            if (role === 'admin' || role === 'vip' || tier === 'Inner Haus') {
                 rate = 0.15;
-            } else if (role === 'gold' || completedCount >= 10) {
+            } else if (role === 'gold' || tier === 'Haus People') {
                 rate = 0.10;
-            } else if (role === 'customer' || completedCount >= 3) {
+            } else if (role === 'customer' || tier === 'Haus Common') {
                 rate = 0.05;
             }
             memberDiscount = subtotal * rate;
         }
 
-        const netBeforeTax = subtotal - memberDiscount;
-        const finalTotal = includeTax ? netBeforeTax * 1.07 : netBeforeTax;
+        const netBeforeTax = subtotal - memberDiscount - xhausDiscount;
+        const finalTotal = includeTax ? Math.max(0, netBeforeTax * 1.07) : Math.max(0, netBeforeTax);
 
-        const success = await completeCheckout(bookingId, finalTotal, paymentMethod, memberDiscount);
+        const success = await completeCheckout(
+            bookingId, 
+            finalTotal, 
+            paymentMethod, 
+            memberDiscount + xhausDiscount, 
+            pointsEarned, 
+            xhausToRedeem, 
+            xhausDiscount
+        );
         if (success) {
             const updatedBooking = await getActiveBooking(selectedTable.id);
             if (updatedBooking) {
@@ -814,6 +849,7 @@ export default function POSDashboard() {
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
+                            attachedMemberCrm={attachedMemberCrm}
                             onUpdateQuantity={handleUpdateQuantity}
                             onClear={() => setCurrentOrder({ items: [], customer: null, table: selectedTable })}
                             onCheckout={handleCheckout}
