@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -24,6 +24,15 @@ export default function POSOrderPanel({
     const [xhausToRedeem, setXhausToRedeem] = React.useState(0);
     const [showRedeemInput, setShowRedeemInput] = React.useState(false);
     const [redeemInputVal, setRedeemInputVal] = React.useState('');
+    
+    // Manual discount states
+    const [manualDiscountVal, setManualDiscountVal] = React.useState('');
+    const [manualDiscountType, setManualDiscountType] = React.useState('amount'); // 'amount' | 'percent'
+    
+    // Promotions states
+    const [activePromotions, setActivePromotions] = React.useState([]);
+    const [selectedPromo, setSelectedPromo] = React.useState(null);
+
     const [crmSettings, setCrmSettings] = React.useState({
         crm_redeem_rate_xhaus: 1.0,
         crm_min_redeem_xhaus: 10.0
@@ -61,20 +70,43 @@ export default function POSOrderPanel({
                 console.error("Error loading CRM settings:", err);
             }
         };
+        const fetchActivePromotions = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('promotion_codes')
+                    .select('*')
+                    .eq('is_active', true);
+                if (!error && data) {
+                    const now = new Date();
+                    const filtered = data.filter(p => {
+                        const startOk = !p.start_date || new Date(p.start_date) <= now;
+                        const endOk = !p.end_date || new Date(p.end_date) >= now;
+                        return startOk && endOk;
+                    });
+                    setActivePromotions(filtered);
+                }
+            } catch (err) {
+                console.error("Error loading active promotions:", err);
+            }
+        };
         loadDefaultVat();
         loadCrmSettings();
+        fetchActivePromotions();
     }, []);
 
-    // Reset points redemption when switching tables
+    // Reset points & discount settings when switching tables/bookings
     React.useEffect(() => {
         setXhausToRedeem(0);
         setShowRedeemInput(false);
         setRedeemInputVal('');
+        setManualDiscountVal('');
+        setManualDiscountType('amount');
+        setSelectedPromo(null);
     }, [booking?.id]);
 
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // Member Tier Discount Calculation
+    // 1. Member Tier Discount Calculation
     const getMemberDiscount = () => {
         if (!booking || !booking.profiles) return 0;
         const role = (booking.profiles.role || 'customer').toLowerCase();
@@ -98,9 +130,37 @@ export default function POSOrderPanel({
             ? `${(booking.profiles.role || 'MEMBER').toUpperCase()}` 
             : '';
         
-    // xhaus points calculations
+    // 2. Promotion Code Discount Calculation
+    const getPromoDiscount = () => {
+        if (!selectedPromo) return 0;
+        if (subtotal < parseFloat(selectedPromo.min_spend || 0)) {
+            return 0; // Under minimum spend
+        }
+        if (selectedPromo.discount_type === 'percentage') {
+            return subtotal * (parseFloat(selectedPromo.discount_value) / 100);
+        } else {
+            return parseFloat(selectedPromo.discount_value);
+        }
+    };
+    const promoDiscount = getPromoDiscount();
+
+    // 3. Manual Discount Calculation
+    const getManualDiscount = () => {
+        const val = parseFloat(manualDiscountVal) || 0;
+        if (val <= 0) return 0;
+        if (manualDiscountType === 'percent') {
+            return subtotal * (val / 100);
+        } else {
+            return val;
+        }
+    };
+    const manualDiscount = getManualDiscount();
+
+    // 4. xhaus Coins Discount Calculation
     const xhausDiscount = xhausToRedeem * (crmSettings.crm_redeem_rate_xhaus || 1.0);
-    const netBeforeTax = Math.max(0, subtotal - memberDiscount - xhausDiscount);
+    
+    // Net total calculations
+    const netBeforeTax = Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount);
     const tax = includeTax ? netBeforeTax * 0.07 : 0;
     const total = netBeforeTax + tax;
     
@@ -424,6 +484,88 @@ export default function POSOrderPanel({
 
             {/* Summary & Checkout */}
             <div className="p-4 bg-[#EBEBE9] border-t border-[#D1D1CD] space-y-3 shrink-0">
+                {/* Custom Discount & Promotions Panel */}
+                <div className="bg-white border border-[#D1D1CD] rounded-xl p-2.5 space-y-2.5 shadow-sm">
+                    {/* Header */}
+                    <div className="flex items-center gap-1.5 border-b border-[#F5F5F2] pb-1.5">
+                        <Tag size={12} className="text-[#1A1A1A]" />
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                            Discounts & Promo (ส่วนลดและโปรโมชั่น)
+                        </span>
+                    </div>
+
+                    {/* Promotion Code Dropdown */}
+                    <div className="space-y-1">
+                        <label className="block text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
+                            <Ticket size={10} /> Select Promotion (เลือกโปรโมชั่น)
+                        </label>
+                        <select
+                            value={selectedPromo ? selectedPromo.id : ''}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) {
+                                    setSelectedPromo(null);
+                                    return;
+                                }
+                                const found = activePromotions.find(p => p.id === val);
+                                if (found) {
+                                    if (subtotal < parseFloat(found.min_spend || 0)) {
+                                        toast.error(`โปรโมชั่นนี้ต้องการยอดขั้นต่ำ ฿${parseFloat(found.min_spend).toLocaleString()} ครับ (ยอดปัจจุบัน: ฿${subtotal.toLocaleString()})`);
+                                        return;
+                                    }
+                                    setSelectedPromo(found);
+                                    toast.success(`ใช้โปรโมชั่น ${found.code} สำเร็จ!`);
+                                }
+                            }}
+                            className="w-full px-2 py-1.5 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-[10px] text-[#1A1A1A] font-semibold outline-none cursor-pointer"
+                        >
+                            <option value="">-- No Promotion Code --</option>
+                            {activePromotions.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    🎟 {p.code} ({p.discount_type === 'percentage' ? `${p.discount_value}%` : `฿${p.discount_value}`} Off)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Manual Discount Entry */}
+                    <div className="space-y-1">
+                        <label className="block text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
+                            <Percent size={10} /> Custom Manual Discount (ใส่ส่วนลดเอง)
+                        </label>
+                        <div className="flex gap-1.5">
+                            {/* Unit Toggle */}
+                            <div className="flex bg-[#F5F5F2] border border-[#D1D1CD] p-0.5 rounded-lg">
+                                <button
+                                    type="button"
+                                    onClick={() => setManualDiscountType('amount')}
+                                    className={`px-2 py-0.5 text-[9px] font-bold rounded ${manualDiscountType === 'amount' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
+                                >
+                                    ฿
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setManualDiscountType('percent')}
+                                    className={`px-2 py-0.5 text-[9px] font-bold rounded ${manualDiscountType === 'percent' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
+                                >
+                                    %
+                                </button>
+                            </div>
+                            {/* Input box */}
+                            <input
+                                type="number"
+                                placeholder={manualDiscountType === 'amount' ? 'e.g. 50' : 'e.g. 10'}
+                                value={manualDiscountVal}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setManualDiscountVal(val);
+                                }}
+                                className="flex-1 px-2.5 py-1 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-xs font-bold font-mono text-[#1A1A1A] outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="space-y-1 font-mono text-[9px] font-bold uppercase tracking-wider text-[#767673]">
                     <div className="flex justify-between items-center">
                         <span>SUBTOTAL</span>
@@ -434,6 +576,20 @@ export default function POSOrderPanel({
                         <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
                             <span>DISCOUNT ({discountLabel})</span>
                             <span>-฿{memberDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    {promoDiscount > 0 && (
+                        <div className="flex justify-between items-center text-green-600 font-bold py-0.5 animate-fade-in">
+                            <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
+                            <span>-฿{promoDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    {manualDiscount > 0 && (
+                        <div className="flex justify-between items-center text-blue-600 font-bold py-0.5 animate-fade-in">
+                            <span>MANUAL DISCOUNT</span>
+                            <span>-฿{manualDiscount.toFixed(2)}</span>
                         </div>
                     )}
 
@@ -520,7 +676,7 @@ export default function POSOrderPanel({
                                         <ReceiptText size={10} /> KITCHEN SLIP
                                     </button>
                                     <button 
-                                        onClick={() => onCheckout(paymentMethod, includeTax, pointsEarned, xhausToRedeem, xhausDiscount)}
+                                        onClick={() => onCheckout(paymentMethod, includeTax, pointsEarned, xhausToRedeem, xhausDiscount, promoDiscount, manualDiscount)}
                                         className="flex items-center justify-center gap-1 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
                                     >
                                         <Check size={10} /> CHECKOUT / ปิดโต๊ะ

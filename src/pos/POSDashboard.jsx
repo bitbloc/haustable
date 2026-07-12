@@ -756,7 +756,9 @@ export default function POSDashboard() {
         includeTax, 
         pointsEarned = 0, 
         xhausToRedeem = 0, 
-        xhausDiscount = 0
+        xhausDiscount = 0,
+        promoDiscount = 0,
+        manualDiscount = 0
     ) => {
         if (currentOrder.items.length === 0) return;
 
@@ -797,14 +799,14 @@ export default function POSDashboard() {
             memberDiscount = subtotal * rate;
         }
 
-        const netBeforeTax = subtotal - memberDiscount - xhausDiscount;
+        const netBeforeTax = subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount;
         const finalTotal = includeTax ? Math.max(0, netBeforeTax * 1.07) : Math.max(0, netBeforeTax);
 
         const success = await completeCheckout(
             bookingId, 
             finalTotal, 
             paymentMethod, 
-            memberDiscount + xhausDiscount, 
+            memberDiscount + promoDiscount + manualDiscount + xhausDiscount, 
             pointsEarned, 
             xhausToRedeem, 
             xhausDiscount
