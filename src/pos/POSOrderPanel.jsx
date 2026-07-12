@@ -27,8 +27,32 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
         loadDefaultVat();
     }, []);
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const tax = includeTax ? subtotal * 0.07 : 0;
-    const total = subtotal + tax;
+    
+    // Member Tier Discount Calculation
+    const getMemberDiscount = () => {
+        if (!booking || !booking.profiles) return 0;
+        const role = (booking.profiles.role || 'customer').toLowerCase();
+        const completedCount = parseInt(booking.profiles.completed_bookings) || 0;
+        
+        let rate = 0;
+        if (role === 'admin' || role === 'vip') {
+            rate = 0.15; // 15%
+        } else if (role === 'gold' || completedCount >= 10) {
+            rate = 0.10; // 10%
+        } else if (role === 'customer' || completedCount >= 3) {
+            rate = 0.05; // 5%
+        }
+        return subtotal * rate;
+    };
+
+    const memberDiscount = getMemberDiscount();
+    const discountLabel = booking?.profiles 
+        ? `${(booking.profiles.role || 'MEMBER').toUpperCase()}` 
+        : '';
+        
+    const netBeforeTax = subtotal - memberDiscount;
+    const tax = includeTax ? netBeforeTax * 0.07 : 0;
+    const total = netBeforeTax + tax;
     const hasNewItems = order.items.some(item => !item.db_id);
 
     return (
@@ -212,6 +236,13 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                         <span>SUBTOTAL</span>
                         <span className="text-[#1A1A1A]">฿{subtotal.toFixed(2)}</span>
                     </div>
+
+                    {memberDiscount > 0 && (
+                        <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
+                            <span>DISCOUNT ({discountLabel})</span>
+                            <span>-฿{memberDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
                     
                     {/* VAT Toggle Row */}
                     <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5">
@@ -225,7 +256,7 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                             </button>
                         </div>
                         <span className={`font-bold ${includeTax ? 'text-[#1A1A1A]' : 'text-gray-400 line-through'}`}>
-                            ฿{(subtotal * 0.07).toFixed(2)}
+                            ฿{(netBeforeTax * 0.07).toFixed(2)}
                         </span>
                     </div>
 

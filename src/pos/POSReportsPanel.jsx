@@ -18,7 +18,7 @@ import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
 import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../utils/printerHelper';
-import { getShiftHistory } from '../utils/shiftHelper';
+import { getShiftHistory, syncShiftHistoryFromCloud } from '../utils/shiftHelper';
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
@@ -36,6 +36,13 @@ export default function POSReportsPanel() {
     const loadShiftHistoryData = () => {
         const history = getShiftHistory();
         setShiftHistory(history);
+
+        // Fetch latest from Supabase and sync in background
+        syncShiftHistoryFromCloud().then(cloudHistory => {
+            if (cloudHistory) {
+                setShiftHistory(cloudHistory);
+            }
+        });
     };
 
     useEffect(() => {

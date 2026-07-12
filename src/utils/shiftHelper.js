@@ -1,7 +1,43 @@
+import { supabase } from '../lib/supabaseClient';
+
 const CURRENT_SHIFT_KEY = 'pos_current_shift';
 const SHIFT_HISTORY_KEY = 'pos_shift_history';
 
-// 1. Get current active shift
+// Helper: Sync shift log directly to Supabase cloud in background
+export async function syncShiftToCloud(shift) {
+    if (!shift) return;
+    try {
+        const { error } = await supabase
+            .from('pos_shifts')
+            .upsert({
+                id: shift.id,
+                staff_name: shift.staffName,
+                opened_at: shift.openedAt,
+                closed_at: shift.closedAt,
+                opening_float: shift.openingFloat,
+                closed_cash: shift.closedCash,
+                expected_cash: shift.expectedCash,
+                difference: shift.difference,
+                status: shift.status,
+                transactions: shift.transactions || [],
+                adjustments: shift.adjustments || [],
+                cash_sales: shift.cashSales || 0,
+                qr_sales: shift.qrSales || 0,
+                total_sales: shift.totalSales || 0,
+                total_in: shift.totalIn || 0,
+                total_out: shift.totalOut || 0
+            });
+        if (error) {
+            console.warn('[Shift Sync] Failed to sync shift to Supabase:', error);
+        } else {
+            console.log('[Shift Sync] Shift synced successfully to cloud:', shift.id);
+        }
+    } catch (err) {
+        console.error('[Shift Sync] Cloud sync error:', err);
+    }
+}
+
+// 1. Get current active shift from localStorage
 export function getCurrentShift() {
     try {
         const shift = JSON.parse(localStorage.getItem(CURRENT_SHIFT_KEY));
@@ -12,6 +48,88 @@ export function getCurrentShift() {
     } catch {
         return null;
     }
+}
+
+// Check and restore active open shift from Supabase cloud if wiped locally
+export async function checkAndRestoreActiveShift() {
+    try {
+        const localShift = getCurrentShift();
+        if (localShift) return localShift;
+
+        // Query Supabase for any active open shift
+        const { data, error } = await supabase
+            .from('pos_shifts')
+            .select('*')
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (!error && data) {
+            const restoredShift = {
+                id: data.id,
+                staffName: data.staff_name,
+                openedAt: data.opened_at,
+                closedAt: data.closed_at,
+                openingFloat: parseFloat(data.opening_float) || 0,
+                transactions: data.transactions || [],
+                adjustments: data.adjustments || [],
+                status: data.status,
+                closedCash: parseFloat(data.closed_cash) || 0,
+                expectedCash: parseFloat(data.expected_cash) || 0,
+                difference: parseFloat(data.difference) || 0,
+                cashSales: parseFloat(data.cash_sales) || 0,
+                qrSales: parseFloat(data.qr_sales) || 0,
+                totalSales: parseFloat(data.total_sales) || 0,
+                totalIn: parseFloat(data.total_in) || 0,
+                totalOut: parseFloat(data.total_out) || 0
+            };
+            localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(restoredShift));
+            window.dispatchEvent(new Event('pos-shift-changed'));
+            console.log('[Shift Sync] Restored active shift from cloud:', restoredShift);
+            return restoredShift;
+        }
+    } catch (err) {
+        console.error('[Shift Sync] Failed to check/restore active shift:', err);
+    }
+    return null;
+}
+
+// Sync completed shift history list from Supabase cloud
+export async function syncShiftHistoryFromCloud() {
+    try {
+        const { data, error } = await supabase
+            .from('pos_shifts')
+            .select('*')
+            .order('opened_at', { ascending: false })
+            .limit(50);
+        if (!error && data) {
+            const history = data.map(item => ({
+                id: item.id,
+                staffName: item.staff_name,
+                openedAt: item.opened_at,
+                closedAt: item.closed_at,
+                openingFloat: parseFloat(item.opening_float) || 0,
+                transactions: item.transactions || [],
+                adjustments: item.adjustments || [],
+                status: item.status,
+                closedCash: parseFloat(item.closed_cash) || 0,
+                expectedCash: parseFloat(item.expected_cash) || 0,
+                difference: parseFloat(item.difference) || 0,
+                cashSales: parseFloat(item.cash_sales) || 0,
+                qrSales: parseFloat(item.qr_sales) || 0,
+                totalSales: parseFloat(item.total_sales) || 0,
+                totalIn: parseFloat(item.total_in) || 0,
+                totalOut: parseFloat(item.total_out) || 0
+            }));
+            localStorage.setItem(SHIFT_HISTORY_KEY, JSON.stringify(history));
+            window.dispatchEvent(new Event('pos-shift-changed'));
+            return history;
+        }
+    } catch (err) {
+        console.error('[Shift Sync] Failed to sync history from cloud:', err);
+    }
+    return getShiftHistory();
 }
 
 // 2. Start a new shift
@@ -28,11 +146,19 @@ export function startShift(staffName, openingFloat) {
         closedAt: null,
         closedCash: 0,
         expectedCash: floatAmount,
-        difference: 0
+        difference: 0,
+        cashSales: 0,
+        qrSales: 0,
+        totalSales: 0,
+        totalIn: 0,
+        totalOut: 0
     };
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(newShift));
     console.log('[Shift Management] Shift started:', newShift);
     
+    // Sync to cloud
+    syncShiftToCloud(newShift);
+
     window.dispatchEvent(new Event('pos-shift-changed'));
     return newShift;
 }
@@ -55,21 +181,31 @@ export function recordShiftTransaction(bookingId, totalAmount, paymentMethod) {
     
     shift.transactions.push(newTx);
     
-    // Recalculate expected cash
-    if (newTx.paymentMethod === 'cash') {
-        const cashSales = shift.transactions
-            .filter(tx => tx.paymentMethod === 'cash')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-        const adjustments = shift.adjustments || [];
-        const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-        const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    // Recalculate cash sales & expected cash
+    const cashSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'cash')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+    const qrSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'qr')
+        .reduce((sum, tx) => sum + tx.amount, 0);
         
-        shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
-    }
+    const adjustments = shift.adjustments || [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    
+    shift.cashSales = cashSales;
+    shift.qrSales = qrSales;
+    shift.totalSales = cashSales + qrSales;
+    shift.totalIn = totalIn;
+    shift.totalOut = totalOut;
+    shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
     
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
     console.log('[Shift Management] Transaction recorded in shift:', newTx);
     
+    // Sync to cloud
+    syncShiftToCloud(shift);
+
     window.dispatchEvent(new Event('pos-shift-changed'));
 }
 
@@ -96,15 +232,27 @@ export function addShiftAdjustment(amount, note, type) {
     const cashSales = shift.transactions
         .filter(tx => tx.paymentMethod === 'cash')
         .reduce((sum, tx) => sum + tx.amount, 0);
+    const qrSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'qr')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+        
     const adjustments = shift.adjustments || [];
     const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
     const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
     
+    shift.cashSales = cashSales;
+    shift.qrSales = qrSales;
+    shift.totalSales = cashSales + qrSales;
+    shift.totalIn = totalIn;
+    shift.totalOut = totalOut;
     shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
     
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
     console.log('[Shift Management] Cash adjustment recorded:', newAdj);
     
+    // Sync to cloud
+    syncShiftToCloud(shift);
+
     window.dispatchEvent(new Event('pos-shift-changed'));
     return shift;
 }
@@ -149,7 +297,7 @@ export function closeShift(actualCash) {
         adjustments
     };
     
-    // Move to history
+    // Move to history locally
     try {
         const history = JSON.parse(localStorage.getItem(SHIFT_HISTORY_KEY)) || [];
         history.unshift(closedShift);
@@ -158,7 +306,10 @@ export function closeShift(actualCash) {
         console.error('Failed to save shift to history:', e);
     }
     
-    // Clear active shift
+    // Sync the closed state to cloud
+    syncShiftToCloud(closedShift);
+
+    // Clear active shift locally
     localStorage.removeItem(CURRENT_SHIFT_KEY);
     console.log('[Shift Management] Shift closed:', closedShift);
     
@@ -166,7 +317,7 @@ export function closeShift(actualCash) {
     return closedShift;
 }
 
-// 6. Get shift logs history
+// 6. Get shift logs history from local storage
 export function getShiftHistory() {
     try {
         return JSON.parse(localStorage.getItem(SHIFT_HISTORY_KEY)) || [];

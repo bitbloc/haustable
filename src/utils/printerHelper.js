@@ -83,6 +83,29 @@ function encodeThaiTIS620(str) {
 
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '58mm') {
+    const BAR_CATEGORIES = [
+        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+    ];
+
+    // Filter items based on activeTab
+    let itemsToRender = booking.order_items || [];
+    if (activeTab === 'kitchen') {
+        itemsToRender = itemsToRender.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
+    } else if (activeTab === 'bar') {
+        itemsToRender = itemsToRender.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
+    }
+
+    // Return null if there are no items to print for this specific tab
+    if ((activeTab === 'kitchen' || activeTab === 'bar') && itemsToRender.length === 0) {
+        return null;
+    }
+
     const encoder = new EscPosEncoder();
     encoder.initialize();
 
@@ -94,8 +117,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const maxCols = paperSize === '80mm' ? 48 : 30; // 58mm usually supports 30 or 32 columns. 30 is safest to avoid wrapping.
     const divider = '-'.repeat(maxCols);
 
-    // 1. Header (Omit for kitchen)
-    if (activeTab !== 'kitchen') {
+    // 1. Header (Omit for kitchen and bar)
+    if (activeTab !== 'kitchen' && activeTab !== 'bar') {
         encoder.align('center')
                .size(1, 1)
                .bold(true)
@@ -104,10 +127,16 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(false)
                .line('TASTE YOUR SCENT.')
                .line(divider);
-    } else {
+    } else if (activeTab === 'kitchen') {
         encoder.align('center')
                .bold(true)
                .line('KITCHEN ORDER / ใบสั่งอาหาร')
+               .bold(false)
+               .line(divider);
+    } else if (activeTab === 'bar') {
+        encoder.align('center')
+               .bold(true)
+               .line('BAR ORDER / ใบสั่งเครื่องดื่ม')
                .bold(false)
                .line(divider);
     }
@@ -136,16 +165,16 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 4. Items Header
     encoder.bold(true)
-           .line(activeTab === 'kitchen' ? 'KITCHEN ITEMS' : 'ITEMS')
+           .line(activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : 'ITEMS')
            .bold(false);
 
     // 5. Items List
-    booking.order_items?.forEach(item => {
+    itemsToRender.forEach(item => {
         const qty = `${item.quantity}x `.padEnd(4, ' ');
         const name = (item.menu_items?.name || 'Item').toUpperCase();
         
         let priceStr = '';
-        if (activeTab !== 'kitchen') {
+        if (activeTab !== 'kitchen' && activeTab !== 'bar') {
             priceStr = (item.price_at_time * item.quantity).toLocaleString();
         }
 
@@ -174,7 +203,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     encoder.line(divider);
 
     // 6. Totals
-    if (activeTab !== 'kitchen') {
+    if (activeTab !== 'kitchen' && activeTab !== 'bar') {
         const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
         const discount = booking.discount_amount || 0;
         const netAfterDiscount = subtotal - discount;
@@ -451,29 +480,35 @@ export async function printToRawBTWebSocket(rawData) {
     }
 }
 
-// Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service)
-export async function printToSunmiBuiltIn(rawData) {
-    try {
-        const { SunmiPrinter } = await import('@kduma-autoid/capacitor-sunmi-printer');
-        
-        // Bind to SUNMI printer service (may already be bound if bindOnLoad is true)
-        try {
-            await SunmiPrinter.bindService();
-        } catch (bindErr) {
-            // Service may already be bound, ignore bind errors
-            console.warn("SUNMI bindService warning (may already be bound):", bindErr);
-        }
+let sunmiPrintQueue = Promise.resolve();
 
-        // Convert Uint8Array to regular number array for the plugin
-        const dataArray = Array.from(rawData);
-        
-        // Send raw ESC/POS bytes directly to the built-in printer
-        await SunmiPrinter.sendRAWData({ data: dataArray });
-        
-        return true;
-    } catch (e) {
-        console.error("SUNMI Built-in print failed:", e);
-        throw new Error("ไม่สามารถพิมพ์ผ่านเครื่องพิมพ์ในตัว SUNMI ได้: " + e.message);
-    }
+// Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service) with FIFO Queue
+export async function printToSunmiBuiltIn(rawData) {
+    return new Promise((resolve, reject) => {
+        sunmiPrintQueue = sunmiPrintQueue.then(async () => {
+            try {
+                const { SunmiPrinter } = await import('@kduma-autoid/capacitor-sunmi-printer');
+                try {
+                    await SunmiPrinter.bindService();
+                } catch (bindErr) {
+                    console.warn("SUNMI bindService warning (may already be bound):", bindErr);
+                }
+
+                const dataArray = Array.from(rawData);
+                await SunmiPrinter.sendRAWData({ data: dataArray });
+                
+                // Add a small 150ms buffer delay for physical motor/paper feed sync
+                await new Promise(r => setTimeout(r, 150));
+                
+                resolve(true);
+            } catch (e) {
+                console.error("SUNMI Built-in print failed inside queue:", e);
+                reject(new Error("ไม่สามารถพิมพ์ผ่านเครื่องพิมพ์ในตัว SUNMI ได้: " + e.message));
+            }
+        }).catch(err => {
+            console.error("SUNMI Print Queue error:", err);
+            reject(err);
+        });
+    });
 }
 

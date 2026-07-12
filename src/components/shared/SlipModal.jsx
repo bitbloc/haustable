@@ -6,6 +6,16 @@ import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../../utils/printerHelper'
 
+const BAR_CATEGORIES = [
+    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+];
+
 export default function SlipModal({ booking, type, onClose }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
@@ -86,8 +96,24 @@ export default function SlipModal({ booking, type, onClose }) {
                 // Wait 400ms for stable render state
                 await new Promise(resolve => setTimeout(resolve, 400));
                 try {
-                    const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm');
-                    await printToSunmiBuiltIn(rawBytes);
+                    if (activeTab === 'kitchen') {
+                        // Print Kitchen slip
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, '80mm');
+                        if (kitchenBytes) {
+                            await printToSunmiBuiltIn(kitchenBytes);
+                        }
+                        
+                        // Print Bar slip
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, '80mm');
+                        if (barBytes) {
+                            await printToSunmiBuiltIn(barBytes);
+                        }
+                    } else {
+                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm');
+                        if (rawBytes) {
+                            await printToSunmiBuiltIn(rawBytes);
+                        }
+                    }
                     onClose();
                 } catch (err) {
                     console.error("SUNMI Auto print failed:", err);
@@ -107,8 +133,25 @@ export default function SlipModal({ booking, type, onClose }) {
     const getPrintHtml = () => {
         const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
         
+        const BAR_CATEGORIES = [
+            '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+            '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+            'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+            'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+            '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+            '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+            '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+        ];
+
+        let filteredItems = booking.order_items || [];
+        if (activeTab === 'kitchen') {
+            filteredItems = filteredItems.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        } else if (activeTab === 'bar') {
+            filteredItems = filteredItems.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        }
+
         // Items HTML
-        const itemsHtml = booking.order_items?.map(item => {
+        const itemsHtml = filteredItems.map(item => {
             const name = item.menu_items?.name || 'Item'
             let optsHtml = ''
             
@@ -127,8 +170,8 @@ export default function SlipModal({ booking, type, onClose }) {
 
             const price = (item.price_at_time * item.quantity).toLocaleString()
 
-            // If kitchen, don't output price
-            if (activeTab === 'kitchen') {
+            // If kitchen or bar, don't output price
+            if (activeTab === 'kitchen' || activeTab === 'bar') {
                 return `
                     <div class="item">
                         <div class="row">
@@ -152,7 +195,7 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }).join('') || '<div class="empty">No Items</div>'
 
-        const discountHtml = (activeTab !== 'kitchen' && booking.discount_amount > 0) ? `
+        const discountHtml = (activeTab !== 'kitchen' && activeTab !== 'bar' && booking.discount_amount > 0) ? `
             <div class="row meta-row">
                 <span>Discount (${booking.promotion_codes?.code || 'PROMO'})</span>
                 <span>-${booking.discount_amount.toLocaleString()}</span>
@@ -171,7 +214,7 @@ export default function SlipModal({ booking, type, onClose }) {
             <div class="row"><span>VAT (7%)</span> <span>${vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
         ` : '';
 
-        const totalsHtml = activeTab !== 'kitchen' ? `
+        const totalsHtml = (activeTab !== 'kitchen' && activeTab !== 'bar') ? `
             <div class="totals">
                 <div class="row"><span>Subtotal</span> <span>${subtotal.toLocaleString()}</span></div>
                 ${discountHtml}
@@ -183,9 +226,9 @@ export default function SlipModal({ booking, type, onClose }) {
             </div>
         ` : ''
 
-        const noteHtml = booking.customer_note ? `
+        const noteHtml = (booking.customer_note && (activeTab === 'kitchen' || activeTab === 'bar')) ? `
             <div class="kitchen-note-box">
-                <div class="kitchen-note-label">NOTE FOR KITCHEN</div>
+                <div class="kitchen-note-label">NOTE FOR STAFF</div>
                 ${booking.customer_note}
             </div>
         ` : ''
@@ -195,6 +238,8 @@ export default function SlipModal({ booking, type, onClose }) {
         let docHeader = 'IN THE HAUS'
         if (activeTab === 'kitchen') {
             docTitle = 'KITCHEN ORDER / ใบสั่งอาหาร'
+        } else if (activeTab === 'bar') {
+            docTitle = 'BAR ORDER / ใบสั่งเครื่องดื่ม'
         } else if (activeTab === 'billing') {
             docTitle = 'BILLING SLIP / ใบแจ้งยอด'
         } else if (activeTab === 'receipt') {
@@ -442,7 +487,11 @@ export default function SlipModal({ booking, type, onClose }) {
         if (printerType === 'sunmi') {
             try {
                 const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm');
-                await printToSunmiBuiltIn(rawBytes);
+                if (rawBytes) {
+                    await printToSunmiBuiltIn(rawBytes);
+                } else {
+                    toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                }
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("SUNMI print failed, falling back to standard dialog:", err);
@@ -604,19 +653,25 @@ export default function SlipModal({ booking, type, onClose }) {
                 <div className="flex bg-[#E0E0DC] border border-[#D1D1CD] p-1 rounded-xl mx-4 mt-4 gap-1">
                     <button 
                         onClick={() => setActiveTab('kitchen')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider transition-colors ${activeTab === 'kitchen' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'kitchen' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
                         ใบสั่งครัว (Kitchen)
                     </button>
                     <button 
+                        onClick={() => setActiveTab('bar')} 
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'bar' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                    >
+                        ใบสั่งบาร์ (Bar)
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('billing')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider transition-colors ${activeTab === 'billing' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'billing' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
                         ใบแจ้งยอด (Bill)
                     </button>
                     <button 
                         onClick={() => setActiveTab('receipt')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider transition-colors ${activeTab === 'receipt' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'receipt' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
                         ใบเสร็จ (Receipt)
                     </button>
@@ -650,8 +705,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top mt-4 mb-6"
                         style={{ fontFamily: "'Courier Prime', 'Courier New', monospace" }}
                     >
-                        {/* BRAND HEADER (Hide for kitchen order to make it neat) */}
-                        {activeTab !== 'kitchen' ? (
+                        {/* BRAND HEADER (Hide for kitchen/bar order to make it neat) */}
+                        {activeTab !== 'kitchen' && activeTab !== 'bar' ? (
                             <div className="text-center mb-5 flex flex-col items-center">
                                 {/* Logo */}
                                 <img src="/receipt-logo.png" alt="Logo" className="w-24 h-auto mb-3 object-contain contrast-125" />
@@ -660,9 +715,13 @@ export default function SlipModal({ booking, type, onClose }) {
                                     TASTE YOUR SCENT.
                                 </p>
                             </div>
-                        ) : (
+                        ) : activeTab === 'kitchen' ? (
                             <div className="text-center mb-5 bg-black text-white py-2 font-bold text-sm tracking-widest">
                                 KITCHEN ORDER / ใบสั่งอาหาร
+                            </div>
+                        ) : (
+                            <div className="text-center mb-5 bg-black text-white py-2 font-bold text-sm tracking-widest">
+                                BAR ORDER / ใบสั่งเครื่องดื่ม
                             </div>
                         )}
 
@@ -698,9 +757,14 @@ export default function SlipModal({ booking, type, onClose }) {
                         {/* Items */}
                         <div className="space-y-3 mb-5">
                             <div className="text-[9px] font-black uppercase tracking-widest text-right mb-1 opacity-55">
-                                {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : '01. ITEMS'}
+                                {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : '01. ITEMS'}
                             </div>
-                            {booking.order_items?.map((item, idx) => {
+                            {booking.order_items?.filter(item => {
+                                const categoryId = item.menu_items?.category_id;
+                                if (activeTab === 'kitchen') return !BAR_CATEGORIES.includes(categoryId);
+                                if (activeTab === 'bar') return BAR_CATEGORIES.includes(categoryId);
+                                return true;
+                            }).map((item, idx) => {
                                 let optionsList = []
                                 if (Array.isArray(item.selected_options)) {
                                      optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
@@ -713,7 +777,7 @@ export default function SlipModal({ booking, type, onClose }) {
                                         <div className="flex justify-between font-bold items-baseline gap-2 mb-0.5">
                                             <span className="w-6 shrink-0 text-sm font-black">{item.quantity}x</span>
                                             <span className="grow font-bold uppercase text-[13px] tracking-tight leading-4">{item.menu_items?.name || 'Item'}</span>
-                                            {activeTab !== 'kitchen' && (
+                                            {activeTab !== 'kitchen' && activeTab !== 'bar' && (
                                                 <span className="shrink-0 font-mono font-normal">{(item.price_at_time * item.quantity).toLocaleString()}</span>
                                             )}
                                         </div>
@@ -727,8 +791,8 @@ export default function SlipModal({ booking, type, onClose }) {
                             })}
                         </div>
 
-                        {/* Totals (Hide for kitchen) */}
-                        {activeTab !== 'kitchen' && (
+                        {/* Totals (Hide for kitchen/bar) */}
+                        {activeTab !== 'kitchen' && activeTab !== 'bar' && (
                             <div className="border-t-2 border-black pt-3.5 mb-4">
                                 <div className="flex justify-between text-xs mb-1 font-bold text-gray-500">
                                     <span>SUBTOTAL</span>

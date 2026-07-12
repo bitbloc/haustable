@@ -200,7 +200,7 @@ export function usePOSOrder() {
         }
     };
 
-    const completeCheckout = async (bookingId, totalAmount, paymentMethod = 'cash') => {
+    const completeCheckout = async (bookingId, totalAmount, paymentMethod = 'cash', discountAmount = 0) => {
         setLoading(true);
         
         if (!isOnline()) {
@@ -208,13 +208,13 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
-                    return { ...b, status: 'completed', total_amount: totalAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
+                    return { ...b, status: 'completed', total_amount: totalAmount, discount_amount: discountAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
                 }
                 return b;
             });
             posCache.setBookings(updatedBookings);
 
-            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod });
+            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod, discountAmount });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
             
             setLoading(false);
@@ -228,6 +228,7 @@ export function usePOSOrder() {
                 .update({
                     status: 'completed',
                     total_amount: totalAmount,
+                    discount_amount: discountAmount,
                     staff_remark: `Paid by ${paymentMethod.toUpperCase()}`
                 })
                 .eq('id', bookingId);
@@ -250,13 +251,13 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
-                    return { ...b, status: 'completed', total_amount: totalAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
+                    return { ...b, status: 'completed', total_amount: totalAmount, discount_amount: discountAmount, staff_remark: `Paid by ${paymentMethod.toUpperCase()}` };
                 }
                 return b;
             });
             posCache.setBookings(updatedBookings);
 
-            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod });
+            addToOfflineQueue('complete_checkout', { bookingId, totalAmount, paymentMethod, discountAmount });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
 
             setLoading(false);

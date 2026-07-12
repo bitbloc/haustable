@@ -9,7 +9,7 @@ import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
 import SlipModal from '../components/shared/SlipModal';
-import { getCurrentShift, startShift, closeShift, addShiftAdjustment } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search } from 'lucide-react';
@@ -161,6 +161,12 @@ export default function POSDashboard() {
 
     useEffect(() => {
         loadStaff();
+
+        checkAndRestoreActiveShift().then(restored => {
+            if (restored) {
+                setActiveShift(restored);
+            }
+        });
 
         const handleShiftChanged = () => {
             setActiveShift(getCurrentShift());
@@ -686,9 +692,26 @@ export default function POSDashboard() {
 
         // 3. Complete Checkout
         const subtotal = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const finalTotal = includeTax ? subtotal * 1.07 : subtotal;
+        
+        let memberDiscount = 0;
+        if (currentBooking && currentBooking.profiles) {
+            const role = (currentBooking.profiles.role || 'customer').toLowerCase();
+            const completedCount = parseInt(currentBooking.profiles.completed_bookings) || 0;
+            let rate = 0;
+            if (role === 'admin' || role === 'vip') {
+                rate = 0.15;
+            } else if (role === 'gold' || completedCount >= 10) {
+                rate = 0.10;
+            } else if (role === 'customer' || completedCount >= 3) {
+                rate = 0.05;
+            }
+            memberDiscount = subtotal * rate;
+        }
 
-        const success = await completeCheckout(bookingId, finalTotal, paymentMethod);
+        const netBeforeTax = subtotal - memberDiscount;
+        const finalTotal = includeTax ? netBeforeTax * 1.07 : netBeforeTax;
+
+        const success = await completeCheckout(bookingId, finalTotal, paymentMethod, memberDiscount);
         if (success) {
             const updatedBooking = await getActiveBooking(selectedTable.id);
             if (updatedBooking) {
