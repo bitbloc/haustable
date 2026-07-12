@@ -21,8 +21,6 @@ export default function SlipModal({ booking, type, onClose }) {
     const [saving, setSaving] = useState(false)
     const [optionMap, setOptionMap] = useState({})
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
-    const [isAutoPrinting, setIsAutoPrinting] = useState(false)
-
     // Determine initial tab:
     // If type === 'kitchen', default to kitchen.
     // Else if status === 'completed', default to receipt.
@@ -33,6 +31,25 @@ export default function SlipModal({ booking, type, onClose }) {
         return 'billing'
     }
     const [activeTab, setActiveTab] = useState(getInitialTab)
+
+    const getIsAutoPrintingInitial = () => {
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                const currentTab = getInitialTab();
+                const printerType = currentTab === 'kitchen' 
+                    ? (config.kitchen_printer_type || 'universal')
+                    : (config.cashier_printer_type || 'universal');
+                return printerType === 'sunmi';
+            }
+        } catch (err) {
+            console.error("Failed to read printer config initially:", err);
+        }
+        return false;
+    };
+
+    const [isAutoPrinting, setIsAutoPrinting] = useState(getIsAutoPrintingInitial)
 
     // Determine initial payment method:
     // Check booking.payment_slip_url or booking.staff_remark
@@ -271,7 +288,7 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }
 
-        const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)
+        const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : String(booking.id).slice(0, 4)
 
         return `
             <html>
@@ -521,7 +538,7 @@ export default function SlipModal({ booking, type, onClose }) {
         if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Printer')) {
             try {
                 await Printer.printHtml({
-                    name: `Receipt-${booking.tracking_token || booking.id.slice(0, 4)}`,
+                    name: `Receipt-${booking.tracking_token || String(booking.id).slice(0, 4)}`,
                     html: htmlContent
                 })
             } catch (err) {
@@ -610,7 +627,7 @@ export default function SlipModal({ booking, type, onClose }) {
         }
     `
 
-    const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : booking.id.slice(0, 4)
+    const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : String(booking.id).slice(0, 4)
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
 

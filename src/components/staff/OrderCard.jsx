@@ -52,7 +52,7 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                             </span>
                         )}
                         <span className="text-[10px] font-mono text-gray-300 bg-gray-50 px-1.5 py-0.5 rounded-full">
-                            #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : order.id.slice(0,4)}
+                            #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : String(order.id).slice(0,4)}
                         </span>
                      </div>
 

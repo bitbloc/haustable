@@ -460,6 +460,22 @@ export default function POSDashboard() {
                         playSystemAlertSound();
                     }
                 } else if (eventType === 'UPDATE') {
+                    // Alert for new QR orders / additions on active table sessions
+                    if (newRow?.status === 'pending' && oldRow?.status !== 'pending') {
+                        toast.success(`🛎️ ออเดอร์เพิ่มเติม! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
+                            duration: 10000,
+                            action: {
+                                label: 'ดูรายการ',
+                                onClick: () => {
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }
+                            }
+                        });
+                        playSystemAlertSound();
+                    }
+
                     const oldRemark = oldRow?.staff_remark || '';
                     const newRemark = newRow?.staff_remark || '';
                     if (newRemark.includes('[CALL_BILL]') && !oldRemark.includes('[CALL_BILL]')) {

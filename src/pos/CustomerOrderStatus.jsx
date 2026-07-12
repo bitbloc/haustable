@@ -217,7 +217,7 @@ export default function CustomerOrderStatus() {
                 <div>
                     <h1 className="font-bold text-sm text-[#1A1A1A]">ติดตามสถานะออเดอร์</h1>
                     <p className="text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold mt-0.5">
-                        Table {booking.tables_layout?.table_name} · Queue #{booking.tracking_token ? booking.tracking_token.slice(0, 4) : booking.id.slice(0, 4)}
+                        Table {booking.tables_layout?.table_name} · Queue #{booking.tracking_token ? booking.tracking_token.slice(0, 4) : String(booking.id).slice(0, 4)}
                     </p>
                 </div>
             </header>

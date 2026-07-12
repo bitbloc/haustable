@@ -567,7 +567,7 @@ export default function POSReportsPanel() {
                                             return (
                                                 <tr key={b.id} className="hover:bg-[#F5F5F2] transition-colors">
                                                     <td className="py-2.5 px-3 font-mono font-bold text-[#767673]">
-                                                        #{b.tracking_token ? b.tracking_token.slice(-4).toUpperCase() : b.id.slice(0, 4)}
+                                                        #{b.tracking_token ? b.tracking_token.slice(-4).toUpperCase() : String(b.id).slice(0, 4)}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-mono text-[#767673]">{timeStr}</td>
                                                     <td className="py-2.5 px-3 font-mono font-bold text-center text-[#ff0000]">
