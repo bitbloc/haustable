@@ -156,6 +156,18 @@ export default function CustomerOrderLanding() {
                 .limit(1)
                 .maybeSingle();
 
+            if (bookingData) {
+                // Auto-link member profile in background if customer is logged in on their device
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user && !bookingData.user_id) {
+                    await supabase
+                        .from('bookings')
+                        .update({ user_id: session.user.id })
+                        .eq('id', bookingData.id);
+                    bookingData.user_id = session.user.id;
+                }
+            }
+
             setActiveBooking(bookingData || null);
 
             // 3.5. Fetch payment QR Code
