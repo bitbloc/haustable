@@ -12,7 +12,7 @@ import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData } from '../utils/printerHelper';
-import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer } from 'lucide-react';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search } from 'lucide-react';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
@@ -44,6 +44,53 @@ export default function POSDashboard() {
     const [showOpeningFloatModal, setShowOpeningFloatModal] = useState(false);
     const [showCashAdjustmentModal, setShowCashAdjustmentModal] = useState(false);
     const [cashAdjustmentForm, setCashAdjustmentForm] = useState({ amount: '', note: '', type: 'out' });
+
+    // CRM Profile Attach States
+    const [showAttachCRMModal, setShowAttachCRMModal] = useState(false);
+    const [crmSearchTerm, setCrmSearchTerm] = useState('');
+    const [crmMembers, setCrmMembers] = useState([]);
+    const [crmLoading, setCrmLoading] = useState(false);
+
+    const loadCrmMembers = async () => {
+        setCrmLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('display_name', { ascending: true });
+            if (error) throw error;
+            setCrmMembers(data || []);
+        } catch (err) {
+            console.error("Error loading profiles:", err);
+            toast.error("Failed to load customer profiles");
+        } finally {
+            setCrmLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (showAttachCRMModal) {
+            loadCrmMembers();
+            setCrmSearchTerm('');
+        }
+    }, [showAttachCRMModal]);
+
+    const handleSelectCrmCustomer = async (member) => {
+        if (!activeBooking) return;
+        const success = await attachCustomerToBooking(activeBooking.id, member.id);
+        if (success) {
+            const updatedBooking = await getActiveBooking(selectedTable.id);
+            setActiveBooking(updatedBooking);
+            setShowAttachCRMModal(false);
+        }
+    };
+
+    const filteredCrmMembers = crmMembers.filter(m => {
+        const nameMatch = (m.display_name || '').toLowerCase().includes(crmSearchTerm.toLowerCase());
+        const phoneMatch = (m.phone || '').toLowerCase().includes(crmSearchTerm.toLowerCase());
+        const emailMatch = (m.email || '').toLowerCase().includes(crmSearchTerm.toLowerCase());
+        return nameMatch || phoneMatch || emailMatch;
+    });
 
     const loadStaff = async () => {
         try {
@@ -515,7 +562,7 @@ export default function POSDashboard() {
         }
     };
 
-    const { getActiveBooking, createWalkIn, completeCheckout, submitOrderItems, acceptOrder } = usePOSOrder();
+    const { getActiveBooking, createWalkIn, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking } = usePOSOrder();
 
     const handleSelectTable = async (table) => {
         setSelectedTable(table);
@@ -656,7 +703,6 @@ export default function POSDashboard() {
 
     return (
         <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none">
-            <Toaster position="top-right" richColors />
             
             <POSLayout 
                 activeView={view} 
@@ -703,6 +749,22 @@ export default function POSDashboard() {
                                 }
                             }}
                             onOpenSlip={handleSaveAndOpenSlip}
+                            onAttachCustomer={() => {
+                                if (!activeBooking) {
+                                    toast.error("กรุณากดเปิดโต๊ะ (Seated Table) ก่อนผูกโปรไฟล์ลูกค้าครับ");
+                                    return;
+                                }
+                                setShowAttachCRMModal(true);
+                            }}
+                            onDetachCustomer={async () => {
+                                if (activeBooking) {
+                                    const success = await attachCustomerToBooking(activeBooking.id, null);
+                                    if (success) {
+                                        const updatedBooking = await getActiveBooking(selectedTable.id);
+                                        setActiveBooking(updatedBooking);
+                                    }
+                                }
+                            }}
                         />
                     )}
                 </div>
@@ -721,6 +783,78 @@ export default function POSDashboard() {
                 />
             )}
 
+            {/* Attach Customer CRM Modal */}
+            {showAttachCRMModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[80vh]">
+                        {/* Header */}
+                        <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD]">
+                            <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Attach Customer Profile</h3>
+                            <button 
+                                onClick={() => setShowAttachCRMModal(false)} 
+                                className="p-2 hover:bg-[#E0E0DC] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="p-4 border-b border-[#D1D1CD] bg-white">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767673]" size={14} />
+                                <input 
+                                    type="text"
+                                    placeholder="SEARCH CUSTOMERS BY NAME OR PHONE..."
+                                    value={crmSearchTerm}
+                                    onChange={(e) => setCrmSearchTerm(e.target.value)}
+                                    className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-2.5 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors font-mono"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        {/* Customer List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white max-h-[50vh]">
+                            {crmLoading ? (
+                                <div className="flex flex-col items-center justify-center opacity-50 py-12">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#ff0000] mb-2"></div>
+                                    <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#767673]">LOADING REGISTRY...</span>
+                                </div>
+                            ) : filteredCrmMembers.length > 0 ? (
+                                filteredCrmMembers.map(m => (
+                                    <button
+                                        key={m.id}
+                                        onClick={() => handleSelectCrmCustomer(m)}
+                                        className="w-full text-left bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] hover:border-[#B0B0AC] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between group shadow-sm"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-8 h-8 rounded-full border border-[#D1D1CD] bg-white overflow-hidden p-0.5 select-none shrink-0 flex items-center justify-center font-mono font-bold text-xs text-[#767673]">
+                                                {m.avatar_url ? (
+                                                    <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                                                ) : (
+                                                    m.display_name?.charAt(0).toUpperCase() || 'U'
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-xs text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
+                                                <p className="text-[9px] font-mono text-[#767673] mt-0.5">{m.phone || m.email || 'No Phone/Email'}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[9px] font-mono font-bold text-[#ff0000] uppercase tracking-wider border border-[#ff0000]/20 bg-[#ff0000]/5 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                            ATTACH
+                                        </span>
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic">
+                                    No customer profiles found
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Open Shift Overlay (Full Screen PIN Pad / Staff Grid) */}
             {!activeShift && (
                 <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -730,7 +864,7 @@ export default function POSDashboard() {
                             /* Step 1: Select Staff Member */
                             <div className="flex flex-col gap-5">
                                 <div className="text-center">
-                                    <div className="w-14 h-14 bg-[#FF5500]/10 text-[#FF5500] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#FF5500]/20 shadow-inner">
+                                    <div className="w-14 h-14 bg-[#ff0000]/10 text-[#ff0000] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#ff0000]/20 shadow-inner">
                                         <Users size={28} />
                                     </div>
                                     <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
@@ -746,10 +880,10 @@ export default function POSDashboard() {
                                                 setPinInput('');
                                                 setShowOpeningFloatModal(false);
                                             }}
-                                            className="w-full bg-white border border-[#D1D1CD] hover:border-[#FF5500]/40 rounded-xl p-3 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-sm group"
+                                            className="w-full bg-white border border-[#D1D1CD] hover:border-[#ff0000]/40 rounded-xl p-3 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-sm group"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-[#EAEAEA] flex items-center justify-center font-bold text-[#FF5500] uppercase text-xs border border-[#D1D1CD] group-hover:bg-[#FF5500]/10 transition-colors">
+                                                <div className="w-8 h-8 rounded-full bg-[#EAEAEA] flex items-center justify-center font-bold text-[#ff0000] uppercase text-xs border border-[#D1D1CD] group-hover:bg-[#ff0000]/10 transition-colors">
                                                     {staff.display_name.charAt(0)}
                                                 </div>
                                                 <div>
@@ -757,7 +891,7 @@ export default function POSDashboard() {
                                                     <p className="text-[8px] font-mono text-[#767673] uppercase tracking-widest leading-none mt-0.5">{staff.role}</p>
                                                 </div>
                                             </div>
-                                            <Lock size={12} className="text-[#D1D1CD] group-hover:text-[#FF5500] transition-colors" />
+                                            <Lock size={12} className="text-[#D1D1CD] group-hover:text-[#ff0000] transition-colors" />
                                         </button>
                                     ))}
                                 </div>
@@ -783,7 +917,7 @@ export default function POSDashboard() {
                                             <div 
                                                 key={idx} 
                                                 className={`w-3.5 h-3.5 rounded-full border border-[#D1D1CD] transition-all duration-100 ${
-                                                    pinInput.length >= idx ? 'bg-[#FF5500] border-[#FF5500] scale-110 shadow-sm' : 'bg-white'
+                                                    pinInput.length >= idx ? 'bg-[#ff0000] border-[#ff0000] scale-110 shadow-sm' : 'bg-white'
                                                 }`}
                                             />
                                         ))}
@@ -889,7 +1023,7 @@ export default function POSDashboard() {
                                                 step="any"
                                                 value={openShiftForm.openingFloat}
                                                 onChange={(e) => setOpenShiftForm(prev => ({ ...prev, openingFloat: e.target.value }))}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] shadow-inner"
                                             />
                                         </div>
                                     </div>
@@ -907,7 +1041,7 @@ export default function POSDashboard() {
                                         </button>
                                         <button
                                             type="submit"
-                                            className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                            className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-1 cursor-pointer"
                                         >
                                             <LogIn size={12} />
                                             <span>เปิดรอบขาย (Start)</span>
@@ -1027,7 +1161,7 @@ export default function POSDashboard() {
                                             placeholder="กรอกเงินสดทั้งหมดที่นับได้ในลิ้นชัก"
                                             value={closeShiftForm.actualCash}
                                             onChange={(e) => setCloseShiftForm(prev => ({ ...prev, actualCash: e.target.value }))}
-                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] shadow-inner"
                                         />
                                     </div>
                                 </div>
@@ -1062,7 +1196,7 @@ export default function POSDashboard() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 active:scale-98"
+                                        className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 active:scale-98"
                                     >
                                         <Printer size={12} />
                                         <span>ปิดกะและพิมพ์สรุปยอด</span>
@@ -1143,7 +1277,7 @@ export default function POSDashboard() {
                                         placeholder="0.00"
                                         value={cashAdjustmentForm.amount}
                                         onChange={(e) => setCashAdjustmentForm(prev => ({ ...prev, amount: e.target.value }))}
-                                        className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                        className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] shadow-inner"
                                     />
                                 </div>
                             </div>
@@ -1159,7 +1293,7 @@ export default function POSDashboard() {
                                     placeholder="เช่น ซื้อน้ำแข็ง, ทอนเงินเพิ่ม, จ่ายผู้ผลิต"
                                     value={cashAdjustmentForm.note}
                                     onChange={(e) => setCashAdjustmentForm(prev => ({ ...prev, note: e.target.value }))}
-                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#FF5500] focus:ring-2 focus:ring-[#FF5500]/15 transition-all text-[#1A1A1A] font-bold shadow-inner"
+                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] font-bold shadow-inner"
                                 />
                             </div>
 
@@ -1177,7 +1311,7 @@ export default function POSDashboard() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md active:scale-98"
+                                    className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md active:scale-98"
                                 >
                                     บันทึกรายการ
                                 </button>

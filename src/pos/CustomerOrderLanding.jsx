@@ -834,15 +834,12 @@ export default function CustomerOrderLanding() {
                 {trackingOpen && activeBooking && (() => {
                     const steps = [
                         { key: 'pending', label: 'ส่งออเดอร์แล้ว', desc: 'รอพนักงานกดยอมรับ', time: activeBooking.booking_time },
-                        { key: 'seated', label: 'รับออเดอร์แล้ว', desc: 'กำลังจัดเตรียมอาหาร', time: activeBooking.status !== 'pending' ? activeBooking.booking_time : null },
-                        { key: 'ready', label: 'พร้อมเสิร์ฟ', desc: 'อาหารพร้อมเสิร์ฟที่โต๊ะ', time: activeBooking.status === 'ready' ? new Date().toISOString() : null },
+                        { key: 'seated', label: 'รับออเดอร์แล้ว', desc: 'พนักงานยอมรับออเดอร์แล้ว กำลังจัดเตรียมอาหาร', time: activeBooking.status !== 'pending' ? activeBooking.booking_time : null },
                     ];
 
                     const getActiveStepIndex = () => {
                         if (activeBooking.status === 'pending') return 0;
-                        if (activeBooking.status === 'confirmed' || activeBooking.status === 'seated') return 1;
-                        if (activeBooking.status === 'ready') return 2;
-                        return 0;
+                        return 1;
                     };
 
                     const activeStep = getActiveStepIndex();
@@ -982,46 +979,15 @@ export default function CustomerOrderLanding() {
                                                     <span>เรียกพนักงานเช็คบิลแล้ว</span>
                                                 </div>
 
-                                                {paymentQrUrl ? (
-                                                    <div className="flex flex-col items-center">
-                                                        <div className="mb-2 bg-white p-2 rounded-xl border border-[#D1D1CD] shadow-sm">
-                                                            <img src={paymentQrUrl} alt="PromptPay QR" className="w-32 h-32 object-contain" />
-                                                        </div>
-                                                        <p className="text-[9px] text-[#767673] text-center leading-relaxed max-w-[220px]">
-                                                            สแกน QR Code เพื่อชำระเงิน จากนั้นอัปโหลดภาพสลิปเพื่อแจ้งโอนเงิน
+                                                <div className="w-full text-center py-6 bg-white border border-[#D1D1CD] rounded-xl flex flex-col items-center gap-2.5 shadow-sm">
+                                                    <Smartphone size={32} className="text-[#ff0000] animate-bounce" />
+                                                    <div>
+                                                        <h4 className="font-bold text-xs text-[#1A1A1A]">กรุณาชำระเงินโดยสแกนกับพนักงาน</h4>
+                                                        <p className="text-[10px] text-[#767673] max-w-[250px] leading-relaxed mx-auto mt-1 px-4">
+                                                            พนักงานกำลังนำใบแจ้งยอดชำระเงิน (Bill) และ QR Code ไปแสดงที่โต๊ะของท่านเพื่อสแกนจ่ายโดยตรง
                                                         </p>
                                                     </div>
-                                                ) : (
-                                                    <div className="w-full flex items-center justify-center p-4 bg-[#F5F5F2] rounded-xl text-[#767673] text-[9px] font-mono font-bold uppercase tracking-wider border border-[#D1D1CD]">
-                                                        ไม่มีรูปภาพ QR ในระบบ
-                                                    </div>
-                                                )}
-
-                                                {activeBooking.payment_slip_url ? (
-                                                    <div className="w-full bg-[#00CC44]/10 border border-[#00CC44]/20 p-3 rounded-xl flex items-center gap-3">
-                                                        <div className="w-7 h-7 bg-[#00CC44]/20 text-[#00CC44] rounded-full flex items-center justify-center shrink-0">
-                                                            <FileText size={14} />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-bold text-[#1A1A1A]">แจ้งโอนเงินสำเร็จแล้ว</p>
-                                                            <p className="text-[9px] text-[#00CC44] font-bold">พนักงานกำลังตรวจสอบเพื่อเช็คเอาท์โต๊ะ</p>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-white border border-dashed border-[#D1D1CD] hover:border-[#FF5500] rounded-xl p-3.5 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
-                                                        <Upload size={16} className="text-[#767673] group-hover:text-[#FF5500] transition-colors mb-1" />
-                                                        <span className="text-[9px] font-bold text-[#767673] group-hover:text-[#1A1A1A] transition-colors">
-                                                            {uploadingSlip ? 'กำลังอัปโหลด...' : 'ส่งหลักฐานโอนเงิน / อัปโหลดสลิป'}
-                                                        </span>
-                                                        <input 
-                                                            type="file" 
-                                                            className="hidden" 
-                                                            accept="image/*" 
-                                                            onChange={handleUploadSlip} 
-                                                            disabled={uploadingSlip}
-                                                        />
-                                                    </label>
-                                                )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

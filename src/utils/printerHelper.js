@@ -112,18 +112,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(divider);
     }
 
-    // 2. Queue Number
+    // 2. Table Name (Emphasized / large font)
+    const tableName = (booking.tables_layout?.table_name || 'PICKUP').toUpperCase();
     encoder.align('center')
            .bold(true)
            .size(1, 1)
-           .line(`Queue #${queueNo}`)
+           .line(`TABLE ${tableName}`)
            .size(0, 0)
            .bold(false)
            .line(divider);
 
     // 3. Meta info
     encoder.align('left')
-           .line(`TABLE: ${booking.tables_layout?.table_name || 'PICKUP'}`)
+           .line(`QUEUE: #${queueNo}`)
            .line(`DATE : ${dateStr}`)
            .line(`GUEST: ${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}`);
 

@@ -1,11 +1,11 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
 
-export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder, onOpenSlip }) {
+export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClear, onCheckout, onAcceptOrder, onOpenSlip, onAttachCustomer, onDetachCustomer }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
 
@@ -114,17 +114,53 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
             )}
 
             {/* Customer Lookup (CRM Hook) */}
-            <div className="px-3 py-2 shrink-0">
-                <button className="w-full bg-white border border-[#D1D1CD] rounded-xl p-2.5 flex items-center gap-3 hover:border-[#B0B0AC] transition-all cursor-pointer group shadow-sm">
-                    <div className="w-7 h-7 rounded-full bg-[#E0E0DC] flex items-center justify-center text-[#1A1A1A] shrink-0">
-                        <UserPlus size={14} />
+            {booking?.profiles ? (
+                <div className="px-3 py-2 shrink-0">
+                    <div className="w-full bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-2.5 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-7 h-7 rounded-full bg-[#ff0000]/10 border border-[#ff0000]/20 flex items-center justify-center text-[#ff0000] shrink-0">
+                                <UserPlus size={14} />
+                            </div>
+                            <div className="text-left min-w-0">
+                                <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                <p className="text-[11px] font-bold uppercase mt-0.5 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
+                                {booking.profiles.phone && <p className="text-[8px] text-[#767673] font-mono leading-none mt-0.5">{booking.profiles.phone}</p>}
+                            </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                            <button 
+                                onClick={() => onAttachCustomer?.()} 
+                                className="p-1.5 hover:bg-white text-[#767673] hover:text-[#1A1A1A] rounded-md transition-colors cursor-pointer"
+                                title="Change Customer"
+                            >
+                                <RefreshCw size={12} />
+                            </button>
+                            <button 
+                                onClick={() => onDetachCustomer?.()} 
+                                className="p-1.5 hover:bg-[#FFD6D6] text-[#767673] hover:text-red-600 rounded-md transition-colors cursor-pointer"
+                                title="Detach Customer"
+                            >
+                                <Trash2 size={12} />
+                            </button>
+                        </div>
                     </div>
-                    <div className="text-left flex-1 min-w-0">
-                        <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">CUSTOMER CRM</p>
-                        <p className="text-[11px] font-bold uppercase mt-0.5 truncate">Attach Customer Profile</p>
-                    </div>
-                </button>
-            </div>
+                </div>
+            ) : (
+                <div className="px-3 py-2 shrink-0">
+                    <button 
+                        onClick={() => onAttachCustomer?.()}
+                        className="w-full bg-white border border-[#D1D1CD] rounded-xl p-2.5 flex items-center gap-3 hover:border-[#B0B0AC] transition-all cursor-pointer group shadow-sm"
+                    >
+                        <div className="w-7 h-7 rounded-full bg-[#E0E0DC] flex items-center justify-center text-[#1A1A1A] shrink-0">
+                            <UserPlus size={14} />
+                        </div>
+                        <div className="text-left flex-1 min-w-0">
+                            <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">CUSTOMER CRM</p>
+                            <p className="text-[11px] font-bold uppercase mt-0.5 truncate">Attach Customer Profile</p>
+                        </div>
+                    </button>
+                </div>
+            )}
 
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5 scrollbar-none">
@@ -145,7 +181,7 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                             >
                                 <div className="flex-1 min-w-0 mr-2">
                                     <h5 className="font-bold text-[11px] leading-tight text-[#1A1A1A] uppercase truncate">{item.name}</h5>
-                                    <p className="text-[9px] text-[#FF5500] font-mono font-bold mt-0.5">฿{item.price}</p>
+                                    <p className="text-[9px] text-[#ff0000] font-mono font-bold mt-0.5">฿{item.price}</p>
                                 </div>
 
                                 <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-md p-0.5 gap-0.5 shrink-0 scale-90 origin-right">
@@ -183,7 +219,7 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                             <span>VAT (7%)</span>
                             <button 
                                 onClick={() => setIncludeTax(!includeTax)}
-                                className={`w-7 h-3.5 rounded-full transition-colors relative flex items-center cursor-pointer ${includeTax ? 'bg-[#FF5500]' : 'bg-white/30'}`}
+                                className={`w-7 h-3.5 rounded-full transition-colors relative flex items-center cursor-pointer ${includeTax ? 'bg-[#ff0000]' : 'bg-white/30'}`}
                             >
                                 <div className={`absolute w-2.5 h-2.5 bg-white rounded-full transition-transform ${includeTax ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
                             </button>
@@ -195,7 +231,7 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-1">
                         <span className="text-[9px] font-bold pb-0.5">NET TOTAL</span>
-                        <span className="text-lg font-black text-[#FF5500]">฿{total.toFixed(2)}</span>
+                        <span className="text-lg font-black text-[#ff0000]">฿{total.toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -247,7 +283,7 @@ export default function POSOrderPanel({ order, booking, onUpdateQuantity, onClea
                                     </button>
                                     <button 
                                         onClick={() => onCheckout(paymentMethod, includeTax)}
-                                        className="flex items-center justify-center gap-1 bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
+                                        className="flex items-center justify-center gap-1 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
                                     >
                                         <Check size={10} /> CHECKOUT / ปิดโต๊ะ
                                     </button>

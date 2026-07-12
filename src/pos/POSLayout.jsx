@@ -139,14 +139,14 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                         
                         {/* Active Shift Employee */}
                         {activeShift && (
-                            <div className="flex items-center gap-1.5 bg-[#FF5500]/10 border border-[#FF5500]/20 text-[#FF5500] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                            <div className="flex items-center gap-1.5 bg-[#ff0000]/10 border border-[#ff0000]/20 text-[#ff0000] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm">
                                 <Users size={12} />
                                 <span>พนักงาน: {activeShift.staffName}</span>
                                 <button 
                                     onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-cash-adjustment'));
                                     }}
-                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#D04500] border-l border-[#FF5500]/30 pl-2 cursor-pointer transition-colors"
+                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
                                 >
                                     เบิกจ่าย
                                 </button>
@@ -154,7 +154,7 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                     onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-close-shift'));
                                     }}
-                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#D04500] border-l border-[#FF5500]/30 pl-2 cursor-pointer transition-colors"
+                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
                                 >
                                     ปิดรอบ
                                 </button>
@@ -199,7 +199,7 @@ function NavIcon({ icon: Icon, active, onClick, label }) {
             
             {/* Active Indicator LED Orange Dot */}
             {active && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#FF5500]"></span>
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#ff0000]"></span>
             )}
         </button>
     );

@@ -101,7 +101,7 @@ export default function POSCRMPanel() {
                                 placeholder="SEARCH PROFILES..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#FF5500] font-medium transition-colors"
+                                className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors"
                             />
                         </div>
                         <button 
@@ -117,7 +117,7 @@ export default function POSCRMPanel() {
                 <div className="flex-1 overflow-y-auto bg-white border border-[#D1D1CD] rounded-xl shadow-sm overflow-hidden flex flex-col">
                     {loading ? (
                         <div className="flex-1 flex flex-col items-center justify-center opacity-50 py-20">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5500] mb-2"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff0000] mb-2"></div>
                             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#767673]">SYNCING REGISTRY...</span>
                         </div>
                     ) : (
@@ -163,7 +163,7 @@ export default function POSCRMPanel() {
                                             </td>
                                             <td className="py-3 px-4">
                                                 <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider ${
-                                                    m.role === 'admin' ? 'bg-[#FF5500]/10 text-[#FF5500] border border-[#FF5500]/20' : 'bg-[#E0E0DC] text-[#1A1A1A] border border-[#B0B0AC]'
+                                                    m.role === 'admin' ? 'bg-[#ff0000]/10 text-[#ff0000] border border-[#ff0000]/20' : 'bg-[#E0E0DC] text-[#1A1A1A] border border-[#B0B0AC]'
                                                 }`}>
                                                     {m.role || 'GUEST'}
                                                 </span>
@@ -219,7 +219,7 @@ export default function POSCRMPanel() {
                                 <div className="flex-1 overflow-y-auto space-y-2 scrollbar-none pr-1">
                                     {historyLoading ? (
                                         <div className="flex flex-col items-center justify-center opacity-50 py-12">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF5500] mb-2"></div>
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#ff0000] mb-2"></div>
                                             <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#767673]">LOADING LOGS...</span>
                                         </div>
                                     ) : (

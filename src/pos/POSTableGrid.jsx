@@ -122,30 +122,28 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[#ECECE9]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5500]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff0000]"></div>
         </div>
     );
 
     return (
         <div className="h-full flex flex-col bg-[#ECECE9] overflow-hidden select-none font-sans text-[#1A1A1A]">
             <style>{`
+                @keyframes pos-blink-red {
+                    0%, 100% { border-color: #2A2B2D; box-shadow: 0 0 2px rgba(0,0,0,0.1); }
+                    50% { border-color: #ff0000; box-shadow: 0 0 16px rgba(255,0,0,0.6); }
+                }
                 @keyframes pos-blink-orange {
-                    0%, 100% {
-                        background-color: #FFF9E6;
-                        border-color: #FFAA00;
-                        color: #805E00;
-                        box-shadow: 0 0 6px #FFAA00;
-                    }
-                    50% {
-                        background-color: #FF5500;
-                        color: #FFFFFF;
-                        border-color: #FF5500;
-                        box-shadow: 0 0 16px #FF5500;
-                    }
+                    0%, 100% { border-color: #2A2B2D; box-shadow: 0 0 2px rgba(0,0,0,0.1); }
+                    50% { border-color: #FFAA00; box-shadow: 0 0 16px rgba(255,170,0,0.6); }
                 }
-                .animate-pos-blink {
-                    animation: pos-blink-orange 1.0s infinite ease-in-out !important;
+                @keyframes pos-blink-blue {
+                    0%, 100% { border-color: #2A2B2D; box-shadow: 0 0 2px rgba(0,0,0,0.1); }
+                    50% { border-color: #0099FF; box-shadow: 0 0 16px rgba(0,153,255,0.6); }
                 }
+                .animate-pos-blink-red { animation: pos-blink-red 1.0s infinite ease-in-out !important; }
+                .animate-pos-blink-orange { animation: pos-blink-orange 1.0s infinite ease-in-out !important; }
+                .animate-pos-blink-blue { animation: pos-blink-blue 1.0s infinite ease-in-out !important; }
             `}</style>
             {/* Top Toolbar */}
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0 shadow-sm">
@@ -156,7 +154,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                         <input 
                             type="search" 
                             placeholder="ค้นหาโต๊ะ..." 
-                            className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#FF5500] font-medium transition-colors"
+                            className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -289,25 +287,31 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                 const rotation = table.rotation || 0;
                                                 
                                                 const isOccupied = table.status === 'occupied';
-                                                const isPending = table.status === 'pending';
-                                                
+                                                const hasOrder = isPending;
+                                                const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
+                                                const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
+                                                const hasSlip = !!table.booking?.payment_slip_url;
+
                                                 // Braun style tables: Matte colors with clear LED status lights
                                                 let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
                                                 let ledColor = 'bg-[#00CC44]';
                                                 
-                                                if (isOccupied) {
+                                                if (isOccupied || isPending) {
                                                     tableBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
-                                                    ledColor = 'bg-[#FF3300]';
-                                                    if (table.booking?.staff_remark?.includes('[CALL_STAFF]')) {
-                                                        tableBgClass = 'animate-pos-blink border-2 shadow-md';
-                                                        ledColor = 'bg-[#FF0055] animate-ping';
-                                                    } else if (table.booking?.staff_remark?.includes('[CALL_BILL]')) {
-                                                        tableBgClass = 'animate-pos-blink border-2 shadow-md';
+                                                    ledColor = 'bg-[#767673]';
+                                                    
+                                                    if (hasCallStaff) {
+                                                        tableBgClass = 'animate-pos-blink-blue border-2 shadow-md';
+                                                        ledColor = 'bg-[#0099FF] animate-ping';
+                                                    }
+                                                    if (hasCallBill) {
+                                                        tableBgClass = 'animate-pos-blink-orange border-2 shadow-md';
                                                         ledColor = 'bg-[#FFAA00] animate-ping';
                                                     }
-                                                } else if (isPending) {
-                                                    tableBgClass = 'animate-pos-blink border-2 shadow-md';
-                                                    ledColor = 'bg-[#FFAA00] animate-ping';
+                                                    if (hasOrder) {
+                                                        tableBgClass = 'animate-pos-blink-red border-2 shadow-md';
+                                                        ledColor = 'bg-[#ff0000] animate-ping';
+                                                    }
                                                 }
                                                 
                                                 return (
@@ -331,19 +335,24 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                             style={{ transform: `rotate(${-rotation}deg)` }}
                                                         >
                                                             {/* LED indicator light in top-right */}
-                                                            <div className="absolute top-1 right-1 flex items-center justify-center gap-1.5">
-                                                                {isOccupied && table.booking?.staff_remark?.includes('[CALL_STAFF]') && (
-                                                                    <span className="bg-[#FF0055] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                                                            <div className="absolute top-1 right-1 flex items-center justify-center gap-1">
+                                                                {hasOrder && (
+                                                                    <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                                                                        ORDER
+                                                                    </span>
+                                                                )}
+                                                                {hasCallStaff && (
+                                                                    <span className="bg-[#0099FF] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
                                                                         CALL
                                                                     </span>
                                                                 )}
-                                                                {isOccupied && table.booking?.staff_remark?.includes('[CALL_BILL]') && (
+                                                                {hasCallBill && (
                                                                     <span className="bg-[#FFAA00] text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
                                                                         BILL
                                                                     </span>
                                                                 )}
-                                                                {isOccupied && table.booking?.payment_slip_url && (
-                                                                    <span className="bg-[#FF5500] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                                                                {hasSlip && (
+                                                                    <span className="bg-[#00CC44] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
                                                                         SLIP
                                                                     </span>
                                                                 )}
@@ -393,22 +402,30 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                     const isOccupied = table.status === 'occupied';
                                     const isPending = table.status === 'pending';
                                     
+                                    const hasOrder = isPending;
+                                    const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
+                                    const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
+                                    const hasSlip = !!table.booking?.payment_slip_url;
+
                                     let cellBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A] hover:border-[#B0B0AC]';
                                     let ledColor = 'bg-[#00CC44]';
                                     
-                                    if (isOccupied) {
+                                    if (isOccupied || isPending) {
                                         cellBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
-                                        ledColor = 'bg-[#FF3300]';
-                                        if (table.booking?.staff_remark?.includes('[CALL_STAFF]')) {
-                                            cellBgClass = 'animate-pos-blink border-2 shadow-md';
-                                            ledColor = 'bg-[#FF0055] animate-ping';
-                                        } else if (table.booking?.staff_remark?.includes('[CALL_BILL]')) {
-                                            cellBgClass = 'animate-pos-blink border-2 shadow-md';
+                                        ledColor = 'bg-[#767673]';
+                                        
+                                        if (hasCallStaff) {
+                                            cellBgClass = 'animate-pos-blink-blue border-2 shadow-md';
+                                            ledColor = 'bg-[#0099FF] animate-ping';
+                                        }
+                                        if (hasCallBill) {
+                                            cellBgClass = 'animate-pos-blink-orange border-2 shadow-md';
                                             ledColor = 'bg-[#FFAA00] animate-ping';
                                         }
-                                    } else if (isPending) {
-                                        cellBgClass = 'animate-pos-blink border-2 shadow-md';
-                                        ledColor = 'bg-[#FFAA00] animate-ping';
+                                        if (hasOrder) {
+                                            cellBgClass = 'animate-pos-blink-red border-2 shadow-md';
+                                            ledColor = 'bg-[#ff0000] animate-ping';
+                                        }
                                     }
 
                                     return (
@@ -422,17 +439,17 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                             {/* Top row: Status LEDs */}
                                             <div className="flex justify-between items-center w-full">
                                                 <div className="flex gap-1 items-center">
-                                                    {isPending && (
-                                                        <span className="bg-yellow-500 text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">NEW</span>
+                                                    {hasOrder && (
+                                                        <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">ORDER</span>
                                                     )}
-                                                    {isOccupied && table.booking?.staff_remark?.includes('[CALL_STAFF]') && (
-                                                        <span className="bg-[#FF0055] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
+                                                    {hasCallStaff && (
+                                                        <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
                                                     )}
-                                                    {isOccupied && table.booking?.staff_remark?.includes('[CALL_BILL]') && (
+                                                    {hasCallBill && (
                                                         <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">BILL</span>
                                                     )}
-                                                    {isOccupied && table.booking?.payment_slip_url && (
-                                                        <span className="bg-[#FF5500] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
+                                                    {hasSlip && (
+                                                        <span className="bg-[#00CC44] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
                                                     )}
                                                 </div>
                                                 <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />

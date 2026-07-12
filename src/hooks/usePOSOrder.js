@@ -19,7 +19,7 @@ export function usePOSOrder() {
             const today = new Date().toISOString().split('T')[0];
             const { data, error } = await supabase
                 .from('bookings')
-                .select('*, order_items(*, menu_items(name))')
+                .select('*, tables_layout(*), order_items(*, menu_items(name))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .gte('booking_time', `${today}T00:00:00`)
@@ -56,7 +56,8 @@ export function usePOSOrder() {
                 booking_type: 'walk_in',
                 booking_time: new Date().toISOString(),
                 pax: table.capacity || 2,
-                staff_remark: 'Walk-in Guest (Offline)'
+                staff_remark: 'Walk-in Guest (Offline)',
+                tables_layout: table
             };
 
             // Save to active bookings cache
@@ -89,7 +90,7 @@ export function usePOSOrder() {
                     pax: table.capacity || 2,
                     staff_remark: 'Walk-in Guest'
                 })
-                .select()
+                .select('*, tables_layout(*)')
                 .single();
 
             if (error) throw error;
@@ -110,7 +111,8 @@ export function usePOSOrder() {
                 booking_type: 'walk_in',
                 booking_time: new Date().toISOString(),
                 pax: table.capacity || 2,
-                staff_remark: 'Walk-in Guest (Offline Fallback)'
+                staff_remark: 'Walk-in Guest (Offline Fallback)',
+                tables_layout: table
             };
 
             const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
@@ -334,6 +336,25 @@ export function usePOSOrder() {
             setLoading(false);
         }
     };
+    const attachCustomerToBooking = async (bookingId, userId) => {
+        if (!isOnline()) {
+            toast.error('❌ ออฟไลน์: ไม่สามารถระบุโปรไฟล์ลูกค้าได้ในขณะนี้');
+            return false;
+        }
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .update({ user_id: userId })
+                .eq('id', bookingId);
+            if (error) throw error;
+            toast.success(userId ? 'Attached customer profile successfully' : 'Detached customer profile successfully');
+            return true;
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to update customer profile: ' + err.message);
+            return false;
+        }
+    };
 
     return {
         loading,
@@ -342,6 +363,7 @@ export function usePOSOrder() {
         submitOrderItems,
         completeCheckout,
         acceptOrder,
-        uploadPaymentSlip
+        uploadPaymentSlip,
+        attachCustomerToBooking
     };
 }

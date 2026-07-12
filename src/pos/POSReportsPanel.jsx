@@ -10,18 +10,22 @@ import {
     Loader2, 
     RefreshCw, 
     CheckCircle2, 
-    FileText 
+    FileText,
+    Clock
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
-import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../utils/printerHelper';
+import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../utils/printerHelper';
+import { getShiftHistory } from '../utils/shiftHelper';
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
     const [bookings, setBookings] = useState([]);
     const [categories, setCategories] = useState([]);
     const [activeReprintBooking, setActiveReprintBooking] = useState(null);
+    const [shiftHistory, setShiftHistory] = useState([]);
 
     // Filter Date (Defaults to Today in Asia/Bangkok)
     const getBangkokDate = () => {
@@ -29,8 +33,22 @@ export default function POSReportsPanel() {
     };
     const [filterDate, setFilterDate] = useState(getBangkokDate());
 
+    const loadShiftHistoryData = () => {
+        const history = getShiftHistory();
+        setShiftHistory(history);
+    };
+
     useEffect(() => {
         fetchReportData();
+        loadShiftHistoryData();
+
+        const handleShiftChanged = () => {
+            loadShiftHistoryData();
+        };
+        window.addEventListener('pos-shift-changed', handleShiftChanged);
+        return () => {
+            window.removeEventListener('pos-shift-changed', handleShiftChanged);
+        };
     }, [filterDate]);
 
     const fetchReportData = async () => {
@@ -298,6 +316,76 @@ export default function POSReportsPanel() {
         }
     };
 
+    const handlePrintHistoricalShiftReport = async (shift) => {
+        const adjs = shift.adjustments || [];
+        const totalIn = shift.totalIn !== undefined ? shift.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+        const totalOut = shift.totalOut !== undefined ? shift.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+
+        try {
+            const reportData = {
+                staffName: shift.staffName,
+                openedAt: shift.openedAt,
+                closedAt: shift.closedAt,
+                openingFloat: shift.openingFloat,
+                cashSales: shift.cashSales || 0,
+                qrSales: shift.qrSales || 0,
+                totalIn,
+                totalOut,
+                expectedCash: shift.expectedCash,
+                actualCash: shift.closedCash,
+                difference: shift.difference,
+                totalBookings: shift.transactions?.length || 0,
+                totalItems: 0,
+                grossRevenue: (shift.cashSales || 0) + (shift.qrSales || 0),
+                discounts: 0,
+                cashRevenue: shift.cashSales || 0,
+                qrRevenue: shift.qrSales || 0,
+                netRevenue: (shift.cashSales || 0) + (shift.qrSales || 0)
+            };
+
+            const rawBytes = encodeShiftClosureReportData(reportData, '80mm');
+            await printToSunmiBuiltIn(rawBytes);
+            toast.success("พิมพ์รายงานประวัติรอบขายผ่าน SUNMI สำเร็จ");
+        } catch (err) {
+            console.error("Historical Shift Print failed:", err);
+            // Fallback: generate HTML for system print dialog
+            const htmlContent = `
+                <html>
+                    <head>
+                        <title>Historical Shift Report - ${shift.staffName}</title>
+                        <style>
+                            body { font-family: monospace; padding: 20px; width: 280px; font-size: 11px; }
+                            .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+                            .divider { border-bottom: 1px dashed black; margin: 10px 0; }
+                            .title { text-align: center; font-weight: bold; font-size: 14px; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="title">IN THE HAUS</div>
+                        <div class="title" style="font-size:10px;">HISTORICAL SHIFT REPORT</div>
+                        <div class="divider"></div>
+                        <div class="row"><span>Staff:</span> <span>${shift.staffName}</span></div>
+                        <div class="row"><span>Opened:</span> <span>${new Date(shift.openedAt).toLocaleString('th-TH')}</span></div>
+                        <div class="row"><span>Closed:</span> <span>${new Date(shift.closedAt).toLocaleString('th-TH')}</span></div>
+                        <div class="divider"></div>
+                        <div class="row"><span>Opening Float:</span> <span>฿${shift.openingFloat.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Cash Sales:</span> <span>฿${(shift.cashSales || 0).toLocaleString()}.-</span></div>
+                        <div class="row"><span>QR Sales:</span> <span>฿${(shift.qrSales || 0).toLocaleString()}.-</span></div>
+                        <div class="row"><span>Cash In (+):</span> <span>+฿${totalIn.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Cash Out (-):</span> <span>-฿${totalOut.toLocaleString()}.-</span></div>
+                        <div class="divider"></div>
+                        <div class="row"><span>Expected Cash:</span> <span>฿${shift.expectedCash?.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Actual Cash:</span> <span>฿${shift.closedCash?.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Difference:</span> <span>${shift.difference >= 0 ? '+' : ''}฿${shift.difference?.toLocaleString()}.-</span></div>
+                        <div class="divider"></div>
+                        <script>window.onload = function() { window.print(); }</script>
+                    </body>
+                </html>
+            `;
+            fallbackBrowserPrint(htmlContent);
+        }
+    };
+
     const fallbackBrowserPrint = (htmlContent) => {
         const printWindow = window.open('', '_blank', 'width=400,height=600');
         if (printWindow) {
@@ -338,7 +426,7 @@ export default function POSReportsPanel() {
                         type="date"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
-                        className="bg-white border border-[#D1D1CD] px-3 py-2 rounded-lg text-xs outline-none text-[#1A1A1A] focus:border-[#FF5500]"
+                        className="bg-white border border-[#D1D1CD] px-3 py-2 rounded-lg text-xs outline-none text-[#1A1A1A] focus:border-[#ff0000]"
                     />
                     <button 
                         onClick={fetchReportData} 
@@ -352,7 +440,7 @@ export default function POSReportsPanel() {
 
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50 space-y-3 font-mono text-[10px] font-bold text-[#767673] uppercase tracking-wider">
-                     <Loader2 className="animate-spin w-8 h-8 text-[#FF5500]" />
+                     <Loader2 className="animate-spin w-8 h-8 text-[#ff0000]" />
                      <p>Generating registry data...</p>
                 </div>
             ) : (
@@ -362,9 +450,9 @@ export default function POSReportsPanel() {
                         
                         {/* Net Revenue */}
                         <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF5500]"></div>
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#ff0000]"></div>
                             <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <TrendingUp size={12} className="text-[#FF5500]" /> NET SALES
+                                <TrendingUp size={12} className="text-[#ff0000]" /> NET SALES
                             </div>
                             <p className="text-xl font-black font-mono text-[#1A1A1A] mt-2">฿{totalSales.toLocaleString()}</p>
                             <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">{completedBookings.length} COMPLETED BILLS</p>
@@ -418,7 +506,7 @@ export default function POSReportsPanel() {
                         {/* Categories Sales Card */}
                         <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm">
                             <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
-                                <CheckCircle2 size={14} className="text-[#FF5500]" /> Sales By Category
+                                <CheckCircle2 size={14} className="text-[#ff0000]" /> Sales By Category
                             </h4>
                             <div className="flex-1 space-y-2 overflow-y-auto max-h-[300px] pr-1">
                                 {categoryList.map((c, i) => (
@@ -439,7 +527,7 @@ export default function POSReportsPanel() {
                             
                             <button 
                                 onClick={handlePrintShiftReport}
-                                className="w-full mt-4 bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                                className="w-full mt-4 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                             >
                                 <PrinterIcon size={12} /> PRINT SHIFT SUMMARY
                             </button>
@@ -448,7 +536,7 @@ export default function POSReportsPanel() {
                         {/* Completed Bills Log */}
                         <div className="md:col-span-2 bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm">
                             <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
-                                <FileText size={14} className="text-[#FF5500]" /> Today's Completed Bills
+                                <FileText size={14} className="text-[#ff0000]" /> Today's Completed Bills
                             </h4>
                             <div className="flex-1 overflow-x-auto max-h-[360px] scrollbar-none">
                                 <table className="w-full text-left text-xs border-collapse">
@@ -475,7 +563,7 @@ export default function POSReportsPanel() {
                                                         #{b.tracking_token ? b.tracking_token.slice(-4).toUpperCase() : b.id.slice(0, 4)}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-mono text-[#767673]">{timeStr}</td>
-                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[#FF5500]">
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[#ff0000]">
                                                         {b.tables_layout?.table_name || 'PICK'}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-bold truncate max-w-[120px] uppercase text-[#1A1A1A]">{guestName}</td>
@@ -515,6 +603,74 @@ export default function POSReportsPanel() {
                             </div>
                         </div>
 
+                    </div>
+
+                    {/* Shift History Section */}
+                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm mt-6">
+                        <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
+                            <Clock size={14} className="text-[#ff0000]" /> Shift Closure History / ประวัติรอบการทำงาน
+                        </h4>
+                        <div className="overflow-x-auto max-h-[300px]">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-[#D1D1CD] text-[#767673] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[#F5F5F2]">
+                                        <th className="py-2.5 px-3">Staff / พนักงาน</th>
+                                        <th className="py-2.5 px-3">Opened / เปิดรอบ</th>
+                                        <th className="py-2.5 px-3">Closed / ปิดรอบ</th>
+                                        <th className="py-2.5 px-3 text-right">Float / เงินต้น</th>
+                                        <th className="py-2.5 px-3 text-right">Cash / ยอดสด</th>
+                                        <th className="py-2.5 px-3 text-right text-emerald-600">Cash In (+เงินเข้า)</th>
+                                        <th className="py-2.5 px-3 text-right text-red-500">Cash Out (-เงินออก)</th>
+                                        <th className="py-2.5 px-3 text-right">Expected / คาดการณ์</th>
+                                        <th className="py-2.5 px-3 text-right">Actual / นับจริง</th>
+                                        <th className="py-2.5 px-3 text-right">Diff / ส่วนต่าง</th>
+                                        <th className="py-2.5 px-3 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[#ECECE9]">
+                                    {shiftHistory.map((s, i) => {
+                                        const openTime = new Date(s.openedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+                                        const closeTime = s.closedAt ? new Date(s.closedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+                                        
+                                        const adjs = s.adjustments || [];
+                                        const totalIn = s.totalIn !== undefined ? s.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+                                        const totalOut = s.totalOut !== undefined ? s.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+
+                                        return (
+                                            <tr key={i} className="hover:bg-[#F5F5F2] transition-colors font-mono text-[10px]">
+                                                <td className="py-2.5 px-3 font-sans font-bold text-[#1A1A1A] uppercase">{s.staffName}</td>
+                                                <td className="py-2.5 px-3 text-[#767673]">{openTime}</td>
+                                                <td className="py-2.5 px-3 text-[#767673]">{closeTime}</td>
+                                                <td className="py-2.5 px-3 text-right">฿{s.openingFloat?.toLocaleString()}</td>
+                                                <td className="py-2.5 px-3 text-right">฿{s.cashSales?.toLocaleString()}</td>
+                                                <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">+฿{totalIn.toLocaleString()}</td>
+                                                <td className="py-2.5 px-3 text-right text-red-500 font-bold">-฿{totalOut.toLocaleString()}</td>
+                                                <td className="py-2.5 px-3 text-right font-bold">฿{s.expectedCash?.toLocaleString()}</td>
+                                                <td className="py-2.5 px-3 text-right font-bold text-[#1A1A1A]">฿{s.closedCash?.toLocaleString()}</td>
+                                                <td className={`py-2.5 px-3 text-right font-black ${s.difference === 0 ? 'text-[#767673]' : s.difference > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                    {s.difference > 0 ? '+' : ''}{s.difference?.toLocaleString()}
+                                                </td>
+                                                <td className="py-2.5 px-3 text-center">
+                                                    <button 
+                                                        onClick={() => handlePrintHistoricalShiftReport(s)}
+                                                        className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer inline-flex items-center gap-1 font-sans text-[9px] font-bold uppercase tracking-wider"
+                                                    >
+                                                        <PrinterIcon size={10} /> Reprint
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {shiftHistory.length === 0 && (
+                                        <tr>
+                                            <td colSpan="11" className="py-10 text-center font-mono text-[9px] text-[#767673] uppercase italic">
+                                                No completed shift logs found
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

@@ -56,7 +56,7 @@ export default function POSMenuGrid({ onAddItem }) {
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[#ECECE9]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5500]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff0000]"></div>
         </div>
     );
 
@@ -69,7 +69,7 @@ export default function POSMenuGrid({ onAddItem }) {
                     <input 
                         type="search" 
                         placeholder="Search menu items..." 
-                        className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#FF5500] font-medium transition-colors"
+                        className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -111,7 +111,7 @@ export default function POSMenuGrid({ onAddItem }) {
                                         {item.name.charAt(0)}
                                     </div>
                                 )}
-                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-white border border-[#D1D1CD] flex items-center justify-center shadow-sm group-hover:bg-[#FF5500] group-hover:text-white group-hover:border-[#E04B00] transition-all">
+                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-white border border-[#D1D1CD] flex items-center justify-center shadow-sm group-hover:bg-[#ff0000] group-hover:text-white group-hover:border-[#d00000] transition-all">
                                     <Plus size={14} />
                                 </div>
                             </div>

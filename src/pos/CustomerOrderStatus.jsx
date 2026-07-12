@@ -166,7 +166,7 @@ export default function CustomerOrderStatus() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans">
-                <div className="w-12 h-12 border-4 border-[#FF5500] border-t-transparent rounded-full animate-spin mb-4" />
+                <div className="w-12 h-12 border-4 border-[#ff0000] border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-[#767673] text-xs font-mono font-bold tracking-widest uppercase">Loading order status...</p>
             </div>
         );
@@ -182,7 +182,7 @@ export default function CustomerOrderStatus() {
                 </p>
                 <button 
                     onClick={() => navigate(`/table/${tableId}`)} 
-                    className="bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white px-6 py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer shadow-sm"
+                    className="bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white px-6 py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer shadow-sm"
                 >
                     ไปที่หน้าสั่งอาหาร (Go to Menu)
                 </button>
@@ -192,21 +192,18 @@ export default function CustomerOrderStatus() {
     // Map status to steps
     const steps = [
         { key: 'pending', label: 'ส่งออเดอร์แล้ว', desc: 'รอพนักงานกดยอมรับ', time: booking.booking_time },
-        { key: 'seated', label: 'รับออเดอร์แล้ว', desc: 'กำลังจัดเตรียมอาหาร', time: booking.status !== 'pending' ? booking.booking_time : null },
-        { key: 'ready', label: 'พร้อมเสิร์ฟ', desc: 'อาหารพร้อมเสิร์ฟที่โต๊ะ', time: booking.status === 'ready' ? new Date().toISOString() : null },
+        { key: 'seated', label: 'รับออเดอร์แล้ว', desc: 'พนักงานยอมรับออเดอร์แล้ว กำลังจัดเตรียมอาหาร', time: booking.status !== 'pending' ? booking.booking_time : null },
     ];
 
     const getActiveStepIndex = () => {
         if (booking.status === 'pending') return 0;
-        if (booking.status === 'confirmed' || booking.status === 'seated') return 1;
-        if (booking.status === 'ready') return 2;
-        return 0;
+        return 1;
     };
 
     const activeStep = getActiveStepIndex();
 
     return (
-        <div className="min-h-screen w-full bg-[#F0F0EC] text-[#1A1A1A] font-sans flex flex-col pb-10 selection:bg-[#FF5500] selection:text-white select-none">
+        <div className="min-h-screen w-full bg-[#F0F0EC] text-[#1A1A1A] font-sans flex flex-col pb-10 selection:bg-[#ff0000] selection:text-white select-none">
             <Toaster position="top-center" richColors />
 
             {/* Header */}
@@ -229,7 +226,7 @@ export default function CustomerOrderStatus() {
             <div className="p-4 bg-transparent">
                 <button
                     onClick={() => navigate(`/table/${tableId}`)}
-                    className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-98"
+                    className="w-full bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-98"
                 >
                     + สั่งอาหารเพิ่ม (Order More)
                 </button>
@@ -249,7 +246,7 @@ export default function CustomerOrderStatus() {
                                     {/* Indicator light */}
                                     <div className="absolute -left-7 top-0.5 w-4 h-4 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center">
                                         {isCurrent ? (
-                                            <span className="w-2 h-2 rounded-full bg-[#FF5500] shadow-[0_0_6px_#FF5500] animate-pulse" />
+                                            <span className="w-2 h-2 rounded-full bg-[#ff0000] shadow-[0_0_6px_#ff0000] animate-pulse" />
                                         ) : isDone ? (
                                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                         ) : (
@@ -263,7 +260,7 @@ export default function CustomerOrderStatus() {
                                                 {step.label}
                                             </span>
                                             {isCurrent && (
-                                                <span className="bg-[#FF5500]/10 text-[#FF5500] text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded leading-none">
+                                                <span className="bg-[#ff0000]/10 text-[#ff0000] text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded leading-none">
                                                     กำลังเตรียม
                                                 </span>
                                             )}
@@ -289,7 +286,7 @@ export default function CustomerOrderStatus() {
                         {orderItems.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-start text-xs text-[#1A1A1A] pb-3 border-b border-[#D1D1CD]/30 last:border-b-0 last:pb-0">
                                 <div className="flex gap-2.5">
-                                    <span className="font-bold text-[#FF5500]">{item.quantity}x</span>
+                                    <span className="font-bold text-[#ff0000]">{item.quantity}x</span>
                                     <div>
                                         <span className="font-bold text-[#1A1A1A] block leading-tight">{item.menu_items?.name}</span>
                                         {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
@@ -311,7 +308,7 @@ export default function CustomerOrderStatus() {
 
                         <div className="border-t border-[#D1D1CD] pt-3.5 mt-2 flex justify-between items-baseline">
                             <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหารสุทธิ</span>
-                            <span className="text-lg font-black text-[#FF5500] font-mono">฿{booking.total_amount?.toLocaleString()}.-</span>
+                            <span className="text-lg font-black text-[#ff0000] font-mono">฿{booking.total_amount?.toLocaleString()}.-</span>
                         </div>
                     </div>
                 </section>
@@ -331,7 +328,7 @@ export default function CustomerOrderStatus() {
                             <button
                                 onClick={handleRequestBill}
                                 disabled={requestingBill}
-                                className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-97"
+                                className="w-full bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-97"
                             >
                                 <Receipt size={12} />
                                 {requestingBill ? 'กำลังดำเนินการ...' : 'เรียกพนักงานเช็คบิล (Request Bill)'}
@@ -345,46 +342,15 @@ export default function CustomerOrderStatus() {
                                 <span>เรียกพนักงานเช็คบิลแล้ว</span>
                             </div>
 
-                            {paymentQrUrl ? (
-                                <div className="flex flex-col items-center">
-                                    <div className="mb-2 bg-white p-2 rounded-xl border border-[#D1D1CD] shadow-sm">
-                                        <img src={paymentQrUrl} alt="Payment QR" className="w-32 h-32 object-contain" />
-                                    </div>
-                                    <p className="text-[9px] text-[#767673] text-center leading-relaxed max-w-[220px]">
-                                        สแกน QR Code เพื่อชำระเงินออนไลน์ จากนั้นอัปโหลดภาพสลิปเพื่อแจ้งพนักงาน
+                            <div className="w-full text-center py-6 bg-white border border-[#D1D1CD] rounded-xl flex flex-col items-center gap-2.5 shadow-sm">
+                                <Smartphone size={32} className="text-[#ff0000] animate-bounce" />
+                                <div>
+                                    <h4 className="font-bold text-xs text-[#1A1A1A]">กรุณาชำระเงินโดยสแกนกับพนักงาน</h4>
+                                    <p className="text-[10px] text-[#767673] max-w-[250px] leading-relaxed mx-auto mt-1 px-4">
+                                        พนักงานกำลังนำใบแจ้งยอดชำระเงิน (Bill) และ QR Code ไปแสดงที่โต๊ะของท่านเพื่อสแกนจ่ายโดยตรง
                                     </p>
                                 </div>
-                            ) : (
-                                <div className="w-full flex items-center justify-center p-4 bg-[#F5F5F2] rounded-xl text-[#767673] text-[9px] font-mono font-bold uppercase tracking-wider border border-[#D1D1CD]">
-                                    ไม่มีรูปภาพ QR ในระบบ (ติดต่อพนักงาน)
-                                </div>
-                            )}
-
-                            {booking.payment_slip_url ? (
-                                <div className="w-full bg-[#00CC44]/10 border border-[#00CC44]/20 p-3 rounded-xl flex items-center gap-3">
-                                    <div className="w-7 h-7 bg-[#00CC44]/20 text-[#00CC44] rounded-full flex items-center justify-center shrink-0">
-                                        <FileText size={14} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-[#1A1A1A]">แจ้งโอนเงินสำเร็จแล้ว</p>
-                                        <p className="text-[9px] text-[#00CC44] font-bold">พนักงานกำลังตรวจสอบเพื่อทำการเช็คเอาท์</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <label className={`w-full cursor-pointer flex flex-col items-center justify-center bg-white border border-dashed border-[#D1D1CD] hover:border-[#FF5500] rounded-xl p-3.5 transition-all text-center group ${uploadingSlip ? 'pointer-events-none opacity-50' : ''}`}>
-                                    <Upload size={16} className="text-[#767673] group-hover:text-[#FF5500] transition-colors mb-1" />
-                                    <span className="text-[9px] font-bold text-[#767673] group-hover:text-[#1A1A1A] transition-colors">
-                                        {uploadingSlip ? 'กำลังอัปโหลด...' : 'ส่งหลักฐานโอนเงิน / อัปโหลดสลิป'}
-                                    </span>
-                                    <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        accept="image/*" 
-                                        onChange={handleUploadSlip} 
-                                        disabled={uploadingSlip}
-                                    />
-                                </label>
-                            )}
+                            </div>
                         </div>
                     )}
                 </section>

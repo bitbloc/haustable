@@ -11,6 +11,7 @@ export default function SlipModal({ booking, type, onClose }) {
     const [saving, setSaving] = useState(false)
     const [optionMap, setOptionMap] = useState({})
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
+    const [isAutoPrinting, setIsAutoPrinting] = useState(false)
 
     // Determine initial tab:
     // If type === 'kitchen', default to kitchen.
@@ -34,36 +35,70 @@ export default function SlipModal({ booking, type, onClose }) {
     }
     const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod)
 
-    // Fetch Option choices names mapping
+    // Fetch Options mapping, QR settings, and execute SUNMI Auto Print
     useEffect(() => {
-        const fetchOptions = async () => {
-            const { data } = await supabase.from('option_choices').select('id, name')
-            if (data) {
-                const map = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {})
-                setOptionMap(map)
-            }
-        }
-        fetchOptions()
-    }, [])
-
-    // Fetch QR Code from settings
-    useEffect(() => {
-        const fetchQr = async () => {
+        const initAndAutoPrint = async () => {
+            // 1. Fetch options mapping
+            let currentOptionMap = {};
             try {
-                const { data, error } = await supabase
+                const { data } = await supabase.from('option_choices').select('id, name')
+                if (data) {
+                    currentOptionMap = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {})
+                    setOptionMap(currentOptionMap)
+                }
+            } catch (err) {
+                console.error("Failed to load options:", err)
+            }
+
+            // 2. Fetch QR Code
+            try {
+                const { data } = await supabase
                     .from('app_settings')
                     .select('value')
                     .eq('key', 'payment_qr_url')
-                    .single()
-                if (data && data.value) {
+                    .maybeSingle()
+                if (data?.value) {
                     setQrCodeUrl(data.value)
                 }
             } catch (err) {
                 console.error("Failed to load QR setting:", err)
             }
-        }
-        fetchQr()
-    }, [])
+
+            // 3. Check printer configuration
+            let printerType = 'universal';
+            try {
+                const stored = localStorage.getItem('onhaus_printer_config');
+                if (stored) {
+                    const config = JSON.parse(stored);
+                    if (activeTab === 'kitchen') {
+                        printerType = config.kitchen_printer_type || 'universal';
+                    } else {
+                        printerType = config.cashier_printer_type || 'universal';
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to read printer config:", err);
+            }
+
+            // 4. SUNMI Auto Print
+            if (printerType === 'sunmi') {
+                setIsAutoPrinting(true);
+                // Wait 400ms for stable render state
+                await new Promise(resolve => setTimeout(resolve, 400));
+                try {
+                    const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm');
+                    await printToSunmiBuiltIn(rawBytes);
+                    onClose();
+                } catch (err) {
+                    console.error("SUNMI Auto print failed:", err);
+                    alert(`พิมพ์อัตโนมัติผ่าน SUNMI ล้มเหลว: ${err.message || err}\nระบบจะสลับมาแสดงหน้าตัวอย่างเพื่อให้กดยืนยันด้วยตนเอง`);
+                    setIsAutoPrinting(false);
+                }
+            }
+        };
+
+        initAndAutoPrint();
+    }, []);
 
     // Helper to get option names
     const getOptionName = (id) => optionMap[id] || id
@@ -343,13 +378,13 @@ export default function SlipModal({ booking, type, onClose }) {
 
                     <div class="center-flex">
                         <div class="queue-box">
-                            <div class="queue-label">Queue No.</div>
-                            <div class="queue-val">#${queueNo}</div>
+                            <div class="queue-label">TABLE / โต๊ะ</div>
+                            <div class="queue-val">${booking.tables_layout?.table_name || 'PICKUP'}</div>
                         </div>
                     </div>
                     
                     <div class="meta">
-                        <div class="row"><span class="label">TABLE</span> <span class="val">${booking.tables_layout?.table_name || 'PICKUP'}</span></div>
+                        <div class="row"><span class="label">QUEUE NO</span> <span class="val">#${queueNo}</span></div>
                         <div class="row"><span class="label">DATE</span> <span class="val">${dateStr}</span></div>
                         <div class="row"><span class="label">GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</span></div>
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
@@ -532,12 +567,27 @@ export default function SlipModal({ booking, type, onClose }) {
 
     useEffect(() => {
         if (type === 'kitchen') {
-            const timer = setTimeout(() => {
-                handlePrint();
-            }, 600);
-            return () => clearTimeout(timer);
+            let isSunmi = false;
+            try {
+                const stored = localStorage.getItem('onhaus_printer_config');
+                if (stored) {
+                    const config = JSON.parse(stored);
+                    if (config.kitchen_printer_type === 'sunmi') {
+                        isSunmi = true;
+                    }
+                }
+            } catch (err) {}
+
+            if (!isSunmi) {
+                const timer = setTimeout(() => {
+                    handlePrint();
+                }, 600);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [type]);
+    }, [type]);    if (isAutoPrinting) {
+        return null;
+    }
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -579,13 +629,13 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div className="flex gap-2">
                             <button 
                                 onClick={() => setPaymentMethod('cash')}
-                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[#FF5500] text-white border border-[#D04500]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 เงินสด (CASH)
                             </button>
                             <button 
                                 onClick={() => setPaymentMethod('qr')}
-                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[#FF5500] text-white border border-[#D04500]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 โอนเงิน (QR)
                             </button>
@@ -594,10 +644,10 @@ export default function SlipModal({ booking, type, onClose }) {
                 )}
 
                 {/* Preview Window */}
-                <div className="flex-1 overflow-y-auto p-12 bg-[#ECECE9] border-t border-b border-[#D1D1CD] flex justify-center mt-4">
+                <div className="flex-1 overflow-y-auto py-6 px-4 bg-[#ECECE9] border-t border-b border-[#D1D1CD] flex flex-col items-center mt-4">
                     <div 
                         ref={slipRef} 
-                        className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top"
+                        className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top mt-4 mb-6"
                         style={{ fontFamily: "'Courier Prime', 'Courier New', monospace" }}
                     >
                         {/* BRAND HEADER (Hide for kitchen order to make it neat) */}
@@ -616,20 +666,20 @@ export default function SlipModal({ booking, type, onClose }) {
                             </div>
                         )}
 
-                        {/* Prominent Queue No. */}
+                        {/* Prominent Table Name */}
                         <div className="text-center mb-5">
                             <div className="inline-block border-2 border-black rounded-md px-6 py-2">
-                                <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px] mb-1">Queue No.</span>
+                                <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px] mb-1">TABLE / โต๊ะ</span>
                                 <span className="text-3xl font-black leading-none block">
-                                    #{queueNo}
+                                    {booking.tables_layout?.table_name || 'PICKUP'}
                                 </span>
                             </div>
                         </div>
 
                         {/* Meta Grid */}
                         <div className="grid grid-cols-2 gap-y-1.5 text-[10px] font-bold border-b-2 border-dashed border-black pb-4 mb-4">
-                            <div className="text-gray-500">TABLE / TYPE</div>
-                            <div className="text-right uppercase">{booking.tables_layout?.table_name || 'PICKUP'}</div>
+                            <div className="text-gray-500">QUEUE NO.</div>
+                            <div className="text-right font-mono">#{queueNo}</div>
                             
                             <div className="text-gray-500">DATE</div>
                             <div className="text-right">{dateStr}</div>
@@ -738,7 +788,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
                 {/* Actions */}
                 <div className="p-4 bg-[#F5F5F2] flex gap-3 border-t border-[#D1D1CD]">
-                    <button onClick={handlePrint} className="flex-1 bg-[#FF5500] hover:bg-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                    <button onClick={handlePrint} className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
                         <PrinterIcon size={14} /> Print Ticket
                     </button>
                     <button onClick={handleSaveImage} className="flex-grow bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
