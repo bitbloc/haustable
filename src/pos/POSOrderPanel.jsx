@@ -138,6 +138,13 @@ export default function POSOrderPanel({
             // 2. Check customer points balance
             const customerBalance = parseFloat(booking.profiles.xhaus_balance || 0);
             const cost = parseFloat(reward.xhaus_cost);
+
+            // 2.5 Check if reward quota has been fully redeemed
+            if (reward.usage_limit && (reward.used_count || 0) >= reward.usage_limit) {
+                toast.error("ขออภัยครับ ของรางวัลนี้ถูกใช้งานครบจำนวนสิทธิ์แล้ว (Out of Stock / Fully Redeemed)");
+                return;
+            }
+
             if (customerBalance < cost) {
                 toast.error(`เหรียญ xhaus ของลูกค้าไม่พอ! (ต้องการ ${cost} xhaus, ลูกค้ามี ${customerBalance} xhaus)`);
                 return;
@@ -529,7 +536,10 @@ export default function POSOrderPanel({
                             <div className="bg-white border border-blue-300 p-2 rounded-lg flex justify-between items-center text-[9px]">
                                 <div className="space-y-0.5 text-left">
                                     <p className="font-bold text-blue-950 truncate max-w-[170px]">{appliedReward.title}</p>
-                                    <p className="text-[8px] text-neutral-500 font-mono">Cost: {appliedReward.xhaus_cost} xhaus ({appliedReward.claim_code})</p>
+                                    <p className="text-[8px] text-neutral-500 font-mono">
+                                        Cost: {appliedReward.xhaus_cost} xhaus ({appliedReward.claim_code})
+                                        {appliedReward.usage_limit && ` | สิทธิ์คงเหลือ: ${Math.max(0, appliedReward.usage_limit - (appliedReward.used_count || 0))}/${appliedReward.usage_limit}`}
+                                    </p>
                                 </div>
                                 <button 
                                     onClick={handleCancelReward}
@@ -869,7 +879,8 @@ export default function POSOrderPanel({
                                                 xhausDiscount + rewardDiscount, 
                                                 promoDiscount, 
                                                 manualDiscount,
-                                                appliedReward ? appliedReward.claim_code : null
+                                                appliedReward ? appliedReward.claim_code : null,
+                                                appliedReward ? appliedReward.id : null
                                             );
                                             if (cfdChannel.current && paymentMethod === 'qr') {
                                                 cfdChannel.current.postMessage({ type: 'PAYMENT_SUCCESS' });

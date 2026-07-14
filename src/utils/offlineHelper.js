@@ -141,7 +141,7 @@ export async function syncOfflineQueue() {
             } 
             
             else if (action.type === 'complete_checkout') {
-                let { bookingId, totalAmount, paymentMethod } = action.payload;
+                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId } = action.payload;
                 
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
@@ -151,13 +151,20 @@ export async function syncOfflineQueue() {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
 
+                const updatePayload = {
+                    status: 'completed',
+                    total_amount: totalAmount,
+                    staff_remark: rewardCode 
+                        ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode} (Offline Sync)`
+                        : `Paid by ${paymentMethod.toUpperCase()} (Offline Sync)`
+                };
+                if (rewardId) {
+                    updatePayload.xhaus_reward_id = rewardId;
+                }
+
                 const { error } = await supabase
                     .from('bookings')
-                    .update({
-                        status: 'completed',
-                        total_amount: totalAmount,
-                        staff_remark: `Paid by ${paymentMethod.toUpperCase()} (Offline Sync)`
-                    })
+                    .update(updatePayload)
                     .eq('id', bookingId);
                 
                 if (error) throw error;

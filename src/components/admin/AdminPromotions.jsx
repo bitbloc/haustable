@@ -26,6 +26,7 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
         description: '',
         xhaus_cost: '',
         claim_code: '',
+        usage_limit: '',
         is_active: true
     })
 
@@ -60,6 +61,7 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 description: reward.description || '',
                 xhaus_cost: reward.xhaus_cost,
                 claim_code: reward.claim_code,
+                usage_limit: reward.usage_limit || '',
                 is_active: reward.is_active
             })
         } else {
@@ -69,6 +71,7 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 description: '',
                 xhaus_cost: '',
                 claim_code: '',
+                usage_limit: '',
                 is_active: true
             })
         }
@@ -87,6 +90,7 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 description: rewardFormData.description,
                 xhaus_cost: parseFloat(rewardFormData.xhaus_cost),
                 claim_code: rewardFormData.claim_code.toUpperCase().trim(),
+                usage_limit: rewardFormData.usage_limit ? parseInt(rewardFormData.usage_limit) : null,
                 is_active: rewardFormData.is_active
             }
 
@@ -459,8 +463,16 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                                                 <p className="text-xs text-gray-500 line-clamp-2">{reward.description}</p>
                                             )}
 
-                                            <div className="flex items-center gap-1.5 text-xs text-amber-700 font-bold bg-amber-50 px-2 py-1 rounded-lg w-max mt-2">
-                                                <span>🪙</span> Cost: {parseFloat(reward.xhaus_cost).toFixed(0)} xhaus
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <div className="flex items-center gap-1.5 text-xs text-amber-700 font-bold bg-amber-50 px-2 py-1 rounded-lg w-max mt-2">
+                                                    <span>🪙</span> Cost: {parseFloat(reward.xhaus_cost).toFixed(0)} xhaus
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-xs text-blue-750 font-bold bg-blue-50/70 border border-blue-100 px-2 py-1 rounded-lg w-max mt-2">
+                                                    <AlertCircle size={12} className="text-blue-500" />
+                                                    <span>
+                                                        แลกแล้ว: {reward.used_count || 0} / {reward.usage_limit ? `${reward.usage_limit} ใบ` : 'ไม่จำกัด'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -654,9 +666,9 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">xhaus Coins Cost (ราคาสะสมที่ใช้แลก)</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Coins Cost (แต้มสะสม)</label>
                                     <input 
                                         type="number"
                                         value={rewardFormData.xhaus_cost}
@@ -668,14 +680,25 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Redemption Code (รหัสแลกสินค้า)</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Redemption Code</label>
                                     <input 
                                         type="text"
                                         value={rewardFormData.claim_code}
                                         onChange={e => setRewardFormData({...rewardFormData, claim_code: e.target.value.toUpperCase()})}
                                         className="w-full bg-gray-50 p-2.5 rounded border outline-none focus:border-black font-mono font-bold uppercase"
-                                        placeholder="e.g. IHGLASS50"
+                                        placeholder="IHGLASS50"
                                         required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Usage Limit (จำกัดสิทธิ์)</label>
+                                    <input 
+                                        type="number"
+                                        value={rewardFormData.usage_limit}
+                                        onChange={e => setRewardFormData({...rewardFormData, usage_limit: e.target.value})}
+                                        className="w-full bg-gray-50 p-2.5 rounded border outline-none focus:border-black"
+                                        placeholder="ไม่จำกัด"
+                                        min="1"
                                     />
                                 </div>
                             </div>

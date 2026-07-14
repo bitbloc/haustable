@@ -287,7 +287,8 @@ export function usePOSOrder() {
         xhausEarned = 0,
         xhausRedeemed = 0,
         xhausDiscount = 0,
-        rewardCode = null
+        rewardCode = null,
+        rewardId = null
     ) => {
         setLoading(true);
         
@@ -304,6 +305,7 @@ export function usePOSOrder() {
                         xhaus_earned: xhausEarned,
                         xhaus_redeemed: xhausRedeemed,
                         xhaus_discount: xhausDiscount,
+                        xhaus_reward_id: rewardId,
                         staff_remark: rewardCode 
                             ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}`
                             : `Paid by ${paymentMethod.toUpperCase()}` 
@@ -321,7 +323,8 @@ export function usePOSOrder() {
                 xhausEarned, 
                 xhausRedeemed, 
                 xhausDiscount,
-                rewardCode
+                rewardCode,
+                rewardId
             });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
             
@@ -336,14 +339,19 @@ export function usePOSOrder() {
                 ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}`
                 : `Paid by ${paymentMethod.toUpperCase()}`;
 
+            const updatePayload = {
+                status: 'completed',
+                total_amount: totalAmount,
+                discount_amount: discountAmount,
+                staff_remark: remarkText
+            };
+            if (rewardId) {
+                updatePayload.xhaus_reward_id = rewardId;
+            }
+
             const { error: bookingErr } = await supabase
                 .from('bookings')
-                .update({
-                    status: 'completed',
-                    total_amount: totalAmount,
-                    discount_amount: discountAmount,
-                    staff_remark: remarkText
-                })
+                .update(updatePayload)
                 .eq('id', bookingId);
 
             if (bookingErr) throw bookingErr;
@@ -383,6 +391,7 @@ export function usePOSOrder() {
                         xhaus_earned: xhausEarned,
                         xhaus_redeemed: xhausRedeemed,
                         xhaus_discount: xhausDiscount,
+                        xhaus_reward_id: rewardId,
                         staff_remark: `Paid by ${paymentMethod.toUpperCase()}` 
                     };
                 }
@@ -397,7 +406,9 @@ export function usePOSOrder() {
                 discountAmount, 
                 xhausEarned, 
                 xhausRedeemed, 
-                xhausDiscount 
+                xhausDiscount,
+                rewardCode,
+                rewardId
             });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
 

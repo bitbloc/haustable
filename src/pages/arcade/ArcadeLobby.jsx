@@ -688,14 +688,19 @@ export default function ArcadeLobby() {
                   {rewards.map(reward => {
                     const userBalance = parseFloat(profile?.xhaus_balance || 0);
                     const cost = parseFloat(reward.xhaus_cost);
-                    const canRedeem = session && userBalance >= cost;
+                    const isOutOfStock = reward.usage_limit && (reward.used_count || 0) >= reward.usage_limit;
+                    const canRedeem = session && userBalance >= cost && !isOutOfStock;
                     const needed = cost - userBalance;
 
                     return (
                       <div 
                         key={reward.id} 
                         className={`p-3 bg-white border rounded-[4px] flex flex-col gap-2 text-xs transition-all ${
-                          canRedeem ? 'border-emerald-500/60' : 'border-[var(--color-rule)]'
+                          isOutOfStock
+                            ? 'border-red-200 opacity-60'
+                            : canRedeem 
+                                ? 'border-emerald-500/60' 
+                                : 'border-[var(--color-rule)]'
                         }`}
                       >
                         <div className="flex justify-between items-start gap-2">
@@ -705,13 +710,31 @@ export default function ArcadeLobby() {
                               <p className="text-[9px] text-[var(--color-ink-2)] leading-tight mt-0.5">{reward.description}</p>
                             )}
                           </div>
-                          <span className="shrink-0 bg-[var(--color-paper-3)] border border-[var(--color-rule)] font-mono text-[9px] font-bold px-2 py-0.5 rounded-[3px] text-[var(--color-ink)]">
-                            {cost.toFixed(0)} XH
-                          </span>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className="bg-[var(--color-paper-3)] border border-[var(--color-rule)] font-mono text-[9px] font-bold px-2 py-0.5 rounded-[3px] text-[var(--color-ink)]">
+                              {cost.toFixed(0)} XH
+                            </span>
+                            <span className={`font-mono text-[7px] font-bold px-1 py-0.5 rounded-[3px] border ${
+                                reward.usage_limit 
+                                    ? (isOutOfStock 
+                                        ? 'bg-red-50 text-red-750 border-red-200' 
+                                        : 'bg-zinc-50 text-zinc-650 border-zinc-200')
+                                    : 'bg-blue-50 text-blue-750 border-blue-205'
+                            }`}>
+                                {reward.usage_limit 
+                                    ? `คงเหลือ: ${Math.max(0, reward.usage_limit - (reward.used_count || 0))}/${reward.usage_limit}`
+                                    : 'คงเหลือ: ไม่จำกัด'}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="border-t border-dashed border-[var(--color-rule)] pt-2 mt-1 flex justify-between items-center">
-                          {canRedeem ? (
+                          {isOutOfStock ? (
+                            <div className="flex items-center gap-1 text-red-500 text-[9px] w-full font-mono font-bold">
+                              <span>🚫</span>
+                              <span>สิทธิ์หมดแล้ว (Fully Redeemed / Out of Stock)</span>
+                            </div>
+                          ) : canRedeem ? (
                             <div className="flex justify-between items-center w-full">
                               <div className="font-mono">
                                 <span className="text-[7px] text-[var(--color-muted)] block uppercase leading-none mb-0.5">รหัสคูปองแสดงพนักงาน</span>

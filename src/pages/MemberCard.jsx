@@ -755,24 +755,40 @@ export default function MemberCard() {
                                             {rewards.map(reward => {
                                                 const userBalance = parseFloat(profile?.xhaus_balance || 0);
                                                 const cost = parseFloat(reward.xhaus_cost);
-                                                const canRedeem = userBalance >= cost;
+                                                const isOutOfStock = reward.usage_limit && (reward.used_count || 0) >= reward.usage_limit;
+                                                const canRedeem = userBalance >= cost && !isOutOfStock;
                                                 const needed = cost - userBalance;
 
                                                 return (
                                                     <div 
                                                         key={reward.id} 
                                                         className={`bg-white border rounded-[8px] p-4 shadow-sm flex flex-col justify-between gap-3 transition-all ${
-                                                            canRedeem 
-                                                                ? 'border-emerald-500 hover:border-emerald-600' 
-                                                                : 'border-[var(--color-hallmark-rule)] opacity-85'
+                                                            isOutOfStock
+                                                                ? 'border-red-200 opacity-60'
+                                                                : canRedeem 
+                                                                    ? 'border-emerald-500 hover:border-emerald-600' 
+                                                                    : 'border-[var(--color-hallmark-rule)] opacity-85'
                                                         }`}
                                                     >
                                                         <div className="space-y-1">
                                                             <div className="flex justify-between items-start gap-2">
                                                                 <h4 className="text-xs font-bold text-[var(--color-hallmark-ink)]">{reward.title}</h4>
-                                                                <span className="shrink-0 bg-amber-50 text-amber-700 border border-amber-250 font-mono text-[9px] font-bold px-2 py-0.5 rounded-[4px]">
-                                                                    {cost.toFixed(0)} xhaus
-                                                                </span>
+                                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                                    <span className="bg-amber-50 text-amber-700 border border-amber-250 font-mono text-[9px] font-bold px-2 py-0.5 rounded-[4px]">
+                                                                        {cost.toFixed(0)} xhaus
+                                                                    </span>
+                                                                    <span className={`font-mono text-[8px] font-bold px-1.5 py-0.5 rounded-[4px] border ${
+                                                                        reward.usage_limit 
+                                                                            ? (isOutOfStock 
+                                                                                ? 'bg-red-50 text-red-750 border-red-200' 
+                                                                                : 'bg-zinc-50 text-zinc-600 border-zinc-200')
+                                                                            : 'bg-blue-50 text-blue-750 border-blue-200'
+                                                                    }`}>
+                                                                        {reward.usage_limit 
+                                                                            ? `สิทธิ์คงเหลือ: ${Math.max(0, reward.usage_limit - (reward.used_count || 0))} / ${reward.usage_limit} ใบ`
+                                                                            : 'สิทธิ์คงเหลือ: ไม่จำกัด (Unlimited)'}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                             {reward.description && (
                                                                 <p className="text-[10px] text-zinc-500 leading-relaxed">{reward.description}</p>
