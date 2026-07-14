@@ -74,7 +74,13 @@ export default function AdminSettings() {
         default_vat_enabled: 'true',
         crm_welcome_xhaus: '10.00',
         crm_redeem_rate_xhaus: '1.00',
-        crm_min_redeem_xhaus: '10.00'
+        crm_min_redeem_xhaus: '10.00',
+        receipt_shop_name: 'IN THE HAUS',
+        receipt_shop_address: '',
+        receipt_shop_phone: '',
+        receipt_shop_vat: '',
+        receipt_shop_logo_url: '',
+        receipt_shop_footer: 'THANK YOU FOR YOUR VISIT'
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -82,6 +88,7 @@ export default function AdminSettings() {
     const [uploadingFloor, setUploadingFloor] = useState(false)
     const [uploadingSound, setUploadingSound] = useState(false)
     const [uploadingHomeBg, setUploadingHomeBg] = useState(false)
+    const [uploadingLogo, setUploadingLogo] = useState(false)
     const [crmQrUrl, setCrmQrUrl] = useState('')
 
     useEffect(() => {
@@ -536,6 +543,7 @@ export default function AdminSettings() {
                     { id: 'checkins', label: '📸 จัดการรูปเช็กอิน / รีวิว', desc: 'Manage Check-in Stream' },
                     { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' },
                     { id: 'printers', label: '🖨 ตั้งค่าเครื่องพิมพ์ (Printers)', desc: 'Configure Cashier & Kitchen Printers' },
+                    { id: 'receipt', label: '🧾 ตั้งค่าหัว/ท้ายใบเสร็จ', desc: 'Shop details, VAT, Logo & Footer' },
                     { id: 'crm', label: '🪙 ระบบ CRM & สะสมเหรียญ xhaus', desc: 'Manage Tiers & Coins Settings' },
                     { id: 'debug', label: '🔧 บั๊ก & รายงานความผิดพลาด', desc: 'Crash Reporting & Debug Logs' }
                 ].map(tab => (
@@ -1461,6 +1469,135 @@ export default function AdminSettings() {
                                 >
                                     Test Kitchen Order Print
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* TAB 7: Receipt Settings */}
+                {activeSettingsTab === 'receipt' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in font-sans text-[#1A1A1A] mb-8">
+                        {/* Column 1: Config Fields */}
+                        <div className="md:col-span-2 space-y-6">
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
+                                    <FileText className="text-zinc-750" size={20} />
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        ข้อมูลหัวใบเสร็จ & ร้านค้า (Shop Header Settings)
+                                    </h2>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {/* Shop Name */}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-subInk mb-1.5">ชื่อร้านบนใบเสร็จ (Shop Name)</label>
+                                        <input
+                                            type="text"
+                                            value={settings.receipt_shop_name || ''}
+                                            onChange={(e) => handleSave('receipt_shop_name', e.target.value)}
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-brand"
+                                            placeholder="IN THE HAUS"
+                                        />
+                                    </div>
+
+                                    {/* Address */}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-wider text-subInk mb-1.5">ที่อยู่ร้าน (Shop Address)</label>
+                                        <textarea
+                                            rows={3}
+                                            value={settings.receipt_shop_address || ''}
+                                            onChange={(e) => handleSave('receipt_shop_address', e.target.value)}
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-brand font-sans resize-none"
+                                            placeholder="123 ถนนโชคชัย นครพนม 48000"
+                                        />
+                                    </div>
+
+                                    {/* Phone & VAT */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase tracking-wider text-subInk mb-1.5">เบอร์โทรศัพท์ติดต่อ (Phone)</label>
+                                            <input
+                                                type="text"
+                                                value={settings.receipt_shop_phone || ''}
+                                                onChange={(e) => handleSave('receipt_shop_phone', e.target.value)}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-brand"
+                                                placeholder="081-234-5678"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase tracking-wider text-subInk mb-1.5">เลขประจำตัวผู้เสียภาษี (VAT ID)</label>
+                                            <input
+                                                type="text"
+                                                value={settings.receipt_shop_vat || ''}
+                                                onChange={(e) => handleSave('receipt_shop_vat', e.target.value)}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-brand"
+                                                placeholder="0105560000000"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer message settings */}
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
+                                    <MessageSquare className="text-zinc-750" size={20} />
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        ข้อความท้ายใบเสร็จ (Receipt Footer message)
+                                    </h2>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-subInk mb-1.5">ข้อความปิดท้ายใบเสร็จ (Footer text)</label>
+                                    <textarea
+                                        rows={2}
+                                        value={settings.receipt_shop_footer || ''}
+                                        onChange={(e) => handleSave('receipt_shop_footer', e.target.value)}
+                                        className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-brand resize-none"
+                                        placeholder="THANK YOU FOR YOUR VISIT"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1.5">จะแสดงที่บรรทัดสุดท้ายด้านล่างของใบเสร็จชำระเงินทุกใบ</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 2: Logo Manager */}
+                        <div className="space-y-6">
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3 mb-4">
+                                        <QrCode className="text-brand" size={20} />
+                                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                            โลโก้บนใบเสร็จ (Shop Logo)
+                                        </h2>
+                                    </div>
+                                    <div className="mb-4 flex justify-center bg-white p-4 rounded-2xl border border-gray-200">
+                                        {settings.receipt_shop_logo_url ? (
+                                            <img 
+                                                src={`${settings.receipt_shop_logo_url}?t=${timestamp}`} 
+                                                className="max-w-[150px] max-h-[150px] object-contain rounded-xl border border-gray-150 p-2" 
+                                            />
+                                        ) : (
+                                            <div className="w-32 h-32 bg-gray-100 rounded-xl flex items-center justify-center text-subInk text-xs">No Logo</div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block w-full cursor-pointer group">
+                                        <div className="bg-white border border-dashed border-gray-300 rounded-xl p-3 text-center group-hover:border-brand transition-colors">
+                                            <span className="text-subInk text-xs group-hover:text-ink font-bold">
+                                                {uploadingLogo ? 'กำลังอัปโหลด...' : '📸 เลือกไฟล์เพื่อเปลี่ยนโลโก้'}
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            accept="image/*" 
+                                            onChange={(e) => handleUpload(e.target.files[0], 'receipt_shop_logo_url', setUploadingLogo)} 
+                                        />
+                                    </label>
+                                    <p className="text-[10px] text-gray-400 mt-2 text-center">ขนาดแนะนำ: สี่เหลี่ยมจัตุรัสหรือแนวราบ, ระบบจะย่อขนาดให้อัตโนมัติเป็น 200px เมื่อพิมพ์</p>
+                                </div>
                             </div>
                         </div>
                     </div>

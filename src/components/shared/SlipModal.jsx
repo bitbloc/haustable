@@ -62,11 +62,19 @@ export default function SlipModal({ booking, type, onClose }) {
     }
     const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod)
 
+    const [receiptShopName, setReceiptShopName] = useState('IN THE HAUS');
+    const [receiptShopAddress, setReceiptShopAddress] = useState('');
+    const [receiptShopPhone, setReceiptShopPhone] = useState('');
+    const [receiptShopVat, setReceiptShopVat] = useState('');
+    const [receiptShopLogoUrl, setReceiptShopLogoUrl] = useState('');
+    const [receiptShopFooter, setReceiptShopFooter] = useState('THANK YOU FOR YOUR VISIT');
+
     // Fetch Options mapping, QR settings, and execute SUNMI Auto Print
     useEffect(() => {
         const initAndAutoPrint = async () => {
             // 1. Fetch options mapping
             let currentOptionMap = {};
+            let loadedConfig = {};
             try {
                 const { data } = await supabase.from('option_choices').select('id, name')
                 if (data) {
@@ -77,18 +85,30 @@ export default function SlipModal({ booking, type, onClose }) {
                 console.error("Failed to load options:", err)
             }
 
-            // 2. Fetch QR Code
+            // 2. Fetch all app settings (QR Code, Receipt Info)
             try {
-                const { data } = await supabase
-                    .from('app_settings')
-                    .select('value')
-                    .eq('key', 'payment_qr_url')
-                    .maybeSingle()
-                if (data?.value) {
-                    setQrCodeUrl(data.value)
+                const { data } = await supabase.from('app_settings').select('*');
+                if (data) {
+                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    if (settingsMap.payment_qr_url) setQrCodeUrl(settingsMap.payment_qr_url);
+                    if (settingsMap.receipt_shop_name) setReceiptShopName(settingsMap.receipt_shop_name);
+                    if (settingsMap.receipt_shop_address) setReceiptShopAddress(settingsMap.receipt_shop_address);
+                    if (settingsMap.receipt_shop_phone) setReceiptShopPhone(settingsMap.receipt_shop_phone);
+                    if (settingsMap.receipt_shop_vat) setReceiptShopVat(settingsMap.receipt_shop_vat);
+                    if (settingsMap.receipt_shop_logo_url) setReceiptShopLogoUrl(settingsMap.receipt_shop_logo_url);
+                    if (settingsMap.receipt_shop_footer) setReceiptShopFooter(settingsMap.receipt_shop_footer);
+
+                    loadedConfig = {
+                        shopName: settingsMap.receipt_shop_name,
+                        shopAddress: settingsMap.receipt_shop_address,
+                        shopPhone: settingsMap.receipt_shop_phone,
+                        shopVat: settingsMap.receipt_shop_vat,
+                        shopLogoUrl: settingsMap.receipt_shop_logo_url,
+                        shopFooter: settingsMap.receipt_shop_footer
+                    };
                 }
             } catch (err) {
-                console.error("Failed to load QR setting:", err)
+                console.error("Failed to load app settings:", err);
             }
 
             // 3. Check printer configuration
@@ -115,20 +135,20 @@ export default function SlipModal({ booking, type, onClose }) {
                 try {
                     if (activeTab === 'kitchen') {
                         // Print Kitchen slip
-                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, '80mm');
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, '80mm', loadedConfig);
                         if (kitchenBytes) {
                             await printToSunmiBuiltIn(kitchenBytes);
                         }
                         
                         // Print Bar slip
-                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, '80mm');
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, '80mm', loadedConfig);
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
                         }
                     } else {
-                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm');
+                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm', loadedConfig);
                         if (rawBytes) {
-                            await printToSunmiBuiltIn(rawBytes);
+                            await printToSunmiBuiltIn(rawBytes, loadedConfig.shopLogoUrl);
                         }
                     }
                     onClose();
@@ -150,21 +170,33 @@ export default function SlipModal({ booking, type, onClose }) {
     const getPrintHtml = () => {
         const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
         
-        const BAR_CATEGORIES = [
-            '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-            '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-            'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-            'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-            '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-            '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-            '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-        ];
-
+        let staffName = ''
+        try {
+            const shift = JSON.parse(localStorage.getItem('pos_current_shift'))
+            if (shift && shift.staffName) {
+                staffName = shift.staffName
+            }
+        } catch (e) {
+            console.error(e)
+        }
+        
         let filteredItems = booking.order_items || [];
         if (activeTab === 'kitchen') {
             filteredItems = filteredItems.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
         } else if (activeTab === 'bar') {
             filteredItems = filteredItems.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        }
+
+        // Sort items for kitchen and bar to group by category first, then alphabetically by name
+        if (activeTab === 'kitchen' || activeTab === 'bar') {
+            filteredItems = [...filteredItems].sort((a, b) => {
+                const catA = a.menu_items?.category_id || '';
+                const catB = b.menu_items?.category_id || '';
+                if (catA !== catB) return catA.localeCompare(catB);
+                const nameA = a.menu_items?.name || '';
+                const nameB = b.menu_items?.name || '';
+                return nameA.localeCompare(nameB);
+            });
         }
 
         // Items HTML
@@ -187,18 +219,23 @@ export default function SlipModal({ booking, type, onClose }) {
 
             const price = (item.price_at_time * item.quantity).toLocaleString()
 
-            // If kitchen or bar, don't output price
+            // If kitchen or bar, format with bold boxed quantity, large font, and no price
             if (activeTab === 'kitchen' || activeTab === 'bar') {
                 return `
-                    <div class="item">
-                        <div class="row">
-                            <span class="qty">${item.quantity}x</span>
-                            <span class="name" style="font-size: 13px; font-weight: bold;">${name}</span>
+                    <div class="item kitchen-item" style="border-bottom: 1px dashed black; padding-bottom: 6px; margin-bottom: 6px;">
+                        <div class="row" style="font-size: 15px; font-weight: bold; display: flex; align-items: center;">
+                            <span class="qty" style="font-size: 16px; background: black; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 8px; flex-shrink: 0;">${item.quantity}x</span>
+                            <span class="name" style="flex-grow: 1; text-transform: uppercase;">${name}</span>
                         </div>
-                        ${optsHtml ? `<div class="opts" style="font-size: 10px; margin-left: 25px;">${optsHtml}</div>` : ''}
+                        ${optsHtml ? `<div class="opts" style="font-size: 11px; margin-left: 35px; font-weight: bold; color: black;">${optsHtml}</div>` : ''}
                     </div>
                 `
             }
+
+            // Customer Receipt: Show unit price calculation if quantity > 1
+            const showUnitPrice = item.quantity > 1 
+                ? `<div style="font-size: 9px; color: #555; margin-left: 25px; margin-top: 1px;">(${item.quantity} x ฿${item.price_at_time.toLocaleString()})</div>` 
+                : '';
 
             return `
                 <div class="item">
@@ -207,6 +244,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         <span class="name">${name}</span>
                         <span class="price">${price}</span>
                     </div>
+                    ${showUnitPrice}
                     ${optsHtml ? `<div class="opts">${optsHtml}</div>` : ''}
                 </div>
             `
@@ -252,7 +290,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
         // Dynamic title based on activeTab
         let docTitle = 'TICKET'
-        let docHeader = 'IN THE HAUS'
+        let docHeader = receiptShopName || 'IN THE HAUS'
         if (activeTab === 'kitchen') {
             docTitle = 'KITCHEN ORDER / ใบสั่งอาหาร'
         } else if (activeTab === 'bar') {
@@ -433,8 +471,24 @@ export default function SlipModal({ booking, type, onClose }) {
                     </style>
                 </head>
                 <body>
+                    <!-- Logo rendering if customer receipt -->
+                    ${(activeTab !== 'kitchen' && activeTab !== 'bar' && receiptShopLogoUrl) ? `
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            <img src="${receiptShopLogoUrl}" style="max-width: 140px; max-height: 80px; object-fit: contain;" />
+                        </div>
+                    ` : ''}
+
                     <div class="brand">${docHeader}</div>
                     <div class="tagline">TASTE YOUR SCENT.</div>
+
+                    <!-- Shop metadata rendering if customer receipt -->
+                    ${(activeTab !== 'kitchen' && activeTab !== 'bar' && (receiptShopAddress || receiptShopPhone || receiptShopVat)) ? `
+                        <div style="text-align: center; font-size: 8px; line-height: 1.3; margin-bottom: 12px; border-bottom: 1px dashed black; padding-bottom: 8px; text-transform: uppercase;">
+                            ${receiptShopAddress ? `<div style="margin-bottom: 2px;">${receiptShopAddress}</div>` : ''}
+                            ${receiptShopPhone ? `<div style="margin-bottom: 2px;">Tel: ${receiptShopPhone}</div>` : ''}
+                            ${receiptShopVat ? `<div>Tax ID: ${receiptShopVat}</div>` : ''}
+                        </div>
+                    ` : ''}
                     
                     <div class="ticket-title">${docTitle}</div>
 
@@ -450,6 +504,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div class="row"><span class="label">DATE</span> <span class="val">${dateStr}</span></div>
                         <div class="row"><span class="label">GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</span></div>
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
+                        <!-- Cashier shift staff info if customer receipt -->
+                        ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">STAFF</span> <span class="val">${staffName}</span></div>` : ''}
                     </div>
 
                     <div class="items">
@@ -465,9 +521,7 @@ export default function SlipModal({ booking, type, onClose }) {
                     ${noteHtml}
 
                     <div class="footer">
-                        THANK YOU FOR DINING WITH US
-                        <br/>
-                        smallfry.world
+                        ${receiptShopFooter || 'THANK YOU FOR YOUR VISIT'}
                     </div>
 
                     <script>
@@ -501,11 +555,21 @@ export default function SlipModal({ booking, type, onClose }) {
             console.error("Failed to read printer config:", err);
         }
 
+        const receiptConfig = {
+            shopName: receiptShopName,
+            shopAddress: receiptShopAddress,
+            shopPhone: receiptShopPhone,
+            shopVat: receiptShopVat,
+            shopLogoUrl: receiptShopLogoUrl,
+            shopFooter: receiptShopFooter
+        };
+
         if (printerType === 'sunmi') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm');
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm', receiptConfig);
                 if (rawBytes) {
-                    await printToSunmiBuiltIn(rawBytes);
+                    const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar') ? receiptConfig.shopLogoUrl : null;
+                    await printToSunmiBuiltIn(rawBytes, logoToPrint);
                 } else {
                     toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                 }
@@ -516,7 +580,7 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'rawbt') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize);
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig);
                 await printToRawBTWebSocket(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -525,7 +589,7 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'bluetooth') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize);
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig);
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
