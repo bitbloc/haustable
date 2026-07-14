@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy } from 'lucide-react'
 import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
 import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from './utils/printerHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
+import { logger } from './utils/logger'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -535,7 +536,8 @@ export default function AdminSettings() {
                     { id: 'checkins', label: '📸 จัดการรูปเช็กอิน / รีวิว', desc: 'Manage Check-in Stream' },
                     { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' },
                     { id: 'printers', label: '🖨 ตั้งค่าเครื่องพิมพ์ (Printers)', desc: 'Configure Cashier & Kitchen Printers' },
-                    { id: 'crm', label: '🪙 ระบบ CRM & สะสมเหรียญ xhaus', desc: 'Manage Tiers & Coins Settings' }
+                    { id: 'crm', label: '🪙 ระบบ CRM & สะสมเหรียญ xhaus', desc: 'Manage Tiers & Coins Settings' },
+                    { id: 'debug', label: '🔧 บั๊ก & รายงานความผิดพลาด', desc: 'Crash Reporting & Debug Logs' }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -1689,6 +1691,140 @@ export default function AdminSettings() {
                                 >
                                     Cancel
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* TAB 7: Diagnostics & Logs */}
+                {activeSettingsTab === 'debug' && (
+                    <div className="space-y-6 animate-fade-in font-sans text-[#1A1A1A]">
+                        {/* Summary & Diagnoses */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                            <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
+                                <Terminal className="text-zinc-700" size={20} />
+                                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                    Crash Diagnostics (วิเคราะห์สาเหตุการหยุดทำงาน)
+                                </h2>
+                            </div>
+
+                            {/* Diagnose Logic */}
+                            {(() => {
+                                const logs = logger.getLogs();
+                                const crashLogs = logs.filter(l => l.level === 'CRASH');
+                                const hasSunmiCrash = crashLogs.some(l => l.title.includes('print_sunmi'));
+
+                                return (
+                                    <div className="space-y-4">
+                                        {hasSunmiCrash ? (
+                                            <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl space-y-2 animate-fade-in">
+                                                <div className="flex items-center gap-2 font-bold text-xs font-mono uppercase text-red-600">
+                                                    <AlertTriangle size={16} />
+                                                    ตรวจพบการหยุดทำงานของแอป (Crash) จากเครื่องพิมพ์ SUNMI ในตัว
+                                                </div>
+                                                <p className="text-xs leading-relaxed font-medium">
+                                                    แอปพลิเคชันเคยหยุดทำงานกระทันหัน (Force Close) ระหว่างเรียกใช้งานเครื่องพิมพ์ระบบ SUNMI ในตัว 
+                                                    มักเกิดจากความไม่เข้ากันทางฮาร์ดแวร์ระหว่าง **Capacitor Sunmi Plugin (AIDL)** กับบอร์ดเฟิร์มแวร์ของรุ่น **Sunmi D2s Plus**
+                                                </p>
+                                                <div className="text-[11px] bg-white/60 p-2.5 rounded-lg border border-red-100 mt-2 space-y-1">
+                                                    <div className="font-bold">💡 คำแนะนำในการแก้ไข:</div>
+                                                    <div>1. ให้ติดตั้งแอปพลิเคชันช่วยเหลือการพิมพ์ภายนอกชื่อ <span className="font-mono font-bold text-red-600">RawBT Printer</span> บนเครื่อง Sunmi</div>
+                                                    <div>2. เปิดสิทธิ์การใช้งานแอป RawBT และเปิดสวิตช์ฟังก์ชัน <span className="font-semibold">Websocket / Local server</span> ในแอป RawBT</div>
+                                                    <div>3. กลับมาที่เมนูนี้ แถบ <span className="font-semibold">"ตั้งค่าเครื่องพิมพ์"</span> และเปลี่ยนรูปแบบการพิมพ์เป็น <span className="font-bold text-brand">Auto-Print (via RawBT Local Server)</span></div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl space-y-1">
+                                                <div className="flex items-center gap-2 font-bold text-xs font-mono uppercase text-emerald-600">
+                                                    <ShieldCheck size={16} />
+                                                    ระบบทำงานเป็นปกติ (No Native Crashes Detected)
+                                                </div>
+                                                <p className="text-xs leading-relaxed font-medium">
+                                                    ยังไม่ตรวจพบประวัติแอปพลิเคชันปิดตัวลงกระทันหันจากปัญหาการเรียกใช้โมดูลหรือฟลัชฮาร์ดแวร์ Native
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                                            <div className="bg-white border border-[#D1D1CD] p-3 rounded-xl space-y-1">
+                                                <div className="text-subInk text-[9px] uppercase font-bold tracking-wider">Environment Info</div>
+                                                <div>Platform: <span className="font-bold">{Capacitor.getPlatform()}</span></div>
+                                                <div>Native App: <span className="font-bold">{Capacitor.isNativePlatform() ? 'Yes' : 'No'}</span></div>
+                                            </div>
+                                            <div className="bg-white border border-[#D1D1CD] p-3 rounded-xl space-y-1">
+                                                <div className="text-subInk text-[9px] uppercase font-bold tracking-wider">Log Statistics</div>
+                                                <div>Total Logs Cached: <span className="font-bold">{logs.length}</span></div>
+                                                <div>Crashes Logged: <span className="font-bold text-red-600">{crashLogs.length}</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Logs Panel */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                            <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="text-zinc-700" size={20} />
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        Runtime & Uncaught Logs (ประวัติข้อผิดพลาดของระบบ)
+                                    </h2>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const logsText = JSON.stringify(logger.getLogs(), null, 2);
+                                            navigator.clipboard.writeText(logsText);
+                                            alert("คัดลอกประวัติข้อผิดพลาดไปที่ Clipboard สำเร็จ!");
+                                        }}
+                                        className="bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-1 active:scale-95 cursor-pointer shadow-sm animate-none"
+                                    >
+                                        <Copy size={12} /> Copy Logs
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติบันทึกข้อผิดพลาดทั้งหมด?")) {
+                                                logger.clearLogs();
+                                                alert("ล้างประวัติบันทึกสำเร็จ!");
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-1 active:scale-95 cursor-pointer animate-none"
+                                    >
+                                        <Trash2 size={12} /> Clear Logs
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="max-h-[300px] overflow-y-auto border border-[#D1D1CD] rounded-xl bg-white text-xs font-mono divide-y divide-[#EAEAEA] no-scrollbar">
+                                {logger.getLogs().length === 0 ? (
+                                    <div className="p-8 text-center text-subInk font-medium">ไม่มีบันทึกประวัติข้อผิดพลาดในขณะนี้</div>
+                                ) : (
+                                    logger.getLogs().slice().reverse().map(log => (
+                                        <div key={log.id} className="p-3 hover:bg-zinc-50 transition-colors">
+                                            <div className="flex justify-between items-start gap-2 mb-1">
+                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
+                                                    log.level === 'CRASH' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                                    log.level === 'ERROR' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                                    log.level === 'WARN' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                                                    'bg-blue-100 text-blue-700 border border-blue-200'
+                                                }`}>
+                                                    {log.level}
+                                                </span>
+                                                <span className="text-[10px] text-subInk">{new Date(log.timestamp).toLocaleString('th-TH')}</span>
+                                            </div>
+                                            <div className="font-bold text-[#1A1A1A]">{log.title}</div>
+                                            {log.details && (
+                                                <pre className="mt-1 p-2 bg-zinc-50 border border-zinc-150 rounded text-[9px] text-[#444] overflow-x-auto whitespace-pre-wrap font-mono max-h-[100px]">
+                                                    {JSON.stringify(log.details, null, 2)}
+                                                </pre>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>

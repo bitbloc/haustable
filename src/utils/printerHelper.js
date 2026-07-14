@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 // ESC/POS Command Constants
 const ESC = 0x1B;
 const GS = 0x1D;
@@ -366,6 +368,7 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
         throw new Error("Web Bluetooth API is not supported on this platform/browser.");
     }
 
+    logger.logNativeStart('print_bluetooth_direct', { targetDeviceName, bytesLength: rawData ? rawData.length : 0 });
     let device;
     try {
         // Try getting previously paired devices first
@@ -448,8 +451,11 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
 
         // Disconnect gracefully
         device.gatt.disconnect();
+        logger.logNativeEnd('print_bluetooth_direct');
         return true;
     } catch (err) {
+        logger.error("Direct Bluetooth print failed", err);
+        logger.logNativeEnd('print_bluetooth_direct');
         console.error("Direct Bluetooth print failed:", err);
         throw err;
     }
@@ -457,6 +463,7 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
 
 // Print via RawBT Android Intent (Directly calls the main RawBT App)
 export async function printToRawBTWebSocket(rawData) {
+    logger.logNativeStart('print_rawbt_intent', { bytesLength: rawData ? rawData.length : 0 });
     try {
         // Convert raw Uint8Array bytes to binary string
         let binary = '';
@@ -473,8 +480,11 @@ export async function printToRawBTWebSocket(rawData) {
         
         // Redirect the WebView to trigger the intent
         window.location.href = intentUrl;
+        logger.logNativeEnd('print_rawbt_intent');
         return true;
     } catch (e) {
+        logger.error("RawBT Intent print failed", e);
+        logger.logNativeEnd('print_rawbt_intent');
         console.error("RawBT Intent print failed:", e);
         throw new Error("เกิดข้อผิดพลาดในการเรียกใช้แอป RawBT: " + e.message);
     }
@@ -484,28 +494,39 @@ let sunmiPrintQueue = Promise.resolve();
 
 // Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service) with FIFO Queue
 export async function printToSunmiBuiltIn(rawData) {
+    logger.logNativeStart('print_sunmi_built_in', { bytesLength: rawData ? rawData.length : 0 });
     return new Promise((resolve, reject) => {
         sunmiPrintQueue = sunmiPrintQueue.then(async () => {
             try {
+                logger.info("SUNMI: loading @kduma-autoid/capacitor-sunmi-printer");
                 const { SunmiPrinter } = await import('@kduma-autoid/capacitor-sunmi-printer');
+                logger.info("SUNMI: calling bindService");
                 try {
                     await SunmiPrinter.bindService();
                 } catch (bindErr) {
                     console.warn("SUNMI bindService warning (may already be bound):", bindErr);
+                    logger.warn("SUNMI: bindService warning (non-fatal)", bindErr);
                 }
 
+                logger.info("SUNMI: calling sendRAWData");
                 const dataArray = Array.from(rawData);
                 await SunmiPrinter.sendRAWData({ data: dataArray });
+                logger.info("SUNMI: sendRAWData completed successfully");
                 
                 // Add a small 150ms buffer delay for physical motor/paper feed sync
                 await new Promise(r => setTimeout(r, 150));
                 
+                logger.logNativeEnd('print_sunmi_built_in');
                 resolve(true);
             } catch (e) {
+                logger.error("SUNMI Built-in print failed inside queue", e);
+                logger.logNativeEnd('print_sunmi_built_in');
                 console.error("SUNMI Built-in print failed inside queue:", e);
                 reject(new Error("ไม่สามารถพิมพ์ผ่านเครื่องพิมพ์ในตัว SUNMI ได้: " + e.message));
             }
         }).catch(err => {
+            logger.error("SUNMI Print Queue error", err);
+            logger.logNativeEnd('print_sunmi_built_in');
             console.error("SUNMI Print Queue error:", err);
             reject(err);
         });
