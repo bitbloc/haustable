@@ -1,6 +1,6 @@
 {
   "appId": "com.inthehaus.pos",
-  "appName": "InTheHaus POS",
+  "appName": "ONHAUS POS",
   "webDir": "dist",
   "server": {
     "androidScheme": "http"
