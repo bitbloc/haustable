@@ -7,7 +7,8 @@ import {
     LogOut,
     ChevronLeft,
     Clock,
-    BarChart3
+    BarChart3,
+    ShoppingBag
 } from 'lucide-react';
 import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
 import { getCurrentShift } from '../utils/shiftHelper';
@@ -67,6 +68,12 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                             label="Menu"
                         />
                         <NavIcon 
+                            icon={ShoppingBag} 
+                            active={activeView === 'pickup'} 
+                            onClick={() => onViewChange('pickup')} 
+                            label="Pick-up"
+                        />
+                        <NavIcon 
                             icon={Users} 
                             active={activeView === 'crm'} 
                             onClick={() => onViewChange('crm')} 
@@ -109,7 +116,8 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                         )}
                         <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
                             {activeView === 'tables' ? 'TABLE REGISTRY' : 
-                             activeView === 'menu' ? (selectedTable ? `ORDER ENTRY : ${selectedTable.table_name}` : 'MENU REGISTRY') : 
+                             activeView === 'pickup' ? 'PICK-UP ORDERS' :
+                             activeView === 'menu' ? (selectedTable ? `ORDER ENTRY : ${selectedTable.table_name}` : 'ORDER ENTRY : DIRECT BILL') : 
                              activeView === 'reports' ? 'REPORTS & SHIFT LOG' : 
                              'CUSTOMER CRM'}
                         </h2>

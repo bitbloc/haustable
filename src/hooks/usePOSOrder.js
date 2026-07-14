@@ -133,6 +133,67 @@ export function usePOSOrder() {
         }
     };
 
+    const createWalkInPickup = async (note) => {
+        if (!isOnline()) {
+            console.log('[Offline Mode] Creating offline walk-in pickup');
+            const tempId = `local_pickup_${Date.now()}`;
+            const mockBooking = {
+                id: tempId,
+                table_id: null,
+                status: 'pending',
+                booking_type: 'pickup',
+                booking_time: new Date().toISOString(),
+                pax: 1,
+                customer_note: note,
+                pickup_contact_name: note,
+                staff_remark: 'Walk-in Pick-up (Offline)'
+            };
+
+            const bookings = posCache.getBookings();
+            bookings.push(mockBooking);
+            posCache.setBookings(bookings);
+
+            addToOfflineQueue('create_pickup', {
+                tempBookingId: tempId,
+                customerNote: note,
+                status: 'pending',
+                bookingTime: mockBooking.booking_time
+            });
+
+            toast.warning('⚠️ ออฟไลน์: เปิดบิลรับกลับบ้านในเครื่องแล้ว');
+            return mockBooking;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('bookings')
+                .insert({
+                    table_id: null,
+                    status: 'pending',
+                    booking_type: 'pickup',
+                    booking_time: new Date().toISOString(),
+                    pax: 1,
+                    customer_note: note,
+                    pickup_contact_name: note,
+                    staff_remark: 'Walk-in Pick-up'
+                })
+                .select('*')
+                .single();
+
+            if (error) throw error;
+            
+            const bookings = posCache.getBookings();
+            bookings.push(data);
+            posCache.setBookings(bookings);
+
+            return data;
+        } catch (err) {
+            console.error('Failed to create walk-in pickup online:', err);
+            toast.error('Failed to open pickup bill');
+            return null;
+        }
+    };
+
     const submitOrderItems = async (bookingId, items) => {
         if (!items || items.length === 0) return true;
 
@@ -143,15 +204,21 @@ export function usePOSOrder() {
             const idx = bookings.findIndex(b => b.id === bookingId);
             if (idx !== -1) {
                 const existingOrderItems = bookings[idx].order_items || [];
-                const newOrderItems = items.map((item, i) => ({
-                    id: `local_item_${Date.now()}_${i}`,
-                    booking_id: bookingId,
-                    menu_item_id: item.id,
-                    quantity: item.quantity,
-                    price_at_time: item.price,
-                    selected_options: item.selected_options || [],
-                    menu_items: { name: item.name } // simulate relation join
-                }));
+                const newOrderItems = items.map((item, i) => {
+                    const finalOpts = [...(item.selected_options || [])];
+                    if (item.item_note) {
+                        finalOpts.push({ name: `Note: ${item.item_note}` });
+                    }
+                    return {
+                        id: `local_item_${Date.now()}_${i}`,
+                        booking_id: bookingId,
+                        menu_item_id: item.id,
+                        quantity: item.quantity,
+                        price_at_time: item.price,
+                        selected_options: finalOpts,
+                        menu_items: { name: item.name } // simulate relation join
+                    };
+                });
                 bookings[idx].order_items = [...existingOrderItems, ...newOrderItems];
                 posCache.setBookings(bookings);
             }
@@ -162,13 +229,19 @@ export function usePOSOrder() {
         }
 
         try {
-            const itemsToInsert = items.map(item => ({
-                booking_id: bookingId,
-                menu_item_id: item.id,
-                quantity: item.quantity,
-                price_at_time: item.price,
-                selected_options: item.selected_options || []
-            }));
+            const itemsToInsert = items.map(item => {
+                const finalOpts = [...(item.selected_options || [])];
+                if (item.item_note) {
+                    finalOpts.push({ name: `Note: ${item.item_note}` });
+                }
+                return {
+                    booking_id: bookingId,
+                    menu_item_id: item.id,
+                    quantity: item.quantity,
+                    price_at_time: item.price,
+                    selected_options: finalOpts
+                };
+            });
 
             const { error } = await supabase.from('order_items').insert(itemsToInsert);
             if (error) throw error;
@@ -181,15 +254,21 @@ export function usePOSOrder() {
             const idx = bookings.findIndex(b => b.id === bookingId);
             if (idx !== -1) {
                 const existingOrderItems = bookings[idx].order_items || [];
-                const newOrderItems = items.map((item, i) => ({
-                    id: `local_item_${Date.now()}_${i}`,
-                    booking_id: bookingId,
-                    menu_item_id: item.id,
-                    quantity: item.quantity,
-                    price_at_time: item.price,
-                    selected_options: item.selected_options || [],
-                    menu_items: { name: item.name }
-                }));
+                const newOrderItems = items.map((item, i) => {
+                    const finalOpts = [...(item.selected_options || [])];
+                    if (item.item_note) {
+                        finalOpts.push({ name: `Note: ${item.item_note}` });
+                    }
+                    return {
+                        id: `local_item_${Date.now()}_${i}`,
+                        booking_id: bookingId,
+                        menu_item_id: item.id,
+                        quantity: item.quantity,
+                        price_at_time: item.price,
+                        selected_options: finalOpts,
+                        menu_items: { name: item.name }
+                    };
+                });
                 bookings[idx].order_items = [...existingOrderItems, ...newOrderItems];
                 posCache.setBookings(bookings);
             }
@@ -423,6 +502,7 @@ export function usePOSOrder() {
         loading,
         getActiveBooking,
         createWalkIn,
+        createWalkInPickup,
         submitOrderItems,
         completeCheckout,
         acceptOrder,

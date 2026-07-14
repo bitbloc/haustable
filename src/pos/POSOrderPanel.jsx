@@ -15,7 +15,8 @@ export default function POSOrderPanel({
     onAcceptOrder, 
     onOpenSlip, 
     onAttachCustomer, 
-    onDetachCustomer 
+    onDetachCustomer,
+    onUpdateItemNote 
 }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
@@ -235,6 +236,33 @@ export default function POSOrderPanel({
     const pointsMultiplier = attachedMemberCrm ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
     const pointsEarned = Math.floor((total / 100) * pointsMultiplier * 100) / 100;
     
+    // CFD Broadcast Channel
+    const cfdChannel = React.useRef(null);
+    React.useEffect(() => {
+        cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
+        return () => {
+            if (cfdChannel.current) cfdChannel.current.close();
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (!cfdChannel.current) return;
+        if (order.items && order.items.length > 0) {
+            cfdChannel.current.postMessage({
+                type: 'UPDATE_CART',
+                payload: {
+                    items: order.items,
+                    subtotal,
+                    discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                    tax,
+                    total
+                }
+            });
+        } else {
+            cfdChannel.current.postMessage({ type: 'IDLE' });
+        }
+    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total]);
+    
     const hasNewItems = order.items.some(item => !item.db_id);
 
     return (
@@ -244,7 +272,7 @@ export default function POSOrderPanel({
                 <div>
                     <h3 className="font-mono font-bold text-xs tracking-wider uppercase">Order Details</h3>
                     <p className="text-[10px] text-[#767673] font-bold font-mono mt-0.5 uppercase tracking-tight">
-                        {order.table ? `TABLE: ${order.table.table_name}` : 'WALK-IN ORDER'}
+                        {order.table ? `TABLE: ${order.table.table_name}` : (booking?.booking_type === 'pickup' ? 'PICK-UP ORDER' : 'WALK-IN ORDER')}
                     </p>
                 </div>
                 <button 
@@ -565,7 +593,39 @@ export default function POSOrderPanel({
                             >
                                 <div className="flex-1 min-w-0 mr-2">
                                     <h5 className="font-bold text-[11px] leading-tight text-[#1A1A1A] uppercase truncate">{item.name}</h5>
-                                    <p className="text-[9px] text-[#ff0000] font-mono font-bold mt-0.5">฿{item.price}</p>
+                                    
+                                    {/* Display existing options/notes if any */}
+                                    {item.selected_options && item.selected_options.length > 0 && (
+                                        <div className="text-[9px] text-[#767673] font-mono leading-tight mt-0.5">
+                                            {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Display newly added note */}
+                                    {item.item_note && (
+                                        <div className="text-[9px] text-blue-600 font-mono font-bold leading-tight mt-0.5">
+                                            Note: {item.item_note}
+                                        </div>
+                                    )}
+                                    
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="text-[9px] text-[#ff0000] font-mono font-bold">฿{item.price}</p>
+                                        
+                                        {/* Only allow adding notes to new (unsubmitted) items */}
+                                        {!item.db_id && (
+                                            <button 
+                                                onClick={() => {
+                                                    const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
+                                                    if (note !== null && onUpdateItemNote) {
+                                                        onUpdateItemNote(item.id, note.trim());
+                                                    }
+                                                }}
+                                                className="text-[8px] bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                                            >
+                                                + Note
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-md p-0.5 gap-0.5 shrink-0 scale-90 origin-right">
@@ -759,7 +819,24 @@ export default function POSOrderPanel({
                         {/* Print Bill / Show QR button if QR is chosen */}
                         {paymentMethod === 'qr' && (
                             <button 
-                                onClick={() => onOpenSlip && onOpenSlip('billing')}
+                                onClick={() => {
+                                    onOpenSlip && onOpenSlip('billing');
+                                    if (cfdChannel.current) {
+                                        cfdChannel.current.postMessage({
+                                            type: 'SHOW_QR',
+                                            payload: {
+                                                orderData: {
+                                                    items: order.items,
+                                                    subtotal,
+                                                    discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                                                    tax,
+                                                    total
+                                                },
+                                                total
+                                            }
+                                        });
+                                    }
+                                }}
                                 className="w-full bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] text-[#1A1A1A] py-2 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
                             >
                                 <Printer size={10} /> DISPLAY QR / พิมพ์ใบแจ้งยอด
@@ -783,16 +860,21 @@ export default function POSOrderPanel({
                                         <ReceiptText size={10} /> KITCHEN SLIP
                                     </button>
                                     <button 
-                                        onClick={() => onCheckout(
-                                            paymentMethod, 
-                                            includeTax, 
-                                            pointsEarned, 
-                                            xhausToRedeem + (appliedReward ? parseFloat(appliedReward.xhaus_cost) : 0), 
-                                            xhausDiscount + rewardDiscount, 
-                                            promoDiscount, 
-                                            manualDiscount,
-                                            appliedReward ? appliedReward.claim_code : null
-                                        )}
+                                        onClick={() => {
+                                            onCheckout(
+                                                paymentMethod, 
+                                                includeTax, 
+                                                pointsEarned, 
+                                                xhausToRedeem + (appliedReward ? parseFloat(appliedReward.xhaus_cost) : 0), 
+                                                xhausDiscount + rewardDiscount, 
+                                                promoDiscount, 
+                                                manualDiscount,
+                                                appliedReward ? appliedReward.claim_code : null
+                                            );
+                                            if (cfdChannel.current && paymentMethod === 'qr') {
+                                                cfdChannel.current.postMessage({ type: 'PAYMENT_SUCCESS' });
+                                            }
+                                        }}
                                         className="flex items-center justify-center gap-1 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
                                     >
                                         <Check size={10} /> CHECKOUT / ปิดโต๊ะ

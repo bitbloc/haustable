@@ -42,6 +42,7 @@ import SongRequestPage from './pages/SongRequestPage'
 import AdminSongRequests from './pages/AdminSongRequests'
 import HausCheckinPage from './pages/HausCheckinPage'
 import RequireAuthLayout from './components/layout/RequireAuthLayout'
+import POSCustomerDisplay from './pos/POSCustomerDisplay' // NEW
 import { Suspense, lazy } from 'react'
 
 const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
@@ -134,6 +135,7 @@ function App() {
           <Route path="/link" element={<AdsLandingPage />} />
           <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
           <Route path="/qa" element={<QnAPage />} />
+          <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
           <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
           <Route path="/arcade" element={
