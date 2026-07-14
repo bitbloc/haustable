@@ -536,7 +536,7 @@ export default function AdminSettings() {
             </div>
 
             {/* Tabs Control */}
-            <div className="flex border-b border-gray-200 mb-4 gap-4 overflow-x-auto no-scrollbar scroll-smooth">
+            <div className="flex flex-wrap border-b border-gray-200 mb-4 gap-2 md:gap-3">
                 {[
                     { id: 'booking', label: '🍽 ตั้งค่าระบบหลัก & การจอง', desc: 'Core Settings & Booking' },
                     { id: 'link', label: '🔗 หน้า Landing Page (/link)', desc: 'Link Page Manager' },
@@ -551,14 +551,14 @@ export default function AdminSettings() {
                         key={tab.id}
                         type="button"
                         onClick={() => setActiveSettingsTab(tab.id)}
-                        className={`pb-3 px-1 text-left border-b-2 font-bold transition-all relative flex flex-col whitespace-nowrap cursor-pointer ${
+                        className={`pb-2 pt-1.5 px-3 text-left rounded-t-xl font-bold transition-all relative flex flex-col cursor-pointer border border-b-0 ${
                             activeSettingsTab === tab.id
-                                ? 'border-brand text-brandDark font-extrabold'
-                                : 'border-transparent text-subInk hover:text-ink hover:border-gray-300'
+                                ? 'bg-white border-gray-200 text-brandDark font-extrabold shadow-sm -mb-px z-10'
+                                : 'bg-gray-50 border-transparent text-subInk hover:text-ink hover:bg-gray-100'
                         }`}
                     >
-                        <span className="text-sm md:text-base font-bold">{tab.label}</span>
-                        <span className="text-[10px] font-normal opacity-85 mt-0.5">{tab.desc}</span>
+                        <span className="text-xs md:text-sm font-bold leading-tight">{tab.label}</span>
+                        <span className="text-[9px] font-normal opacity-70 mt-0.5 leading-tight">{tab.desc}</span>
                     </button>
                 ))}
             </div>
