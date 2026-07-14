@@ -159,7 +159,7 @@ export default function AdminSettings() {
                     qrRevenue: 1000,
                     netRevenue: 2300
                 };
-                const rawBytes = encodeShiftReportData(dummyReport, '80mm');
+                const rawBytes = encodeShiftReportData(dummyReport, '80mm', 'sunmi');
                 await printToSunmiBuiltIn(rawBytes);
                 alert(`✅ ทดสอบพิมพ์ผ่านเครื่องพิมพ์ SUNMI ในตัวสำเร็จ!`);
             } catch (err) {
@@ -179,7 +179,7 @@ export default function AdminSettings() {
                     qrRevenue: 1000,
                     netRevenue: 2300
                 };
-                const rawBytes = encodeShiftReportData(dummyReport, configSize);
+                const rawBytes = encodeShiftReportData(dummyReport, configSize, 'rawbt');
                 
                 alert(`📤 ส่งข้อมูลพิมพ์ทดสอบไปที่แอป RawBT...\n(กรุณาเช็คว่าเปิดแอป RawBT และเปิดสิทธิ์ 'WebSocket Server' ในแอปแล้ว)`);
                 await printToRawBTWebSocket(rawBytes);
@@ -201,7 +201,7 @@ export default function AdminSettings() {
                     qrRevenue: 1000,
                     netRevenue: 2300
                 };
-                const rawBytes = encodeShiftReportData(dummyReport);
+                const rawBytes = encodeShiftReportData(dummyReport, '58mm', 'bluetooth');
                 
                 alert(`📤 Connecting to Bluetooth printer [${configBt}]...\n(Please make sure Bluetooth is enabled and the printer is powered on)`);
                 

@@ -104,7 +104,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         shopPhone: settingsMap.receipt_shop_phone,
                         shopVat: settingsMap.receipt_shop_vat,
                         shopLogoUrl: settingsMap.receipt_shop_logo_url,
-                        shopFooter: settingsMap.receipt_shop_footer
+                        shopFooter: settingsMap.receipt_shop_footer,
+                        paymentQrUrl: settingsMap.payment_qr_url
                     };
                 }
             } catch (err) {
@@ -135,20 +136,21 @@ export default function SlipModal({ booking, type, onClose }) {
                 try {
                     if (activeTab === 'kitchen') {
                         // Print Kitchen slip
-                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, '80mm', loadedConfig);
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
                         if (kitchenBytes) {
                             await printToSunmiBuiltIn(kitchenBytes);
                         }
                         
                         // Print Bar slip
-                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, '80mm', loadedConfig);
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
                         }
                     } else {
-                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm', loadedConfig);
+                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
                         if (rawBytes) {
-                            await printToSunmiBuiltIn(rawBytes, loadedConfig.shopLogoUrl);
+                            const qrToPrint = (activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) ? loadedConfig.paymentQrUrl : null;
+                            await printToSunmiBuiltIn(rawBytes, loadedConfig.shopLogoUrl, qrToPrint);
                         }
                     }
                     onClose();
@@ -566,10 +568,11 @@ export default function SlipModal({ booking, type, onClose }) {
 
         if (printerType === 'sunmi') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm', receiptConfig);
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm', receiptConfig, 'sunmi');
                 if (rawBytes) {
                     const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar') ? receiptConfig.shopLogoUrl : null;
-                    await printToSunmiBuiltIn(rawBytes, logoToPrint);
+                    const qrToPrint = (activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) ? qrCodeUrl : null;
+                    await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                 } else {
                     toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                 }
@@ -580,7 +583,7 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'rawbt') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig);
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
                 await printToRawBTWebSocket(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -589,7 +592,7 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'bluetooth') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig);
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {

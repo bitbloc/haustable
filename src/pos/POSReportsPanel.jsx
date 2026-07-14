@@ -183,7 +183,7 @@ export default function POSReportsPanel() {
                     qrRevenue: qrSales,
                     netRevenue: totalSales
                 };
-                const rawBytes = encodeShiftReportData(reportData, '80mm');
+                const rawBytes = encodeShiftReportData(reportData, '80mm', 'sunmi');
                 await printToSunmiBuiltIn(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -203,7 +203,7 @@ export default function POSReportsPanel() {
                     qrRevenue: qrSales,
                     netRevenue: totalSales
                 };
-                const rawBytes = encodeShiftReportData(reportData, paperSize);
+                const rawBytes = encodeShiftReportData(reportData, paperSize, 'rawbt');
                 await printToRawBTWebSocket(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -223,7 +223,7 @@ export default function POSReportsPanel() {
                     qrRevenue: qrSales,
                     netRevenue: totalSales
                 };
-                const rawBytes = encodeShiftReportData(reportData, paperSize);
+                const rawBytes = encodeShiftReportData(reportData, paperSize, 'bluetooth');
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -350,7 +350,7 @@ export default function POSReportsPanel() {
                 netRevenue: (shift.cashSales || 0) + (shift.qrSales || 0)
             };
 
-            const rawBytes = encodeShiftClosureReportData(reportData, '80mm');
+            const rawBytes = encodeShiftClosureReportData(reportData, '80mm', 'sunmi');
             await printToSunmiBuiltIn(rawBytes);
             toast.success("พิมพ์รายงานประวัติรอบขายผ่าน SUNMI สำเร็จ");
         } catch (err) {

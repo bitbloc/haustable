@@ -254,7 +254,7 @@ export default function POSDashboard() {
 
         // Print shift report to SUNMI
         try {
-            const rawBytes = encodeShiftClosureReportData(reportData, '80mm');
+            const rawBytes = encodeShiftClosureReportData(reportData, '80mm', 'sunmi');
             const printRes = await printToSunmiBuiltIn(rawBytes);
             if (printRes) {
                 toast.success('พิมพ์ใบสรุปยอดปิดกะเรียบร้อยแล้ว');

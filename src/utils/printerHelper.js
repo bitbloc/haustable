@@ -5,19 +5,24 @@ const ESC = 0x1B;
 const GS = 0x1D;
 
 class EscPosEncoder {
-    constructor() {
+    constructor(isUtf8 = false) {
         this.buffer = [];
+        this.isUtf8 = isUtf8;
     }
 
     initialize() {
         this.buffer.push(ESC, 0x40); // Initialize printer
-        this.buffer.push(0x1C, 0x2E); // Exit Chinese mode (FS .)
-        this.buffer.push(ESC, 0x74, 26); // Set Thai code page (TIS-620)
+        if (this.isUtf8) {
+            // Sunmi defaults to UTF-8 parsing, no need to set standard single-byte TIS-620 code page
+        } else {
+            this.buffer.push(0x1C, 0x2E); // Exit Chinese mode (FS .)
+            this.buffer.push(ESC, 0x74, 21); // Set Thai code page CP874 (TIS-620)
+        }
         return this;
     }
 
     text(txt) {
-        const bytes = encodeThaiTIS620(txt);
+        const bytes = this.isUtf8 ? encodeUTF8(txt) : encodeThaiTIS620(txt);
         this.buffer.push(...bytes);
         return this;
     }
@@ -85,8 +90,29 @@ function encodeThaiTIS620(str) {
     return bytes;
 }
 
+// UTF-8 Encoder fallback
+function encodeUTF8(str) {
+    if (typeof TextEncoder !== 'undefined') {
+        return new TextEncoder().encode(str);
+    }
+    const bytes = [];
+    for (let i = 0; i < str.length; i++) {
+        let code = str.charCodeAt(i);
+        if (code < 0x80) {
+            bytes.push(code);
+        } else if (code < 0x800) {
+            bytes.push(0xC0 | (code >> 6), 0x80 | (code & 0x3F));
+        } else if (code < 0x10000) {
+            bytes.push(0xE0 | (code >> 12), 0x80 | ((code >> 6) & 0x3F), 0x80 | (code & 0x3F));
+        } else {
+            bytes.push(0xF0 | (code >> 18), 0x80 | ((code >> 12) & 0x3F), 0x80 | ((code >> 6) & 0x3F), 0x80 | (code & 0x3F));
+        }
+    }
+    return bytes;
+}
+
 // Convert receipt/ticket details to ESC/POS binary format
-export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '58mm', receiptConfig = {}) {
+export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '58mm', receiptConfig = {}, printerType = 'universal') {
     const BAR_CATEGORIES = [
         '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
         '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
@@ -122,7 +148,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         });
     }
 
-    const encoder = new EscPosEncoder();
+    const encoder = new EscPosEncoder(printerType === 'sunmi');
     encoder.initialize();
 
     const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) 
@@ -376,8 +402,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 }
 
 // Convert shift report data to ESC/POS binary format
-export function encodeShiftReportData(reportData, paperSize = '58mm') {
-    const encoder = new EscPosEncoder();
+export function encodeShiftReportData(reportData, paperSize = '58mm', printerType = 'universal') {
+    const encoder = new EscPosEncoder(printerType === 'sunmi');
     encoder.initialize();
 
     const maxCols = paperSize === '80mm' ? 48 : 30;
@@ -422,8 +448,8 @@ export function encodeShiftReportData(reportData, paperSize = '58mm') {
 }
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
-export function encodeShiftClosureReportData(reportData, paperSize = '80mm') {
-    const encoder = new EscPosEncoder();
+export function encodeShiftClosureReportData(reportData, paperSize = '80mm', printerType = 'universal') {
+    const encoder = new EscPosEncoder(printerType === 'sunmi');
     encoder.initialize();
 
     const maxCols = paperSize === '80mm' ? 48 : 30;
@@ -634,8 +660,8 @@ async function downloadAndResizeLogoToBase64(logoUrl) {
 }
 
 // Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service) with FIFO Queue
-export async function printToSunmiBuiltIn(rawData, logoUrl = null) {
-    logger.logNativeStart('print_sunmi_built_in', { bytesLength: rawData ? rawData.length : 0, hasLogo: !!logoUrl });
+export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null) {
+    logger.logNativeStart('print_sunmi_built_in', { bytesLength: rawData ? rawData.length : 0, hasLogo: !!logoUrl, hasQr: !!qrUrl });
     return new Promise((resolve, reject) => {
         sunmiPrintQueue = sunmiPrintQueue.then(async () => {
             try {
@@ -649,16 +675,28 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null) {
                     logger.warn("SUNMI: bindService warning (non-fatal)", bindErr);
                 }
 
+                // Dynamically strip cut command from rawData if present
+                let cleanData = rawData;
+                let shouldManualCut = false;
+                if (rawData && rawData.length >= 4) {
+                    const lastFour = rawData.slice(-4);
+                    // 0x1D, 0x56, 66 (0x42), 0x00 is GS V 66 0
+                    if (lastFour[0] === 0x1D && lastFour[1] === 0x56 && lastFour[2] === 66 && lastFour[3] === 0) {
+                        cleanData = rawData.slice(0, -4);
+                        shouldManualCut = true;
+                    }
+                }
+
                 // If logo URL is provided, try to print it first
                 if (logoUrl) {
                     try {
                         logger.info("SUNMI: downloading and resizing logo: " + logoUrl);
                         const base64Image = await downloadAndResizeLogoToBase64(logoUrl);
                         logger.info("SUNMI: printing logo bitmap");
-                        await SunmiPrinter.setAlignment({ alignment: 1 }); // 1 = Center
+                        await SunmiPrinter.setAlignment({ alignment: "center" });
                         await SunmiPrinter.printBitmap({ bitmap: base64Image });
                         await SunmiPrinter.lineWrap({ lines: 1 });
-                        await SunmiPrinter.setAlignment({ alignment: 0 }); // 0 = Left
+                        await SunmiPrinter.setAlignment({ alignment: "left" });
                         logger.info("SUNMI: logo print completed successfully");
                     } catch (logoErr) {
                         console.warn("SUNMI print logo warning (non-fatal):", logoErr);
@@ -668,9 +706,9 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null) {
 
                 logger.info("SUNMI: converting rawData to base64 string");
                 let binary = '';
-                const len = rawData.byteLength;
+                const len = cleanData.byteLength;
                 for (let i = 0; i < len; i++) {
-                    binary += String.fromCharCode(rawData[i]);
+                    binary += String.fromCharCode(cleanData[i]);
                 }
                 const base64Data = window.btoa(binary);
 
@@ -678,6 +716,29 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null) {
                 await SunmiPrinter.sendRAWBase64Data({ data: base64Data });
                 logger.info("SUNMI: sendRAWBase64Data completed successfully");
                 
+                // If QR URL is provided, print it at the bottom
+                if (qrUrl) {
+                    try {
+                        logger.info("SUNMI: downloading and resizing QR code: " + qrUrl);
+                        const base64Qr = await downloadAndResizeLogoToBase64(qrUrl);
+                        logger.info("SUNMI: printing QR code bitmap");
+                        await SunmiPrinter.setAlignment({ alignment: "center" });
+                        await SunmiPrinter.printBitmap({ bitmap: base64Qr });
+                        await SunmiPrinter.lineWrap({ lines: 1 });
+                        await SunmiPrinter.setAlignment({ alignment: "left" });
+                        logger.info("SUNMI: QR code print completed successfully");
+                    } catch (qrErr) {
+                        console.warn("SUNMI print QR warning (non-fatal):", qrErr);
+                        logger.warn("SUNMI: print QR warning (non-fatal)", qrErr);
+                    }
+                }
+
+                // If we stripped the cut command or explicitly need cutting, trigger it manually
+                if (shouldManualCut) {
+                    logger.info("SUNMI: executing manual cutPaper");
+                    await SunmiPrinter.cutPaper();
+                }
+
                 // Add a small 150ms buffer delay for physical motor/paper feed sync
                 await new Promise(r => setTimeout(r, 150));
                 
