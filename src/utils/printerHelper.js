@@ -508,9 +508,16 @@ export async function printToSunmiBuiltIn(rawData) {
                     logger.warn("SUNMI: bindService warning (non-fatal)", bindErr);
                 }
 
-                logger.info("SUNMI: calling sendRAWData");
-                const dataArray = Array.from(rawData);
-                await SunmiPrinter.sendRAWData({ data: dataArray });
+                logger.info("SUNMI: converting rawData to base64 string");
+                let binary = '';
+                const len = rawData.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(rawData[i]);
+                }
+                const base64Data = window.btoa(binary);
+
+                logger.info("SUNMI: calling sendRAWData with base64");
+                await SunmiPrinter.sendRAWData({ data: base64Data });
                 logger.info("SUNMI: sendRAWData completed successfully");
                 
                 // Add a small 150ms buffer delay for physical motor/paper feed sync
