@@ -36,6 +36,7 @@ export default function ArcadeClaim() {
   const [errorMessage, setErrorMessage] = useState('');
   const [distance, setDistance] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [claimResultMessage, setClaimResultMessage] = useState('');
 
   // URL parameters
   const score = searchParams.get('score');
@@ -147,6 +148,7 @@ export default function ArcadeClaim() {
       if (profileError) throw profileError;
 
       const nameToDisplay = profile.nickname || profile.display_name || 'MEMBER';
+      const newScore = parseInt(score);
 
       // Check if there is an existing score for this user
       const { data: existingLeaderboard, error: selectError } = await supabase
@@ -156,8 +158,6 @@ export default function ArcadeClaim() {
         .maybeSingle();
 
       if (selectError) throw selectError;
-
-      const newScore = parseInt(score);
 
       if (existingLeaderboard) {
         // Only update if the new score is higher than the existing high score
@@ -185,6 +185,15 @@ export default function ArcadeClaim() {
 
         if (insertError) throw insertError;
       }
+
+      // Call RPC to securely claim P2E rewards
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('claim_arcade_rewards', { p_score: newScore });
+
+      if (rpcError) throw rpcError;
+
+      const message = rpcData?.message || 'สะสมประวัติคะแนนของท่านสำเร็จ!';
+      setClaimResultMessage(message);
 
       // Lock token locally
       localStorage.setItem(`claimed_${hash}`, 'true');
@@ -306,6 +315,11 @@ export default function ArcadeClaim() {
               <span className="text-neutral-400 text-sm font-mono">คะแนนที่เคลมได้</span>
               <span className="text-2xl font-bold font-mono text-[#DFFF00]">{score} แต้ม</span>
             </div>
+            {claimResultMessage && (
+              <div className="bg-[#DFFF00]/10 border border-[#DFFF00]/30 rounded-2xl py-3.5 px-4 w-full text-center text-sm font-bold text-[#DFFF00] mb-4 font-mono leading-relaxed">
+                {claimResultMessage}
+              </div>
+            )}
             <p className="text-xs text-neutral-500 mb-6 font-mono leading-relaxed">
               {distance && `พิกัดได้รับการตรวจสอบเรียบร้อย (ระยะห่าง: ${(distance * 1000).toFixed(0)} เมตร)`}
             </p>

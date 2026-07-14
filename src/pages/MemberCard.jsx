@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useBookingContext } from '../context/BookingContext'
 import AuthModal from '../components/AuthModal'
 import QRCode from 'qrcode'
-import { LogOut, QrCode, Coins, Award, Clock, ChevronRight, User, Phone, LogIn, Sparkles, ShieldCheck, Edit2, Check, X, Calendar, UserCheck } from 'lucide-react'
+import { LogOut, QrCode, Coins, Award, Clock, ChevronRight, User, Phone, LogIn, Sparkles, ShieldCheck, Edit2, Check, X, Calendar, UserCheck, Gift } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
@@ -26,6 +26,34 @@ export default function MemberCard() {
     const [loading, setLoading] = useState(true)
     const [qrUrl, setQrUrl] = useState('')
     const [showAuthModal, setShowAuthModal] = useState(false)
+
+    // Tab Navigation & Rewards States
+    const [activeSubTab, setActiveSubTab] = useState('card') // 'card' | 'rewards'
+    const [rewards, setRewards] = useState([])
+    const [rewardsLoading, setRewardsLoading] = useState(false)
+
+    const fetchRewards = async () => {
+        setRewardsLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('xhaus_rewards')
+                .select('*')
+                .eq('is_active', true)
+                .order('xhaus_cost', { ascending: true })
+            if (error) throw error
+            setRewards(data || [])
+        } catch (err) {
+            console.error("Error fetching rewards:", err)
+        } finally {
+            setRewardsLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        if (activeSubTab === 'rewards' && user) {
+            fetchRewards()
+        }
+    }, [activeSubTab, user])
     const { loginWithLine, logoutLine } = useBookingContext()
 
     // Inline Profile Edit States
@@ -360,337 +388,428 @@ export default function MemberCard() {
                             exit={{ opacity: 0, y: -15 }}
                             className="space-y-5"
                         >
-                            {/* The Rams Mechanical Casing Membership Card */}
-                            <div className={`relative border p-5 rounded-[8px] flex flex-col justify-between h-52 overflow-hidden transition-all ${card.bg}`}>
-                                {/* Mechanical LED Dial indicator */}
-                                <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/15 px-2 py-1 rounded-[4px] border border-white/5 font-mono text-[7px] tracking-widest uppercase">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${card.dotColor} ${card.glow}`} />
-                                    <span>ACTIVE SYSTEM</span>
-                                </div>
-                                
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-1.5 mb-1.5">
-                                            <div className="w-5 h-5 rounded-xs bg-white/10 flex items-center justify-center p-0.5 border border-white/10 shrink-0">
-                                                <img 
-                                                    src="/logo.png" 
-                                                    alt="" 
-                                                    className="w-full h-full object-contain invert opacity-80" 
-                                                    onError={(e) => e.target.style.display = 'none'}
-                                                />
-                                            </div>
-                                            <span className="text-[7px] font-mono font-bold uppercase tracking-widest opacity-65">IN THE HAUS RELATIONS</span>
-                                        </div>
-                                        <h2 className="text-base font-bold tracking-tight truncate max-w-[200px] font-mono uppercase">{profile?.display_name || 'Anonymous Member'}</h2>
-                                        {profile?.nickname && (
-                                            <p className="text-[9px] font-medium opacity-80">ชื่อเล่น: {profile.nickname}</p>
-                                        )}
-                                        <p className="text-[9px] font-mono opacity-70 tracking-widest mt-0.5">{profile?.phone_number || '-'}</p>
-                                    </div>
-                                    <span className={`px-2 py-0.5 border text-[8px] font-mono font-bold rounded-[4px] uppercase tracking-wider shrink-0 mt-5 ${card.badge}`}>
-                                        {tierDetails.current_tier}
-                                    </span>
-                                </div>
-
-                                <div className="flex justify-between items-end border-t border-white/10 pt-3">
-                                    <div>
-                                        <span className={`text-[7px] font-mono font-bold uppercase tracking-wider ${card.labelColor}`}>xhaus Balance</span>
-                                        <p className="text-2xl font-mono font-bold leading-none mt-0.5 flex items-baseline gap-1">
-                                            {parseFloat(profile?.xhaus_balance || 0).toFixed(2)}
-                                            <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400">coins</span>
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className={`text-[7px] font-mono font-bold uppercase tracking-wider ${card.labelColor}`}>Earn Rate</span>
-                                        <p className="text-[10px] font-mono font-bold mt-0.5">{tierDetails.multiplier}x multiplier</p>
-                                    </div>
-                                </div>
+                            {/* Tabs Navigation */}
+                            <div className="flex bg-[#F2F2EC] p-1 rounded-[6px] border border-[var(--color-hallmark-rule)] font-mono text-[9px] font-bold uppercase tracking-wider">
+                                <button
+                                    onClick={() => setActiveSubTab('card')}
+                                    className={`flex-1 py-2 text-center rounded-[4px] transition-all cursor-pointer ${
+                                        activeSubTab === 'card' 
+                                            ? 'bg-white text-[var(--color-hallmark-ink)] shadow-sm' 
+                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)]'
+                                    }`}
+                                >
+                                    💳 บัตรสมาชิก (My Card)
+                                </button>
+                                <button
+                                    onClick={() => setActiveSubTab('rewards')}
+                                    className={`flex-1 py-2 text-center rounded-[4px] transition-all cursor-pointer ${
+                                        activeSubTab === 'rewards' 
+                                            ? 'bg-white text-[var(--color-hallmark-ink)] shadow-sm' 
+                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)]'
+                                    }`}
+                                >
+                                    🎁 แลกรางวัล (Redeem Rewards)
+                                </button>
                             </div>
 
-                            {/* Grace Period Notification Banner */}
-                            {tierDetails.is_in_grace_period && (
-                                <div className="bg-[#FFF9E6] border border-[#E5A900] p-3 rounded-[6px] flex items-start gap-2.5">
-                                    <ShieldCheck size={16} className="text-[#E5A900] shrink-0 mt-0.5" />
-                                    <div className="space-y-0.5">
-                                        <h5 className="text-[10px] font-bold text-amber-900">อยู่ในช่วงผ่อนผันระดับสมาชิกรักษาใจ</h5>
-                                        <p className="text-[8px] text-amber-800/80 font-medium">ยอดสะสม 12 เดือนน้อยลงเล็กน้อย ร้านขอตรึงสิทธิ์ระดับ {tierDetails.current_tier} ให้คุณต่ออีก 30 วันครับ</p>
+                            {activeSubTab === 'card' ? (
+                                <div className="space-y-5 animate-fade-in">
+                                    {/* The Rams Mechanical Casing Membership Card */}
+                                    <div className={`relative border p-5 rounded-[8px] flex flex-col justify-between h-52 overflow-hidden transition-all ${card.bg}`}>
+                                        {/* Mechanical LED Dial indicator */}
+                                        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/15 px-2 py-1 rounded-[4px] border border-white/5 font-mono text-[7px] tracking-widest uppercase">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${card.dotColor} ${card.glow}`} />
+                                            <span>ACTIVE SYSTEM</span>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <div className="w-5 h-5 rounded-xs bg-white/10 flex items-center justify-center p-0.5 border border-white/10 shrink-0">
+                                                        <img 
+                                                            src="/logo.png" 
+                                                            alt="" 
+                                                            className="w-full h-full object-contain invert opacity-80" 
+                                                            onError={(e) => e.target.style.display = 'none'}
+                                                        />
+                                                    </div>
+                                                    <span className="text-[7px] font-mono font-bold uppercase tracking-widest opacity-65">IN THE HAUS RELATIONS</span>
+                                                </div>
+                                                <h2 className="text-base font-bold tracking-tight truncate max-w-[200px] font-mono uppercase">{profile?.display_name || 'Anonymous Member'}</h2>
+                                                {profile?.nickname && (
+                                                    <p className="text-[9px] font-medium opacity-80">ชื่อเล่น: {profile.nickname}</p>
+                                                )}
+                                                <p className="text-[9px] font-mono opacity-70 tracking-widest mt-0.5">{profile?.phone_number || '-'}</p>
+                                            </div>
+                                            <span className={`px-2 py-0.5 border text-[8px] font-mono font-bold rounded-[4px] uppercase tracking-wider shrink-0 mt-5 ${card.badge}`}>
+                                                {tierDetails.current_tier}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                                            <div>
+                                                <span className={`text-[7px] font-mono font-bold uppercase tracking-wider ${card.labelColor}`}>xhaus Balance</span>
+                                                <p className="text-2xl font-mono font-bold leading-none mt-0.5 flex items-baseline gap-1">
+                                                    {parseFloat(profile?.xhaus_balance || 0).toFixed(2)}
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400">coins</span>
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className={`text-[7px] font-mono font-bold uppercase tracking-wider ${card.labelColor}`}>Earn Rate</span>
+                                                <p className="text-[10px] font-mono font-bold mt-0.5">{tierDetails.multiplier}x multiplier</p>
+                                            </div>
+                                        </div>
                                     </div>
+
+                                    {/* Grace Period Notification Banner */}
+                                    {tierDetails.is_in_grace_period && (
+                                        <div className="bg-[#FFF9E6] border border-[#E5A900] p-3 rounded-[6px] flex items-start gap-2.5">
+                                            <ShieldCheck size={16} className="text-[#E5A900] shrink-0 mt-0.5" />
+                                            <div className="space-y-0.5">
+                                                <h5 className="text-[10px] font-bold text-amber-900">อยู่ในช่วงผ่อนผันระดับสมาชิกรักษาใจ</h5>
+                                                <p className="text-[8px] text-amber-800/80 font-medium">ยอดสะสม 12 เดือนน้อยลงเล็กน้อย ร้านขอตรึงสิทธิ์ระดับ {tierDetails.current_tier} ให้คุณต่ออีก 30 วันครับ</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* PROFILE DETAILS & EDITING SYSTEM (MY PROFILE) */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-4">
+                                        <div className="flex justify-between items-center border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5">
+                                                <UserCheck size={14} className="text-[var(--color-hallmark-ink-muted)]" /> ข้อมูลโปรไฟล์ส่วนตัว (My Profile)
+                                            </h3>
+                                            {!isEditing && (
+                                                <button 
+                                                    onClick={() => setIsEditing(true)}
+                                                    className="text-[9px] font-mono font-bold border border-[var(--color-hallmark-rule)] hover:bg-neutral-50 px-2 py-1 rounded-[4px] flex items-center gap-1 uppercase text-[var(--color-hallmark-ink)] cursor-pointer"
+                                                >
+                                                    <Edit2 size={10} /> Edit Info
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {isEditing ? (
+                                            <form onSubmit={handleSaveProfile} className="space-y-3.5 text-[10px]">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="space-y-1">
+                                                        <label className="block font-mono font-bold text-[8px] uppercase tracking-wider text-zinc-400">Display Name</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={editForm.display_name} 
+                                                            onChange={(e) => setEditForm({ ...editForm, display_name: e.target.value })}
+                                                            className="w-full bg-neutral-50 border border-[var(--color-hallmark-rule)] px-3 py-2 rounded-[4px] focus:outline-none focus:border-zinc-500"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="block font-mono font-bold text-[8px] uppercase tracking-wider text-zinc-400">Nickname (ชื่อเล่น)</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={editForm.nickname} 
+                                                            onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
+                                                            className="w-full bg-neutral-50 border border-[var(--color-hallmark-rule)] px-3 py-2 rounded-[4px] focus:outline-none focus:border-zinc-500"
+                                                            placeholder="เช่น ริท"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="space-y-1">
+                                                        <label className="block font-mono font-bold text-[8px] uppercase tracking-wider text-zinc-400">Phone Number</label>
+                                                        <input 
+                                                            type="tel" 
+                                                            value={editForm.phone_number} 
+                                                            onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })}
+                                                            className="w-full bg-neutral-50 border border-[var(--color-hallmark-rule)] px-3 py-2 rounded-[4px] focus:outline-none focus:border-zinc-500"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="block font-mono font-bold text-[8px] uppercase tracking-wider text-zinc-400">Gender (เพศ)</label>
+                                                        <select 
+                                                            value={editForm.gender} 
+                                                            onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                                                            className="w-full bg-neutral-50 border border-[var(--color-hallmark-rule)] px-3 py-2 rounded-[4px] focus:outline-none focus:border-zinc-500 font-sans"
+                                                        >
+                                                            <option value="">เลือกเพศ</option>
+                                                            <option value="Male">ชาย (Male)</option>
+                                                            <option value="Female">หญิง (Female)</option>
+                                                            <option value="Not Specified">อื่นๆ (Other / Prefer not to say)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="space-y-1">
+                                                        <label className="block font-mono font-bold text-[8px] uppercase tracking-wider text-zinc-400">Birth Day (วันเกิด)</label>
+                                                        <select 
+                                                            value={editForm.birth_day} 
+                                                            onChange={(e) => setEditForm({ ...editForm, birth_day: e.target.value })}
+                                                            className="w-full bg-neutral-50 border border-[var(--color-hallmark-rule)] px-3 py-2 rounded-[4px] focus:outline-none focus:border-zinc-500"
+                                                        >
+                                                            <option value="">วัน</option>
+                                                            {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                                                <option key={d} value={d}>{d}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="block font-mono font-bold text-[8px] uppercase tracking-wider text-zinc-400">Birth Month (เดือนเกิด)</label>
+                                                        <select 
+                                                            value={editForm.birth_month} 
+                                                            onChange={(e) => setEditForm({ ...editForm, birth_month: e.target.value })}
+                                                            className="w-full bg-neutral-50 border border-[var(--color-hallmark-rule)] px-3 py-2 rounded-[4px] focus:outline-none focus:border-zinc-500"
+                                                        >
+                                                            <option value="">เดือน</option>
+                                                            {['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'].map((m, idx) => (
+                                                                <option key={idx + 1} value={idx + 1}>{m}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2 pt-2">
+                                                    <button 
+                                                        type="submit" 
+                                                        disabled={isSaving}
+                                                        className="flex-1 bg-[var(--color-hallmark-ink)] hover:bg-neutral-800 text-[var(--color-hallmark-paper)] py-2 rounded-[4px] font-mono font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
+                                                    >
+                                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                                    </button>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => {
+                                                            setIsEditing(false)
+                                                            setEditForm({
+                                                                display_name: profile.display_name || '',
+                                                                nickname: profile.nickname || '',
+                                                                phone_number: profile.phone_number || '',
+                                                                birth_day: profile.birth_day || '',
+                                                                birth_month: profile.birth_month || '',
+                                                                gender: profile.gender || ''
+                                                            })
+                                                        }}
+                                                        className="px-4 border border-[var(--color-hallmark-rule)] hover:bg-neutral-50 py-2 rounded-[4px] font-mono font-bold uppercase tracking-wider cursor-pointer"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-y-3.5 gap-x-4 text-[10px]">
+                                                <div>
+                                                    <span className="block font-mono text-[7.5px] uppercase tracking-wider text-zinc-450 mb-0.5">Display Name</span>
+                                                    <p className="font-bold text-[var(--color-hallmark-ink)]">{profile?.display_name || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="block font-mono text-[7.5px] uppercase tracking-wider text-zinc-450 mb-0.5">Nickname (ชื่อเล่น)</span>
+                                                    <p className="font-bold text-[var(--color-hallmark-ink)]">{profile?.nickname || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="block font-mono text-[7.5px] uppercase tracking-wider text-zinc-450 mb-0.5">Phone Number</span>
+                                                    <p className="font-bold text-[var(--color-hallmark-ink)] font-mono">{profile?.phone_number || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="block font-mono text-[7.5px] uppercase tracking-wider text-zinc-450 mb-0.5">Gender (เพศ)</span>
+                                                    <p className="font-bold text-[var(--color-hallmark-ink)] uppercase font-mono text-[9px]">{profile?.gender || '-'}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="block font-mono text-[7.5px] uppercase tracking-wider text-zinc-450 mb-0.5">Birthday (วันเกิด)</span>
+                                                    <p className="font-bold text-[var(--color-hallmark-ink)]">
+                                                        {profile?.birth_day && profile?.birth_month ? (
+                                                            `${profile.birth_day} ${['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'][parseInt(profile.birth_month) - 1]}`
+                                                        ) : (
+                                                            '-'
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Membership QR Code Section */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm flex flex-col items-center gap-3">
+                                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5">
+                                            <QrCode size={14} /> SCAN TO EARN / REDEEM
+                                        </h3>
+                                        <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] font-medium leading-relaxed px-4 text-center">
+                                            เปิดหน้านี้เพื่อยื่นคิวอาร์โค้ดให้พนักงานแสกนเช็คบิลเพื่อสะสมคะแนน หรือแจ้งขอแลกแต้มแทนเงินสดได้ทันที
+                                        </p>
+
+                                        <div className="bg-neutral-50 border border-[var(--color-hallmark-rule)] p-3 rounded-[6px] flex items-center justify-center">
+                                            {qrUrl ? (
+                                                <img src={qrUrl} alt="Member Card QR Code" className="w-36 h-36" />
+                                            ) : (
+                                                <div className="w-36 h-36 flex items-center justify-center font-mono text-[9px] text-zinc-400">Loading QR...</div>
+                                            )}
+                                        </div>
+                                        <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)] select-all border border-[var(--color-hallmark-rule)] px-3 py-1 rounded-[4px] bg-neutral-50 font-bold uppercase tracking-wider">
+                                            Member ID: {profile?.phone_number || profile?.id}
+                                        </span>
+                                    </div>
+
+                                    {/* Tiers Multiplier Info Card */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
+                                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <Award size={14} /> ระดับความสัมพันธ์ (Loyalty Tier)
+                                        </h3>
+
+                                        <div className="grid grid-cols-3 gap-2 text-center text-[9px]">
+                                            <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus Common' ? 'bg-[#F2F2EC] border-[#B8B8B2] font-bold text-neutral-900' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
+                                                <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 01</span>
+                                                <span className="block text-[10px] font-bold leading-tight">Common</span>
+                                                <span className="block text-[7px] font-mono mt-0.5">1.0x Rate</span>
+                                            </div>
+                                            <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus People' ? 'bg-[#2E3138] border-[#A0AEC0] text-slate-100 font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
+                                                <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 02</span>
+                                                <span className="block text-[10px] font-bold leading-tight">People</span>
+                                                <span className="block text-[7px] font-mono mt-0.5">1.25x Rate</span>
+                                            </div>
+                                            <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Inner Haus' ? 'bg-[#12141a] border-[#D4AF37] text-white font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
+                                                <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 03</span>
+                                                <span className="block text-[10px] font-bold leading-tight">Inner Haus</span>
+                                                <span className="block text-[7px] font-mono mt-0.5">1.5x Rate</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-relaxed border-t border-[var(--color-hallmark-rule)] pt-2.5 text-center">
+                                            ยอดใช้จ่ายสะสมย้อนหลัง 12 เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m).toLocaleString()} บาท</strong>
+                                        </p>
+                                    </div>
+
+                                    {/* Transaction History Log */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
+                                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <Clock size={14} /> ประวัติธุรกรรมสะสมเหรียญ
+                                        </h3>
+
+                                        <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                            {history.length === 0 ? (
+                                                <p className="text-center font-mono text-[8px] text-zinc-400 py-4 uppercase tracking-wider">ยังไม่มีประวัติการทำรายการ</p>
+                                            ) : (
+                                                history.map((h, idx) => (
+                                                    <div key={h.id + idx} className="flex justify-between items-center text-[10px] border-b border-[var(--color-hallmark-rule)] pb-2 last:border-b-0 last:pb-0">
+                                                        <div className="space-y-0.5">
+                                                            <h4 className="font-bold text-[var(--color-hallmark-ink)]">{h.title}</h4>
+                                                            <span className="text-[8px] font-mono text-[var(--color-hallmark-ink-muted)]">{h.date}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            {h.earned > 0 && (
+                                                                <span className="font-mono font-bold text-emerald-600 font-bold">+{h.earned.toFixed(2)} xhaus</span>
+                                                            )}
+                                                            {h.redeemed > 0 && (
+                                                                <span className="font-mono font-bold text-rose-500 font-bold">-{h.redeemed.toFixed(2)} xhaus</span>
+                                                            )}
+                                                            {h.total > 0 && (
+                                                                <p className="text-[7px] text-[var(--color-hallmark-ink-muted)] font-mono mt-0.5">บิลรวม: {h.total.toLocaleString()}.-</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 animate-fade-in">
+                                    {/* Tab 2: Redeem Rewards */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3">
+                                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <Gift size={14} className="text-amber-500" /> รายการแลกรางวัลพิเศษ (xhaus Rewards)
+                                        </h3>
+                                        <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-relaxed">
+                                            สะสมเหรียญ xhaus จากการสั่งทานในร้านหรือเล่นเกมใน Arcade เพื่อนำรหัสคูปองแสดงให้พนักงานกรอกรับของหรือส่วนลดพิเศษ (เชื่อมกับระบบ POS ของร้าน)
+                                        </p>
+                                        
+                                        {/* User balance mini badge */}
+                                        <div className="bg-[#FFFDF5] border border-amber-300 rounded-[6px] p-3 flex justify-between items-center font-mono">
+                                            <span className="text-[9px] font-bold text-amber-900">เหรียญสะสมคงเหลือของคุณ:</span>
+                                            <span className="text-sm font-bold text-amber-700">{parseFloat(profile?.xhaus_balance || 0).toFixed(2)} xhaus</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Play-To-Earn Arcade Callout inside Rewards Tab */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
+                                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <span>🎮</span> PLAY-TO-EARN (ARCADE PLAYGROUND)
+                                        </h3>
+                                        <div className="space-y-3">
+                                            <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-relaxed">
+                                                สนุกแถมได้แต้ม! เล่นเกมตู้ Flappy Cat บินผ่านท่อรับเหรียญ xhaus และลุ้นรับรางวัล 50 xhaus รายสัปดาห์!
+                                            </p>
+                                            <a 
+                                                href="/arcade" 
+                                                className="w-full bg-[var(--color-hallmark-ink)] hover:bg-neutral-800 text-[var(--color-hallmark-paper)] text-center py-2.5 rounded-[4px] text-[9px] font-mono font-bold uppercase tracking-widest transition-all active:scale-[0.98] block border border-transparent"
+                                            >
+                                                เปิดห้องเกมตู้ ARCADE PLAYGROUND ↗
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    {rewardsLoading ? (
+                                        <div className="text-center py-8 font-mono text-[9px] text-zinc-450 uppercase tracking-widest animate-pulse">กำลังโหลดรางวัล...</div>
+                                    ) : rewards.length === 0 ? (
+                                        <div className="text-center py-8 bg-white border border-[var(--color-hallmark-rule)] rounded-[8px] text-[10px] text-zinc-400 font-mono">
+                                            ยังไม่มีรายการของรางวัลสำหรับแลกในระบบขณะนี้
+                                        </div>
+                                    ) : (
+                                        <div className="grid gap-3">
+                                            {rewards.map(reward => {
+                                                const userBalance = parseFloat(profile?.xhaus_balance || 0);
+                                                const cost = parseFloat(reward.xhaus_cost);
+                                                const canRedeem = userBalance >= cost;
+                                                const needed = cost - userBalance;
+
+                                                return (
+                                                    <div 
+                                                        key={reward.id} 
+                                                        className={`bg-white border rounded-[8px] p-4 shadow-sm flex flex-col justify-between gap-3 transition-all ${
+                                                            canRedeem 
+                                                                ? 'border-emerald-500 hover:border-emerald-600' 
+                                                                : 'border-[var(--color-hallmark-rule)] opacity-85'
+                                                        }`}
+                                                    >
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <h4 className="text-xs font-bold text-[var(--color-hallmark-ink)]">{reward.title}</h4>
+                                                                <span className="shrink-0 bg-amber-50 text-amber-700 border border-amber-250 font-mono text-[9px] font-bold px-2 py-0.5 rounded-[4px]">
+                                                                    {cost.toFixed(0)} xhaus
+                                                                </span>
+                                                            </div>
+                                                            {reward.description && (
+                                                                <p className="text-[10px] text-zinc-500 leading-relaxed">{reward.description}</p>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="border-t border-dashed border-zinc-100 pt-3 flex justify-between items-center">
+                                                            {canRedeem ? (
+                                                                <div className="flex items-center gap-2 w-full justify-between">
+                                                                    <div className="space-y-0.5">
+                                                                        <span className="text-[8px] text-[var(--color-hallmark-ink-muted)] uppercase block font-mono">รหัสคูปองแสดงพนักงาน</span>
+                                                                        <span className="font-mono text-xs font-bold text-emerald-600 select-all tracking-wider">{reward.claim_code}</span>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(reward.claim_code);
+                                                                            toast.success("คัดลอกรหัสสำเร็จ!");
+                                                                        }}
+                                                                        className="px-2.5 py-1 text-[8px] font-mono font-bold bg-neutral-100 hover:bg-neutral-200 border border-zinc-300 rounded-[4px] uppercase cursor-pointer"
+                                                                    >
+                                                                        Copy
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-1.5 text-zinc-400 text-[9px] w-full font-mono">
+                                                                    <span>🔒</span>
+                                                                    <span>สะสมเพิ่มอีก <strong className="text-[var(--color-hallmark-ink)]">{needed.toFixed(2)} xhaus</strong> เพื่อปลดล็อก</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
-
-                            {/* PROFILE DETAILS & EDITING SYSTEM (RAMS DETAIL) */}
-                            <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-4">
-                                <div className="flex justify-between items-center border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5">
-                                        <UserCheck size={14} className="text-[var(--color-hallmark-ink-muted)]" /> ข้อมูลโปรไฟล์ส่วนตัว (RAMS Profile)
-                                    </h3>
-                                    {!isEditing && (
-                                        <button 
-                                            onClick={() => setIsEditing(true)}
-                                            className="text-[9px] font-mono font-bold border border-[var(--color-hallmark-rule)] hover:bg-neutral-50 px-2 py-1 rounded-[4px] flex items-center gap-1 uppercase text-[var(--color-hallmark-ink)] cursor-pointer"
-                                        >
-                                            <Edit2 size={10} /> Edit Info
-                                        </button>
-                                    )}
-                                </div>
-
-                                <AnimatePresence mode="wait">
-                                    {!isEditing ? (
-                                        /* Display Profile Info */
-                                        <motion.div 
-                                            key="profile-display"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            className="grid grid-cols-2 gap-3 text-[10px] py-1 font-mono"
-                                        >
-                                            <div className="space-y-0.5">
-                                                <span className="text-[8px] text-[var(--color-hallmark-ink-muted)] uppercase block">Display Name</span>
-                                                <span className="font-bold text-[var(--color-hallmark-ink)] block">{profile?.display_name || '-'}</span>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <span className="text-[8px] text-[var(--color-hallmark-ink-muted)] uppercase block">Nickname (ชื่อเล่น)</span>
-                                                <span className="font-bold text-[var(--color-hallmark-ink)] block">{profile?.nickname || '-'}</span>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <span className="text-[8px] text-[var(--color-hallmark-ink-muted)] uppercase block">Mobile Phone</span>
-                                                <span className="font-bold text-[var(--color-hallmark-ink)] block">{profile?.phone_number || '-'}</span>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <span className="text-[8px] text-[var(--color-hallmark-ink-muted)] uppercase block">Gender (เพศ)</span>
-                                                <span className="font-bold text-[var(--color-hallmark-ink)] block">{profile?.gender || '-'}</span>
-                                            </div>
-                                            <div className="space-y-0.5 col-span-2">
-                                                <span className="text-[8px] text-[var(--color-hallmark-ink-muted)] uppercase block">Birthday</span>
-                                                <span className="font-bold text-[var(--color-hallmark-ink)] block flex items-center gap-1.5">
-                                                    <Calendar size={11} className="text-neutral-400" />
-                                                    {profile?.birth_day && profile?.birth_month 
-                                                        ? `${profile.birth_day} / ${['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][parseInt(profile.birth_month) - 1]}`
-                                                        : 'ยังไม่ได้ระบุวันเกิด'
-                                                    }
-                                                </span>
-                                            </div>
-                                        </motion.div>
-                                    ) : (
-                                        /* Edit Form */
-                                        <motion.form 
-                                            key="profile-edit"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            exit={{ opacity: 0 }}
-                                            onSubmit={handleSaveProfile}
-                                            className="space-y-3 pt-1"
-                                        >
-                                            <div className="flex gap-2">
-                                                <div className="flex-1">
-                                                    <label className="text-[8px] font-mono font-bold uppercase text-[var(--color-hallmark-ink-muted)] block mb-1">Display Name</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={editForm.display_name} 
-                                                        onChange={e => setEditForm({...editForm, display_name: e.target.value})}
-                                                        className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-[4px] p-2 text-xs text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="w-1/3">
-                                                    <label className="text-[8px] font-mono font-bold uppercase text-[var(--color-hallmark-ink-muted)] block mb-1">Nickname</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={editForm.nickname} 
-                                                        onChange={e => setEditForm({...editForm, nickname: e.target.value})}
-                                                        className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-[4px] p-2 text-xs text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
-                                                        placeholder="ชื่อเล่น"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex gap-2">
-                                                <div className="flex-1">
-                                                    <label className="text-[8px] font-mono font-bold uppercase text-[var(--color-hallmark-ink-muted)] block mb-1">Phone Number</label>
-                                                    <input 
-                                                        type="tel" 
-                                                        value={editForm.phone_number} 
-                                                        onChange={e => setEditForm({...editForm, phone_number: e.target.value})}
-                                                        className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-[4px] p-2 text-xs text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="w-1/3">
-                                                    <label className="text-[8px] font-mono font-bold uppercase text-[var(--color-hallmark-ink-muted)] block mb-1">Gender</label>
-                                                    <select 
-                                                        value={editForm.gender} 
-                                                        onChange={e => setEditForm({...editForm, gender: e.target.value})}
-                                                        className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-[4px] p-2 text-xs text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
-                                                    >
-                                                        <option value="">เพศ</option>
-                                                        <option value="Male">Male</option>
-                                                        <option value="Female">Female</option>
-                                                        <option value="Not Specified">Other</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[8px] font-mono font-bold uppercase text-[var(--color-hallmark-ink-muted)] block mb-1">Birthday</label>
-                                                <div className="flex gap-2">
-                                                    <select 
-                                                        value={editForm.birth_day} 
-                                                        onChange={e => setEditForm({...editForm, birth_day: e.target.value})}
-                                                        className="w-20 bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-[4px] p-2 text-xs text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
-                                                    >
-                                                        <option value="">Day</option>
-                                                        {[...Array(31)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
-                                                    </select>
-                                                    <select 
-                                                        value={editForm.birth_month} 
-                                                        onChange={e => setEditForm({...editForm, birth_month: e.target.value})}
-                                                        className="flex-1 bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] rounded-[4px] p-2 text-xs text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
-                                                    >
-                                                        <option value="">Month</option>
-                                                        {['มกราคม (Jan)', 'กุมภาพันธ์ (Feb)', 'มีนาคม (Mar)', 'เมษายน (Apr)', 'พฤษภาคม (May)', 'มิถุนายน (Jun)', 'กรกฎาคม (Jul)', 'สิงหาคม (Aug)', 'กันยายน (Sep)', 'ตุลาคม (Oct)', 'พฤศจิกายน (Nov)', 'ธันวาคม (Dec)'].map((m, i) => (
-                                                            <option key={i} value={i + 1}>{m}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-hallmark-rule)]">
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => {
-                                                        setIsEditing(false)
-                                                        setEditForm({
-                                                            display_name: profile.display_name || '',
-                                                            nickname: profile.nickname || '',
-                                                            phone_number: profile.phone_number || '',
-                                                            birth_day: profile.birth_day || '',
-                                                            birth_month: profile.birth_month || '',
-                                                            gender: profile.gender || ''
-                                                        })
-                                                    }}
-                                                    className="px-3 py-1.5 border border-[var(--color-hallmark-rule)] hover:bg-neutral-50 rounded-[4px] text-[9px] font-mono uppercase font-bold flex items-center gap-1 cursor-pointer"
-                                                >
-                                                    <X size={10} /> Cancel
-                                                </button>
-                                                <button 
-                                                    type="submit" 
-                                                    disabled={isSaving}
-                                                    className="px-4 py-1.5 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:opacity-90 rounded-[4px] text-[9px] font-mono uppercase font-bold flex items-center gap-1 cursor-pointer"
-                                                >
-                                                    <Check size={10} /> {isSaving ? 'Saving...' : 'Save'}
-                                                </button>
-                                            </div>
-                                        </motion.form>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Special Benefits & House Rewards */}
-                            <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5 animate-fade-in">
-                                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                    <Award size={14} className="text-amber-500" /> สิทธิประโยชน์ของคนในบ้าน (ชั้น {tierDetails.current_tier})
-                                </h3>
-                                <div className="space-y-3 text-[10px]">
-                                    <div className="bg-neutral-50 p-3 rounded-[6px] border border-[var(--color-hallmark-rule)] space-y-2">
-                                        <p className="font-bold flex items-center gap-1.5 text-[var(--color-hallmark-ink)]">
-                                            <span>✨</span> ลำดับชั้นปัจจุบัน: <span className="font-mono text-xs text-amber-600">{tierDetails.current_tier}</span>
-                                        </p>
-                                        <ul className="space-y-1.5 pl-4 list-disc text-neutral-600 leading-relaxed">
-                                            <li>อัตราการรับเหรียญสะสม: <strong className="text-[var(--color-hallmark-ink)] font-mono">{tierDetails.multiplier}x multiplier</strong> (ยอดเช็คบิล 100 บาท = {tierDetails.multiplier} xhaus)</li>
-                                            <li>สามารถใช้เหรียญสะสมแลกรับส่วนลดแทนเงินสดได้ทันที (1 xhaus = 1 บาท)</li>
-                                            
-                                            {tierDetails.current_tier === 'Inner Haus' && (
-                                                <>
-                                                    <li className="text-[var(--color-hallmark-ink)] font-bold">รับสิทธิ์จองโต๊ะระดับ VIP และรับ Welcome Drink ฟรีทุกครั้งเมื่อมาเยือน</li>
-                                                    <li className="text-[var(--color-hallmark-ink)] font-bold">สิทธิ์การรักษาสถานะและผ่อนผันระดับสมาชิก 30 วัน (Grace Period)</li>
-                                                </>
-                                            )}
-                                            {tierDetails.current_tier === 'Haus People' && (
-                                                <>
-                                                    <li className="text-[var(--color-hallmark-ink)] font-bold">สิทธิ์การจองโต๊ะและร่วมกิจกรรม Exclusive ของร้านก่อนสมาชิกทั่วไป</li>
-                                                    <li className="text-[var(--color-hallmark-ink)] font-bold">สิทธิ์การรักษาสถานะและผ่อนผันระดับสมาชิก 30 วัน (Grace Period)</li>
-                                                </>
-                                            )}
-                                        </ul>
-                                    </div>
-
-                                    <div className="bg-[#FFFDF5] p-3 rounded-[6px] border border-amber-200 space-y-1.5">
-                                        <p className="font-bold text-amber-950 flex items-center gap-1.5">
-                                            <span>🎁</span> แลกของพิเศษคนในบ้าน (House Rewards Exclusives)
-                                        </p>
-                                        <p className="text-[9px] text-amber-900/90 leading-relaxed font-medium">
-                                            ใช้เหรียญ xhaus เพื่อแลกรับของพรีเมียมเฉพาะตัว, Merchandise เสื้อหมวกแก้วลาย In The Haus, หรือเครื่องดื่ม/เมนูลับสุด Exclusive ที่ไม่มีในเมนูปกติ โดยแจ้งขอสิทธิ์แลกกับพนักงานที่ร้านได้เลยครับ
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Play-To-Earn Arcade Callout */}
-                            <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5 animate-fade-in">
-                                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                    <span>🎮</span> PLAY-TO-EARN (ARCADE PLAYGROUND)
-                                </h3>
-                                <div className="space-y-3">
-                                    <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-relaxed">
-                                        สนุกแถมได้แต้ม! ร่วมเล่นเกมตู้สุดมันส์ของบ้านใน Arcade ปลดล็อคความสำเร็จ คะแนน High Scores เพื่อนำมารับรางวัลเหรียญ xhaus พิเศษเข้ากระเป๋าบัตรสมาชิกตามเงื่อนไขสะสมแต้มของร้าน
-                                    </p>
-                                    <a 
-                                        href="/arcade" 
-                                        className="w-full bg-[var(--color-hallmark-ink)] hover:bg-neutral-800 text-[var(--color-hallmark-paper)] text-center py-2.5 rounded-[4px] text-[9px] font-mono font-bold uppercase tracking-widest transition-all active:scale-[0.98] block border border-transparent"
-                                    >
-                                        เปิดห้องเกมตู้ ARCADE PLAYGROUND ↗
-                                    </a>
-                                </div>
-                            </div>
-
-                            {/* Membership QR Code Section */}
-                            <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm flex flex-col items-center gap-3">
-                                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5">
-                                    <QrCode size={14} /> SCAN TO EARN / REDEEM
-                                </h3>
-                                <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] font-medium leading-relaxed px-4 text-center">
-                                    เปิดหน้านี้เพื่อยื่นคิวอาร์โค้ดให้พนักงานแสกนเช็คบิลเพื่อสะสมคะแนน หรือแจ้งขอแลกแต้มแทนเงินสดได้ทันที
-                                </p>
-
-                                <div className="bg-neutral-50 border border-[var(--color-hallmark-rule)] p-3 rounded-[6px] flex items-center justify-center">
-                                    {qrUrl ? (
-                                        <img src={qrUrl} alt="Member Card QR Code" className="w-36 h-36" />
-                                    ) : (
-                                        <div className="w-36 h-36 flex items-center justify-center font-mono text-[9px] text-zinc-400">Loading QR...</div>
-                                    )}
-                                </div>
-                                <span className="font-mono text-[8px] text-[var(--color-hallmark-ink-muted)] select-all border border-[var(--color-hallmark-rule)] px-3 py-1 rounded-[4px] bg-neutral-50 font-bold uppercase tracking-wider">
-                                    Member ID: {profile?.phone_number || profile?.id}
-                                </span>
-                            </div>
-
-                            {/* Tiers Multiplier Info Card */}
-                            <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
-                                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                    <Award size={14} /> ระดับความสัมพันธ์ (Loyalty Tier)
-                                </h3>
-
-                                <div className="grid grid-cols-3 gap-2 text-center text-[9px]">
-                                    <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus Common' ? 'bg-[#F2F2EC] border-[#B8B8B2] font-bold text-neutral-900' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
-                                        <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 01</span>
-                                        <span className="block text-[10px] font-bold leading-tight">Common</span>
-                                        <span className="block text-[7px] font-mono mt-0.5">1.0x Rate</span>
-                                    </div>
-                                    <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus People' ? 'bg-[#2E3138] border-[#A0AEC0] text-slate-100 font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
-                                        <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 02</span>
-                                        <span className="block text-[10px] font-bold leading-tight">People</span>
-                                        <span className="block text-[7px] font-mono mt-0.5">1.25x Rate</span>
-                                    </div>
-                                    <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Inner Haus' ? 'bg-[#12141a] border-[#D4AF37] text-white font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
-                                        <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 03</span>
-                                        <span className="block text-[10px] font-bold leading-tight">Inner Haus</span>
-                                        <span className="block text-[7px] font-mono mt-0.5">1.5x Rate</span>
-                                    </div>
-                                </div>
-                                <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-relaxed border-t border-[var(--color-hallmark-rule)] pt-2.5 text-center">
-                                    ยอดใช้จ่ายสะสมย้อนหลัง 12 เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m).toLocaleString()} บาท</strong>
-                                </p>
-                            </div>
 
                             {/* Transaction History Log */}
                             <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -24,6 +24,11 @@ export default function POSOrderPanel({
     const [xhausToRedeem, setXhausToRedeem] = React.useState(0);
     const [showRedeemInput, setShowRedeemInput] = React.useState(false);
     const [redeemInputVal, setRedeemInputVal] = React.useState('');
+
+    // xhaus Reward Code states
+    const [rewardCodeInput, setRewardCodeInput] = React.useState('');
+    const [appliedReward, setAppliedReward] = React.useState(null);
+    const [rewardDiscount, setRewardDiscount] = React.useState(0);
     
     // Manual discount states
     const [manualDiscountVal, setManualDiscountVal] = React.useState('');
@@ -102,7 +107,69 @@ export default function POSOrderPanel({
         setManualDiscountVal('');
         setManualDiscountType('amount');
         setSelectedPromo(null);
+        setRewardCodeInput('');
+        setAppliedReward(null);
+        setRewardDiscount(0);
     }, [booking?.id]);
+
+    const handleApplyRewardCode = async () => {
+        if (!rewardCodeInput) return;
+        if (!booking || !booking.profiles) {
+            toast.error("กรุณาผูกบัญชีสมาชิก (CRM) ก่อนแลกโค้ดรางวัลครับ");
+            return;
+        }
+
+        try {
+            // 1. Query xhaus_rewards for the code
+            const { data: reward, error } = await supabase
+                .from('xhaus_rewards')
+                .select('*')
+                .eq('claim_code', rewardCodeInput.toUpperCase().trim())
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (error) throw error;
+            if (!reward) {
+                toast.error("ไม่พบรหัสแลกของรางวัลนี้ หรือรหัสหมดอายุแล้วครับ");
+                return;
+            }
+
+            // 2. Check customer points balance
+            const customerBalance = parseFloat(booking.profiles.xhaus_balance || 0);
+            const cost = parseFloat(reward.xhaus_cost);
+            if (customerBalance < cost) {
+                toast.error(`เหรียญ xhaus ของลูกค้าไม่พอ! (ต้องการ ${cost} xhaus, ลูกค้ามี ${customerBalance} xhaus)`);
+                return;
+            }
+
+            // 3. Apply the reward
+            setAppliedReward(reward);
+            
+            // Calculate reward discount value if it's a discount type reward
+            let discVal = 0;
+            if (reward.title.includes("ส่วนลด") || reward.title.toLowerCase().includes("discount")) {
+                const match = reward.title.match(/(\d+)\s*(บาท|Baht|B|b)/);
+                if (match) {
+                    discVal = parseFloat(match[1]);
+                } else if (reward.claim_code === 'IHDISC50') {
+                    discVal = 50.00;
+                }
+            }
+            
+            setRewardDiscount(discVal);
+            toast.success(`แลกรางวัลสำเร็จ: ${reward.title} (หัก ${cost} xhaus)`);
+            setRewardCodeInput('');
+        } catch (err) {
+            console.error("Error applying reward code:", err);
+            toast.error("เกิดข้อผิดพลาดในการตรวจสอบรหัสแลกรางวัล");
+        }
+    };
+
+    const handleCancelReward = () => {
+        setAppliedReward(null);
+        setRewardDiscount(0);
+        toast.info("ยกเลิกการแลกของรางวัลแล้ว");
+    };
 
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
@@ -159,8 +226,8 @@ export default function POSOrderPanel({
     // 4. xhaus Coins Discount Calculation
     const xhausDiscount = xhausToRedeem * (crmSettings.crm_redeem_rate_xhaus || 1.0);
     
-    // Net total calculations
-    const netBeforeTax = Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount);
+    // Net total calculations (including reward discount)
+    const netBeforeTax = Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount);
     const tax = includeTax ? netBeforeTax * 0.07 : 0;
     const total = netBeforeTax + tax;
     
@@ -421,6 +488,46 @@ export default function POSOrderPanel({
                             </div>
                         )}
                     </div>
+
+                    {/* xhaus Reward Code Redemption Panel */}
+                    <div className="bg-[#E6F4FF] border border-blue-200 rounded-xl p-2.5 flex flex-col gap-2 shadow-sm font-sans mt-2">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <Gift size={12} className="text-blue-500 shrink-0" />
+                                <p className="text-[9px] text-blue-900 font-bold leading-none">Redeem Reward Code</p>
+                            </div>
+                        </div>
+                        {appliedReward ? (
+                            <div className="bg-white border border-blue-300 p-2 rounded-lg flex justify-between items-center text-[9px]">
+                                <div className="space-y-0.5 text-left">
+                                    <p className="font-bold text-blue-950 truncate max-w-[170px]">{appliedReward.title}</p>
+                                    <p className="text-[8px] text-neutral-500 font-mono">Cost: {appliedReward.xhaus_cost} xhaus ({appliedReward.claim_code})</p>
+                                </div>
+                                <button 
+                                    onClick={handleCancelReward}
+                                    className="px-2 py-0.5 bg-red-50 hover:bg-red-100 text-red-650 border border-red-200 text-[8px] font-bold uppercase rounded cursor-pointer transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex gap-1.5">
+                                <input 
+                                    type="text"
+                                    placeholder="Enter Code (e.g. IHGLASS50)"
+                                    value={rewardCodeInput}
+                                    onChange={(e) => setRewardCodeInput(e.target.value.toUpperCase())}
+                                    className="flex-1 bg-white border border-blue-300 rounded-lg px-2.5 py-1 text-xs font-bold font-mono text-[#1A1A1A] outline-none placeholder:text-neutral-400 placeholder:font-sans uppercase"
+                                />
+                                <button 
+                                    onClick={handleApplyRewardCode}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase rounded-lg px-3 cursor-pointer transition-all active:scale-95"
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div className="px-3 py-2 shrink-0">
@@ -676,7 +783,16 @@ export default function POSOrderPanel({
                                         <ReceiptText size={10} /> KITCHEN SLIP
                                     </button>
                                     <button 
-                                        onClick={() => onCheckout(paymentMethod, includeTax, pointsEarned, xhausToRedeem, xhausDiscount, promoDiscount, manualDiscount)}
+                                        onClick={() => onCheckout(
+                                            paymentMethod, 
+                                            includeTax, 
+                                            pointsEarned, 
+                                            xhausToRedeem + (appliedReward ? parseFloat(appliedReward.xhaus_cost) : 0), 
+                                            xhausDiscount + rewardDiscount, 
+                                            promoDiscount, 
+                                            manualDiscount,
+                                            appliedReward ? appliedReward.claim_code : null
+                                        )}
                                         className="flex items-center justify-center gap-1 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
                                     >
                                         <Check size={10} /> CHECKOUT / ปิดโต๊ะ

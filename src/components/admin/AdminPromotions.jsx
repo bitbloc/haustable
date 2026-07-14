@@ -5,11 +5,122 @@ import { toast } from 'sonner'
 import { getThaiDate } from '../../utils/timeUtils'
 
 export default function AdminPromotions() {
+    const [activeTab, setActiveTab] = useState('promo') // 'promo' | 'rewards'
     const [codes, setCodes] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingCode, setEditingCode] = useState(null)
     const [searchTerm, setSearchTerm] = useState('')
+
+    // Rewards States
+    const [rewards, setRewards] = useState([])
+    const [rewardsLoading, setRewardsLoading] = useState(false)
+    const [isRewardModalOpen, setIsRewardModalOpen] = useState(false)
+    const [editingReward, setEditingReward] = useState(null)
+    const [rewardFormData, setRewardFormData] = useState({
+        title: '',
+        description: '',
+        xhaus_cost: '',
+        claim_code: '',
+        is_active: true
+    })
+
+    const fetchRewards = async () => {
+        try {
+            setRewardsLoading(true)
+            const { data, error } = await supabase
+                .from('xhaus_rewards')
+                .select('*')
+                .order('created_at', { ascending: false })
+            if (error) throw error
+            setRewards(data || [])
+        } catch (err) {
+            console.error('Error fetching rewards:', err)
+            toast.error('Failed to load rewards')
+        } finally {
+            setRewardsLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        if (activeTab === 'rewards') {
+            fetchRewards()
+        }
+    }, [activeTab])
+
+    const handleOpenRewardModal = (reward = null) => {
+        if (reward) {
+            setEditingReward(reward)
+            setRewardFormData({
+                title: reward.title,
+                description: reward.description || '',
+                xhaus_cost: reward.xhaus_cost,
+                claim_code: reward.claim_code,
+                is_active: reward.is_active
+            })
+        } else {
+            setEditingReward(null)
+            setRewardFormData({
+                title: '',
+                description: '',
+                xhaus_cost: '',
+                claim_code: '',
+                is_active: true
+            })
+        }
+        setIsRewardModalOpen(true)
+    }
+
+    const handleRewardSubmit = async (e) => {
+        e.preventDefault()
+        try {
+            if (!rewardFormData.title || !rewardFormData.xhaus_cost || !rewardFormData.claim_code) {
+                return toast.error('Please fill in all required fields')
+            }
+
+            const payload = {
+                title: rewardFormData.title,
+                description: rewardFormData.description,
+                xhaus_cost: parseFloat(rewardFormData.xhaus_cost),
+                claim_code: rewardFormData.claim_code.toUpperCase().trim(),
+                is_active: rewardFormData.is_active
+            }
+
+            if (editingReward) {
+                const { error } = await supabase
+                    .from('xhaus_rewards')
+                    .update(payload)
+                    .eq('id', editingReward.id)
+                if (error) throw error
+                toast.success('Reward updated')
+            } else {
+                const { error } = await supabase
+                    .from('xhaus_rewards')
+                    .insert(payload)
+                if (error) throw error
+                toast.success('Reward created')
+            }
+
+            setIsRewardModalOpen(false)
+            fetchRewards()
+        } catch (err) {
+            console.error('Error saving reward:', err)
+            toast.error(err.message)
+        }
+    }
+
+    const handleRewardDelete = async (id) => {
+        if (!confirm('Are you sure you want to delete this reward item?')) return
+        try {
+            const { error } = await supabase.from('xhaus_rewards').delete().eq('id', id)
+            if (error) throw error
+            toast.success('Reward deleted')
+            fetchRewards()
+        } catch (err) {
+            console.error('Error deleting reward:', err)
+            toast.error(err.message || 'Failed to delete reward')
+        }
+    }
 
     // Form State
     const [formData, setFormData] = useState({
@@ -163,21 +274,63 @@ export default function AdminPromotions() {
     }
 
     const filteredCodes = codes.filter(c => c.code.includes(searchTerm.toUpperCase()))
+    const filteredRewards = rewards.filter(r => r.title.toLowerCase().includes(searchTerm.toLowerCase()) || r.claim_code.toUpperCase().includes(searchTerm.toUpperCase()))
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Tag className="w-6 h-6" /> Promotions
+                        <Tag className="w-6 h-6" /> {activeTab === 'promo' ? 'Promotions' : 'xhaus Rewards'}
                     </h1>
-                    <p className="text-gray-500 text-sm">Manage discount codes and coupons</p>
+                    <p className="text-gray-500 text-sm">
+                        {activeTab === 'promo' ? 'Manage discount codes and coupons' : 'Manage rewards redeemable with xhaus coins'}
+                    </p>
                 </div>
-                <button 
-                    onClick={() => handleOpenModal()} 
-                    className="bg-black text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors"
+                {activeTab === 'promo' ? (
+                    <button 
+                        onClick={() => handleOpenModal()} 
+                        className="bg-black text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors cursor-pointer"
+                    >
+                        <Plus size={18} /> New Code
+                    </button>
+                ) : (
+                    <button 
+                        onClick={() => handleOpenRewardModal()} 
+                        className="bg-black text-[#DFFF00] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors cursor-pointer"
+                    >
+                        <Plus size={18} /> New Reward
+                    </button>
+                )}
+            </div>
+
+            {/* Tabs Header */}
+            <div className="flex gap-6 border-b mb-6 text-sm font-bold">
+                <button
+                    onClick={() => {
+                        setActiveTab('promo')
+                        setSearchTerm('')
+                    }}
+                    className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
+                        activeTab === 'promo' 
+                            ? 'border-black text-black' 
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
                 >
-                    <Plus size={18} /> New Code
+                    🎟️ โค้ดส่วนลดโปรโมชัน (Promotions)
+                </button>
+                <button
+                    onClick={() => {
+                        setActiveTab('rewards')
+                        setSearchTerm('')
+                    }}
+                    className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
+                        activeTab === 'rewards' 
+                            ? 'border-black text-black' 
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
+                >
+                    🎁 ของรางวัลสะสมแต้ม (xhaus Rewards)
                 </button>
             </div>
 
@@ -186,92 +339,157 @@ export default function AdminPromotions() {
                 <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
                 <input 
                     type="text" 
-                    placeholder="Search code..." 
+                    placeholder={activeTab === 'promo' ? "Search code..." : "Search rewards by title or code..."} 
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-lg outline-none focus:border-black transition-colors"
                 />
             </div>
 
-            {/* List */}
-            {loading ? (
-                <div className="text-center py-10 text-gray-400">Loading...</div>
-            ) : filteredCodes.length === 0 ? (
-                <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                    <p className="text-gray-500">No promotion codes found.</p>
-                </div>
-            ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredCodes.map(code => (
-                        <div key={code.id} className={`bg-white rounded-xl shadow-sm border p-4 relative ${!code.is_active ? 'opacity-60 grayscale' : 'border-gray-100'}`}>
-                            
-                            {/* Header */}
-                            <div className="flex justify-between items-start mb-3">
-                                <div className="bg-gray-100 px-3 py-1 rounded text-lg font-mono font-bold tracking-wider">
-                                    {code.code}
-                                </div>
-                                <div className={`text-xs px-2 py-1 rounded-full font-bold ${code.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                                    {code.is_active ? 'ACTIVE' : 'INACTIVE'}
-                                </div>
-                            </div>
-
-                            {/* Details */}
-                            <div className="space-y-2 text-sm text-gray-600 mb-4">
-                                <div className="flex items-center gap-2 text-black font-bold text-lg">
-                                    {code.discount_type === 'percent' ? <Percent size={18} /> : <span className="text-xs">฿</span>}
-                                    {code.discount_value} {code.discount_type === 'percent' ? '% OFF' : 'BAHT OFF'}
-                                </div>
-                                
-                                <div className="flex items-center gap-2 text-xs">
-                                    <Calendar size={14} />
-                                    <span>{new Date(code.start_date).toLocaleDateString('en-GB')} - {new Date(code.end_date).toLocaleDateString('en-GB')}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-xs">
-                                    <DollarSign size={14} />
-                                    <span>Min Spend: {code.min_spend > 0 ? `${code.min_spend}.-` : 'None'}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-xs">
-                                    <Tag size={14} />
-                                    <span className="capitalize">For: {code.applicable_to === 'both' ? 'All' : code.applicable_to}</span>
-                                </div>
-
-                                {code.usage_limit && (
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <AlertCircle size={14} />
-                                        <span>Used: {code.used_count} / {code.usage_limit}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-2 border-t pt-3 mt-auto">
-                                <button 
-                                    onClick={() => handleOpenModal(code)}
-                                    className="flex-1 py-1.5 text-xs font-bold bg-gray-50 hover:bg-gray-100 rounded text-gray-700 flex items-center justify-center gap-1"
-                                >
-                                    <Edit2 size={14} /> Edit
-                                </button>
-                                <button 
-                                    onClick={() => handleDelete(code.id)}
-                                    className="px-3 py-1.5 text-xs font-bold bg-red-50 hover:bg-red-100 rounded text-red-600"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
+            {/* Promotions Tab Render */}
+            {activeTab === 'promo' && (
+                <>
+                    {loading ? (
+                        <div className="text-center py-10 text-gray-400 animate-pulse">Loading...</div>
+                    ) : filteredCodes.length === 0 ? (
+                        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <p className="text-gray-500">No promotion codes found.</p>
                         </div>
-                    ))}
-                </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredCodes.map(code => (
+                                <div key={code.id} className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between relative ${!code.is_active ? 'opacity-60 grayscale' : 'border-gray-100'}`}>
+                                    <div>
+                                        {/* Header */}
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="bg-gray-100 px-3 py-1 rounded text-lg font-mono font-bold tracking-wider">
+                                                {code.code}
+                                            </div>
+                                            <div className={`text-xs px-2 py-1 rounded-full font-bold ${code.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                                {code.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                            </div>
+                                        </div>
+
+                                        {/* Details */}
+                                        <div className="space-y-2 text-sm text-gray-600 mb-4">
+                                            <div className="flex items-center gap-2 text-black font-bold text-lg">
+                                                {code.discount_type === 'percent' ? <Percent size={18} /> : <span className="text-xs">฿</span>}
+                                                {code.discount_value} {code.discount_type === 'percent' ? '% OFF' : 'BAHT OFF'}
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <Calendar size={14} />
+                                                <span>{new Date(code.start_date).toLocaleDateString('en-GB')} - {new Date(code.end_date).toLocaleDateString('en-GB')}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <DollarSign size={14} />
+                                                <span>Min Spend: {code.min_spend > 0 ? `${code.min_spend}.-` : 'None'}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <Tag size={14} />
+                                                <span className="capitalize">For: {code.applicable_to === 'both' ? 'All' : code.applicable_to}</span>
+                                            </div>
+
+                                            {code.usage_limit && (
+                                                <div className="flex items-center gap-2 text-xs">
+                                                    <AlertCircle size={14} />
+                                                    <span>Used: {code.used_count} / {code.usage_limit}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2 border-t pt-3 mt-4">
+                                        <button 
+                                            onClick={() => handleOpenModal(code)}
+                                            className="flex-1 py-1.5 text-xs font-bold bg-gray-50 hover:bg-gray-100 rounded text-gray-700 flex items-center justify-center gap-1 cursor-pointer"
+                                        >
+                                            <Edit2 size={14} /> Edit
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDelete(code.id)}
+                                            className="px-3 py-1.5 text-xs font-bold bg-red-50 hover:bg-red-150 rounded text-red-600 cursor-pointer"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
 
-            {/* Modal */}
+            {/* xhaus Rewards Tab Render */}
+            {activeTab === 'rewards' && (
+                <>
+                    {rewardsLoading ? (
+                        <div className="text-center py-10 text-gray-400 animate-pulse">Loading...</div>
+                    ) : filteredRewards.length === 0 ? (
+                        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <p className="text-gray-500">No reward items found.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredRewards.map(reward => (
+                                <div key={reward.id} className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between relative ${!reward.is_active ? 'opacity-60 grayscale' : 'border-gray-100'}`}>
+                                    <div>
+                                        {/* Header */}
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded text-xs font-mono font-bold tracking-wider">
+                                                {reward.claim_code}
+                                            </div>
+                                            <div className={`text-xs px-2 py-1 rounded-full font-bold ${reward.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                                {reward.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                            </div>
+                                        </div>
+
+                                        {/* Details */}
+                                        <div className="space-y-2 text-sm text-gray-600 mb-4">
+                                            <h4 className="font-bold text-black text-base">{reward.title}</h4>
+                                            
+                                            {reward.description && (
+                                                <p className="text-xs text-gray-500 line-clamp-2">{reward.description}</p>
+                                            )}
+
+                                            <div className="flex items-center gap-1.5 text-xs text-amber-700 font-bold bg-amber-50 px-2 py-1 rounded-lg w-max mt-2">
+                                                <span>🪙</span> Cost: {parseFloat(reward.xhaus_cost).toFixed(0)} xhaus
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2 border-t pt-3 mt-4">
+                                        <button 
+                                            onClick={() => handleOpenRewardModal(reward)}
+                                            className="flex-1 py-1.5 text-xs font-bold bg-gray-50 hover:bg-gray-100 rounded text-gray-700 flex items-center justify-center gap-1 cursor-pointer"
+                                        >
+                                            <Edit2 size={14} /> Edit
+                                        </button>
+                                        <button 
+                                            onClick={() => handleRewardDelete(reward.id)}
+                                            className="px-3 py-1.5 text-xs font-bold bg-red-50 hover:bg-red-150 rounded text-red-600 cursor-pointer"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Code Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto text-gray-900">
                         <div className="p-6 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
                             <h2 className="text-xl font-bold">{editingCode ? 'Edit Code' : 'Create New Code'}</h2>
-                            <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+                            <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full cursor-pointer"><X size={20} /></button>
                         </div>
                         
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -391,9 +609,91 @@ export default function AdminPromotions() {
 
                             <button 
                                 type="submit" 
-                                className="w-full bg-black text-[#DFFF00] py-4 rounded-xl font-bold text-lg mt-4 hover:bg-gray-900 transition-colors"
+                                className="w-full bg-black text-[#DFFF00] py-4 rounded-xl font-bold text-lg mt-4 hover:bg-gray-900 transition-colors cursor-pointer"
                             >
                                 {editingCode ? 'Update Code' : 'Create Code'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Reward Modal */}
+            {isRewardModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto text-gray-900">
+                        <div className="p-6 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+                            <h2 className="text-xl font-bold">{editingReward ? 'Edit Reward' : 'Create New Reward'}</h2>
+                            <button onClick={() => setIsRewardModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-full cursor-pointer"><X size={20} /></button>
+                        </div>
+                        
+                        <form onSubmit={handleRewardSubmit} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Reward Title (ชื่อของรางวัล)</label>
+                                <input 
+                                    type="text" 
+                                    value={rewardFormData.title} 
+                                    onChange={e => setRewardFormData({...rewardFormData, title: e.target.value})}
+                                    className="w-full text-lg font-bold border-b border-gray-200 focus:border-black outline-none py-1.5 placeholder:text-gray-300"
+                                    placeholder="เช่น ของที่ระลึก: แก้วเซรามิค In The Haus"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description (รายละเอียด)</label>
+                                <textarea 
+                                    value={rewardFormData.description} 
+                                    onChange={e => setRewardFormData({...rewardFormData, description: e.target.value})}
+                                    className="w-full bg-gray-50 p-2.5 rounded-lg border border-gray-200 outline-none focus:border-black text-sm h-20 resize-none"
+                                    placeholder="คำอธิบายของรางวัลและวิธีรับ"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">xhaus Coins Cost (ราคาสะสมที่ใช้แลก)</label>
+                                    <input 
+                                        type="number"
+                                        value={rewardFormData.xhaus_cost}
+                                        onChange={e => setRewardFormData({...rewardFormData, xhaus_cost: e.target.value})}
+                                        className="w-full bg-gray-50 p-2.5 rounded border outline-none focus:border-black"
+                                        placeholder="50"
+                                        required
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Redemption Code (รหัสแลกสินค้า)</label>
+                                    <input 
+                                        type="text"
+                                        value={rewardFormData.claim_code}
+                                        onChange={e => setRewardFormData({...rewardFormData, claim_code: e.target.value.toUpperCase()})}
+                                        className="w-full bg-gray-50 p-2.5 rounded border outline-none focus:border-black font-mono font-bold uppercase"
+                                        placeholder="e.g. IHGLASS50"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-2">
+                                <span className="text-sm font-bold">Status:</span>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={rewardFormData.is_active} 
+                                        onChange={e => setRewardFormData({...rewardFormData, is_active: e.target.checked})}
+                                        className="w-5 h-5 accent-black" 
+                                    />
+                                    <span className="text-sm text-gray-600">{rewardFormData.is_active ? 'Active' : 'Inactive'}</span>
+                                </label>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                className="w-full bg-black text-[#DFFF00] py-4 rounded-xl font-bold text-lg mt-4 hover:bg-gray-900 transition-colors cursor-pointer"
+                            >
+                                {editingReward ? 'Update Reward' : 'Create Reward'}
                             </button>
                         </form>
                     </div>

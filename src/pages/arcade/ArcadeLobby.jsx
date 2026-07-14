@@ -25,6 +25,7 @@ export default function ArcadeLobby() {
   const [distance, setDistance] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [isGameFullscreen, setIsGameFullscreen] = useState(false);
+  const [claimResultMessage, setClaimResultMessage] = useState('');
 
   const SHOP_LAT = 17.39008981227407;
   const SHOP_LNG = 104.79292770946343;
@@ -236,6 +237,15 @@ export default function ArcadeLobby() {
 
         if (insertError) throw insertError;
       }
+
+      // Call RPC to securely claim P2E rewards
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('claim_arcade_rewards', { p_score: claimScore });
+
+      if (rpcError) throw rpcError;
+
+      const message = rpcData?.message || 'สะสมประวัติคะแนนของท่านสำเร็จ!';
+      setClaimResultMessage(message);
 
       // Confetti celebration
       confetti({
@@ -609,6 +619,11 @@ export default function ArcadeLobby() {
                     <span className="text-neutral-400 text-xs">คะแนนที่บันทึก</span>
                     <span className="text-lg font-bold text-[#DFFF00]">{claimScore} แต้ม</span>
                   </div>
+                  {claimResultMessage && (
+                    <div className="bg-[#DFFF00]/10 border border-[#DFFF00]/30 rounded-2xl py-3 px-4 w-full text-center text-xs font-bold text-[#DFFF00] my-3 font-mono leading-relaxed">
+                      {claimResultMessage}
+                    </div>
+                  )}
                   {distance && (
                     <p className="text-[10px] text-neutral-500 font-mono">
                       ยืนยันพิกัดเรียบร้อย (ระยะห่างจากร้าน: {(distance * 1000).toFixed(0)} เมตร)

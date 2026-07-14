@@ -23,6 +23,7 @@ import AdminBookings from './AdminBookings'
 import AdminMembers from './AdminMembers'
 import AdminPromotions from './components/admin/AdminPromotions' // NEW
 import AdminTableManager from './admin/AdminTableManager' // NEW
+import AdminArcade from './components/admin/AdminArcade' // NEW
 
 import LoginPage from './LoginPage' // NEW
 import MemberCard from './pages/MemberCard' // NEW
@@ -187,6 +188,7 @@ function App() {
               <Route path="costing" element={<MenuCostPage />} />
               <Route path="lab" element={<RecipeLabPage />} />
               <Route path="promotions" element={<AdminPromotions />} />
+              <Route path="arcade" element={<AdminArcade />} />
               <Route path="tables" element={<AdminTableManager />} />
               <Route path="editor" element={<AdminTableEditor />} />
               <Route path="sop" element={<SOPEditorPage />} />

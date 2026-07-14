@@ -758,7 +758,8 @@ export default function POSDashboard() {
         xhausToRedeem = 0, 
         xhausDiscount = 0,
         promoDiscount = 0,
-        manualDiscount = 0
+        manualDiscount = 0,
+        rewardCode = null
     ) => {
         if (currentOrder.items.length === 0) return;
 
@@ -809,7 +810,8 @@ export default function POSDashboard() {
             memberDiscount + promoDiscount + manualDiscount + xhausDiscount, 
             pointsEarned, 
             xhausToRedeem, 
-            xhausDiscount
+            xhausDiscount,
+            rewardCode
         );
         if (success) {
             const updatedBooking = await getActiveBooking(selectedTable.id);
