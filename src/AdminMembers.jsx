@@ -130,15 +130,28 @@ export default function AdminMembers() {
 
     // Edit Member State
     const [editingMember, setEditingMember] = useState(null)
-    const [editForm, setEditForm] = useState({ display_name: '', phone_number: '', line_user_id: '', admin_notes: '' })
+    const [editForm, setEditForm] = useState({
+        display_name: '',
+        nickname: '',
+        phone_number: '',
+        line_user_id: '',
+        admin_notes: '',
+        birth_day: '',
+        birth_month: '',
+        gender: ''
+    })
 
     const openEditModal = (member) => {
         setEditingMember(member)
         setEditForm({
             display_name: member.display_name || '',
+            nickname: member.nickname || '',
             phone_number: member.phone_number || '',
             line_user_id: member.line_user_id || member.line_uid || '', // Support both if legacy exists
-            admin_notes: member.admin_notes || '' 
+            admin_notes: member.admin_notes || '',
+            birth_day: member.birth_day || '',
+            birth_month: member.birth_month || '',
+            gender: member.gender || ''
         })
     }
 
@@ -151,16 +164,20 @@ export default function AdminMembers() {
                 .from('profiles')
                 .update({
                     display_name: editForm.display_name,
+                    nickname: editForm.nickname,
                     phone_number: editForm.phone_number,
                     line_user_id: editForm.line_user_id,
-                    admin_notes: editForm.admin_notes
+                    admin_notes: editForm.admin_notes,
+                    birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null,
+                    birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null,
+                    gender: editForm.gender || null
                 })
                 .eq('id', editingMember.id)
 
             if (error) throw error
 
             // Update UI
-            setMembers(prev => prev.map(m => m.id === editingMember.id ? { ...m, ...editForm } : m))
+            setMembers(prev => prev.map(m => m.id === editingMember.id ? { ...m, ...editForm, birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null, birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null } : m))
             setEditingMember(null)
             alert('Member updated successfully!')
         } catch (err) {
@@ -297,24 +314,76 @@ export default function AdminMembers() {
                             </div>
                             
                             <form onSubmit={handleSaveMember} className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-subInk uppercase mb-1">Display Name</label>
-                                    <input 
-                                        type="text" 
-                                        value={editForm.display_name} 
-                                        onChange={e => setEditForm({...editForm, display_name: e.target.value})}
-                                        className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
-                                    />
+                                <div className="flex gap-3">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Display Name</label>
+                                        <input 
+                                            type="text" 
+                                            value={editForm.display_name} 
+                                            onChange={e => setEditForm({...editForm, display_name: e.target.value})}
+                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="w-1/3">
+                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Nickname</label>
+                                        <input 
+                                            type="text" 
+                                            value={editForm.nickname} 
+                                            onChange={e => setEditForm({...editForm, nickname: e.target.value})}
+                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-subInk uppercase mb-1">Phone Number</label>
-                                    <input 
-                                        type="text" 
-                                        value={editForm.phone_number} 
-                                        onChange={e => setEditForm({...editForm, phone_number: e.target.value})}
-                                        className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
-                                    />
+                                
+                                <div className="flex gap-3">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Phone Number</label>
+                                        <input 
+                                            type="text" 
+                                            value={editForm.phone_number} 
+                                            onChange={e => setEditForm({...editForm, phone_number: e.target.value})}
+                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="w-1/3">
+                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Gender</label>
+                                        <select 
+                                            value={editForm.gender} 
+                                            onChange={e => setEditForm({...editForm, gender: e.target.value})}
+                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Not Specified">Other</option>
+                                        </select>
+                                    </div>
                                 </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-subInk uppercase mb-1">Birthday (วันเกิด)</label>
+                                    <div className="flex gap-2">
+                                        <select 
+                                            value={editForm.birth_day} 
+                                            onChange={e => setEditForm({...editForm, birth_day: e.target.value})}
+                                            className="w-24 bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        >
+                                            <option value="">Day</option>
+                                            {[...Array(31)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+                                        </select>
+                                        <select 
+                                            value={editForm.birth_month} 
+                                            onChange={e => setEditForm({...editForm, birth_month: e.target.value})}
+                                            className="flex-1 bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        >
+                                            <option value="">Month</option>
+                                            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                                                <option key={i} value={i + 1}>{m}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-bold text-green-600 uppercase mb-1">LINE User ID</label>
                                     <input 

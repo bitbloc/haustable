@@ -549,30 +549,47 @@ export default function AuthModal({ isOpen, onClose }) {
 
                         {error && <div className="bg-red-500/10 text-red-500 p-2 rounded-lg text-xs mb-4 text-center">{error}</div>}
 
-                        <div className="space-y-4 flex-1 overflow-y-auto">
+                        <div className="space-y-4 flex-1 overflow-y-auto pr-1">
+                             <div className="flex gap-2">
+                                 <div className="flex-1">
+                                    <label className="text-xs text-gray-500 mb-1 block">Full Name</label>
+                                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" />
+                                 </div>
+                                 <div className="w-1/3">
+                                    <label className="text-xs text-gray-500 mb-1 block">Nickname</label>
+                                    <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" placeholder="ชื่อเล่น" />
+                                 </div>
+                             </div>
+                             
                              <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Full Name</label>
-                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" />
-                            </div>
-                            
-                            <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Mobile Number (Required)</label>
-                                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" placeholder="0xx-xxx-xxxx" required />
-                            </div>
+                                 <label className="text-xs text-gray-500 mb-1 block">Mobile Number (Required)</label>
+                                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" placeholder="0xx-xxx-xxxx" required />
+                             </div>
 
-                             <div>
-                                <label className="text-xs text-gray-500 mb-1 block">Birthday (Get Birthday Gift!)</label>
-                                <div className="flex gap-2">
-                                    <select value={birthDay} onChange={e => setBirthDay(e.target.value)} className="w-24 bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
-                                        <option value="">Day</option>
-                                        {[...Array(31)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+                             <div className="flex gap-2">
+                                 <div className="flex-grow">
+                                    <label className="text-xs text-gray-500 mb-1 block">Birthday (Get Birthday Gift!)</label>
+                                    <div className="flex gap-1">
+                                        <select value={birthDay} onChange={e => setBirthDay(e.target.value)} className="w-20 bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
+                                            <option value="">Day</option>
+                                            {[...Array(31)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+                                        </select>
+                                        <select value={birthMonth} onChange={e => setBirthMonth(e.target.value)} className="flex-1 bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
+                                            <option value="">Month</option>
+                                            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                                        </select>
+                                    </div>
+                                 </div>
+                                 <div className="w-2/5">
+                                    <label className="text-xs text-gray-500 mb-1 block">Gender</label>
+                                    <select value={gender} onChange={e => setGender(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
+                                        <option value="">Select</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Not Specified">Other</option>
                                     </select>
-                                    <select value={birthMonth} onChange={e => setBirthMonth(e.target.value)} className="flex-1 bg-[#111] border border-white/10 rounded-xl py-3 px-2 text-white outline-none">
-                                        <option value="">Month</option>
-                                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                                    </select>
-                                </div>
-                            </div>
+                                 </div>
+                             </div>
                             
                             <div className="bg-[#222] p-4 rounded-xl border border-white/5">
                                 <label className="flex items-start gap-3 cursor-pointer">

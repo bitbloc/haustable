@@ -319,17 +319,25 @@ Deno.serve(async (req) => {
                  }
                })
                
-               if (bubbles.length > 5) {
-                  bubbles.length = 5;
-                  bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
-                  bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#9E2D2D", size: "xs", margin: "md", align: "center" })
+               // LINE Carousel max 12 bubbles, but also need to respect 50KB Flex content limit
+               if (bubbles.length > 12) bubbles.length = 12;
+               const totalBubblesBuy = bubbles.length;
+               let flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
+               let flexSizeBuy = new TextEncoder().encode(JSON.stringify(flexContentBuy)).length;
+               while (flexSizeBuy > 49000 && bubbles.length > 1) {
+                   bubbles.pop();
+                   flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
+                   flexSizeBuy = new TextEncoder().encode(JSON.stringify(flexContentBuy)).length;
                }
-               
-               if (bubbles.length === 1) {
-                  messages.push({ type: "flex", altText: headerTitle, contents: bubbles[0] })
-               } else {
-                  messages.push({ type: "flex", altText: headerTitle, contents: { type: "carousel", contents: bubbles } })
+               if (bubbles.length < totalBubblesBuy) {
+                   const lastB = bubbles[bubbles.length - 1];
+                   lastB.body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
+                   lastB.body.contents.push({ type: "text", text: `...(แสดงได้ ${bubbles.length} จาก ${totalBubblesBuy} หน้า)`, color: "#9E2D2D", size: "xs", margin: "md", align: "center", wrap: true });
+                   // recalculate after adding truncation text
+                   flexContentBuy = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
                }
+               console.log(`Flex stbuy: ${bubbles.length}/${totalBubblesBuy} bubbles, ${flexSizeBuy} bytes`);
+               messages.push({ type: "flex", altText: headerTitle, contents: flexContentBuy });
             }
 
             const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
@@ -637,20 +645,26 @@ Deno.serve(async (req) => {
                  }
                })
                
-               if (bubbles.length > 5) {
-                  bubbles.length = 5; // LINE Carousel max safe size to avoid 50KB limit
-                  bubbles[4].body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
-                  bubbles[4].body.contents.push({ type: "text", text: "...(แสดงได้สูงสุด 5 หน้า)", color: "#9E2D2D", size: "xs", margin: "md", align: "center" })
+               if (bubbles.length > 12) bubbles.length = 12;
+               const totalBubblesStock = bubbles.length;
+               let flexContentStock: any = { type: "carousel", contents: bubbles };
+               let flexSizeStock = new TextEncoder().encode(JSON.stringify(flexContentStock)).length;
+               while (flexSizeStock > 49000 && bubbles.length > 1) {
+                   bubbles.pop();
+                   flexContentStock = { type: "carousel", contents: bubbles };
+                   flexSizeStock = new TextEncoder().encode(JSON.stringify(flexContentStock)).length;
                }
-               
-               messages.push({
-                   type: "flex",
-                   altText: headerTitle,
-                   contents: {
-                       type: "carousel",
-                       contents: bubbles
-                   }
-               })
+               if (bubbles.length < totalBubblesStock) {
+                   const lastB = bubbles[bubbles.length - 1];
+                   lastB.body.contents.push({ type: "separator", margin: "md", color: "#E2E2E0" });
+                   lastB.body.contents.push({ type: "text", text: `...(แสดงได้ ${bubbles.length} จาก ${totalBubblesStock} หน้า เนื่องจากขนาดข้อความเกินขีดจำกัด)`, color: "#9E2D2D", size: "xs", margin: "md", align: "center", wrap: true });
+               }
+               console.log(`Flex stock: ${bubbles.length}/${totalBubblesStock} bubbles, ${flexSizeStock} bytes`);
+                messages.push({
+                    type: "flex",
+                    altText: headerTitle,
+                    contents: flexContentStock
+                })
             }
 
             console.log(`Sending Stock Reply (${messages.length} bubbles)`)
