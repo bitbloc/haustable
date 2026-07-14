@@ -139,12 +139,22 @@ function App() {
           <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
           <Route path="/arcade" element={
-            <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING PLAYGROUND...</div>}>
+            <Suspense fallback={
+              <div className="min-h-screen bg-[#f2f2ec] flex flex-col items-center justify-center text-zinc-800 font-mono text-xs uppercase tracking-widest gap-3 select-none">
+                <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
+                <span>LOADING PLAYGROUND...</span>
+              </div>
+            }>
               <ArcadeLobby />
             </Suspense>
           } />
           <Route path="/arcade/claim" element={
-            <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING CLAIM PORTAL...</div>}>
+            <Suspense fallback={
+              <div className="min-h-screen bg-[#f2f2ec] flex flex-col items-center justify-center text-zinc-800 font-mono text-xs uppercase tracking-widest gap-3 select-none">
+                <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
+                <span>LOADING CLAIM PORTAL...</span>
+              </div>
+            }>
               <ArcadeClaim />
             </Suspense>
           } />

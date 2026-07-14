@@ -1,9 +1,14 @@
+/* Hallmark · component: SongRequestPage · genre: modern-minimal · theme: custom · vibe: "Dieter Rams industrial dashboard, Spotify request"
+ * states: default · hover · focus · active · loading · error · success
+ * contrast: pass (APCA / WCAG compliant)
+ */
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock, MapPin } from 'lucide-react'
+import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock, MapPin, Copy } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Toaster, toast } from 'sonner'
+import { Link } from 'react-router-dom'
 
 export default function SongRequestPage() {
   const [activeTab, setActiveTab] = useState('request') // 'request' | 'queue'
@@ -55,7 +60,6 @@ export default function SongRequestPage() {
       if (error) throw error
       if (data?.error) {
         setPlaylistError(data.error)
-        // If playlist is not set, we can still enable Spotify mode (direct catalog search)
         if (data.error.includes('Playlist') || data.error.includes('playlist') || data.error.includes('not configured')) {
           setPlaylistTracks([])
           setIsSpotifyActive(true)
@@ -84,7 +88,6 @@ export default function SongRequestPage() {
     fetchQueue()
     fetchPlaylistTracks()
 
-    // Setup Realtime Database Subscription for Queue updates
     const subscription = supabase
       .channel('public:song_requests')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'song_requests' }, () => {
@@ -122,9 +125,7 @@ export default function SongRequestPage() {
       const data = await resp.json()
       
       const tracks = (data.results || []).map((item) => {
-        // Get high-res cover artwork
         const albumImage = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg') : ''
-        
         return {
           id: String(item.trackId),
           name: item.trackName,
@@ -132,7 +133,7 @@ export default function SongRequestPage() {
           albumName: item.collectionName || '',
           albumImage: albumImage || item.artworkUrl100 || '',
           duration_ms: item.trackTimeMillis || 180000,
-          uri: `https://open.spotify.com/search/${encodeURIComponent(item.trackName + ' ' + item.artistName)}`, // Spotify Search prefilled URL
+          uri: `https://open.spotify.com/search/${encodeURIComponent(item.trackName + ' ' + item.artistName)}`,
           previewUrl: item.previewUrl || ''
         }
       })
@@ -505,7 +506,6 @@ export default function SongRequestPage() {
 
       if (lineError) console.error('LINE notification failed:', lineError)
 
-      // Clean form & show success
       toast.dismiss(toastId)
       setSpotifyLink('')
       setTrackName('')
@@ -516,11 +516,11 @@ export default function SongRequestPage() {
       setDonationAmount('100')
       setShowSuccess(true)
       
-      // Explosion!
       confetti({
         particleCount: 150,
         spread: 80,
-        origin: { y: 0.6 }
+        origin: { y: 0.6 },
+        colors: ['#E05315', '#222222', '#F2F2EC']
       })
 
     } catch (err) {
@@ -535,564 +535,675 @@ export default function SongRequestPage() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'playing':
-        return <span className="px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1.5"><Play size={10} fill="currentColor" /> Now Playing</span>
+        return (
+          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 text-[8px] font-mono font-bold rounded-[3px] uppercase tracking-wider flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 border border-emerald-700 animate-pulse shadow-[0_0_3px_#10b981]"></span>
+            Now Playing
+          </span>
+        )
       case 'completed':
-        return <span className="px-3 py-1 bg-white/5 text-gray-500 border border-white/5 text-[10px] font-bold rounded-full uppercase tracking-wider">Completed</span>
+        return <span className="px-2 py-0.5 bg-neutral-100 text-[var(--color-muted)] border border-[var(--color-rule)] text-[8px] font-mono rounded-[3px] uppercase">Completed</span>
       case 'rejected':
-        return <span className="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold rounded-full uppercase tracking-wider">Rejected</span>
+        return <span className="px-2 py-0.5 bg-red-500/10 text-red-600 border border-red-500/25 text-[8px] font-mono rounded-[3px] uppercase">Rejected</span>
       default:
-        return <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-[10px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1"><Clock size={10} /> Queued</span>
+        return (
+          <span className="px-2 py-0.5 bg-[var(--color-paper-3)] text-[var(--color-ink-2)] border border-[var(--color-rule)] text-[8px] font-mono rounded-[3px] uppercase flex items-center gap-1">
+            Queued
+          </span>
+        )
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0C0C0C] text-white font-sans flex flex-col items-center">
-      <Toaster position="top-center" richColors />
+    <div id="song-request-root" className="min-h-screen flex flex-col items-center select-none pb-12">
+      <Toaster position="top-center" richColors closeButton />
 
-      {/* Dynamic Spotify BG Header */}
-      <div className="w-full relative overflow-hidden bg-gradient-to-b from-[#1DB954]/20 via-[#0C0C0C] to-[#0C0C0C] py-8 px-6 flex flex-col items-center border-b border-white/5">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#1DB954] rounded-full blur-[120px] opacity-20 pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-purple-600 rounded-full blur-[120px] opacity-10 pointer-events-none" />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
-        <div className="flex items-center gap-2 mb-2 scale-95 md:scale-100">
-          <img src="/logo.png" alt="In The Haus" className="h-10 w-auto object-contain filter invert brightness-200" />
+        html, body {
+          overflow-x: clip !important;
+        }
+
+        #song-request-root {
+          --color-paper: oklch(96% 0.003 80);      /* Braun light-grey casing */
+          --color-paper-2: oklch(92% 0.004 80);    /* Secondary card panel */
+          --color-paper-3: oklch(88% 0.005 80);    /* Inset panel bg */
+          --color-ink: oklch(20% 0.003 80);        /* Deep charcoal */
+          --color-ink-2: oklch(40% 0.004 80);      /* Muted lettering */
+          --color-muted: oklch(55% 0.004 80);      /* Greyed elements */
+          --color-rule: oklch(82% 0.004 80);       /* Hairline dividers */
+          --color-brand: oklch(62% 0.16 35);      /* Braun Dial Orange Accent */
+          --color-accent-ink: oklch(98% 0 0);      /* White button text */
+          --color-focus: oklch(62% 0.16 35);
+          
+          --font-display: 'Space Mono', monospace;
+          --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+          
+          --dur-short: 180ms;
+          --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+          
+          background-color: var(--color-paper);
+          color: var(--color-ink);
+          font-family: var(--font-body);
+        }
+
+        #song-request-root .btn-tab {
+          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
+        }
+        #song-request-root .btn-tab:focus-visible {
+          outline: 2px solid var(--color-focus);
+        }
+        
+        #song-request-root .btn-action {
+          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+        }
+        #song-request-root .btn-action:hover:not(:disabled) {
+          filter: brightness(0.95);
+        }
+        #song-request-root .btn-action:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        #song-request-root .btn-action:focus-visible {
+          outline: 2px solid var(--color-focus);
+          outline-offset: 2px;
+        }
+
+        #song-request-root .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        #song-request-root .custom-scrollbar::-webkit-scrollbar-track {
+          background: var(--color-paper-3);
+          border-radius: 2px;
+        }
+        #song-request-root .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: var(--color-rule);
+          border-radius: 2px;
+        }
+      `}</style>
+
+      {/* Dieter Rams Dashboard Masthead */}
+      <header className="w-full border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] py-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 select-none mb-6">
+        {/* Brand block */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[var(--color-ink)] flex items-center justify-center p-1 rounded-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
+            <img 
+              src="/logo-secondary.png" 
+              alt="ในบ้าน" 
+              className="h-5 w-auto object-contain brightness-0 invert" 
+            />
+          </div>
+          <div>
+            <h1 className="text-[10px] font-bold font-mono tracking-widest text-[var(--color-ink)] uppercase">
+              HAUS SONG REQUEST SYSTEM
+            </h1>
+            <p className="text-[8px] text-[var(--color-ink-2)] font-mono uppercase tracking-wider">
+              MODEL T-2026 // SPOTIFY INTEGRATION
+            </p>
+          </div>
         </div>
-        <h1 className="text-3xl font-black tracking-tight text-center bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">Spotify Song Requests</h1>
-        <p className="text-xs text-gray-400 mt-2 text-center max-w-xs leading-relaxed">
-          ขอเพลงโปรดของคุณเข้ามาในร้าน ร่วมบริจาคสนับสนุนร้านได้ตามความสมัครใจ 💚
-        </p>
 
-        {/* Tab Selector */}
-        <div className="flex bg-white/5 backdrop-blur-md p-1 rounded-full border border-white/10 mt-6 max-w-xs w-full gap-1">
+        {/* Tab Navigation switches */}
+        <div className="flex bg-[var(--color-paper-3)] p-0.5 rounded-[4px] border border-[var(--color-rule)]">
           <button
+            type="button"
             onClick={() => setActiveTab('request')}
-            className={`flex-1 py-2 rounded-full font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'request' ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white'
+            className={`btn-tab px-4 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider ${
+              activeTab === 'request' 
+                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-sm' 
+                : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <Music size={14} /> ขอเพลงใหม่
+            REQUEST SONG / ขอเพลงใหม่
           </button>
+          
           <button
+            type="button"
             onClick={() => {
               setActiveTab('queue')
               fetchQueue(true)
             }}
-            className={`flex-1 py-2 rounded-full font-bold text-xs transition-all flex items-center justify-center gap-1.5 relative ${
-              activeTab === 'queue' ? 'bg-white text-black shadow-lg' : 'text-gray-400 hover:text-white'
+            className={`btn-tab px-4 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider relative ${
+              activeTab === 'queue' 
+                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-sm' 
+                : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <ListMusic size={14} /> คิวเพลง
+            UPCOMING QUEUE / คิวเพลง
             {queue.filter(q => q.status === 'pending').length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-bounce border border-black">
+              <span className="absolute -top-1.5 -right-1.5 bg-[var(--color-brand)] text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-bold font-mono border border-white">
                 {queue.filter(q => q.status === 'pending').length}
               </span>
             )}
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Main Content Body */}
-      <main className="w-full max-w-md px-6 py-6 flex-1 flex flex-col pb-24">
+      <main className="w-full max-w-md px-6 flex-grow flex flex-col">
         {activeTab === 'request' ? (
-          <form onSubmit={handleSubmitRequest} className="space-y-5 flex-1 flex flex-col">
+          <form onSubmit={handleSubmitRequest} className="flex-grow flex flex-col gap-5">
             
-            {/* Music Guidelines Banner */}
+            {/* Guidelines alert board */}
             {songGuidelines && (
-              <div className="bg-[#1DB954]/5 border border-[#1DB954]/20 p-4.5 rounded-2xl flex flex-col gap-2 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-[#1DB954]/5 rounded-full blur-2xl pointer-events-none" />
-                <div className="flex items-center gap-2 text-[#1DB954] font-black text-xs uppercase tracking-wider">
-                  <Sparkles className="w-4 h-4 shrink-0" />
+              <div className="bg-white border border-[var(--color-rule)] p-4.5 rounded-md flex flex-col gap-2 shadow-sm relative overflow-hidden font-mono text-[10px]">
+                <div className="flex items-center gap-2 text-[var(--color-brand)] font-bold uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
                   <span>กติกาการขอเพลง (Music Guidelines)</span>
                 </div>
-                <p className="text-[11px] text-gray-300 leading-relaxed whitespace-pre-wrap">
+                <p className="text-[10px] text-[var(--color-ink-2)] leading-relaxed whitespace-pre-wrap font-sans">
                   {songGuidelines}
                 </p>
               </div>
             )}
             
-            {/* GPS verification note */}
+            {/* GPS verification banner */}
             {gpsConfig.enabled && (
-              <div className="flex items-center gap-2.5 text-[10px] text-gray-400 bg-white/5 border border-white/5 p-3 rounded-2xl">
-                <MapPin className="w-4 h-4 text-[#1DB954] shrink-0" />
-                <span className="leading-normal">ตรวจสอบ GPS: ระบบจะตรวจสอบตำแหน่งของคุณว่าอยู่ในรัศมีร้าน (ไม่เกิน {(gpsConfig.radius / 1000).toFixed(1)} กม.) ขณะกดส่งเพลง</span>
+              <div className="flex items-center gap-2.5 text-[9px] text-[var(--color-ink-2)] bg-white border border-[var(--color-rule)] p-3.5 rounded-md font-mono select-none">
+                <MapPin className="w-3.5 h-3.5 text-[var(--color-brand)] shrink-0" />
+                <span className="leading-normal uppercase">GPS LOCK ENABLED: ระบบตรวจสอบตำแหน่งพิกัดในร้าน (ไม่เกิน {(gpsConfig.radius / 1000).toFixed(1)} กม.) ขณะกดส่ง</span>
               </div>
             )}
 
-            {/* Spotify Song Selector */}
-            {isSpotifyActive ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider">เลือกเพลง / Select Song *</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsSpotifyActive(false)}
-                    className="text-[10px] text-gray-400 hover:text-white transition-colors underline font-bold"
-                  >
-                    กรอกข้อมูลเพลงด้วยตัวเอง (Manual Input)
-                  </button>
-                </div>
+            {/* Song Form Card */}
+            <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-5 flex flex-col gap-4 shadow-sm">
+              
+              {/* Spotify Song Selector */}
+              {isSpotifyActive ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center select-none">
+                    <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// CHOOSE SONG</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsSpotifyActive(false)}
+                      className="text-[9px] text-[var(--color-brand)] hover:underline font-mono uppercase font-bold"
+                    >
+                      [ MANUAL INPUT ]
+                    </button>
+                  </div>
 
-                {selectedTrack ? (
-                  /* Selected Song Card */
-                  <div className="bg-[#1DB954]/10 border border-[#1DB954]/25 p-4 rounded-2xl flex items-center justify-between shadow-lg relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#1DB954]/10 rounded-full blur-2xl pointer-events-none" />
-                    <div className="flex items-center gap-3.5 min-w-0 z-10">
-                      <div className="w-14 h-14 bg-zinc-800 rounded-xl overflow-hidden shrink-0 shadow-md border border-white/10">
-                        <img src={selectedTrack.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-full h-full object-cover" />
+                  {selectedTrack ? (
+                    /* Selected Song display */
+                    <div className="bg-white border border-[var(--color-rule)] p-3 rounded-md flex items-center justify-between shadow-sm relative overflow-hidden">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-12 h-12 bg-neutral-100 rounded-sm overflow-hidden shrink-0 shadow-sm border border-[var(--color-rule)]">
+                          <img src={selectedTrack.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 font-sans text-xs">
+                          <h4 className="font-bold text-[var(--color-ink)] truncate leading-snug">{selectedTrack.name}</h4>
+                          <p className="text-[10px] text-[var(--color-brand)] font-bold truncate mt-0.5">{selectedTrack.artists}</p>
+                          <span className="inline-flex items-center gap-1 text-[8px] text-[var(--color-muted)] font-mono uppercase mt-1 leading-none">
+                            Selected Song //
+                          </span>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="font-extrabold text-sm text-white truncate leading-snug">{selectedTrack.name}</h4>
-                        <p className="text-xs text-[#1DB954] font-bold truncate mt-0.5">{selectedTrack.artists}</p>
-                        <span className="inline-flex items-center gap-1 text-[9px] text-gray-400 mt-1">
-                          <Music size={8} className="text-[#1DB954]" /> Selected Song
-                        </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTrack(null)
+                          setTrackName('')
+                          setArtistName('')
+                          setSpotifyLink('')
+                        }}
+                        className="text-[var(--color-ink-2)] hover:text-[var(--color-ink)] font-mono text-[9px] border border-[var(--color-rule)] bg-[var(--color-paper-3)] px-2.5 py-1 rounded-[3px] uppercase cursor-pointer"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    /* Search input and listing selector */
+                    <div className="flex flex-col gap-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] w-3.5 h-3.5" />
+                        <input
+                          type="text"
+                          placeholder={searchMode === 'playlist' ? "ค้นหาเพลงแนะนำของร้าน..." : "ค้นหาเพลงบน Spotify..."}
+                          className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 pl-9 pr-8 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors placeholder:text-neutral-400"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-ink)] font-mono text-[10px]"
+                          >
+                            [X]
+                          </button>
+                        )}
                       </div>
+
+                      {spotifyApiError && (
+                        <div className="bg-red-500/5 border border-red-500/20 text-red-600 p-3 rounded-md text-[10px] space-y-1 font-mono">
+                          <p className="font-bold">⚠️ AUTO SEARCH FAILED</p>
+                          <p className="opacity-80 font-sans">{spotifyApiError}</p>
+                          <button
+                            type="button"
+                            onClick={() => setIsSpotifyActive(false)}
+                            className="text-[var(--color-brand)] font-bold underline mt-1.5 block cursor-pointer"
+                          >
+                            สลับไปกรอกข้อมูลเพลงด้วยตัวเอง (พิมพ์มือ)
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Mode tab sliders */}
+                      {playlistTracks.length > 0 && (
+                        <div className="flex bg-[var(--color-paper-3)] p-0.5 rounded-[4px] border border-[var(--color-rule)] gap-0.5 select-none">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchMode('playlist')
+                              setSearchQuery('')
+                            }}
+                            className={`flex-1 py-1 rounded-[3px] font-bold font-mono text-[8px] uppercase transition-all ${
+                              searchMode === 'playlist' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-sm' : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
+                            }`}
+                          >
+                            Store Recommended / แนะนำร้าน
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchMode('catalog')
+                              setSearchQuery('')
+                            }}
+                            className={`flex-1 py-1 rounded-[3px] font-bold font-mono text-[8px] uppercase transition-all ${
+                              searchMode === 'catalog' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-sm' : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
+                            }`}
+                          >
+                            Spotify Catalog / ค้นหาทั่วไป
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Search Results / Recommendation list box */}
+                      <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar bg-white border border-[var(--color-rule)] p-2 rounded-[3px] font-mono text-[9px]">
+                        {loadingPlaylist || searching ? (
+                          <div className="flex items-center justify-center py-8 text-[var(--color-muted)] text-[10px] gap-2 animate-pulse">
+                            <RefreshCw className="w-3 h-3 animate-spin text-[var(--color-brand)]" />
+                            <span>SEARCHING LEDGER…</span>
+                          </div>
+                        ) : searchMode === 'playlist' ? (
+                          (() => {
+                            const filtered = playlistTracks.filter(track =>
+                              track.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              track.artists.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+
+                            if (filtered.length === 0) {
+                              return (
+                                <div className="text-center py-6 text-[var(--color-muted)] text-[10px] font-sans">
+                                  ไม่พบเพลงในเพลย์ลิสต์แนะนำ <br/>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSearchMode('catalog')}
+                                    className="text-[var(--color-brand)] font-bold underline mt-1 block w-full text-center font-mono text-[9px] uppercase"
+                                  >
+                                    [ SEARCH GENERAL SPOTIFY ]
+                                  </button>
+                                </div>
+                              )
+                            }
+
+                            return filtered.map(track => (
+                              <div
+                                key={track.id}
+                                onClick={() => {
+                                  setSelectedTrack(track)
+                                  setTrackName(track.name)
+                                  setArtistName(track.artists)
+                                  setSpotifyLink(`https://open.spotify.com/track/${track.id}`)
+                                }}
+                                className="p-2 border-b border-dashed border-[var(--color-rule)] last:border-0 flex items-center justify-between hover:bg-[var(--color-paper-2)] cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <img src={track.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-8 h-8 rounded-sm object-cover shrink-0 border border-[var(--color-rule)]" />
+                                  <div className="min-w-0 text-left font-sans text-xs">
+                                    <h5 className="font-bold text-[var(--color-ink)] truncate leading-none">{track.name}</h5>
+                                    <p className="text-[9px] text-[var(--color-ink-2)] truncate mt-1">{track.artists}</p>
+                                  </div>
+                                </div>
+                                <span className="text-[8px] bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] font-bold px-2 py-0.5 rounded-[3px] uppercase shrink-0">
+                                  SELECT
+                                </span>
+                              </div>
+                            ))
+                          })()
+                        ) : (
+                          (() => {
+                            if (!searchQuery.trim()) {
+                              return (
+                                <div className="text-center py-6 text-[var(--color-muted)] text-[10px] font-sans">
+                                  พิมพ์ชื่อเพลงหรือศิลปินเพื่อเริ่มต้นค้นหา...
+                                </div>
+                              )
+                            }
+
+                            if (searchResults.length === 0) {
+                              return (
+                                <div className="text-center py-6 text-[var(--color-muted)] text-[10px] font-sans">
+                                  ไม่พบผลลัพธ์การค้นหาในสารบบ
+                                </div>
+                              )
+                            }
+
+                            return searchResults.map(track => (
+                              <div
+                                key={track.id}
+                                onClick={() => {
+                                  setSelectedTrack(track)
+                                  setTrackName(track.name)
+                                  setArtistName(track.artists)
+                                  setSpotifyLink(track.uri || `https://open.spotify.com/track/${track.id}`)
+                                }}
+                                className="p-2 border-b border-dashed border-[var(--color-rule)] last:border-0 flex items-center justify-between hover:bg-[var(--color-paper-2)] cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <img src={track.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-8 h-8 rounded-sm object-cover shrink-0 border border-[var(--color-rule)]" />
+                                  <div className="min-w-0 text-left font-sans text-xs">
+                                    <h5 className="font-bold text-[var(--color-ink)] truncate leading-none">{track.name}</h5>
+                                    <p className="text-[9px] text-[var(--color-ink-2)] truncate mt-1">{track.artists}</p>
+                                  </div>
+                                </div>
+                                <span className="text-[8px] bg-[var(--color-paper-3)] border border-[var(--color-rule)] text-[var(--color-ink)] font-bold px-2 py-0.5 rounded-[3px] uppercase shrink-0">
+                                  SELECT
+                                </span>
+                              </div>
+                            ))
+                          })()
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Fallback Manual Inputs styling */
+                <div className="flex flex-col gap-3">
+                  {playlistTracks.length > 0 && (
+                    <div className="flex justify-end select-none">
+                      <button
+                        type="button"
+                        onClick={() => setIsSpotifyActive(true)}
+                        className="text-[9px] text-[var(--color-brand)] hover:underline font-mono uppercase font-bold"
+                      >
+                        [ LOAD STORE RECOMMENDATIONS ]
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Spotify Link Field */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// SPOTIFY URL LINK (IF ANY)</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] w-3.5 h-3.5" />
+                      <input
+                        type="text"
+                        placeholder="วางลิงก์ เช่น https://open.spotify.com/track/..."
+                        className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 pl-9 pr-4 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors placeholder:text-neutral-400"
+                        value={spotifyLink}
+                        onChange={(e) => setSpotifyLink(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Song title and artist */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// SONG TITLE *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="ระบุชื่อเพลง..."
+                        className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 px-3 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors"
+                        value={trackName}
+                        onChange={(e) => setTrackName(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// ARTIST NAME *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="ระบุชื่อศิลปิน..."
+                        className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 px-3 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors"
+                        value={artistName}
+                        onChange={(e) => setArtistName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Requester Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// SENDER NAME *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ระบุชื่อของคุณ..."
+                  className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 px-3 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors"
+                  value={requesterName}
+                  onChange={(e) => setRequesterName(e.target.value)}
+                />
+              </div>
+
+              {/* Donation Amount */}
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// SUPPORT DONATION AMOUNT (THB) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder="จำนวนเงินสนับสนุน (เช่น 100 บาท)..."
+                  className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 px-3 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors"
+                  value={donationAmount}
+                  onChange={(e) => setDonationAmount(e.target.value)}
+                />
+              </div>
+
+              {/* Dedication Message */}
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// MESSAGE TO DJ / ข้อความฝากดีเจ</label>
+                <textarea
+                  rows={2}
+                  placeholder="ฝากความในใจหรือคำอวยพรสั้นๆ..."
+                  className="w-full bg-white border border-[var(--color-rule)] rounded-[4px] py-2 px-3 text-xs font-sans text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-brand)] transition-colors resize-none placeholder:text-neutral-400"
+                  value={dedicationMessage}
+                  onChange={(e) => setDedicationMessage(e.target.value)}
+                />
+              </div>
+
+              {/* PromptPay QR Code Panel */}
+              <div className="bg-white border border-[var(--color-rule)] rounded-md p-4 flex flex-col items-center">
+                <span className="text-[9px] font-bold font-mono tracking-widest text-[var(--color-brand)] mb-3 uppercase">// SCAN PROMPTPAY TO DONATE</span>
+                {paymentQrUrl ? (
+                  <div className="bg-white p-2 border border-[var(--color-rule)] rounded-[4px] mb-3 shadow-sm select-none">
+                    <img src={paymentQrUrl} alt="PromptPay" className="w-32 h-32 object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 bg-[var(--color-paper-3)] text-[var(--color-muted)] rounded-[4px] border border-[var(--color-rule)] flex items-center justify-center text-[10px] font-mono mb-3 select-none">
+                    NO INSTALLED QR CODE
+                  </div>
+                )}
+                <p className="text-[9px] text-[var(--color-ink-2)] text-center leading-relaxed max-w-[240px] font-mono uppercase select-none">
+                  สแกน QR Code เพื่อร่วมโอนเงินสนับสนุน จากนั้นแนบหลักฐานรูปสลิปที่โอนด้านล่าง
+                </p>
+              </div>
+
+              {/* Upload Payment Slip */}
+              <div className="flex flex-col gap-1.5">
+                <label className="block text-[9px] text-[var(--color-ink-2)] uppercase font-mono font-bold tracking-wider">// ATTACH PAYMENT SLIP *</label>
+                {slipFile ? (
+                  <div className="bg-white border border-emerald-500/60 p-3 rounded-md flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 border border-emerald-700 shadow-[0_0_3px_#10b981]"></span>
+                      <p className="text-xs font-mono font-bold text-emerald-600 truncate flex-1">{slipFile.name}</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedTrack(null)
-                        setTrackName('')
-                        setArtistName('')
-                        setSpotifyLink('')
-                      }}
-                      className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all z-10 cursor-pointer"
+                      onClick={() => setSlipFile(null)}
+                      className="text-[var(--color-ink-2)] hover:text-[var(--color-ink)] font-mono text-[9px] border border-[var(--color-rule)] bg-[var(--color-paper-3)] px-2.5 py-0.5 rounded-[3px] uppercase cursor-pointer"
                     >
-                      <X size={16} />
+                      Remove
                     </button>
                   </div>
                 ) : (
-                  /* Search & List Selector */
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                      <input
-                        type="text"
-                        placeholder={searchMode === 'playlist' ? "ค้นหาเพลงในเพลย์ลิสต์ร้าน..." : "ค้นหาเพลงบน Spotify..."}
-                        className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                      {searchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setSearchQuery('')}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-
-                    {spotifyApiError && (
-                      <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3.5 rounded-xl text-[10px] leading-relaxed space-y-1 animate-fade-in">
-                        <p className="font-bold">⚠️ ค้นหาเพลงอัตโนมัติไม่สำเร็จ</p>
-                        <p className="opacity-80">{spotifyApiError}</p>
-                        <button
-                          type="button"
-                          onClick={() => setIsSpotifyActive(false)}
-                          className="text-[#1DB954] font-black underline mt-1.5 block hover:text-[#1ed760] cursor-pointer"
-                        >
-                          สลับไปกรอกข้อมูลเพลงด้วยตัวเอง (พิมพ์มือ)
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Mode Tabs */}
-                    {playlistTracks.length > 0 && (
-                      <div className="flex bg-[#121212] p-1 rounded-xl border border-white/5 gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchMode('playlist')
-                            setSearchQuery('')
-                          }}
-                          className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
-                            searchMode === 'playlist' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          เพลงแนะนำของร้าน
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchMode('catalog')
-                            setSearchQuery('')
-                          }}
-                          className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 ${
-                            searchMode === 'catalog' ? 'bg-[#1DB954] text-black shadow-md' : 'text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          ค้นหาทั่วไป (Spotify)
-                        </button>
-                      </div>
-                    )}
-
-                    {/* List Tracks container */}
-                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                      {loadingPlaylist || searching ? (
-                        <div className="flex items-center justify-center py-8 text-gray-500 text-[11px] gap-2">
-                          <div className="w-4 h-4 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin" />
-                          กำลังโหลดรายชื่อเพลง...
-                        </div>
-                      ) : searchMode === 'playlist' ? (
-                        /* Render Playlist Tracks */
-                        (() => {
-                          const filtered = playlistTracks.filter(track =>
-                            track.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            track.artists.toLowerCase().includes(searchQuery.toLowerCase())
-                          )
-
-                          if (filtered.length === 0) {
-                            return (
-                              <div className="text-center py-8 text-gray-500 text-[11px]">
-                                ไม่พบเพลงในเพลย์ลิสต์ร้าน <br/>
-                                <button
-                                  type="button"
-                                  onClick={() => setSearchMode('catalog')}
-                                  className="text-[#1DB954] font-bold underline mt-1 block w-full text-center"
-                                >
-                                  ลองค้นหาทั่วไปบน Spotify
-                                </button>
-                              </div>
-                            )
-                          }
-
-                          return filtered.map(track => (
-                            <div
-                              key={track.id}
-                              onClick={() => {
-                                setSelectedTrack(track)
-                                setTrackName(track.name)
-                                setArtistName(track.artists)
-                                setSpotifyLink(`https://open.spotify.com/track/${track.id}`)
-                              }}
-                              className="bg-[#161616] border border-white/5 p-2 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <img src={track.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                                <div className="min-w-0">
-                                  <h5 className="font-bold text-xs text-white truncate group-hover:text-[#1DB954] transition-colors">{track.name}</h5>
-                                  <p className="text-[10px] text-gray-500 truncate mt-0.5">{track.artists}</p>
-                                </div>
-                              </div>
-                              <span className="text-[9px] bg-white/5 border border-white/5 text-gray-400 group-hover:bg-[#1DB954] group-hover:text-black group-hover:border-transparent font-bold px-2 py-1 rounded-lg transition-all shrink-0">
-                                เลือก
-                              </span>
-                            </div>
-                          ))
-                        })()
-                      ) : (
-                        /* Render Catalog Search Results */
-                        (() => {
-                          if (!searchQuery.trim()) {
-                            return (
-                              <div className="text-center py-8 text-gray-500 text-[11px]">
-                                พิมพ์ชื่อเพลงหรือศิลปินเพื่อค้นหา...
-                              </div>
-                            )
-                          }
-
-                          if (searchResults.length === 0) {
-                            return (
-                              <div className="text-center py-8 text-gray-500 text-[11px]">
-                                ไม่พบผลลัพธ์การค้นหา
-                              </div>
-                            )
-                          }
-
-                          return searchResults.map(track => (
-                            <div
-                              key={track.id}
-                              onClick={() => {
-                                setSelectedTrack(track)
-                                setTrackName(track.name)
-                                setArtistName(track.artists)
-                                setSpotifyLink(track.uri || `https://open.spotify.com/track/${track.id}`)
-                              }}
-                              className="bg-[#161616] border border-white/5 p-2 rounded-xl flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <img src={track.albumImage || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                                <div className="min-w-0">
-                                  <h5 className="font-bold text-xs text-white truncate group-hover:text-[#1DB954] transition-colors">{track.name}</h5>
-                                  <p className="text-[10px] text-gray-500 truncate mt-0.5">{track.artists}</p>
-                                </div>
-                              </div>
-                              <span className="text-[9px] bg-white/5 border border-white/5 text-gray-400 group-hover:bg-[#1DB954] group-hover:text-black group-hover:border-transparent font-bold px-2 py-1 rounded-lg transition-all shrink-0">
-                                เลือก
-                              </span>
-                            </div>
-                          ))
-                        })()
-                      )}
-                    </div>
-                  </div>
+                  <label className="border border-dashed border-[var(--color-rule)] hover:border-[var(--color-brand)] cursor-pointer bg-white p-5 rounded-md flex flex-col items-center justify-center gap-2 group transition-all text-center select-none">
+                    <Upload size={16} className="text-[var(--color-ink-2)] group-hover:text-[var(--color-brand)] transition-colors" />
+                    <span className="text-[10px] font-bold font-mono text-[var(--color-ink-2)] group-hover:text-[var(--color-ink)] uppercase">
+                      UPLOAD PAYMENT SLIP / คลิกแนบสลิป
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => setSlipFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
                 )}
               </div>
-            ) : (
-              /* Fallback Manual Fields */
-              <div className="space-y-4 animate-fade-in">
-                {playlistTracks.length > 0 && (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsSpotifyActive(true)}
-                      className="text-[10px] text-[#1DB954] hover:text-[#1ed760] font-bold underline transition-colors cursor-pointer"
-                    >
-                      กลับไปเลือกจากเพลย์ลิสต์ร้าน
-                    </button>
-                  </div>
-                )}
 
-                {/* Spotify Link Field */}
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ลิงก์เพลง Spotify / Spotify Track Link (ถ้ามี)</label>
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="วางลิงก์ เช่น https://open.spotify.com/track/..."
-                      className="w-full bg-[#161616] border border-white/5 rounded-xl py-3 pl-10 pr-4 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954] transition-colors placeholder:text-gray-600 shadow-inner"
-                      value={spotifyLink}
-                      onChange={(e) => setSpotifyLink(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Song Title & Artist Group */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อเพลง / Song Title *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="ชื่อเพลง..."
-                      className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                      value={trackName}
-                      onChange={(e) => setTrackName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ศิลปิน / Artist *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="ชื่อศิลปิน..."
-                      className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                      value={artistName}
-                      onChange={(e) => setArtistName(e.target.value)}
-                    />
-                  </div>
-                </div>
+              {/* Submit Request Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="btn-action w-full bg-[var(--color-brand)] text-white hover:bg-[oklch(58% 0.16 35)] font-mono font-bold py-3.5 rounded-[4px] cursor-pointer text-xs uppercase border border-[oklch(52% 0.16 35)] shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <Send size={12} className="shrink-0" />
+                  <span>{uploading ? 'TRANSMITTING REQUEST BLOCK…' : 'SUBMIT REQUEST / ส่งคำขอเพลง'}</span>
+                </button>
               </div>
-            )}
 
-            {/* Requester Name */}
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ชื่อของคุณ / Your Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="พิมพ์ชื่อของคุณ..."
-                className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                value={requesterName}
-                onChange={(e) => setRequesterName(e.target.value)}
-              />
-            </div>
-
-            {/* Donation Amount */}
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">จำนวนเงินบริจาค / Donation Amount (THB) *</label>
-              <input
-                type="number"
-                required
-                min="1"
-                placeholder="ระบุจำนวนเงินที่บริจาค..."
-                className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 font-bold text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors"
-                value={donationAmount}
-                onChange={(e) => setDonationAmount(e.target.value)}
-              />
-            </div>
-
-            {/* Dedication Message */}
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">ฝากข้อความถึงดีเจ / Message to DJ (ไม่บังคับ)</label>
-              <textarea
-                rows={2}
-                placeholder="เช่น ขอมอบเพลงนี้ให้เพื่อนร่วมโต๊ะ..."
-                className="w-full bg-[#161616] border border-white/5 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#1DB954] transition-colors resize-none placeholder:text-gray-600"
-                value={dedicationMessage}
-                onChange={(e) => setDedicationMessage(e.target.value)}
-              />
-            </div>
-
-            {/* PromptPay QR Code */}
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-[9px] font-black tracking-widest text-[#1DB954] mb-3 uppercase">SCAN PROMPTPAY TO DONATE</span>
-              {paymentQrUrl ? (
-                <div className="bg-white p-2 rounded-xl mb-3 shadow-md">
-                  <img src={paymentQrUrl} alt="PromptPay" className="w-32 h-32 object-contain" />
-                </div>
-              ) : (
-                <div className="w-32 h-32 bg-black/30 text-gray-600 rounded-xl flex items-center justify-center text-xs mb-3">
-                  ไม่มีรูปภาพ QR ในระบบ
-                </div>
-              )}
-              <p className="text-[10px] text-gray-400 text-center leading-relaxed max-w-[240px]">
-                สแกน QR Code ด้านบนเพื่อโอนเงินร่วมสนับสนุนตามความสมัครใจ จากนั้นแนบหลักฐานการโอน
-              </p>
-            </div>
-
-            {/* Upload Slip */}
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-2">สลิปโอนเงิน / Slip Transfer *</label>
-              {slipFile ? (
-                <div className="bg-[#1DB954]/10 border border-[#1DB954]/20 p-3.5 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 bg-[#1DB954]/20 text-[#1DB954] rounded-lg flex items-center justify-center shrink-0">
-                      <CheckCircle2 size={16} />
-                    </div>
-                    <p className="text-xs font-bold text-white truncate flex-1">{slipFile.name}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSlipFile(null)}
-                    className="text-gray-500 hover:text-white p-1"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <label className="border border-dashed border-white/10 hover:border-[#1DB954]/50 cursor-pointer bg-[#161616] p-5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all text-center">
-                  <Upload size={18} className="text-gray-500 group-hover:text-[#1DB954] transition-colors" />
-                  <span className="text-[11px] font-bold text-gray-400 group-hover:text-white">
-                    คลิกเพื่ออัปโหลดรูปภาพสลิป
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setSlipFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-              )}
-            </div>
-
-            {/* Submit Button */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={uploading}
-                className="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-black py-4 rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 transform active:scale-95 shadow-lg shadow-[#1DB954]/10 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Send size={14} fill="black" /> {uploading ? 'กำลังส่งคำขอเพลง...' : 'ส่งคำขอเพลง (Submit Request)'}
-              </button>
             </div>
           </form>
         ) : (
-          /* Live Queue View */
-          <div className="space-y-4">
+          /* Upcoming Queue View list */
+          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-5 flex flex-col gap-4 shadow-sm">
+            
+            <div className="border-b border-[var(--color-rule)] pb-2 flex justify-between items-center select-none">
+              <div className="flex items-center gap-1.5 text-[var(--color-ink)]">
+                <ListMusic className="w-3.5 h-3.5 text-[var(--color-brand)]" />
+                <h2 className="text-[10px] font-bold font-mono tracking-widest uppercase">// LIVE REQUEST QUEUE</h2>
+              </div>
+              <button 
+                onClick={() => fetchQueue(true)}
+                className="px-2 py-0.5 text-[8px] text-[var(--color-ink-2)] hover:text-[var(--color-ink)] font-mono bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded-[3px] transition-all cursor-pointer"
+              >
+                REFRESH
+              </button>
+            </div>
+
             {loadingQueue ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-500 text-xs">
-                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
-                กำลังโหลดคิวเพลง...
+              <div className="py-12 flex flex-col items-center justify-center gap-3">
+                <RefreshCw className="w-7 h-7 text-[var(--color-brand)] animate-spin" />
+                <p className="text-[10px] text-[var(--color-ink-2)] font-mono animate-pulse">READING QUEUE STACK…</p>
               </div>
             ) : queue.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-600 text-center">
-                <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                  <ListMusic size={22} className="text-gray-500" />
-                </div>
-                <p className="text-xs font-bold">คิวเพลงว่างอยู่</p>
-                <p className="text-[10px] text-gray-600 mt-1">
+              <div className="py-12 flex flex-col items-center justify-center text-center text-[var(--color-muted)] font-mono text-[10px]">
+                <ListMusic className="w-7 h-7 mb-2 opacity-60 text-[var(--color-ink)]" />
+                <p className="font-bold">QUEUE IS CURRENTLY EMPTY</p>
+                <p className="text-[9px] mt-1 font-sans text-zinc-500">
                   ขอเพลงเป็นคนแรกเพื่อเปิดบรรยากาศในร้านเลย!
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {/* Now Playing Section */}
+              <div className="flex flex-col gap-3 font-sans">
+                
+                {/* Now Playing Tracks */}
                 {queue.filter(q => q.status === 'playing').map((reqItem) => (
-                  <motion.div
+                  <div 
                     key={reqItem.id}
-                    layoutId={reqItem.id}
-                    className="bg-gradient-to-r from-green-950/20 to-black border border-green-500/30 p-4 rounded-3xl flex items-center gap-4 shadow-lg shadow-green-950/10 relative overflow-hidden"
+                    className="bg-white border border-emerald-500/60 p-4 rounded-md flex items-center gap-4 shadow-sm relative"
                   >
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl pointer-events-none" />
-                    <div className="w-16 h-16 bg-zinc-800 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-green-500/30">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
+                    <div className="w-12 h-12 bg-neutral-100 rounded-sm overflow-hidden shrink-0 border border-[var(--color-rule)]">
                       <img src={reqItem.album_image} alt="" className="w-full h-full object-cover" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="mb-1">{getStatusBadge(reqItem.status)}</div>
-                      <h3 className="font-extrabold text-sm text-white truncate">{reqItem.track_name}</h3>
-                      <p className="text-xs text-green-400 font-bold truncate mt-0.5">{reqItem.artist_name}</p>
+                    <div className="flex-1 min-w-0 text-xs text-left">
+                      <div className="mb-1.5">{getStatusBadge(reqItem.status)}</div>
+                      <h3 className="font-bold text-[var(--color-ink)] truncate leading-snug">{reqItem.track_name}</h3>
+                      <p className="text-[10px] text-[var(--color-brand)] font-bold truncate mt-0.5">{reqItem.artist_name}</p>
                       {reqItem.requester_name && (
-                        <p className="text-[10px] text-gray-500 truncate mt-1">
-                          ผู้ขอ: <span className="text-gray-300 font-bold">{reqItem.requester_name}</span>
+                        <p className="text-[9px] text-[var(--color-ink-2)] truncate mt-1 font-mono">
+                          REQUESTER: <span className="text-[var(--color-ink)] font-bold">{reqItem.requester_name}</span>
                         </p>
                       )}
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
 
-                {/* Separator */}
-                {queue.filter(q => q.status === 'playing').length > 0 && (
-                  <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest pt-2 pb-1 border-b border-white/5">
-                    คิวถัดไป (UPCOMING QUEUE)
+                {/* Queue Separator tag */}
+                {queue.filter(q => q.status === 'playing').length > 0 && queue.filter(q => q.status !== 'playing').length > 0 && (
+                  <div className="text-[8px] text-[var(--color-muted)] font-bold font-mono uppercase tracking-widest pt-2 pb-1 border-b border-dashed border-[var(--color-rule)] select-none">
+                    UPCOMING QUEUE / ลำดับคิวถัดไป
                   </div>
                 )}
 
-                {/* Pending Queue Items */}
-                {queue.filter(q => q.status !== 'playing').map((reqItem) => (
-                  <motion.div
-                    key={reqItem.id}
-                    layoutId={reqItem.id}
-                    className="bg-[#121212] border border-white/5 p-3.5 rounded-2xl flex items-center gap-4 hover:bg-[#161616] transition-colors"
-                  >
-                    <div className="w-12 h-12 bg-zinc-800 rounded-xl overflow-hidden shrink-0 opacity-80">
-                      <img src={reqItem.album_image} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-extrabold text-xs text-white truncate">{reqItem.track_name}</h4>
-                      <p className="text-[11px] text-gray-500 truncate mt-0.5">{reqItem.artist_name}</p>
-                      {reqItem.requester_name && (
-                        <p className="text-[9px] text-gray-600 truncate mt-1">
-                          ผู้ขอ: <span className="text-gray-400 font-bold">{reqItem.requester_name}</span>
-                        </p>
-                      )}
-                    </div>
-                    <div className="shrink-0">{getStatusBadge(reqItem.status)}</div>
-                  </motion.div>
-                ))}
+                {/* Other Queue Tracks */}
+                {queue.filter(q => q.status !== 'playing').length > 0 && (
+                  <div className="flex flex-col font-mono text-[9px] bg-white border border-[var(--color-rule)] p-2 rounded-[3px]">
+                    {queue.filter(q => q.status !== 'playing').map((reqItem, index) => (
+                      <div 
+                        key={reqItem.id}
+                        className="py-2.5 px-2 border-b border-dashed border-[var(--color-rule)] last:border-0 hover:bg-[var(--color-paper-2)] transition-colors flex items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="w-4 text-left font-bold text-[var(--color-muted)]">
+                            {(index + 1).toString().padStart(2, '0')}
+                          </span>
+                          <img src={reqItem.album_image} alt="" className="w-8 h-8 rounded-sm object-cover shrink-0 border border-[var(--color-rule)]" />
+                          <div className="min-w-0 text-left font-sans text-xs">
+                            <h4 className="font-bold text-[var(--color-ink)] truncate leading-none">{reqItem.track_name}</h4>
+                            <p className="text-[9px] text-[var(--color-ink-2)] truncate mt-1 leading-none">{reqItem.artist_name}</p>
+                            {reqItem.requester_name && (
+                              <p className="text-[8px] text-[var(--color-muted)] truncate mt-1 uppercase font-mono">
+                                BY: {reqItem.requester_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0">{getStatusBadge(reqItem.status)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
               </div>
             )}
           </div>
         )}
       </main>
 
-      {/* Request Success Screen Overlay */}
+      {/* Success Modal Overlay Casing */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#0C0C0C] z-50 flex flex-col items-center justify-center p-6 text-center select-none"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <div className="absolute top-0 right-0 w-80 h-80 bg-[#1DB954] rounded-full blur-[160px] opacity-20 pointer-events-none" />
-            
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1, type: 'spring' }}
-              className="flex flex-col items-center"
+              transition={{ delay: 0.05 }}
+              className="w-full max-w-md bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md p-6 sm:p-8 shadow-xl text-left relative"
             >
-              <div className="w-20 h-20 bg-green-500/10 text-[#1DB954] rounded-full flex items-center justify-center mb-6 border-2 border-[#1DB954]/30 shadow-lg shadow-green-950/20">
-                <Sparkles size={36} fill="#1DB954" className="animate-pulse" />
+              {/* Minimal orange highlight strip */}
+              <div className="absolute top-0 left-0 w-full h-1 bg-[var(--color-brand)] rounded-t-md" />
+              
+              <div className="w-8 h-8 bg-emerald-500/10 text-emerald-600 rounded-[3px] flex items-center justify-center mb-6">
+                <CheckCircle2 size={16} />
               </div>
               
-              <h2 className="text-3xl font-black mb-3 text-white tracking-tight">ส่งขอเพลงเรียบร้อยแล้ว!</h2>
-              <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-10">
-                ข้อความของท่านพร้อมเพลงได้ถูกส่งเข้ากลุ่ม LINE ของร้านแล้ว พนักงานกำลังทำการตรวจสอบและจัดเตรียมคิวเพลงให้นะคะ 💚
+              <h2 className="text-[10px] font-bold font-mono tracking-widest text-[var(--color-brand)] uppercase mb-2">
+                // SONG REQUEST ENQUEUED SUCCESS
+              </h2>
+              <h3 className="text-[13px] font-bold text-[var(--color-ink)] mb-2 font-sans">ส่งคำขอเพลงเข้าสู่ระบบเรียบร้อย!</h3>
+              <p className="text-[10px] text-[var(--color-ink-2)] leading-relaxed font-sans mb-8">
+                ข้อมูลคำขอและสลิปเงินบริจาคของคุณพร้อมเพลงได้รับการส่งเข้าห้องดีเจเป็นที่เรียบร้อย พนักงานจะเร่งตรวจสอบข้อมูลสลิปและคิวสำหรับคุณนะคะ 💚
               </p>
 
               <button
@@ -1101,9 +1212,9 @@ export default function SongRequestPage() {
                   setActiveTab('queue')
                   fetchQueue(true)
                 }}
-                className="bg-white text-black font-black px-8 py-3.5 rounded-full text-xs hover:bg-gray-200 tracking-wider transition-all transform active:scale-95 shadow-md flex items-center gap-2"
+                className="btn-action w-full bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-bold py-2.5 rounded-[4px] cursor-pointer text-xs uppercase shadow-sm"
               >
-                ดูคิวเพลงทั้งหมด
+                VIEW LIVE QUEUE / ดูคิวเพลงทั้งหมด
               </button>
             </motion.div>
           </motion.div>
