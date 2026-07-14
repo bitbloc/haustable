@@ -336,19 +336,19 @@ export default function MemberCard() {
                                 </ul>
                             </div>
 
-                            {/* Register Buttons */}
+                            {/* Register & Login Buttons */}
                             <div className="flex flex-col gap-2 pt-1">
                                 <button
                                     onClick={loginWithLine}
                                     className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white py-3 rounded-[4px] font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                                 >
-                                    <LogIn size={14} /> สมัครสมาชิกผ่าน LINE (แนะนำ)
+                                    <LogIn size={14} /> เข้าสู่ระบบ / สมัครสมาชิกผ่าน LINE (แนะนำ)
                                 </button>
                                 <button
                                     onClick={() => setShowAuthModal(true)}
                                     className="w-full bg-white hover:bg-neutral-50 border border-[var(--color-hallmark-rule)] text-[var(--color-hallmark-ink)] py-3 rounded-[4px] font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                                 >
-                                    <Phone size={14} /> ใช้เบอร์โทรศัพท์ / อีเมล
+                                    <Phone size={14} /> เข้าสู่ระบบด้วยเบอร์โทรศัพท์ / อีเมล
                                 </button>
                             </div>
                         </motion.div>
