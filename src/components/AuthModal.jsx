@@ -63,6 +63,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
     const handleGoogleLogin = async () => {
         try {
+            localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search)
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: { redirectTo: window.location.origin }
@@ -87,6 +88,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     // Existing user -> Check for Session Link (Magic Link)
                     if (data?.sessionLink) {
                         console.log("Redirecting to Session...", data.sessionLink)
+                        localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search)
                         window.location.href = data.sessionLink
                         return
                     }
@@ -153,11 +155,12 @@ export default function AuthModal({ isOpen, onClose }) {
                 throw new Error(data.error)
             }
 
-            if (data?.sessionLink) {
-                console.log("Registration Success! Redirecting...", data.sessionLink)
-                // Force redirect
-                window.location.href = data.sessionLink
-                return
+             if (data?.sessionLink) {
+                 console.log("Registration Success! Redirecting...", data.sessionLink)
+                 localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search)
+                 // Force redirect
+                 window.location.href = data.sessionLink
+                 return
             } else if (data?.success) {
                  // Should have a link if success, but just in case
                  setView('success')

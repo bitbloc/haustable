@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core' // Added Capacitor import
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
@@ -47,6 +47,17 @@ const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
 const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
 
 function BookingProviderLayout() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const redirectTo = localStorage.getItem('redirectAfterLogin')
+    if (redirectTo) {
+      localStorage.removeItem('redirectAfterLogin')
+      console.log("Found redirect path after login. Sending user to:", redirectTo)
+      navigate(redirectTo, { replace: true })
+    }
+  }, [navigate])
+
   return (
     <BookingProvider>
       <Outlet />
