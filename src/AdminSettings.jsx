@@ -1728,9 +1728,10 @@ export default function AdminSettings() {
                                                 </p>
                                                 <div className="text-[11px] bg-white/60 p-2.5 rounded-lg border border-red-100 mt-2 space-y-1">
                                                     <div className="font-bold">💡 คำแนะนำในการแก้ไข:</div>
-                                                    <div>1. ให้ติดตั้งแอปพลิเคชันช่วยเหลือการพิมพ์ภายนอกชื่อ <span className="font-mono font-bold text-red-600">RawBT Printer</span> บนเครื่อง Sunmi</div>
-                                                    <div>2. เปิดสิทธิ์การใช้งานแอป RawBT และเปิดสวิตช์ฟังก์ชัน <span className="font-semibold">Websocket / Local server</span> ในแอป RawBT</div>
-                                                    <div>3. กลับมาที่เมนูนี้ แถบ <span className="font-semibold">"ตั้งค่าเครื่องพิมพ์"</span> และเปลี่ยนรูปแบบการพิมพ์เป็น <span className="font-bold text-brand">Auto-Print (via RawBT Local Server)</span></div>
+                                                    <div>1. เปิดแอป <span className="font-bold">App Market (หรือ App Store)</span> บนเครื่อง Sunmi D2s Plus</div>
+                                                    <div>2. ค้นหาและอัปเดตแอปพลิเคชันระบบชื่อ <span className="font-bold text-brand">Sunmi Printer Service</span> (หรือ <span className="font-bold text-brand">WOYOU AIO Service</span>) เป็นเวอร์ชันล่าสุด</div>
+                                                    <div>3. ทำการปิด-เปิดเครื่องใหม่ (Restart Device) เพื่อเริ่มการทำงานของบริการการพิมพ์ระบบใหม่</div>
+                                                    <div>4. หลีกเลี่ยงการเปิดแอปพลิเคชันอื่นที่แย่งการใช้เครื่องพิมพ์ในเวลาเดียวกัน</div>
                                                 </div>
                                             </div>
                                         ) : (

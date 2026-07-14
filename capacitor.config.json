@@ -7,7 +7,7 @@
   },
   "plugins": {
     "SunmiPrinter": {
-      "bindOnLoad": true
+      "bindOnLoad": false
     }
   }
 }
