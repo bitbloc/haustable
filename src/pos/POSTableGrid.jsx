@@ -287,6 +287,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                 const rotation = table.rotation || 0;
                                                 
                                                 const isOccupied = table.status === 'occupied';
+                                                const isPending = table.status === 'pending';
                                                 const hasOrder = isPending;
                                                 const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
                                                 const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
