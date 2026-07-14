@@ -4,8 +4,12 @@ import { Plus, Trash2, Edit2, Search, Tag, Calendar, DollarSign, Percent, Check,
 import { toast } from 'sonner'
 import { getThaiDate } from '../../utils/timeUtils'
 
-export default function AdminPromotions() {
-    const [activeTab, setActiveTab] = useState('promo') // 'promo' | 'rewards'
+export default function AdminPromotions({ defaultTab = 'promo' }) {
+    const [activeTab, setActiveTab] = useState(defaultTab) // 'promo' | 'rewards'
+
+    useEffect(() => {
+        setActiveTab(defaultTab)
+    }, [defaultTab])
     const [codes, setCodes] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)

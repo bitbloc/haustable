@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { generateScoreHash } from './game/scenes/GameOverScene';
 import confetti from 'canvas-confetti';
 import { ShieldAlert, MapPin, Award, CheckCircle, LogIn, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 const SHOP_LAT = 17.39008981227407;
 const SHOP_LNG = 104.79292770946343;
@@ -203,7 +204,7 @@ export default function ArcadeClaim() {
         particleCount: 120,
         spread: 80,
         origin: { y: 0.6 },
-        colors: ['#DFFF00', '#FF00FF', '#00FFFF', '#FFFFFF']
+        colors: ['#E05315', '#06C755', '#222222', '#F2F2EC']
       });
 
       setStatus('success');
@@ -236,32 +237,70 @@ export default function ArcadeClaim() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0C] text-white flex flex-col items-center justify-center p-6 relative font-sans select-none">
-      {/* Sleek Modern Dark Grid Decoration */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
-      
-      <div className="w-full max-w-md bg-neutral-900/80 border border-neutral-850 rounded-3xl p-8 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-10 text-center relative overflow-hidden">
-        
-        {/* Glow accent line at top */}
-        <div className="absolute top-0 left-0 w-full h-[3px] bg-[#DFFF00]" />
+    <div id="arcade-claim-root" className="min-h-screen flex flex-col items-center justify-center p-6 relative select-none">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
-        <h1 className="text-xl font-bold font-mono tracking-widest text-[#DFFF00] mb-8">
-          HAUS ARCADE CLAIM
+        html, body {
+          overflow-x: clip !important;
+        }
+
+        #arcade-claim-root {
+          --color-paper: oklch(96% 0.003 80);      /* Braun light-grey casing */
+          --color-paper-2: oklch(92% 0.004 80);    /* Secondary elevation card */
+          --color-ink: oklch(20% 0.003 80);        /* Deep charcoal */
+          --color-ink-2: oklch(40% 0.004 80);      /* Muted lettering */
+          --color-muted: oklch(55% 0.004 80);
+          --color-rule: oklch(82% 0.004 80);       /* Hairline dividers */
+          --color-brand: oklch(62% 0.16 35);      /* Braun Dial Orange Accent */
+          
+          --font-display: 'Space Mono', monospace;
+          --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+          
+          --dur-short: 180ms;
+          --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+          
+          background-color: var(--color-paper);
+          color: var(--color-ink);
+          font-family: var(--font-body);
+        }
+
+        #arcade-claim-root .btn-action {
+          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+        }
+        #arcade-claim-root .btn-action:hover:not(:disabled) {
+          filter: brightness(0.95);
+        }
+        #arcade-claim-root .btn-action:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        #arcade-claim-root .btn-action:focus-visible {
+          outline: 2px solid var(--color-brand);
+          outline-offset: 2px;
+        }
+      `}</style>
+      
+      <div className="w-full max-w-md bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-md p-8 shadow-sm text-center relative">
+        {/* Minimal orange highlight strip */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-[var(--color-brand)] rounded-t-md" />
+
+        <h1 className="text-xs font-bold font-mono tracking-widest text-[var(--color-brand)] mb-8 uppercase">
+          // HAUS ARCADE RECEIPT CLAIM
         </h1>
 
         {/* View: Auth / Login Required */}
         {status === 'login_required' && (
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-[#06C755]/10 text-[#06C755] rounded-full flex items-center justify-center mb-6">
-              <LogIn className="w-8 h-8" />
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 bg-[#06C755]/10 text-[#06C755] rounded-[3px] flex items-center justify-center mb-6">
+              <LogIn className="w-6 h-6" />
             </div>
-            <h2 className="text-lg font-bold mb-2">ยินดีด้วย! คุณทำคะแนนได้ {score} แต้ม</h2>
-            <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
-              กรุณาเข้าสู่ระบบผ่านสมาชิก LINE เพื่อบันทึกคะแนนลงในกระดานคะแนนและใช้สิทธิ์สะสมรางวัล
+            <h2 className="text-[13px] font-bold mb-2 font-mono uppercase tracking-tight">ยินดีด้วย! คุณทำคะแนนได้ {score} แต้ม</h2>
+            <p className="text-[10px] text-[var(--color-ink-2)] mb-6 leading-relaxed">
+              กรุณาเข้าสู่ระบบผ่านสมาชิก LINE เพื่อบันทึกคะแนนสะสมลงในระบบและลุ้นรับเหรียญ xhaus
             </p>
             <button
               onClick={handleLineLogin}
-              className="w-full bg-[#06C755] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer"
+              className="btn-action w-full bg-[#06C755] text-white font-mono font-bold py-2.5 rounded-[4px] flex items-center justify-center gap-2 cursor-pointer text-xs uppercase border border-[#05b04b] shadow-sm"
             >
               เข้าสู่ระบบด้วย LINE
             </button>
@@ -271,25 +310,25 @@ export default function ArcadeClaim() {
         {/* View: Loading / Verifying */}
         {status === 'verifying' && (
           <div className="py-12 flex flex-col items-center">
-            <RefreshCw className="w-10 h-10 text-[#DFFF00] animate-spin mb-4" />
-            <p className="text-sm text-neutral-400 font-mono">กำลังตรวจสอบข้อมูลสิทธิ์คะแนน...</p>
+            <RefreshCw className="w-8 h-8 text-[var(--color-brand)] animate-spin mb-4" />
+            <p className="text-[10px] text-[var(--color-ink-2)] font-mono animate-pulse">VERIFYING RECEIPT TOKEN…</p>
           </div>
         )}
 
         {/* View: GPS Request */}
         {status === 'gps_required' && (
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-[#DFFF00]/10 text-[#DFFF00] rounded-full flex items-center justify-center mb-6 animate-bounce">
-              <MapPin className="w-8 h-8" />
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 bg-[var(--color-brand)]/10 text-[var(--color-brand)] rounded-[3px] flex items-center justify-center mb-6">
+              <MapPin className="w-6 h-6 animate-bounce" />
             </div>
-            <h2 className="text-lg font-bold mb-2">ตรวจสอบตำแหน่งพิกัดร้าน</h2>
-            <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
-              กรุณาอนุญาตสิทธิ์เข้าถึงพิกัดที่ตั้ง (GPS) เพื่อยืนยันว่าคุณสแกนรับสิทธิ์ภายในเขตพื้นที่ของร้านอินเดอะเฮาส์
+            <h2 className="text-[13px] font-bold mb-2 font-mono uppercase tracking-tight">ตรวจสอบพิกัดตำแหน่งร้าน</h2>
+            <p className="text-[10px] text-[var(--color-ink-2)] mb-6 leading-relaxed">
+              กรุณาอนุญาตสิทธิ์เข้าถึงพิกัดที่ตั้ง (GPS) เพื่อยืนยันว่าสแกนรับสิทธิ์ภายในเขตพื้นที่ของร้านอินเดอะเฮาส์
             </p>
             <button
               onClick={requestGpsLocation}
               disabled={gpsLoading}
-              className="w-full bg-[#DFFF00] text-black font-extrabold py-3.5 rounded-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+              className="btn-action w-full bg-[var(--color-brand)] text-white font-mono font-bold py-2.5 rounded-[4px] disabled:opacity-50 cursor-pointer text-xs uppercase border border-[oklch(52% 0.16 35)] shadow-sm"
             >
               {gpsLoading ? 'กำลังดึงพิกัดตำแหน่ง...' : 'ยืนยันตำแหน่ง GPS'}
             </button>
@@ -299,61 +338,65 @@ export default function ArcadeClaim() {
         {/* View: Saving DB */}
         {status === 'saving' && (
           <div className="py-12 flex flex-col items-center">
-            <RefreshCw className="w-10 h-10 text-[#DFFF00] animate-spin mb-4" />
-            <p className="text-sm text-neutral-400 font-mono">กำลังบันทึกคะแนนสมาชิกของคุณ...</p>
+            <RefreshCw className="w-8 h-8 text-[var(--color-brand)] animate-spin mb-4" />
+            <p className="text-[10px] text-[var(--color-ink-2)] font-mono animate-pulse">WRITING DATA TO SYSTEM LEDGER…</p>
           </div>
         )}
 
         {/* View: Success */}
         {status === 'success' && (
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-[#39FF14]/10 text-[#39FF14] rounded-full flex items-center justify-center mb-6">
-              <CheckCircle className="w-9 h-9" />
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 bg-emerald-500/10 text-emerald-600 rounded-[3px] flex items-center justify-center mb-6">
+              <CheckCircle className="w-7 h-7" />
             </div>
-            <h2 className="text-xl font-bold mb-1 text-[#39FF14]">สะสมคะแนนสำเร็จ!</h2>
-            <div className="bg-black/40 border border-neutral-800 rounded-2xl py-4 px-6 w-full my-4 flex justify-between items-center">
-              <span className="text-neutral-400 text-sm font-mono">คะแนนที่เคลมได้</span>
-              <span className="text-2xl font-bold font-mono text-[#DFFF00]">{score} แต้ม</span>
+            <h2 className="text-[13px] font-bold text-emerald-600 font-mono uppercase tracking-tight mb-2">// CLAIM GRANTED SUCCESS</h2>
+            
+            <div className="bg-white border border-[var(--color-rule)] rounded-[4px] py-3.5 px-5 w-full my-4 flex justify-between items-center font-mono text-[10px]">
+              <span className="text-[var(--color-ink-2)]">CLEARED SCORE</span>
+              <span className="text-sm font-bold text-[var(--color-brand)]">{score} PTS</span>
             </div>
+
             {claimResultMessage && (
-              <div className="bg-[#DFFF00]/10 border border-[#DFFF00]/30 rounded-2xl py-3.5 px-4 w-full text-center text-sm font-bold text-[#DFFF00] mb-4 font-mono leading-relaxed">
+              <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-[4px] py-3 px-4 w-full text-center text-[10px] font-bold text-[var(--color-ink)] mb-4 font-mono leading-relaxed">
                 {claimResultMessage}
               </div>
             )}
-            <p className="text-xs text-neutral-500 mb-6 font-mono leading-relaxed">
-              {distance && `พิกัดได้รับการตรวจสอบเรียบร้อย (ระยะห่าง: ${(distance * 1000).toFixed(0)} เมตร)`}
+            
+            <p className="text-[8px] text-[var(--color-muted)] mb-6 font-mono uppercase leading-relaxed">
+              {distance && `verified lock at ${(distance * 1000).toFixed(0)} meters from base station`}
             </p>
+            
             <button
               onClick={() => navigate('/arcade')}
-              className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3.5 rounded-xl transition-all cursor-pointer"
+              className="btn-action w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink-2)] text-[var(--color-paper)] font-mono font-bold py-2.5 rounded-[4px] cursor-pointer text-xs uppercase shadow-sm"
             >
-              ดูตารางอันดับ Hall of Fame
+              GO TO HALL OF FAME
             </button>
           </div>
         )}
 
         {/* View: Error / Failed */}
         {status === 'error' && (
-          <div className="flex flex-col items-center animate-fade-in">
-            <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-6">
-              <ShieldAlert className="w-8 h-8" />
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-[3px] flex items-center justify-center mb-6">
+              <ShieldAlert className="w-6 h-6" />
             </div>
-            <h2 className="text-lg font-bold mb-2">เกิดข้อผิดพลาดในการเคลมสิทธิ์</h2>
-            <p className="text-sm text-red-400/90 mb-8 leading-relaxed px-2">
+            <h2 className="text-[13px] font-bold text-red-500 font-mono uppercase tracking-tight mb-2">// TRANSACTION REJECTED</h2>
+            <p className="text-[10px] text-red-600/90 mb-8 leading-relaxed px-2 font-mono">
               {errorMessage}
             </p>
             <div className="flex flex-col w-full gap-3">
               <button
                 onClick={validateAndProcessClaim}
-                className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3.5 rounded-xl transition-all cursor-pointer"
+                className="btn-action w-full bg-[var(--color-brand)] text-white font-mono font-bold py-2.5 rounded-[4px] cursor-pointer text-xs uppercase border border-[oklch(52% 0.16 35)] shadow-sm"
               >
-                ลองใหม่อีกครั้ง
+                RETRY TRANSACTION
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="w-full bg-black/40 border border-neutral-850 hover:text-white text-neutral-400 py-3.5 rounded-xl transition-all text-sm font-mono cursor-pointer"
+                className="btn-action w-full bg-white hover:bg-[var(--color-paper)] text-[var(--color-ink-2)] font-mono py-2.5 rounded-[4px] border border-[var(--color-rule)] text-xs uppercase transition-all cursor-pointer"
               >
-                กลับไปหน้าหลักของร้าน
+                RETURN TO STORE FRONT
               </button>
             </div>
           </div>

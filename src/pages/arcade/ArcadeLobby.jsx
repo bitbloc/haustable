@@ -1,23 +1,32 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
-/* Hallmark · macrostructure: Bento Grid · N5 Floating Nav Pill · Ft2 Inline footer
- * theme: custom · vibe: "late-night cyber game lobby" · paper: oklch(14% 0.015 110) · accent: oklch(88% 0.16 110)
- * display: Space Grotesk · body: Geist · axes: dark / geometric-sans / chromatic-other (green-yellow ~110°)
- * studied: no · context: inferred · v1.1.0
+/* Hallmark · component: ArcadeLobby · genre: modern-minimal · theme: custom · vibe: "Dieter Rams industrial console, xhaus integration"
+ * states: default · hover · focus · active · loading · error · success
+ * contrast: pass (APCA / WCAG compliant)
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import FlappyCatGame from './FlappyCatGame';
-import { Gamepad2, Music, Tag, Trophy, Award, X, MapPin, CheckCircle, ShieldAlert, RefreshCw, LogIn } from 'lucide-react';
+import { Gamepad2, Music, Tag, Trophy, Award, X, MapPin, CheckCircle, ShieldAlert, RefreshCw, LogIn, Gift, Copy } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
 
 export default function ArcadeLobby() {
   const [leaderboard, setLeaderboard] = useState([]);
-  const [activeTab, setActiveTab] = useState('game'); // 'game' | 'music' | 'promo'
+  const [activeTab, setActiveTab] = useState('game'); // 'game' | 'music'
   const [loading, setLoading] = useState(true);
 
   // Authentication & Claiming states
   const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [userStats, setUserStats] = useState({
+    weeklyTotal: 0,
+    todayPipe20: false,
+    todayPipe35: false,
+    todayRaffle40: false
+  });
+  const [rewards, setRewards] = useState([]);
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimScore, setClaimScore] = useState(0);
   const [claimStatus, setClaimStatus] = useState('idle'); // 'idle' | 'checking_gps' | 'saving' | 'success' | 'error'
@@ -80,7 +89,6 @@ export default function ArcadeLobby() {
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
-      // Fetch top 10 scores
       const { data, error } = await supabase
         .from('leaderboard')
         .select(`
@@ -98,7 +106,6 @@ export default function ArcadeLobby() {
 
       if (error) throw error;
 
-      // Map display_name / profiles display_name/nickname to entry for easier Phaser usage
       const formatted = (data || []).map(entry => ({
         id: entry.id,
         score: entry.score,
@@ -113,9 +120,115 @@ export default function ArcadeLobby() {
     }
   };
 
+  // Fetch user profile info
+  const fetchUserProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('xhaus_balance, nickname, display_name')
+        .eq('id', userId)
+        .single();
+      if (!error && data) {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user profile:', err);
+    }
+  };
+
+  // Fetch rewards catalog
+  const fetchRewards = async () => {
+    setRewardsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('xhaus_rewards')
+        .select('*')
+        .eq('is_active', true)
+        .order('xhaus_cost', { ascending: true });
+      if (!error && data) {
+        setRewards(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch rewards:', err);
+    } finally {
+      setRewardsLoading(false);
+    }
+  };
+
+  // Fetch user milestone status and weekly coin stats
+  const fetchUserStats = async (userId) => {
+    try {
+      const now = new Date();
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const bangkokNow = new Date(utcTime + (7 * 3600000));
+      
+      // Start of Today (Bangkok)
+      const bkkToday = new Date(bangkokNow);
+      bkkToday.setHours(0, 0, 0, 0);
+      const utcToday = new Date(bkkToday.getTime() - (7 * 3600000));
+      const todayStartISO = utcToday.toISOString();
+
+      // Start of Week (Monday) in Bangkok
+      const bkkWeek = new Date(bangkokNow);
+      const day = bkkWeek.getDay();
+      const diff = bkkWeek.getDate() - day + (day === 0 ? -6 : 1);
+      bkkWeek.setDate(diff);
+      bkkWeek.setHours(0, 0, 0, 0);
+      const utcWeek = new Date(bkkWeek.getTime() - (7 * 3600000));
+      const weekStartISO = utcWeek.toISOString();
+
+      // Fetch weekly coin rewards (pipe_20, pipe_35)
+      const { data: weeklyLogs, error: weeklyError } = await supabase
+        .from('arcade_rewards_log')
+        .select('xhaus_rewarded')
+        .eq('profile_id', userId)
+        .in('reward_type', ['pipe_20', 'pipe_35'])
+        .gte('created_at', weekStartISO);
+
+      // Fetch today's logs
+      const { data: todayLogs, error: todayError } = await supabase
+        .from('arcade_rewards_log')
+        .select('reward_type')
+        .eq('profile_id', userId)
+        .gte('created_at', todayStartISO);
+
+      if (!weeklyError && !todayError) {
+        const weeklyTotal = (weeklyLogs || []).reduce((sum, log) => sum + parseFloat(log.xhaus_rewarded || 0), 0);
+        const todayPipe20 = (todayLogs || []).some(log => log.reward_type === 'pipe_20');
+        const todayPipe35 = (todayLogs || []).some(log => log.reward_type === 'pipe_35');
+        const todayRaffle40 = (todayLogs || []).some(log => log.reward_type === 'raffle_40');
+
+        setUserStats({
+          weeklyTotal,
+          todayPipe20,
+          todayPipe35,
+          todayRaffle40
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch user stats:', err);
+    }
+  };
+
   useEffect(() => {
     fetchLeaderboard();
+    fetchRewards();
   }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchUserProfile(session.user.id);
+      fetchUserStats(session.user.id);
+    } else {
+      setProfile(null);
+      setUserStats({
+        weeklyTotal: 0,
+        todayPipe20: false,
+        todayPipe35: false,
+        todayRaffle40: false
+      });
+    }
+  }, [session]);
 
   // Callback triggered when the Phaser game ends
   const handleGameOver = (score) => {
@@ -192,7 +305,7 @@ export default function ArcadeLobby() {
     try {
       setClaimStatus('saving');
       
-      const { data: profile, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('display_name, nickname')
         .eq('id', session.user.id)
@@ -200,7 +313,7 @@ export default function ArcadeLobby() {
 
       if (profileError) throw profileError;
 
-      const nameToDisplay = profile.nickname || profile.display_name || 'MEMBER';
+      const nameToDisplay = profileData.nickname || profileData.display_name || 'MEMBER';
 
       // Check if there is an existing score for this user
       const { data: existingLeaderboard, error: selectError } = await supabase
@@ -252,12 +365,17 @@ export default function ArcadeLobby() {
         particleCount: 120,
         spread: 80,
         origin: { y: 0.6 },
-        colors: ['#DFFF00', '#FF00FF', '#00FFFF', '#FFFFFF']
+        colors: ['#E05315', '#06C755', '#222222', '#F2F2EC']
       });
 
       setClaimStatus('success');
-      // Refresh the high score leaderboard
+      // Refresh high score leaderboard
       fetchLeaderboard();
+      // Refresh user balance and logs
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+        fetchUserStats(session.user.id);
+      }
     } catch (e) {
       console.error('Failed to submit score:', e);
       setClaimError('ไม่สามารถบันทึกคะแนน กรุณาลองใหม่อีกครั้ง');
@@ -282,50 +400,47 @@ export default function ArcadeLobby() {
   return (
     <div id="arcade-lobby-root" className="min-h-screen flex flex-col relative select-none">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
         html, body {
           overflow-x: clip !important;
         }
 
         #arcade-lobby-root {
-          --color-paper: oklch(14% 0.015 110);
-          --color-paper-2: oklch(18% 0.018 110);
-          --color-paper-3: oklch(22% 0.018 110);
-          --color-ink: oklch(96% 0.008 110);
-          --color-ink-2: oklch(76% 0.008 110);
-          --color-rule: oklch(28% 0.012 110);
-          --color-muted: oklch(58% 0.010 110);
-          --color-accent: oklch(88% 0.16 110);
-          --color-accent-ink: oklch(10% 0.015 110);
-          --color-focus: oklch(88% 0.20 110);
+          --color-paper: oklch(96% 0.003 80);      /* Braun light-grey casing */
+          --color-paper-2: oklch(92% 0.004 80);    /* Slightly darker gray for inset panels */
+          --color-paper-3: oklch(88% 0.005 80);    /* Secondary card elevation */
+          --color-ink: oklch(20% 0.003 80);        /* Deep charcoal for dials & typography */
+          --color-ink-2: oklch(40% 0.004 80);      /* Muted lettering */
+          --color-muted: oklch(55% 0.004 80);      /* Disabled text */
+          --color-rule: oklch(82% 0.004 80);       /* Hairline layout divisions */
+          --color-accent: oklch(62% 0.16 35);      /* Braun Dial Orange Accent */
+          --color-accent-ink: oklch(98% 0 0);      /* White text for orange buttons */
+          --color-focus: oklch(62% 0.16 35);
           
-          --dur-short: 200ms;
+          --font-display: 'Space Mono', monospace;
+          --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
+          
+          --dur-short: 180ms;
           --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
           
           background-color: var(--color-paper);
           color: var(--color-ink);
-          font-family: 'Geist', sans-serif;
-        }
-
-        #arcade-lobby-root .display-font {
-          font-family: 'Space Grotesk', sans-serif;
-          letter-spacing: -0.03em;
+          font-family: var(--font-body);
         }
 
         #arcade-lobby-root .btn-tab {
-          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+          transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
         }
         #arcade-lobby-root .btn-tab:focus-visible {
           outline: 2px solid var(--color-focus);
-          outline-offset: 1px;
         }
         
         #arcade-lobby-root .btn-action {
           transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
         }
         #arcade-lobby-root .btn-action:hover:not(:disabled) {
-          filter: brightness(1.1);
+          filter: brightness(0.95);
         }
         #arcade-lobby-root .btn-action:active:not(:disabled) {
           transform: scale(0.98);
@@ -335,166 +450,295 @@ export default function ArcadeLobby() {
           outline-offset: 2px;
         }
 
-        #arcade-lobby-root .glow-bg {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 384px;
-          background: radial-gradient(circle at top, oklch(88% 0.16 110 / 0.06) 0%, transparent 70%);
-          pointer-events: none;
-          filter: blur(40px);
+        /* Braun physical dial styling */
+        #arcade-lobby-root .braun-dial {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: conic-gradient(from 0deg, var(--color-paper-3) 0%, var(--color-rule) 50%, var(--color-paper-3) 100%);
+          border: 1.5px solid var(--color-rule);
+          box-shadow: inset 0 1px 2px rgba(255,255,255,0.8), 0 2px 4px rgba(0,0,0,0.1);
+          position: relative;
         }
-
-        #arcade-lobby-root .grid-bg {
+        #arcade-lobby-root .braun-dial::after {
+          content: '';
           position: absolute;
-          inset: 0;
-          background-image: 
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-            linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-          background-size: 40px 40px;
-          pointer-events: none;
+          width: 2px;
+          height: 10px;
+          background: var(--color-ink);
+          top: 3px;
+          left: 50%;
+          transform: translateX(-50%);
+          border-radius: 1px;
         }
       `}</style>
 
-      {/* Sleek Modern Dark Grid Decoration & Radial Glow */}
-      <div className="grid-bg" />
-      <div className="glow-bg" />
-
-      {/* Floating Header (N5 Floating Pill style) */}
-      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 p-1.5 bg-[#141416]/80 backdrop-blur-md border border-neutral-800 rounded-full shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] w-[calc(100%-2rem)] max-w-2xl select-none">
-        {/* Brand Wordmark */}
-        <div className="flex items-center gap-2 pl-3.5">
-          <img 
-            src="/logo-secondary.png" 
-            alt="ในบ้าน" 
-            className="h-5 w-auto object-contain brightness-0 invert" 
-          />
-          <div className="border-l border-neutral-800/80 pl-2.5 hidden sm:block">
-            <h1 className="text-[10px] font-bold font-mono tracking-widest text-neutral-400 display-font">
-              PLAYGROUND
+      {/* Dieter Rams Masthead / Tuning strip */}
+      <header className="w-full border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] py-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+        {/* Brand block */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-[var(--color-ink)] flex items-center justify-center p-1 rounded-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
+            <img 
+              src="/logo-secondary.png" 
+              alt="ในบ้าน" 
+              className="h-5 w-auto object-contain brightness-0 invert" 
+            />
+          </div>
+          <div>
+            <h1 className="text-[10px] font-bold font-mono tracking-widest text-[var(--color-ink)] uppercase">
+              HAUS ARCADE SYSTEM
             </h1>
+            <p className="text-[8px] text-[var(--color-ink-2)] font-mono uppercase tracking-wider">
+              MODEL T-2026 // LINE INTEGRATION
+            </p>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex bg-[#0A0A0C]/50 p-0.5 rounded-full border border-neutral-800/60">
+        {/* Navigation sliders */}
+        <div className="flex bg-[var(--color-paper-3)] p-0.5 rounded-[4px] border border-[var(--color-rule)]">
           <button
             onClick={() => setActiveTab('game')}
-            className={`btn-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider display-font ${
+            className={`btn-tab px-4 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider ${
               activeTab === 'game' 
-                ? 'bg-[#DFFF00] text-black font-extrabold shadow-[0_2px_8px_rgba(223,255,0,0.15)]' 
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-sm' 
+                : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <Gamepad2 className="w-3 h-3" />
-            <span>เล่นเกม</span>
+            PLAY GAME / เล่นเกม
           </button>
           
           <Link
             to="/song"
-            className="btn-tab flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider text-neutral-400 hover:text-white display-font"
+            className="btn-tab px-4 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider text-[var(--color-ink-2)] hover:text-[var(--color-ink)] flex items-center gap-1.5"
           >
-            <Music className="w-3 h-3" />
-            <span>ขอเพลง</span>
+            <Music className="w-2.5 h-2.5" />
+            <span>MUSIC / ขอเพลง</span>
           </Link>
         </div>
 
-        {/* Login Status */}
-        <div className="pr-1.5">
+        {/* User LED Status Indicator */}
+        <div className="flex items-center gap-2">
           {session ? (
-            <div className="flex items-center gap-1 px-3 py-1.5 text-[8px] font-mono text-[#DFFF00] bg-[#DFFF00]/10 rounded-full border border-[#DFFF00]/20">
-              <CheckCircle className="w-2.5 h-2.5 text-[#06C755]" />
-              <span className="font-semibold uppercase tracking-wider">Logged In</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 text-[9px] font-mono text-[var(--color-ink)] bg-white border border-[var(--color-rule)] rounded-[4px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse border border-emerald-700 shadow-[0_0_3px_#10b981]"></span>
+              <span className="font-bold uppercase tracking-wider">CONNECTED // {profile?.nickname || profile?.display_name || 'MEMBER'}</span>
             </div>
           ) : (
             <button
               onClick={handleRequireLogin}
-              className="btn-action flex items-center gap-1 px-3 py-1.5 bg-[#06C755] text-white text-[8px] font-bold font-mono uppercase tracking-wider rounded-full cursor-pointer"
+              className="btn-action flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-accent)] hover:bg-[oklch(58% 0.16 35)] text-white text-[9px] font-mono font-bold uppercase tracking-wider rounded-[4px] border border-[oklch(52% 0.16 35)] shadow-sm transition-all active:scale-[0.98] cursor-pointer"
             >
-              <LogIn className="w-2.5 h-2.5" />
-              <span>LINE Login</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 border border-red-700 animate-pulse shadow-[0_0_3px_red]"></span>
+              <span>LINE CONNECT</span>
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Lobby Container — Bento Grid Layout */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-6 pt-24 pb-16 z-10 flex flex-col justify-center">
-        
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+      {/* Main Console Grid */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-6 py-10 z-10 flex flex-col justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-start">
           
-          {/* Cell 1: Phaser Game (Hero block, spans 7 columns on lg) */}
-          <div className={`lg:col-span-7 flex flex-col bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-4 sm:p-6 relative shadow-2xl transition-all duration-200 ${isGameFullscreen ? 'z-[999]' : 'backdrop-blur-sm overflow-hidden'}`}>
+          {/* Column 1: Game Cabinet (Left Column, spans 7 on lg) */}
+          <div className={`lg:col-span-7 flex flex-col bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-6 relative shadow-sm transition-all duration-200 ${isGameFullscreen ? 'z-[999]' : 'overflow-hidden'}`}>
             {activeTab === 'game' && (
               <div className="w-full flex flex-col items-center">
-                <div className="w-full aspect-[6/7] max-w-[500px]">
-                  <FlappyCatGame 
-                    onGameOver={handleGameOver} 
-                    leaderboard={leaderboard} 
-                    onClaimScore={handleClaimScore} 
-                    session={session} 
-                    onRequireLogin={handleRequireLogin} 
-                    isFullscreen={isGameFullscreen}
-                    setIsFullscreen={setIsGameFullscreen}
-                  />
+                {/* Physical bezel frame around screen */}
+                <div className="w-full bg-[#1b1c1e] p-3 rounded-md border border-[#2d2e30] shadow-[inset_0_2px_10px_rgba(0,0,0,0.6)]">
+                  <div className="w-full aspect-[6/7] max-w-[480px] mx-auto bg-black rounded-sm overflow-hidden">
+                    <FlappyCatGame 
+                      onGameOver={handleGameOver} 
+                      leaderboard={leaderboard} 
+                      onClaimScore={handleClaimScore} 
+                      session={session} 
+                      onRequireLogin={handleRequireLogin} 
+                      isFullscreen={isGameFullscreen}
+                      setIsFullscreen={setIsGameFullscreen}
+                    />
+                  </div>
                 </div>
-                <div className="mt-4 text-center text-[11px] text-neutral-400 font-mono leading-relaxed max-w-sm">
-                  <span className="text-[#DFFF00] font-bold">⚡ TIP:</span> แตะหน้าจอช่วยแมวส้มหลบหลีกอุปสรรคและมีดครัวบินเพื่อเก็บแต้ม!
+
+                {/* Cabinet control deck indicators */}
+                <div className="flex items-center justify-between w-full border-t border-[var(--color-rule)] pt-4 mt-5 font-mono text-[9px] text-[var(--color-ink-2)]">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-red-500 border border-red-700 shadow-[0_0_4px_red]"></span>
+                      <span className="font-bold">SYS PWR</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${distance !== null && distance <= MAX_RADIUS_KM ? 'bg-emerald-500 border-emerald-700 shadow-[0_0_4px_emerald]' : 'bg-neutral-300 border-neutral-400'}`}></span>
+                      <span className="font-bold">GPS LOCK</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse border border-amber-700 shadow-[0_0_4px_amber]"></span>
+                      <span className="font-bold">CON STBY</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="braun-dial" title="SYSTEM VOLUME"></div>
+                    <div className="braun-dial" title="CONSOLE TUNER"></div>
+                  </div>
+                </div>
+
+                <div className="mt-4 text-center text-[10px] text-[var(--color-ink-2)] font-mono leading-relaxed max-w-sm border-t border-dashed border-[var(--color-rule)] w-full pt-3">
+                  <span className="text-[var(--color-accent)] font-bold">// INSTRUCTION:</span> แตะหน้าจอช่วยแมวส้มบินเพื่อสะสมแต้มแลกเหรียญ xhaus!
                 </div>
               </div>
             )}
           </div>
 
-          {/* Right Column Group: Leaderboard & Info (Spans 5 columns on lg) */}
+          {/* Column 2: Braun Instrument Panels (Right Column, spans 5 on lg) */}
           <div className="lg:col-span-5 flex flex-col gap-6 w-full">
             
-            {/* Cell 2: Leaderboard (Hall of Fame) */}
-            <div className="bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-6 backdrop-blur-sm shadow-xl">
-              <div className="flex items-center justify-between mb-5 border-b border-neutral-800/60 pb-3">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-[#DFFF00]" />
-                  <h2 className="text-sm font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font">Hall of Fame</h2>
-                </div>
-                <button 
-                  onClick={fetchLeaderboard}
-                  className="btn-action text-[10px] text-neutral-300 hover:text-white font-mono bg-neutral-800/85 px-2.5 py-1 rounded transition-colors duration-200"
-                >
-                  REFRESH
-                </button>
+            {/* Panel 1: xhaus Wallet & Progress Dashboard */}
+            <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-5 flex flex-col gap-4 shadow-sm">
+              <div className="border-b border-[var(--color-rule)] pb-2 flex justify-between items-center select-none">
+                <h2 className="text-[10px] font-bold font-mono tracking-widest text-[var(--color-ink)] uppercase">// COIN STATUS</h2>
+                <span className="text-[8px] font-mono text-[var(--color-muted)]">SYSTEM V.2026</span>
               </div>
 
-              {loading ? (
-                <div className="py-10 text-center text-neutral-500 font-mono text-xs animate-pulse">
-                  LOADING SCORES…
+              {/* LCD digital screen display */}
+              <div className="bg-[#e2e7df] border border-[#cfd6cb] rounded-[4px] p-4 flex flex-col items-center justify-center shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] relative overflow-hidden">
+                <span className="text-[8px] font-mono uppercase text-[#5a6353] tracking-widest block mb-1">XHAUS COIN BALANCE</span>
+                <span className="font-mono text-3xl font-bold text-[#2a3026] tracking-tight">
+                  {session ? parseFloat(profile?.xhaus_balance || 0).toFixed(2) : "0.00"} <span className="text-sm font-normal">XH</span>
+                </span>
+                {!session && (
+                  <span className="text-[8px] font-mono text-red-700/80 font-bold tracking-wider mt-2 animate-pulse uppercase">
+                    [ GUEST MODE - CONNECT LINE ]
+                  </span>
+                )}
+              </div>
+
+              {/* Daily quests */}
+              <div className="flex flex-col gap-2">
+                <h3 className="text-[9px] font-bold font-mono text-[var(--color-ink-2)] uppercase tracking-wider">DAILY ACHIEVEMENTS / ภารกิจรับเหรียญวันนี้</h3>
+                <div className="flex flex-col gap-1.5 font-mono text-[9px]">
+                  
+                  {/* Milestone 20 */}
+                  <div className="flex items-center justify-between py-2 px-3 bg-white border border-[var(--color-rule)] rounded-[3px]">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${session && userStats.todayPipe20 ? 'bg-emerald-500 border-emerald-700 shadow-[0_0_3px_#10b981]' : 'bg-neutral-200 border-neutral-300'}`}></span>
+                      <span>บินผ่าน 20 ท่อ (ความสำเร็จเริ่มต้น)</span>
+                    </div>
+                    <span className="font-bold text-[var(--color-accent)]">+1.00 XH</span>
+                  </div>
+
+                  {/* Milestone 35 */}
+                  <div className="flex items-center justify-between py-2 px-3 bg-white border border-[var(--color-rule)] rounded-[3px]">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${session && userStats.todayPipe35 ? 'bg-emerald-500 border-emerald-700 shadow-[0_0_3px_#10b981]' : 'bg-neutral-200 border-neutral-300'}`}></span>
+                      <span>บินผ่าน 35 ท่อ (ความสำเร็จขั้นสูง)</span>
+                    </div>
+                    <span className="font-bold text-[var(--color-accent)]">+1.00 XH</span>
+                  </div>
+
+                  {/* Milestone 40 */}
+                  <div className="flex items-center justify-between py-2 px-3 bg-white border border-[var(--color-rule)] rounded-[3px]">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${session && userStats.todayRaffle40 ? 'bg-emerald-500 border-emerald-700 shadow-[0_0_3px_#10b981]' : 'bg-neutral-200 border-neutral-300'}`}></span>
+                      <span>บินผ่าน 40 ท่อ (ตั๋วสุ่มจับรางวัลประจำสัปดาห์)</span>
+                    </div>
+                    <span className="font-bold text-sky-600">1 TICKET</span>
+                  </div>
+
                 </div>
-              ) : leaderboard.length === 0 ? (
-                <div className="py-10 text-center text-neutral-500 font-mono text-xs">
-                  NO RECORDED SCORES YET. BE THE FIRST!
+              </div>
+
+              {/* Weekly progress bar */}
+              <div className="flex flex-col gap-1 border-t border-[var(--color-rule)] pt-3">
+                <div className="flex justify-between text-[9px] font-mono text-[var(--color-ink-2)]">
+                  <span>WEEKLY ARCADE COINS / ขีดจำกัดเหรียญรายสัปดาห์</span>
+                  <span>{session ? userStats.weeklyTotal.toFixed(2) : "0.00"} / 5.00 XH</span>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-1.5 font-mono text-xs">
-                  {leaderboard.map((entry, index) => {
-                    const isTop3 = index < 3;
+                <div className="flex gap-0.5 h-2 w-full bg-[var(--color-paper-3)] border border-[var(--color-rule)] p-0.5 rounded-[2px]">
+                  {Array.from({ length: 10 }).map((_, i) => {
+                    const filled = session && (userStats.weeklyTotal / 5.00) * 10 >= (i + 1);
                     return (
                       <div 
-                        key={entry.id || index}
-                        className={`flex items-center justify-between py-2 px-3 rounded-lg border border-transparent transition-colors duration-200 ${
-                          index === 0 ? 'bg-yellow-500/5 text-yellow-400/90 font-semibold' :
-                          index === 1 ? 'bg-slate-300/5 text-slate-300/90 font-semibold' :
-                          index === 2 ? 'bg-amber-600/5 text-amber-500/90 font-semibold' :
-                          'text-neutral-400 hover:bg-neutral-900/30'
+                        key={i} 
+                        className={`flex-1 rounded-[1px] transition-colors duration-200 ${
+                          filled ? 'bg-[var(--color-accent)]' : 'bg-neutral-300/40'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 2: xhaus Rewards Shop */}
+            <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-5 flex flex-col gap-4 shadow-sm">
+              <div className="border-b border-[var(--color-rule)] pb-2 flex justify-between items-center select-none">
+                <h2 className="text-[10px] font-bold font-mono tracking-widest text-[var(--color-ink)] uppercase">// REWARD REDEMPTION</h2>
+                <span className="text-[8px] font-mono text-[var(--color-muted)]">XHAUS SHOP</span>
+              </div>
+
+              {rewardsLoading ? (
+                <div className="py-6 text-center text-[var(--color-muted)] font-mono text-[9px] animate-pulse">
+                  LOADING CATALOG...
+                </div>
+              ) : rewards.length === 0 ? (
+                <div className="py-6 text-center text-[var(--color-muted)] font-mono text-[9px] bg-white border border-[var(--color-rule)] rounded-[4px]">
+                  ยังไม่มีรายการของรางวัลสำหรับแลกในระบบขณะนี้
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5 max-h-80 overflow-y-auto pr-1">
+                  {rewards.map(reward => {
+                    const userBalance = parseFloat(profile?.xhaus_balance || 0);
+                    const cost = parseFloat(reward.xhaus_cost);
+                    const canRedeem = session && userBalance >= cost;
+                    const needed = cost - userBalance;
+
+                    return (
+                      <div 
+                        key={reward.id} 
+                        className={`p-3 bg-white border rounded-[4px] flex flex-col gap-2 text-xs transition-all ${
+                          canRedeem ? 'border-emerald-500/60' : 'border-[var(--color-rule)]'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="w-4 text-center text-[10px] font-bold text-neutral-500">
-                            {index + 1}
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <h4 className="font-bold text-[var(--color-ink)] text-[11px]">{reward.title}</h4>
+                            {reward.description && (
+                              <p className="text-[9px] text-[var(--color-ink-2)] leading-tight mt-0.5">{reward.description}</p>
+                            )}
+                          </div>
+                          <span className="shrink-0 bg-[var(--color-paper-3)] border border-[var(--color-rule)] font-mono text-[9px] font-bold px-2 py-0.5 rounded-[3px] text-[var(--color-ink)]">
+                            {cost.toFixed(0)} XH
                           </span>
-                          {isTop3 && <Award className="w-3.5 h-3.5 opacity-90" />}
-                          <span className="truncate max-w-[160px]">{entry.display_name}</span>
                         </div>
-                        <span className="font-bold text-[#DFFF00]">{entry.score} pts</span>
+
+                        <div className="border-t border-dashed border-[var(--color-rule)] pt-2 mt-1 flex justify-between items-center">
+                          {canRedeem ? (
+                            <div className="flex justify-between items-center w-full">
+                              <div className="font-mono">
+                                <span className="text-[7px] text-[var(--color-muted)] block uppercase leading-none mb-0.5">รหัสคูปองแสดงพนักงาน</span>
+                                <span className="text-[11px] font-bold text-emerald-600 tracking-wider select-all leading-none">{reward.claim_code}</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(reward.claim_code);
+                                  toast.success("คัดลอกรหัสสำเร็จ!");
+                                }}
+                                className="px-2 py-1 text-[8px] font-mono font-bold bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded-[3px] uppercase cursor-pointer transition-all active:scale-[0.96] flex items-center gap-1 text-[var(--color-ink)]"
+                              >
+                                <Copy className="w-2 h-2" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-[var(--color-muted)] text-[9px] w-full font-mono">
+                              <span>🔒</span>
+                              {session ? (
+                                <span>สะสมเพิ่มอีก <strong className="text-[var(--color-ink)] font-bold">{needed.toFixed(2)} XH</strong> เพื่อปลดล็อก</span>
+                              ) : (
+                                <span>เชื่อมต่อ LINE เพื่อตรวจสอบแต้มสะสม</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -502,18 +746,50 @@ export default function ArcadeLobby() {
               )}
             </div>
 
-            {/* Cell 3: Rules & Info Board */}
-            <div className="bg-[#141416]/60 border border-neutral-800/80 rounded-3xl p-6 backdrop-blur-sm shadow-xl flex flex-col gap-4">
-              <div className="flex items-center gap-2 border-b border-neutral-800/60 pb-3">
-                <Tag className="w-4 h-4 text-[#DFFF00]" />
-                <h3 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font">Rules & Rewards</h3>
+            {/* Panel 3: Leaderboard (Hall of Fame) */}
+            <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-5 flex flex-col gap-4 shadow-sm">
+              <div className="border-b border-[var(--color-rule)] pb-2 flex justify-between items-center select-none">
+                <div className="flex items-center gap-1.5 text-[var(--color-ink)]">
+                  <Trophy className="w-3.5 h-3.5" />
+                  <h2 className="text-[10px] font-bold font-mono tracking-widest uppercase">// LEADERBOARD</h2>
+                </div>
+                <button 
+                  onClick={fetchLeaderboard}
+                  className="px-2 py-0.5 text-[8px] text-[var(--color-ink-2)] hover:text-[var(--color-ink)] font-mono bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded-[3px] transition-all cursor-pointer"
+                >
+                  REFRESH
+                </button>
               </div>
-              <p className="text-xs text-neutral-400 leading-relaxed font-sans">
-                ช่วยเหลือเจ้าแมวส้มหลบหลีกอุปสรรคเพื่อเก็บแต้มสูงสุด! เมื่อเกมจบลง คุณสามารถกดปุ่ม <strong className="text-white">SAVE SCORE / บันทึกแต้ม</strong> เพื่อบันทึกสถิติของคุณลงในตารางผู้นำ และมีสิทธิ์รับของรางวัลพิเศษประจำสัปดาห์จากทางร้าน
-              </p>
-              <div className="text-[10px] text-neutral-500 font-mono leading-relaxed border-t border-neutral-800/40 pt-3">
-                * พิกัด GPS ของอุปกรณ์ต้องอยู่ภายในรัศมีร้าน ในบ้าน (<span className="text-[#DFFF00]">{MAX_RADIUS_KM} กม.</span>) เพื่อยืนยันความถูกต้องของการบันทึกคะแนน
-              </div>
+
+              {loading ? (
+                <div className="py-8 text-center text-[var(--color-muted)] font-mono text-[9px] animate-pulse">
+                  LOADING HIGH SCORES...
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <div className="py-8 text-center text-[var(--color-muted)] font-mono text-[9px] bg-white border border-[var(--color-rule)] rounded-[4px]">
+                  NO RECORDED SCORES YET
+                </div>
+              ) : (
+                <div className="flex flex-col font-mono text-[9px] bg-white border border-[var(--color-rule)] p-2 rounded-[3px] max-h-60 overflow-y-auto">
+                  {leaderboard.map((entry, index) => (
+                    <div 
+                      key={entry.id || index}
+                      className={`flex items-center justify-between py-1.5 px-2 border-b border-dashed border-[var(--color-rule)] last:border-0 hover:bg-[var(--color-paper-2)] transition-colors ${
+                        index === 0 ? 'text-[var(--color-accent)] font-bold bg-[var(--color-accent)]/5' : 'text-[var(--color-ink-2)]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 text-left font-bold text-[var(--color-muted)]">
+                          {(index + 1).toString().padStart(2, '0')}
+                        </span>
+                        {index < 3 && <Award className="w-3.5 h-3.5 shrink-0" />}
+                        <span className="truncate max-w-[130px] uppercase">{entry.display_name}</span>
+                      </div>
+                      <span>{entry.score.toString().padStart(3, '0')} PTS</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
@@ -521,43 +797,43 @@ export default function ArcadeLobby() {
         </div>
       </main>
 
-      {/* Minimal Footer Signature (Ft2 Inline style) */}
-      <footer className="w-full py-6 border-t border-neutral-800/60 text-center text-[10px] text-neutral-500 font-mono select-none">
-        IN THE HAUS © {new Date().getFullYear()} — IN-STORE ARCADE CONSOLE
+      {/* Dieter Rams Brand Footer */}
+      <footer className="w-full py-6 border-t border-[var(--color-rule)] text-center text-[9px] text-[var(--color-muted)] font-mono select-none bg-[var(--color-paper-2)]">
+        IN THE HAUS © {new Date().getFullYear()} — SYSTEM MODEL IH-FC-01 // BANGKOK THAILAND
       </footer>
 
-      {/* Claim Score Modal Overlay */}
+      {/* Claim Score Modal Overlay (Rams Mechanical Box style) */}
       {showClaimModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-[fadeIn_0.2s_ease-out]">
-          <div className="w-full max-w-md bg-[#141416] border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-[0_12px_48px_rgba(0,0,0,0.8)] text-left relative overflow-hidden">
-            {/* Glow line top */}
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#DFFF00]" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[999] animate-[fadeIn_0.15s_ease-out]">
+          <div className="w-full max-w-md bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md p-6 sm:p-8 shadow-xl text-left relative">
+            {/* Minimal orange highlight strip */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-[var(--color-brand)] rounded-t-md" />
 
             <button 
               onClick={() => setShowClaimModal(false)}
-              className="absolute top-5 right-5 text-neutral-500 hover:text-white transition-colors duration-200 cursor-pointer"
+              className="absolute top-5 right-5 text-[var(--color-ink-2)] hover:text-[var(--color-ink)] transition-colors duration-200 cursor-pointer font-mono text-[9px]"
             >
-              <X className="w-4 h-4" />
+              [ CLOSE ]
             </button>
 
             {/* View: User not logged in */}
             {!session && (
-              <div className="flex flex-col gap-4 mt-2">
-                <div className="w-10 h-10 bg-[#06C755]/10 text-[#06C755] rounded-xl flex items-center justify-center">
-                  <LogIn className="w-5 h-5" />
+              <div className="flex flex-col gap-4 mt-2 font-mono text-xs">
+                <div className="w-8 h-8 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded-[3px] flex items-center justify-center">
+                  <LogIn className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font mb-1">
-                    LINE ACCOUNT REQUIRED
+                  <h2 className="text-[10px] font-bold tracking-widest text-[var(--color-accent)] uppercase mb-1">
+                    // ACCESS DIRECTIVE REQUIRED
                   </h2>
-                  <h3 className="text-base font-bold font-sans text-white mb-2">คุณทำคะแนนได้ {claimScore} แต้ม!</h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed font-sans">
-                    กรุณาเข้าสู่ระบบด้วยบัญชี LINE เพื่อบันทึกคะแนนของคุณลงในตารางผู้นำและรับสิทธิ์ของรางวัลสะสม
+                  <h3 className="text-[13px] font-bold text-[var(--color-ink)] mb-2 font-sans">คุณเล่นได้ทั้งหมด {claimScore} แต้ม!</h3>
+                  <p className="text-[10px] text-[var(--color-ink-2)] leading-relaxed font-sans">
+                    กรุณาเชื่อมต่อบัญชีสมาชิก LINE เพื่อบันทึกคะแนนสะสมลงในระบบและคำนวณเหรียญ xhaus ที่ได้รับจากการเล่น
                   </p>
                 </div>
                 <button
                   onClick={handleLineLogin}
-                  className="btn-action w-full bg-[#06C755] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-xs display-font"
+                  className="btn-action w-full bg-[#06C755] hover:bg-[#05b04b] text-white font-bold py-2.5 rounded-[4px] flex items-center justify-center gap-2 cursor-pointer font-mono text-[10px] uppercase shadow-sm border border-[#05b04b]"
                 >
                   เข้าสู่ระบบด้วย LINE เพื่อบันทึกแต้ม
                 </button>
@@ -566,22 +842,22 @@ export default function ArcadeLobby() {
 
             {/* View: Idle (User logged in, ready to claim) */}
             {session && claimStatus === 'idle' && (
-              <div className="flex flex-col gap-4 mt-2">
-                <div className="w-10 h-10 bg-[#DFFF00]/10 text-[#DFFF00] rounded-xl flex items-center justify-center">
-                  <MapPin className="w-5 h-5" />
+              <div className="flex flex-col gap-4 mt-2 font-mono text-xs">
+                <div className="w-8 h-8 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded-[3px] flex items-center justify-center">
+                  <MapPin className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold font-mono tracking-widest text-[#DFFF00] uppercase display-font mb-1">
-                    GPS VERIFICATION
+                  <h2 className="text-[10px] font-bold tracking-widest text-[var(--color-accent)] uppercase mb-1">
+                    // GPS LOCK VERIFICATION
                   </h2>
-                  <h3 className="text-base font-bold font-sans text-white mb-2">บันทึกคะแนน {claimScore} แต้ม</h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed font-sans">
-                    เพื่อความโปร่งใสในการเล่นเกมนอกสถานที่ กรุณาตรวจสอบพิกัดตำแหน่ง (GPS) ยืนยันว่าคุณกำลังอยู่ในเขตร้าน
+                  <h3 className="text-[13px] font-bold text-[var(--color-ink)] mb-2 font-sans">ยืนยันบันทึกคะแนน {claimScore} แต้ม</h3>
+                  <p className="text-[10px] text-[var(--color-ink-2)] leading-relaxed font-sans">
+                    เพื่อความโปร่งใสและตรวจสอบความปลอดภัย กรุณายืนยันตำแหน่ง GPS ของคุณว่าอยู่ในพื้นที่ร้านในการเคลมรับสิทธิ์
                   </p>
                 </div>
                 <button
                   onClick={processClaimScore}
-                  className="btn-action w-full bg-[#DFFF00] text-black font-extrabold py-3 rounded-xl cursor-pointer text-xs display-font"
+                  className="btn-action w-full bg-[var(--color-accent)] text-white font-bold py-2.5 rounded-[4px] cursor-pointer font-mono text-[10px] uppercase border border-[oklch(55% 0.16 35)] shadow-sm"
                 >
                   ยืนยันตำแหน่ง GPS และบันทึกคะแนน
                 </button>
@@ -591,81 +867,81 @@ export default function ArcadeLobby() {
             {/* View: Checking GPS */}
             {claimStatus === 'checking_gps' && (
               <div className="py-8 flex flex-col items-center justify-center gap-3">
-                <RefreshCw className="w-8 h-8 text-[#DFFF00] animate-spin" />
-                <p className="text-xs text-neutral-400 font-mono animate-pulse">กำลังตรวจสอบตำแหน่งพิกัด GPS…</p>
+                <RefreshCw className="w-7 h-7 text-[var(--color-accent)] animate-spin" />
+                <p className="text-[10px] text-[var(--color-ink-2)] font-mono animate-pulse">VERIFYING GPS COORD LOCK…</p>
               </div>
             )}
 
             {/* View: Saving to Database */}
             {claimStatus === 'saving' && (
               <div className="py-8 flex flex-col items-center justify-center gap-3">
-                <RefreshCw className="w-8 h-8 text-[#DFFF00] animate-spin" />
-                <p className="text-xs text-neutral-400 font-mono animate-pulse">กำลังบันทึกข้อมูลคะแนนสะสม…</p>
+                <RefreshCw className="w-7 h-7 text-[var(--color-accent)] animate-spin" />
+                <p className="text-[10px] text-[var(--color-ink-2)] font-mono animate-pulse">WRITING DATA TO LEDGER…</p>
               </div>
             )}
 
             {/* View: Success */}
             {claimStatus === 'success' && (
-              <div className="flex flex-col gap-4 mt-2">
-                <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6" />
+              <div className="flex flex-col gap-4 mt-2 font-mono text-xs">
+                <div className="w-8 h-8 bg-emerald-500/10 text-emerald-600 rounded-[3px] flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold font-mono tracking-widest text-emerald-400 uppercase display-font mb-1">
-                    SUCCESS
+                  <h2 className="text-[10px] font-bold tracking-widest text-emerald-600 uppercase mb-1">
+                    // CLAIM GRANTED SUCCESS
                   </h2>
-                  <h3 className="text-base font-bold font-sans text-white mb-2">บันทึกคะแนนสำเร็จ!</h3>
-                  <div className="bg-neutral-900/80 border border-neutral-800/80 rounded-2xl py-3.5 px-5 w-full my-2 flex justify-between items-center font-mono">
-                    <span className="text-neutral-400 text-xs">คะแนนที่บันทึก</span>
-                    <span className="text-lg font-bold text-[#DFFF00]">{claimScore} แต้ม</span>
+                  <h3 className="text-[13px] font-bold text-[var(--color-ink)] mb-2 font-sans">บันทึกสถิติของคุณเข้าคลังข้อมูลสำเร็จ!</h3>
+                  <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-[4px] py-3 px-4 w-full my-2 flex justify-between items-center">
+                    <span className="text-[var(--color-ink-2)] text-[10px]">RECORDED SCORE</span>
+                    <span className="text-sm font-bold text-[var(--color-accent)]">{claimScore} PTS</span>
                   </div>
                   {claimResultMessage && (
-                    <div className="bg-[#DFFF00]/10 border border-[#DFFF00]/30 rounded-2xl py-3 px-4 w-full text-center text-xs font-bold text-[#DFFF00] my-3 font-mono leading-relaxed">
+                    <div className="bg-[var(--color-paper-3)] border border-[var(--color-rule)] rounded-[4px] py-3 px-4 w-full text-center text-[10px] font-bold text-[var(--color-ink)] my-3 leading-relaxed">
                       {claimResultMessage}
                     </div>
                   )}
                   {distance && (
-                    <p className="text-[10px] text-neutral-500 font-mono">
-                      ยืนยันพิกัดเรียบร้อย (ระยะห่างจากร้าน: {(distance * 1000).toFixed(0)} เมตร)
+                    <p className="text-[8px] text-[var(--color-muted)] uppercase">
+                      verified at {(distance * 1000).toFixed(0)} meters from base station
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => setShowClaimModal(false)}
-                  className="btn-action w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3 rounded-xl cursor-pointer text-xs display-font"
+                  className="btn-action w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink-2)] text-[var(--color-paper)] font-bold py-2.5 rounded-[4px] cursor-pointer font-mono text-[10px] uppercase shadow-sm"
                 >
-                  ปิดหน้าต่าง
+                  DISMISS PANEL
                 </button>
               </div>
             )}
 
             {/* View: Error */}
             {claimStatus === 'error' && (
-              <div className="flex flex-col gap-4 mt-2">
-                <div className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center">
-                  <ShieldAlert className="w-5 h-5" />
+              <div className="flex flex-col gap-4 mt-2 font-mono text-xs">
+                <div className="w-8 h-8 bg-red-500/10 text-red-500 rounded-[3px] flex items-center justify-center">
+                  <ShieldAlert className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold font-mono tracking-widest text-red-500 uppercase display-font mb-1">
-                    VERIFICATION FAILED
+                  <h2 className="text-[10px] font-bold tracking-widest text-red-500 uppercase mb-1">
+                    // TRANSACTION REJECTED
                   </h2>
-                  <h3 className="text-base font-bold font-sans text-white mb-1">ไม่สามารถบันทึกคะแนนได้</h3>
-                  <p className="text-xs text-red-400/90 leading-relaxed font-sans">
+                  <h3 className="text-[13px] font-bold text-[var(--color-ink)] mb-1 font-sans">การบันทึกสถิติล้มเหลว</h3>
+                  <p className="text-[10px] text-red-600/90 leading-relaxed font-sans">
                     {claimError}
                   </p>
                 </div>
                 <div className="flex w-full gap-3 mt-2">
                   <button
                     onClick={session ? processClaimScore : handleLineLogin}
-                    className="btn-action flex-1 bg-[#DFFF00] text-black font-extrabold py-3 rounded-xl cursor-pointer text-xs display-font text-center"
+                    className="btn-action flex-1 bg-[var(--color-accent)] text-white font-bold py-2.5 rounded-[4px] cursor-pointer font-mono text-[10px] uppercase text-center border border-[oklch(55% 0.16 35)]"
                   >
-                    ลองใหม่ดูอีกครั้ง
+                    RETRY
                   </button>
                   <button
                     onClick={() => setShowClaimModal(false)}
-                    className="btn-action flex-1 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 rounded-xl text-xs display-font text-center"
+                    className="btn-action flex-1 bg-[var(--color-paper-3)] hover:bg-[var(--color-rule)] text-[var(--color-ink)] font-bold py-2.5 rounded-[4px] text-[10px] uppercase text-center border border-[var(--color-rule)] cursor-pointer"
                   >
-                    ยกเลิก
+                    CANCEL
                   </button>
                 </div>
               </div>

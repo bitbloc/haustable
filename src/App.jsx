@@ -178,7 +178,8 @@ function App() {
               <Route path="menu" element={<AdminMenu />} />
               <Route path="costing" element={<MenuCostPage />} />
               <Route path="lab" element={<RecipeLabPage />} />
-              <Route path="promotions" element={<AdminPromotions />} />
+              <Route path="promotions" element={<AdminPromotions defaultTab="promo" />} />
+              <Route path="rewards" element={<AdminPromotions defaultTab="rewards" />} />
               <Route path="arcade" element={<AdminArcade />} />
               <Route path="tables" element={<AdminTableManager />} />
               <Route path="editor" element={<AdminTableEditor />} />

@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-07-14",
+    "macrostructure": "Bento Grid",
+    "theme": "custom",
+    "theme_axes": "light / mono / chromatic-other (orange ~35°)",
+    "vibe": "Dieter Rams industrial console, xhaus integration",
+    "enrichment": "none",
+    "brief": "Link /arcade to xhaus coins and apply Rams UX/UI"
+  },
+  {
     "date": "2026-06-26",
     "macrostructure": "Bento Grid",
     "theme": "custom",
