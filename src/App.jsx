@@ -75,17 +75,6 @@ function App() {
       setSession(session)
     })
 
-    // Prepare for Native App: Redirect to /pos if running in Capacitor
-    if (Capacitor.isNativePlatform()) {
-        const path = window.location.pathname
-        if (path === '/' || path === '') {
-            // Check if we can use history, but outside router we just set hash or pathname depending on router type.
-            // Since we use BrowserRouter, direct manipulation works if server/file supports it. 
-            // Capacitor serves from localhost, so pathname works.
-            window.location.replace('/pos') 
-        }
-    }
-
     const handleAuthChange = async (event, session) => {
         setSession(session)
 
@@ -145,7 +134,7 @@ function App() {
           <Route path="/link" element={<AdsLandingPage />} />
           <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
           <Route path="/qa" element={<QnAPage />} />
-          <Route path="/index.html" element={<Navigate to="/" replace />} />
+          <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
           <Route path="/arcade" element={
             <Suspense fallback={<div className="min-h-screen bg-[#0a0018] flex items-center justify-center text-purple-400 font-mono text-xs uppercase tracking-widest">LOADING PLAYGROUND...</div>}>
@@ -161,7 +150,7 @@ function App() {
           {/* Routes requiring Booking Context */}
           <Route element={<BookingProviderLayout />}>
             {/* Home Page */}
-            <Route path="/" element={<Home session={session} />} />
+            <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Home session={session} />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/staff/login" element={<LoginPage />} />
 
