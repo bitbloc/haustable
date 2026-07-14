@@ -12,7 +12,7 @@ import POSCRMPanel from './POSCRMPanel';
 import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search } from 'lucide-react';
 
 export default function POSDashboard() {
@@ -232,37 +232,97 @@ export default function POSDashboard() {
         const summary = getShiftSummary();
         const actual = parseFloat(closeShiftForm.actualCash) || 0;
         
-        const reportData = {
-            staffName: activeShift.staffName,
-            openedAt: activeShift.openedAt,
-            closedAt: new Date().toISOString(),
-            openingFloat: activeShift.openingFloat,
-            cashSales: summary.cashSales,
-            qrSales: summary.qrSales,
-            totalSales: summary.totalSales,
-            totalIn: summary.totalIn,
-            totalOut: summary.totalOut,
-            expectedCash: summary.expectedCash,
-            actualCash: actual,
-            difference: actual - summary.expectedCash
-        };
-
-        // Close shift locally
-        closeShift(actual);
-        setShowCloseShiftModal(false);
-        setCloseShiftForm({ actualCash: '' });
-        toast.success('ปิดรอบการทำงานและบันทึกประวัติสำเร็จแล้ว');
-
-        // Print shift report to SUNMI
+        const toastId = toast.loading('กำลังปิดกะและพิมพ์รายงาน...');
+        
         try {
-            const rawBytes = encodeShiftClosureReportData(reportData, '80mm', 'sunmi');
+            // 1. Fetch bookings in this shift
+            const completedBookingIds = activeShift.transactions?.map(tx => tx.bookingId) || [];
+            let bookingsData = [];
+            
+            if (isOnline()) {
+                let bookingsQuery = supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        tables_layout (table_name),
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            menu_item_id,
+                            status,
+                            menu_items (
+                                name,
+                                category_id
+                            )
+                        )
+                    `);
+
+                if (completedBookingIds.length > 0) {
+                    const orFilter = `id.in.(${completedBookingIds.join(',')}),and(status.in.(void,cancelled),booking_time.gte.${activeShift.openedAt})`;
+                    const { data } = await bookingsQuery.or(orFilter);
+                    bookingsData = data || [];
+                } else {
+                    const { data } = await bookingsQuery
+                        .in('status', ['void', 'cancelled'])
+                        .gte('booking_time', activeShift.openedAt);
+                    bookingsData = data || [];
+                }
+            }
+            
+            // 2. Fetch categories
+            let categoriesData = [];
+            if (isOnline()) {
+                const { data } = await supabase
+                    .from('menu_categories')
+                    .select('id, name');
+                categoriesData = data || [];
+            }
+            
+            // 3. Compile reportData
+            const compiledReport = compileShiftReportData(
+                {
+                    ...activeShift,
+                    expectedCash: summary.expectedCash,
+                    closedCash: actual,
+                    difference: actual - summary.expectedCash,
+                    cashSales: summary.cashSales,
+                    qrSales: summary.qrSales,
+                    totalSales: summary.totalSales,
+                    totalIn: summary.totalIn,
+                    totalOut: summary.totalOut
+                },
+                bookingsData,
+                categoriesData
+            );
+            
+            // 4. Print shift report to SUNMI
+            const rawBytes = encodeShiftClosureReportData(compiledReport, '80mm', 'sunmi');
             const printRes = await printToSunmiBuiltIn(rawBytes);
+            
+            // 5. Close shift locally & cloud
+            closeShift(actual);
+            setShowCloseShiftModal(false);
+            setCloseShiftForm({ actualCash: '' });
+            
+            toast.dismiss(toastId);
+            toast.success('ปิดรอบการทำงานและบันทึกประวัติสำเร็จแล้ว');
             if (printRes) {
                 toast.success('พิมพ์ใบสรุปยอดปิดกะเรียบร้อยแล้ว');
             }
-        } catch (printErr) {
-            console.error("Failed to print shift report on SUNMI:", printErr);
-            toast.error('ไม่สามารถพิมพ์ใบรายงานได้ แต่ระบบทำการปิดกะสำเร็จแล้ว');
+        } catch (err) {
+            console.error("Failed to close shift or print:", err);
+            toast.dismiss(toastId);
+            
+            // Fallback close shift locally in case of error
+            try {
+                closeShift(actual);
+                setShowCloseShiftModal(false);
+                setCloseShiftForm({ actualCash: '' });
+                toast.success('ปิดรอบการทำงานสำเร็จ (เกิดข้อผิดพลาดในการดึงข้อมูลพิมพ์)');
+            } catch (closeErr) {
+                toast.error('ไม่สามารถปิดรอบการทำงานได้: ' + closeErr.message);
+            }
         }
     };
 

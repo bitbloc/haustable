@@ -401,50 +401,271 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     return encoder.encode();
 }
 
+// Formatter Helpers for shift reports
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} - ${hours}:${minutes}`;
+}
+
+function formatThreeCols(left, mid, right, maxCols) {
+    const rightCol = 12;
+    const midCol = 5;
+    // two spaces separation
+    const leftCol = maxCols - rightCol - midCol - 3;
+    
+    let leftStr = String(left);
+    if (leftStr.length > leftCol) {
+        leftStr = leftStr.slice(0, leftCol - 3) + '...';
+    }
+    
+    return leftStr.padEnd(leftCol, ' ') + '  ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
+}
+
+function formatTwoCols(left, right, maxCols) {
+    const rightCol = 12;
+    const leftCol = maxCols - rightCol - 1; // one space separation
+    
+    let leftStr = String(left);
+    if (leftStr.length > leftCol) {
+        leftStr = leftStr.slice(0, leftCol - 3) + '...';
+    }
+    
+    return leftStr.padEnd(leftCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
+}
+
+// Compile raw bookings into rich structured shift report details
+export function compileShiftReportData(shift, bookingsData, categoriesData = []) {
+    const categoryMap = {};
+    categoriesData.forEach(cat => {
+        categoryMap[cat.id] = cat.name;
+    });
+
+    const completedBookings = bookingsData.filter(b => b.status === 'completed');
+    const voidBookings = bookingsData.filter(b => b.status === 'void');
+    const cancelledBookings = bookingsData.filter(b => b.status === 'cancelled');
+
+    // 1. Category Sales
+    const categorySalesMap = {};
+    let totalItemsCount = 0;
+    let totalItemsAmount = 0;
+
+    completedBookings.forEach(b => {
+        b.order_items?.forEach(item => {
+            const catId = item.menu_items?.category_id || 'other';
+            const catName = categoryMap[catId] || 'อื่นๆ / Uncategorized';
+            const qty = item.quantity || 0;
+            const price = item.price_at_time || 0;
+            const amt = qty * price;
+
+            totalItemsCount += qty;
+            totalItemsAmount += amt;
+
+            if (!categorySalesMap[catId]) {
+                categorySalesMap[catId] = { name: catName, quantity: 0, amount: 0 };
+            }
+            categorySalesMap[catId].quantity += qty;
+            categorySalesMap[catId].amount += amt;
+        });
+    });
+
+    const categorySales = Object.values(categorySalesMap).sort((a, b) => b.amount - a.amount);
+
+    // 2. Payments
+    let cashCount = 0;
+    let cashAmount = 0;
+    let qrCount = 0;
+    let qrAmount = 0;
+    let otherCount = 0;
+    let otherAmount = 0;
+    
+    const otherDetailsMap = {};
+
+    completedBookings.forEach(b => {
+        const isCash = (b.payment_slip_url) ? false : !(b.staff_remark || '').toLowerCase().includes('qr') && !(b.staff_remark || '').toLowerCase().includes('transfer') && !(b.staff_remark || '').toLowerCase().includes('โอน');
+        const amt = b.total_amount || 0;
+        
+        if (isCash) {
+            cashCount++;
+            cashAmount += amt;
+        } else {
+            const remark = (b.staff_remark || '').toLowerCase();
+            let parsedBank = '';
+            if (remark.includes('scb') || remark.includes('ไทยพาณิชย์')) {
+                parsedBank = 'ไทยพาณิชย์ พลัส';
+            } else if (remark.includes('kbank') || remark.includes('กสิกร')) {
+                parsedBank = 'กสิกรไทย';
+            } else if (remark.includes('bbl') || remark.includes('กรุงเทพ')) {
+                parsedBank = 'กรุงเทพ';
+            } else if (remark.includes('ktb') || remark.includes('กรุงไทย')) {
+                parsedBank = 'กรุงไทย';
+            }
+
+            if (parsedBank) {
+                otherCount++;
+                otherAmount += amt;
+                if (!otherDetailsMap[parsedBank]) {
+                    otherDetailsMap[parsedBank] = { name: parsedBank, count: 0, amount: 0 };
+                }
+                otherDetailsMap[parsedBank].count++;
+                otherDetailsMap[parsedBank].amount += amt;
+            } else {
+                qrCount++;
+                qrAmount += amt;
+            }
+        }
+    });
+
+    const otherDetails = Object.values(otherDetailsMap);
+
+    // 3. Order Types
+    let dineInCount = 0;
+    let dineInAmount = 0;
+    let pickupCount = 0;
+    let pickupAmount = 0;
+
+    completedBookings.forEach(b => {
+        const amt = b.total_amount || 0;
+        if (b.booking_type === 'pickup') {
+            pickupCount++;
+            pickupAmount += amt;
+        } else {
+            dineInCount++;
+            dineInAmount += amt;
+        }
+    });
+
+    // 4. Sales Channels
+    let linemanCount = 0;
+    let linemanAmount = 0;
+    let walkinCount = 0;
+    let walkinAmount = 0;
+
+    completedBookings.forEach(b => {
+        const amt = b.total_amount || 0;
+        const remark = (b.staff_remark || '').toLowerCase();
+        const note = (b.customer_note || '').toLowerCase();
+        
+        if (remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man')) {
+            linemanCount++;
+            linemanAmount += amt;
+        } else {
+            walkinCount++;
+            walkinAmount += amt;
+        }
+    });
+
+    // 5. Voids & Cancels
+    let voidBillCount = voidBookings.length;
+    let voidBillAmount = voidBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    
+    let voidItemCount = 0;
+    let voidItemAmount = 0;
+    let cancelItemCount = 0;
+    let cancelItemAmount = 0;
+
+    bookingsData.forEach(b => {
+        b.order_items?.forEach(item => {
+            if (item.status === 'void') {
+                voidItemCount += item.quantity || 0;
+                voidItemAmount += (item.quantity || 0) * (item.price_at_time || 0);
+            } else if (item.status === 'cancelled') {
+                cancelItemCount += item.quantity || 0;
+                cancelItemAmount += (item.quantity || 0) * (item.price_at_time || 0);
+            }
+        });
+    });
+
+    let cancelBillCount = cancelledBookings.length;
+    let cancelBillAmount = cancelledBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+    // 6. General metrics
+    const totalDiscounts = completedBookings.reduce((sum, b) => sum + (b.discount_amount || 0), 0);
+    const totalGuests = completedBookings.reduce((sum, b) => sum + (b.pax || 0), 0);
+    
+    let totalVat = 0;
+    completedBookings.forEach(b => {
+        const sub = b.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
+        const disc = b.discount_amount || 0;
+        const net = sub - disc;
+        if (b.total_amount && Math.abs(b.total_amount - (net * 1.07)) < 1) {
+            totalVat += net * 0.07;
+        }
+    });
+
+    const netSales = completedBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    const avgSalesPerBill = completedBookings.length > 0 ? (netSales / completedBookings.length) : 0;
+
+    // Deduct adjustments
+    const adjustments = shift.adjustments || [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+
+    return {
+        staffName: shift.staffName,
+        openedAt: shift.openedAt,
+        closedAt: shift.closedAt || new Date().toISOString(),
+        openingFloat: shift.openingFloat,
+        cashSales: shift.cashSales || cashAmount,
+        qrSales: shift.qrSales || qrAmount,
+        totalSales: shift.totalSales || (cashAmount + qrAmount),
+        totalIn,
+        totalOut,
+        expectedCash: shift.expectedCash,
+        actualCash: shift.closedCash,
+        difference: shift.difference,
+        
+        shiftId: shift.id ? shift.id.replace('shift_', '') : '',
+        totalBookings: completedBookings.length,
+        totalItemsCount,
+        totalItemsAmount,
+        categorySales,
+        
+        paymentSales: {
+            cash: { count: cashCount, amount: cashAmount },
+            qrPromptPay: { count: qrCount, amount: qrAmount },
+            linemanCash: { count: 0, amount: 0 },
+            creditCard: { count: 0, amount: 0 },
+            other: { count: otherCount, amount: otherAmount, subItems: otherDetails }
+        },
+        
+        orderTypeSales: {
+            dineIn: { count: dineInCount, amount: dineInAmount },
+            pickup: { count: pickupCount, amount: pickupAmount }
+        },
+        
+        channelSales: {
+            linemanDelivery: { count: linemanCount, amount: linemanAmount },
+            walkin: { count: walkinCount, amount: walkinAmount }
+        },
+        
+        voidData: {
+            wholeBill: { count: voidBillCount, amount: voidBillAmount },
+            itemLevel: { count: voidItemCount, amount: voidItemAmount },
+            paidBillVoidCount: 0
+        },
+        
+        cancelData: {
+            wholeBill: { count: cancelBillCount, amount: cancelBillAmount },
+            itemLevel: { count: cancelItemCount, amount: cancelItemAmount }
+        },
+        
+        totalDiscounts,
+        totalVat,
+        totalGuests,
+        averageSalesPerBill: avgSalesPerBill,
+        adjustments
+    };
+}
+
 // Convert shift report data to ESC/POS binary format
 export function encodeShiftReportData(reportData, paperSize = '58mm', printerType = 'universal') {
-    const encoder = new EscPosEncoder(printerType === 'sunmi');
-    encoder.initialize();
-
-    const maxCols = paperSize === '80mm' ? 48 : 30;
-    const divider = '-'.repeat(maxCols);
-    const dateStr = new Date().toLocaleString('th-TH');
-
-    encoder.align('center')
-           .size(1, 1)
-           .bold(true)
-           .line('IN THE HAUS')
-           .size(0, 0)
-           .bold(false)
-           .line('SHIFT SUMMARY REPORT')
-           .line(divider)
-           .align('left')
-           .line(`Printed: ${dateStr}`)
-           .line(`Staff  : ${reportData.staffName}`)
-           .line(divider);
-
-    encoder.bold(true).line('SALES SUMMARY').bold(false);
-    encoder.text(`Total Bookings`.padEnd(maxCols - 12, ' ') + `${reportData.totalBookings}`.padStart(12, ' ') + '\n');
-    encoder.text(`Total Items`.padEnd(maxCols - 12, ' ') + `${reportData.totalItems}`.padStart(12, ' ') + '\n');
-    encoder.text(`Gross Revenue`.padEnd(maxCols - 12, ' ') + `฿${reportData.grossRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`Discounts`.padEnd(maxCols - 12, ' ') + `-฿${reportData.discounts.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.line(divider);
-
-    encoder.bold(true).line('REVENUE BY METHOD').bold(false);
-    encoder.text(`Cash Payments`.padEnd(maxCols - 12, ' ') + `฿${reportData.cashRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`QR Payments`.padEnd(maxCols - 12, ' ') + `฿${reportData.qrRevenue.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.line(divider);
-
-    encoder.bold(true)
-           .size(0, 1)
-           .text(`NET REVENUE`.padEnd(maxCols - 12, ' ') + `฿${reportData.netRevenue.toLocaleString()}`.padStart(12, ' ') + '\n')
-           .size(0, 0)
-           .bold(false)
-           .line(divider)
-           .feed(4)
-           .cut();
-
-    return encoder.encode();
+    return encodeShiftClosureReportData(reportData, paperSize, printerType);
 }
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
@@ -454,48 +675,168 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
 
     const maxCols = paperSize === '80mm' ? 48 : 30;
     const divider = '-'.repeat(maxCols);
-    const dateStr = new Date().toLocaleString('th-TH');
+
+    // Header info
+    const shopName = reportData.shopName || 'ร้านในบ้าน นครพนม';
+    const shopAddress = reportData.shopAddress || 'นครพนม';
 
     encoder.align('center')
-           .size(1, 1)
            .bold(true)
-           .line('IN THE HAUS')
+           .size(0, 1) // Double height
+           .line('รายงานยอดการขาย')
            .size(0, 0)
            .bold(false)
-           .line('SHIFT CLOSURE REPORT')
-           .line(divider)
+           .line(`รหัส: ${reportData.shiftId || reportData.staffName || ''}`)
+           .line(shopName)
+           .line(shopAddress)
+           .line('')
            .align('left')
-           .line(`Printed: ${dateStr}`)
-           .line(`Staff  : ${reportData.staffName}`)
-           .line(`Opened : ${new Date(reportData.openedAt).toLocaleString('th-TH')}`)
-           .line(`Closed : ${new Date(reportData.closedAt).toLocaleString('th-TH')}`)
+           .line(`เวลาเปิดรอบ: ${formatDateTime(reportData.openedAt)}`)
+           .line(`โดย: ${reportData.staffName}`)
+           .line('')
+           .line(`เวลาปิดรอบ: ${formatDateTime(reportData.closedAt)}`)
+           .line(`โดย: ${reportData.staffName}`)
            .line(divider);
 
-    encoder.bold(true).line('CASH FLOW').bold(false);
-    encoder.text(`Opening Float`.padEnd(maxCols - 12, ' ') + `฿${reportData.openingFloat.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`Cash Sales`.padEnd(maxCols - 12, ' ') + `฿${reportData.cashSales.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`QR Sales`.padEnd(maxCols - 12, ' ') + `฿${reportData.qrSales.toLocaleString()}`.padStart(12, ' ') + '\n');
-    
-    if (reportData.totalIn > 0) {
-        encoder.text(`Petty Cash In`.padEnd(maxCols - 12, ' ') + `+฿${reportData.totalIn.toLocaleString()}`.padStart(12, ' ') + '\n');
-    }
-    if (reportData.totalOut > 0) {
-        encoder.text(`Petty Cash Out`.padEnd(maxCols - 12, ' ') + `-฿${reportData.totalOut.toLocaleString()}`.padStart(12, ' ') + '\n');
-    }
-    encoder.line(divider);
+    // Section 1: ยอดขายตามหมวดหมู่
+    if (reportData.categorySales && reportData.categorySales.length > 0) {
+        encoder.bold(true).line('ยอดขายตามหมวดหมู่').bold(false);
+        let totalQty = 0;
+        let totalAmt = 0;
+        reportData.categorySales.forEach(cat => {
+            totalQty += cat.quantity || 0;
+            totalAmt += cat.amount || 0;
+            encoder.line(formatThreeCols(cat.name, cat.quantity, (cat.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        });
+        
+        encoder.line(formatThreeCols('รวม', totalQty, totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        
+        const discountVal = reportData.totalDiscounts || 0;
+        const vatVal = reportData.totalVat || 0;
+        const netSales = reportData.totalSales - discountVal;
+        const preVatVal = netSales - vatVal;
 
-    encoder.bold(true).line('RECONCILIATION').bold(false);
-    encoder.text(`Expected Cash`.padEnd(maxCols - 12, ' ') + `฿${reportData.expectedCash.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.text(`Actual Cash`.padEnd(maxCols - 12, ' ') + `฿${reportData.actualCash.toLocaleString()}`.padStart(12, ' ') + '\n');
-    encoder.line(divider);
+        encoder.line(formatTwoCols('ส่วนลด', discountVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ค่าบริการ', '0.00', maxCols));
+        encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', preVatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ภาษี (VAT)', vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ปัดเศษ', '0.00', maxCols));
+        encoder.line(formatTwoCols('ส่วนลดท้ายบิล', '0.00', maxCols));
+        encoder.line(formatTwoCols('ยอดขายสุทธิ', netSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('จำนวนลูกค้า', (reportData.totalGuests || 0).toString(), maxCols));
+        encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อบิล', (reportData.averageSalesPerBill || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    } else {
+        // Fallback backward compatibility
+        encoder.bold(true).line('SALES SUMMARY').bold(false);
+        encoder.text(`Total Bookings`.padEnd(maxCols - 12, ' ') + `${reportData.totalBookings || 0}`.padStart(12, ' ') + '\n');
+        encoder.text(`Gross Revenue`.padEnd(maxCols - 12, ' ') + `฿${(reportData.grossRevenue || reportData.totalSales || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
+        encoder.text(`Discounts`.padEnd(maxCols - 12, ' ') + `-฿${(reportData.discounts || reportData.totalDiscounts || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
+        encoder.line(divider);
+    }
 
-    const diffLabel = reportData.difference === 0 ? 'Cash Matched' : reportData.difference > 0 ? 'Cash Over' : 'Cash Short';
-    encoder.bold(true)
-           .size(0, 1)
-           .text(`DIFF (${diffLabel})`.padEnd(maxCols - 12, ' ') + `${reportData.difference >= 0 ? '+' : ''}฿${reportData.difference.toLocaleString()}`.padStart(12, ' ') + '\n')
-           .size(0, 0)
-           .bold(false)
-           .line(divider)
+    // Section 2: ยอดขายตามการชำระเงิน
+    if (reportData.paymentSales) {
+        encoder.line(divider);
+        encoder.bold(true).line('ยอดขายตามการชำระเงิน').bold(false);
+        
+        const cash = reportData.paymentSales.cash || { count: 0, amount: 0 };
+        const linemanCash = reportData.paymentSales.linemanCash || { count: 0, amount: 0 };
+        const credit = reportData.paymentSales.creditCard || { count: 0, amount: 0 };
+        const qr = reportData.paymentSales.qrPromptPay || { count: 0, amount: 0 };
+        const other = reportData.paymentSales.other || { count: 0, amount: 0, subItems: [] };
+        
+        encoder.line(formatThreeCols('เงินสด', cash.count, (cash.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatThreeCols('เงินสดจาก LINE MAN', linemanCash.count, (linemanCash.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatThreeCols('บัตรเครดิต', credit.count, (credit.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatThreeCols('QR PromptPay', qr.count, (qr.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatThreeCols('การชำระเงินแบบอื่นๆ', other.count, (other.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        
+        if (other.subItems && other.subItems.length > 0) {
+            other.subItems.forEach(sub => {
+                encoder.line(formatThreeCols(`• ${sub.name}`, sub.count, (sub.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            });
+        }
+        
+        const netSales = reportData.totalSales - (reportData.totalDiscounts || 0);
+        encoder.line(formatTwoCols('ยอดขายสุทธิ', netSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    } else {
+        // Fallback
+        encoder.bold(true).line('REVENUE BY METHOD').bold(false);
+        encoder.text(`Cash Payments`.padEnd(maxCols - 12, ' ') + `฿${(reportData.cashRevenue || reportData.cashSales || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
+        encoder.text(`QR Payments`.padEnd(maxCols - 12, ' ') + `฿${(reportData.qrRevenue || reportData.qrSales || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
+    }
+
+    // Section 3: ยอดขายตามประเภทออเดอร์
+    if (reportData.orderTypeSales) {
+        encoder.line(divider);
+        encoder.bold(true).line('ยอดขายตามประเภทออเดอร์').bold(false);
+        
+        const dineIn = reportData.orderTypeSales.dineIn || { count: 0, amount: 0 };
+        const pickup = reportData.orderTypeSales.pickup || { count: 0, amount: 0 };
+        
+        if (dineIn.count > 0 || pickup.count === 0) {
+            encoder.line(formatThreeCols('กินที่ร้าน', dineIn.count, (dineIn.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        }
+        if (pickup.count > 0) {
+            encoder.line(formatThreeCols('กลับบ้าน / รับเอง', pickup.count, (pickup.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        }
+    }
+
+    // Section 4: ยอดขายตามช่องทางการขาย
+    if (reportData.channelSales) {
+        encoder.line(divider);
+        encoder.bold(true).line('ยอดขายตามช่องทางการขาย').bold(false);
+        
+        const linemanDelivery = reportData.channelSales.linemanDelivery || { count: 0, amount: 0 };
+        const walkin = reportData.channelSales.walkin || { count: 0, amount: 0 };
+        
+        if (linemanDelivery.count > 0) {
+            encoder.line(formatThreeCols('LINE MAN Delivery', linemanDelivery.count, (linemanDelivery.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        }
+        if (walkin.count > 0 || linemanDelivery.count === 0) {
+            encoder.line(formatThreeCols('หน้าร้าน / Direct', walkin.count, (walkin.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        }
+    }
+
+    // Section 5: รอบการขาย
+    encoder.line(divider);
+    encoder.bold(true).line('รอบการขาย').bold(false);
+    encoder.line(formatTwoCols('เงินสดเริ่มต้น', (reportData.openingFloat || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('ยอดขายเงินสด', (reportData.cashSales || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('คืนเงิน', '0.00', maxCols));
+    encoder.line(formatTwoCols('เงินเข้า/เงินออก', ((reportData.totalIn || 0) - (reportData.totalOut || 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('จำนวนเงินที่ควรมี', (reportData.expectedCash || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('จำนวนจริงในลิ้นชัก', (reportData.actualCash || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('ส่วนต่าง', (reportData.difference || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('บิลทั้งหมด', (reportData.totalBookings || 0).toString(), maxCols));
+
+    // Detailed adjustments list on receipt
+    if (reportData.adjustments && reportData.adjustments.length > 0) {
+        reportData.adjustments.forEach(adj => {
+            const prefix = adj.type === 'in' ? 'นำเข้า' : 'นำออก';
+            const sign = adj.type === 'in' ? '+' : '-';
+            const label = `  • [${prefix}] ${adj.note || ''}`;
+            const amountStr = `${sign}${adj.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            encoder.line(formatTwoCols(label, amountStr, maxCols));
+        });
+    }
+
+    // Section 6: ทำลายบิล (Void)
+    const voidData = reportData.voidData || { wholeBill: { count: 0, amount: 0 }, itemLevel: { count: 0, amount: 0 }, paidBillVoidCount: 0 };
+    encoder.line(divider);
+    encoder.bold(true).line('ทำลายบิล (Void)').bold(false);
+    encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, (voidData.wholeBill.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, (voidData.itemLevel.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('ทำลายบิลที่ชำระเงินแล้ว', (voidData.paidBillVoidCount || 0).toString(), maxCols));
+
+    // Section 7: ยกเลิกเมนู (Cancel)
+    const cancelData = reportData.cancelData || { wholeBill: { count: 0, amount: 0 }, itemLevel: { count: 0, amount: 0 } };
+    encoder.line(divider);
+    encoder.bold(true).line('ยกเลิกเมนู (Cancel)').bold(false);
+    encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, (cancelData.wholeBill.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, (cancelData.itemLevel.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+
+    encoder.line(divider)
            .feed(4)
            .cut();
 

@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
-import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../utils/printerHelper';
+import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData } from '../utils/printerHelper';
 import { getShiftHistory, syncShiftHistoryFromCloud } from '../utils/shiftHelper';
 
 export default function POSReportsPanel() {
@@ -156,6 +156,8 @@ export default function POSReportsPanel() {
     // Print Shift Report HTML
     const handlePrintShiftReport = async () => {
         let paperSize = '58mm';
+        let printerType = 'universal';
+        let btDeviceName = '';
         
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
@@ -170,20 +172,25 @@ export default function POSReportsPanel() {
             console.error("Failed to read printer config:", err);
         }
 
+        const dayShift = {
+            staffName: 'Cashier Staff',
+            openedAt: bookings.length > 0 ? bookings[bookings.length - 1].booking_time : new Date().toISOString(),
+            closedAt: new Date().toISOString(),
+            openingFloat: 0,
+            expectedCash: cashSales,
+            closedCash: cashSales,
+            difference: 0,
+            cashSales: cashSales,
+            qrSales: qrSales,
+            totalSales: totalSales,
+            totalIn: 0,
+            totalOut: 0
+        };
+        const compiledReport = compileShiftReportData(dayShift, bookings, categories);
+
         if (printerType === 'sunmi') {
             try {
-                const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
-                const reportData = {
-                    staffName: 'Cashier Staff',
-                    totalBookings: completedBookings.length,
-                    totalItems: totalItems,
-                    grossRevenue: totalSales + totalDiscounts,
-                    discounts: totalDiscounts,
-                    cashRevenue: cashSales,
-                    qrRevenue: qrSales,
-                    netRevenue: totalSales
-                };
-                const rawBytes = encodeShiftReportData(reportData, '80mm', 'sunmi');
+                const rawBytes = encodeShiftReportData(compiledReport, '80mm', 'sunmi');
                 await printToSunmiBuiltIn(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -192,18 +199,7 @@ export default function POSReportsPanel() {
             }
         } else if (printerType === 'rawbt') {
             try {
-                const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
-                const reportData = {
-                    staffName: 'Cashier Staff',
-                    totalBookings: completedBookings.length,
-                    totalItems: totalItems,
-                    grossRevenue: totalSales + totalDiscounts,
-                    discounts: totalDiscounts,
-                    cashRevenue: cashSales,
-                    qrRevenue: qrSales,
-                    netRevenue: totalSales
-                };
-                const rawBytes = encodeShiftReportData(reportData, paperSize, 'rawbt');
+                const rawBytes = encodeShiftReportData(compiledReport, paperSize, 'rawbt');
                 await printToRawBTWebSocket(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -212,18 +208,7 @@ export default function POSReportsPanel() {
             }
         } else if (printerType === 'bluetooth') {
             try {
-                const totalItems = completedBookings.reduce((sum, b) => sum + (b.order_items?.reduce((s, i) => s + i.quantity, 0) || 0), 0);
-                const reportData = {
-                    staffName: 'Cashier Staff',
-                    totalBookings: completedBookings.length,
-                    totalItems: totalItems,
-                    grossRevenue: totalSales + totalDiscounts,
-                    discounts: totalDiscounts,
-                    cashRevenue: cashSales,
-                    qrRevenue: qrSales,
-                    netRevenue: totalSales
-                };
-                const rawBytes = encodeShiftReportData(reportData, paperSize, 'bluetooth');
+                const rawBytes = encodeShiftReportData(compiledReport, paperSize, 'bluetooth');
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -324,37 +309,69 @@ export default function POSReportsPanel() {
     };
 
     const handlePrintHistoricalShiftReport = async (shift) => {
+        const toastId = toast.loading('กำลังโหลดข้อมูลและเตรียมพิมพ์รายงานประวัติ...');
         const adjs = shift.adjustments || [];
         const totalIn = shift.totalIn !== undefined ? shift.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
         const totalOut = shift.totalOut !== undefined ? shift.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
 
         try {
-            const reportData = {
-                staffName: shift.staffName,
-                openedAt: shift.openedAt,
-                closedAt: shift.closedAt,
-                openingFloat: shift.openingFloat,
-                cashSales: shift.cashSales || 0,
-                qrSales: shift.qrSales || 0,
-                totalIn,
-                totalOut,
-                expectedCash: shift.expectedCash,
-                actualCash: shift.closedCash,
-                difference: shift.difference,
-                totalBookings: shift.transactions?.length || 0,
-                totalItems: 0,
-                grossRevenue: (shift.cashSales || 0) + (shift.qrSales || 0),
-                discounts: 0,
-                cashRevenue: shift.cashSales || 0,
-                qrRevenue: shift.qrSales || 0,
-                netRevenue: (shift.cashSales || 0) + (shift.qrSales || 0)
-            };
+            // 1. Fetch bookings in this historical shift
+            const completedBookingIds = shift.transactions?.map(tx => tx.bookingId) || [];
+            let bookingsData = [];
+            
+            let bookingsQuery = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    tables_layout (table_name),
+                    order_items (
+                        id,
+                        quantity,
+                        price_at_time,
+                        menu_item_id,
+                        status,
+                        menu_items (
+                            name,
+                            category_id
+                        )
+                    )
+                `);
 
-            const rawBytes = encodeShiftClosureReportData(reportData, '80mm', 'sunmi');
+            if (completedBookingIds.length > 0) {
+                const orFilter = `id.in.(${completedBookingIds.join(',')}),and(status.in.(void,cancelled),booking_time.gte.${shift.openedAt})`;
+                const { data } = await bookingsQuery.or(orFilter);
+                bookingsData = data || [];
+            } else {
+                const { data } = await bookingsQuery
+                    .in('status', ['void', 'cancelled'])
+                    .gte('booking_time', shift.openedAt)
+                    .lte('booking_time', shift.closedAt || new Date().toISOString());
+                bookingsData = data || [];
+            }
+            
+            // 2. Fetch categories
+            const { data: categoriesData } = await supabase
+                .from('menu_categories')
+                .select('id, name');
+            
+            // 3. Compile reportData
+            const compiledReport = compileShiftReportData(
+                {
+                    ...shift,
+                    totalIn,
+                    totalOut
+                },
+                bookingsData,
+                categoriesData || []
+            );
+
+            const rawBytes = encodeShiftClosureReportData(compiledReport, '80mm', 'sunmi');
             await printToSunmiBuiltIn(rawBytes);
+            toast.dismiss(toastId);
             toast.success("พิมพ์รายงานประวัติรอบขายผ่าน SUNMI สำเร็จ");
         } catch (err) {
             console.error("Historical Shift Print failed:", err);
+            toast.dismiss(toastId);
             // Fallback: generate HTML for system print dialog
             const htmlContent = `
                 <html>
