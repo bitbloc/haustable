@@ -23,6 +23,7 @@ export async function syncShiftToCloud(shift) {
                 adjustments: shift.adjustments || [],
                 cash_sales: shift.cashSales || 0,
                 qr_sales: shift.qrSales || 0,
+                credit_sales: shift.creditSales || 0,
                 total_sales: shift.totalSales || 0,
                 total_in: shift.totalIn || 0,
                 total_out: shift.totalOut || 0
@@ -80,6 +81,7 @@ export async function checkAndRestoreActiveShift() {
                 difference: parseFloat(data.difference) || 0,
                 cashSales: parseFloat(data.cash_sales) || 0,
                 qrSales: parseFloat(data.qr_sales) || 0,
+                creditSales: parseFloat(data.credit_sales) || 0,
                 totalSales: parseFloat(data.total_sales) || 0,
                 totalIn: parseFloat(data.total_in) || 0,
                 totalOut: parseFloat(data.total_out) || 0
@@ -118,6 +120,7 @@ export async function syncShiftHistoryFromCloud() {
                 difference: parseFloat(item.difference) || 0,
                 cashSales: parseFloat(item.cash_sales) || 0,
                 qrSales: parseFloat(item.qr_sales) || 0,
+                creditSales: parseFloat(item.credit_sales) || 0,
                 totalSales: parseFloat(item.total_sales) || 0,
                 totalIn: parseFloat(item.total_in) || 0,
                 totalOut: parseFloat(item.total_out) || 0
@@ -149,6 +152,7 @@ export function startShift(staffName, openingFloat) {
         difference: 0,
         cashSales: 0,
         qrSales: 0,
+        creditSales: 0,
         totalSales: 0,
         totalIn: 0,
         totalOut: 0
@@ -175,18 +179,21 @@ export function recordShiftTransaction(bookingId, totalAmount, paymentMethod) {
     const newTx = {
         bookingId,
         amount,
-        paymentMethod: paymentMethod.toLowerCase(), // 'cash' or 'qr'
+        paymentMethod: paymentMethod.toLowerCase(), // 'cash', 'qr', or 'credit'
         timestamp: new Date().toISOString()
     };
     
     shift.transactions.push(newTx);
     
-    // Recalculate cash sales & expected cash
+    // Recalculate cash, qr, credit sales & expected cash
     const cashSales = shift.transactions
         .filter(tx => tx.paymentMethod === 'cash')
         .reduce((sum, tx) => sum + tx.amount, 0);
     const qrSales = shift.transactions
         .filter(tx => tx.paymentMethod === 'qr')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+    const creditSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'credit')
         .reduce((sum, tx) => sum + tx.amount, 0);
         
     const adjustments = shift.adjustments || [];
@@ -195,7 +202,8 @@ export function recordShiftTransaction(bookingId, totalAmount, paymentMethod) {
     
     shift.cashSales = cashSales;
     shift.qrSales = qrSales;
-    shift.totalSales = cashSales + qrSales;
+    shift.creditSales = creditSales;
+    shift.totalSales = cashSales + qrSales + creditSales;
     shift.totalIn = totalIn;
     shift.totalOut = totalOut;
     shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
@@ -235,6 +243,9 @@ export function addShiftAdjustment(amount, note, type) {
     const qrSales = shift.transactions
         .filter(tx => tx.paymentMethod === 'qr')
         .reduce((sum, tx) => sum + tx.amount, 0);
+    const creditSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'credit')
+        .reduce((sum, tx) => sum + tx.amount, 0);
         
     const adjustments = shift.adjustments || [];
     const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
@@ -242,7 +253,8 @@ export function addShiftAdjustment(amount, note, type) {
     
     shift.cashSales = cashSales;
     shift.qrSales = qrSales;
-    shift.totalSales = cashSales + qrSales;
+    shift.creditSales = creditSales;
+    shift.totalSales = cashSales + qrSales + creditSales;
     shift.totalIn = totalIn;
     shift.totalOut = totalOut;
     shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
@@ -273,7 +285,11 @@ export function closeShift(actualCash) {
         .filter(tx => tx.paymentMethod === 'qr')
         .reduce((sum, tx) => sum + tx.amount, 0);
         
-    const totalSales = cashSales + qrSales;
+    const creditSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'credit')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+        
+    const totalSales = cashSales + qrSales + creditSales;
     
     const adjustments = shift.adjustments || [];
     const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
@@ -291,6 +307,7 @@ export function closeShift(actualCash) {
         difference: diff,
         cashSales,
         qrSales,
+        creditSales,
         totalSales,
         totalIn,
         totalOut,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -809,20 +809,27 @@ export default function POSOrderPanel({
                 {/* Payment Method Selector / Actions */}
                 {(order.items.length > 0 || booking) && (
                     <div className="space-y-2">
-                        <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] w-full font-mono text-[9px] font-bold uppercase tracking-wider">
+                        <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] w-full font-mono text-[9px] font-bold uppercase tracking-wider gap-0.5">
                             <button 
                                 type="button"
                                 onClick={() => setPaymentMethod('cash')}
-                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                             >
                                 <Banknote size={10} /> CASH / เงินสด
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setPaymentMethod('qr')}
-                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                             >
-                                <CreditCard size={10} /> TRANSFER / โอน
+                                <QrCode size={10} /> QR / โอน
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setPaymentMethod('credit')}
+                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'credit' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            >
+                                <CreditCard size={10} /> CREDIT / บัตร
                             </button>
                         </div>
 

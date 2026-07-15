@@ -45,12 +45,11 @@ export default function POSLayout({ children, activeView, onViewChange, selected
             {/* Narrow Sidebar for Navigation */}
             <aside className="w-24 bg-[#F5F5F2] border-r border-[#D1D1CD] flex flex-col items-center py-4 justify-between select-none shrink-0">
                 <div className="flex flex-col items-center gap-4 w-full">
-                    {/* Brand Logo */}
-                    <div className="w-12 h-12 flex flex-col items-center justify-center border border-[#D1D1CD] rounded-full bg-white shadow-sm select-none overflow-hidden p-1.5 bg-white">
+                    <div className="w-12 h-12 flex flex-col items-center justify-center border border-[#D1D1CD] rounded-full bg-white shadow-sm select-none overflow-hidden">
                         <img 
                             src="/logo.png" 
                             alt="Haus Table" 
-                            className="w-full h-full object-contain grayscale-[10%]"
+                            className="w-full h-full object-cover grayscale-[10%]"
                         />
                     </div>
 
@@ -165,6 +164,14 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                     className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
                                 >
                                     ปิดรอบ
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        window.dispatchEvent(new Event('pos-trigger-lock'));
+                                    }}
+                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
+                                >
+                                    ล็อค
                                 </button>
                             </div>
                         )}

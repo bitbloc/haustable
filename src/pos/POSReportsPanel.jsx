@@ -115,20 +115,24 @@ export default function POSReportsPanel() {
     // Active Tables Total (Estimated Unpaid)
     const activeUnpaid = activeBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
-    // Cash vs QR breakdown
-    const isCashBooking = (b) => {
-        if (b.payment_slip_url) return false;
+    // Payment method breakdown helper
+    const getBookingPaymentMethod = (b) => {
         const remark = (b.staff_remark || '').toLowerCase();
-        if (remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return false;
-        return true; // Default to cash if no slip and not explicitly qr
+        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) return 'credit';
+        if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'qr';
+        return 'cash';
     };
 
     const cashSales = completedBookings
-        .filter(b => isCashBooking(b))
+        .filter(b => getBookingPaymentMethod(b) === 'cash')
         .reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
     const qrSales = completedBookings
-        .filter(b => !isCashBooking(b))
+        .filter(b => getBookingPaymentMethod(b) === 'qr')
+        .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+    const creditSales = completedBookings
+        .filter(b => getBookingPaymentMethod(b) === 'credit')
         .reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
     // Category sales compile
@@ -182,6 +186,7 @@ export default function POSReportsPanel() {
             difference: 0,
             cashSales: cashSales,
             qrSales: qrSales,
+            creditSales: creditSales,
             totalSales: totalSales,
             totalIn: 0,
             totalOut: 0
@@ -260,13 +265,14 @@ export default function POSReportsPanel() {
                         <div class="date">Report Date: ${filterDate}</div>
                         <div class="date">Printed: ${printDateStr}</div>
                     </div>
-
+ 
                     <div class="section">
                         <div class="section-title">Sales Summary</div>
                         <div class="row"><span>Total Completed Bills</span> <span>${completedBookings.length}</span></div>
                         <div class="row"><span>Total Discounts</span> <span>-${totalDiscounts.toLocaleString()}.-</span></div>
                         <div class="row"><span>Cash Sales</span> <span>${cashSales.toLocaleString()}.-</span></div>
                         <div class="row"><span>QR Transfer Sales</span> <span>${qrSales.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Credit Card Sales</span> <span>${creditSales.toLocaleString()}.-</span></div>
                         <div class="row total-row"><span>NET REVENUE</span> <span>${totalSales.toLocaleString()}.-</span></div>
                     </div>
 
@@ -470,7 +476,7 @@ export default function POSReportsPanel() {
             ) : (
                 <div className="space-y-6">
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                         
                         {/* Net Revenue */}
                         <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
@@ -500,6 +506,16 @@ export default function POSReportsPanel() {
                             </div>
                             <p className="text-xl font-black font-mono text-blue-600 mt-2">฿{qrSales.toLocaleString()}</p>
                             <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">BANK DEPOSIT</p>
+                        </div>
+
+                        {/* Credit Sales */}
+                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
+                            <div className="absolute top-0 left-0 w-full h-[3px] bg-amber-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
+                                <CreditCard size={12} className="text-amber-500" /> CREDIT CARD
+                            </div>
+                            <p className="text-xl font-black font-mono text-amber-600 mt-2">฿{creditSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">CARD TERMINAL</p>
                         </div>
 
                         {/* Discounts */}
@@ -578,7 +594,6 @@ export default function POSReportsPanel() {
                                     <tbody className="divide-y divide-[#ECECE9]">
                                         {completedBookings.map((b) => {
                                             const timeStr = new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                            const isCash = isCashBooking(b);
                                             const guestName = b.profiles?.display_name || b.pickup_contact_name || 'Walk-in';
 
                                             return (
@@ -592,13 +607,24 @@ export default function POSReportsPanel() {
                                                     </td>
                                                     <td className="py-2.5 px-3 font-bold truncate max-w-[120px] uppercase text-[#1A1A1A]">{guestName}</td>
                                                     <td className="py-2.5 px-3">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border ${
-                                                            isCash 
-                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                                                        }`}>
-                                                            {isCash ? 'Cash' : 'QR Pay'}
-                                                        </span>
+                                                        {(() => {
+                                                            const pm = getBookingPaymentMethod(b);
+                                                            if (pm === 'cash') return (
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                    Cash
+                                                                </span>
+                                                            );
+                                                            if (pm === 'credit') return (
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-amber-50 text-amber-700 border-amber-200">
+                                                                    Credit
+                                                                </span>
+                                                            );
+                                                            return (
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-blue-50 text-blue-700 border-blue-200">
+                                                                    QR Pay
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold">
                                                         ฿{b.total_amount?.toLocaleString()}

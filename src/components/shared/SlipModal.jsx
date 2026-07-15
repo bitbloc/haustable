@@ -319,7 +319,9 @@ export default function SlipModal({ booking, type, onClose }) {
         // Payment Method / PAID Badge Section for Receipt
         let paymentMethodHtml = ''
         if (activeTab === 'receipt') {
-            const methodLabel = paymentMethod === 'cash' ? 'CASH / เงินสด' : 'QR TRANSFER / โอนเงินผ่าน QR'
+            const methodLabel = paymentMethod === 'cash' 
+                ? 'CASH / เงินสด' 
+                : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')
             paymentMethodHtml = `
                 <div class="payment-section">
                     <div class="payment-method">Payment Method: ${methodLabel}</div>
@@ -765,18 +767,24 @@ export default function SlipModal({ booking, type, onClose }) {
                 {(activeTab === 'billing' || activeTab === 'receipt') && (
                     <div className="flex items-center justify-between bg-white border border-[#D1D1CD] p-3 rounded-xl mx-4 mt-3">
                         <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">ช่องทางชำระเงิน / Payment:</span>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                             <button 
                                 onClick={() => setPaymentMethod('cash')}
-                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 เงินสด (CASH)
                             </button>
                             <button 
                                 onClick={() => setPaymentMethod('qr')}
-                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 โอนเงิน (QR)
+                            </button>
+                            <button 
+                                onClick={() => setPaymentMethod('credit')}
+                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'credit' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                            >
+                                บัตร (CREDIT)
                             </button>
                         </div>
                     </div>
@@ -899,7 +907,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         {activeTab === 'receipt' && (
                             <div className="border-t-2 border-dashed border-black py-4 my-2 text-center flex flex-col items-center">
                                 <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                                    Payment Method: {paymentMethod === 'cash' ? 'CASH / เงินสด' : 'QR TRANSFER / โอนเงินผ่าน QR'}
+                                    Payment Method: {paymentMethod === 'cash' ? 'CASH / เงินสด' : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')}
                                 </div>
                                 <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
                                     PAID / ชำระแล้ว

@@ -11,7 +11,7 @@ import {
     Phone
 } from 'lucide-react';
 
-export default function POSPickupGrid({ onSelectOrder, onNewWalkInPickup, hasPendingOrders, refreshKey }) {
+export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refreshKey }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -70,15 +70,7 @@ export default function POSPickupGrid({ onSelectOrder, onNewWalkInPickup, hasPen
         <div className="h-full flex flex-col bg-[#ECECE9] overflow-hidden select-none font-sans text-[#1A1A1A]">
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0 shadow-sm">
                 
-                <div className="flex items-center">
-                    <button
-                        onClick={onNewWalkInPickup}
-                        className="bg-[#DFFF00] hover:bg-[#cce600] text-black px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-colors border border-[#b3cc00] shadow-sm cursor-pointer"
-                    >
-                        <Plus size={16} /> NEW IN-STORE PICK-UP
-                    </button>
-                </div>
-
+                <div></div>
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     <div className="relative w-full sm:w-56">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={16} />

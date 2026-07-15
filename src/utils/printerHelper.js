@@ -481,20 +481,36 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     let cashAmount = 0;
     let qrCount = 0;
     let qrAmount = 0;
+    let creditCount = 0;
+    let creditAmount = 0;
     let otherCount = 0;
     let otherAmount = 0;
     
     const otherDetailsMap = {};
 
     completedBookings.forEach(b => {
-        const isCash = (b.payment_slip_url) ? false : !(b.staff_remark || '').toLowerCase().includes('qr') && !(b.staff_remark || '').toLowerCase().includes('transfer') && !(b.staff_remark || '').toLowerCase().includes('โอน');
+        const remark = (b.staff_remark || '').toLowerCase();
         const amt = b.total_amount || 0;
+        
+        let isCash = true;
+        let isCredit = false;
+        let isQr = false;
+        
+        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
+            isCash = false;
+            isCredit = true;
+        } else if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) {
+            isCash = false;
+            isQr = true;
+        }
         
         if (isCash) {
             cashCount++;
             cashAmount += amt;
+        } else if (isCredit) {
+            creditCount++;
+            creditAmount += amt;
         } else {
-            const remark = (b.staff_remark || '').toLowerCase();
             let parsedBank = '';
             if (remark.includes('scb') || remark.includes('ไทยพาณิชย์')) {
                 parsedBank = 'ไทยพาณิชย์ พลัส';
@@ -613,7 +629,8 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
         openingFloat: shift.openingFloat,
         cashSales: shift.cashSales || cashAmount,
         qrSales: shift.qrSales || qrAmount,
-        totalSales: shift.totalSales || (cashAmount + qrAmount),
+        creditSales: shift.creditSales || creditAmount,
+        totalSales: shift.totalSales || (cashAmount + qrAmount + creditAmount),
         totalIn,
         totalOut,
         expectedCash: shift.expectedCash,
@@ -630,7 +647,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
             cash: { count: cashCount, amount: cashAmount },
             qrPromptPay: { count: qrCount, amount: qrAmount },
             linemanCash: { count: 0, amount: 0 },
-            creditCard: { count: 0, amount: 0 },
+            creditCard: { count: creditCount, amount: creditAmount },
             other: { count: otherCount, amount: otherAmount, subItems: otherDetails }
         },
         
