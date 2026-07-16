@@ -30,6 +30,7 @@ export default function POSReportsPanel() {
     const [shiftHistory, setShiftHistory] = useState([]);
     const [activeShift, setActiveShift] = useState(null);
     const [expandedShiftId, setExpandedShiftId] = useState(null);
+    const [payMethodFilter, setPayMethodFilter] = useState('all');
 
     // Filter Date (Defaults to Today in Asia/Bangkok)
     const getBangkokDate = () => {
@@ -145,9 +146,15 @@ export default function POSReportsPanel() {
         .filter(b => getBookingPaymentMethod(b) === 'credit')
         .reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
+    // Filter bookings for breakdown calculations based on payment method
+    const filteredForBreakdown = completedBookings.filter(b => {
+        if (payMethodFilter === 'all') return true;
+        return getBookingPaymentMethod(b) === payMethodFilter;
+    });
+
     // Category sales compile
     const categorySales = {};
-    completedBookings.forEach(b => {
+    filteredForBreakdown.forEach(b => {
         b.order_items?.forEach(item => {
             const catId = item.menu_items?.category_id || 'uncategorized';
             const catName = categoryMap[catId] || 'Uncategorized';
@@ -655,6 +662,33 @@ export default function POSReportsPanel() {
                         </div>
                     )}
 
+                    {/* Filter Bar for Bottom Layout */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm select-none">
+                        <div className="text-xs font-mono font-bold text-[#1A1A1A] uppercase tracking-wider">
+                            ตัวกรองสถิติและรายการบิล (Breakdown Filter)
+                        </div>
+                        <div className="flex items-center gap-1 bg-[#F5F5F2] border border-[#D1D1CD] p-1 rounded-lg">
+                            {[
+                                { id: 'all', label: 'ทั้งหมด (All)' },
+                                { id: 'cash', label: 'เงินสด (Cash)' },
+                                { id: 'qr', label: 'โอน/QR (QR)' },
+                                { id: 'credit', label: 'บัตรเครดิต (Credit)' }
+                            ].map(btn => (
+                                <button
+                                    key={btn.id}
+                                    onClick={() => setPayMethodFilter(btn.id)}
+                                    className={`px-3 py-1.5 rounded-md font-mono text-[9px] font-bold uppercase transition-all cursor-pointer ${
+                                        payMethodFilter === btn.id
+                                            ? 'bg-white text-[#1A1A1A] shadow-sm border border-[#D1D1CD]'
+                                            : 'text-[#767673] hover:text-[#1A1A1A] border border-transparent'
+                                    }`}
+                                >
+                                    {btn.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Bottom Split Layout: Categories & Log */}
                     <div className="grid md:grid-cols-3 gap-6">
                         
@@ -675,7 +709,7 @@ export default function POSReportsPanel() {
                                 ))}
                                 {categoryList.length === 0 && (
                                     <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic">
-                                        No sales logged today
+                                        No sales logged for this payment method
                                     </div>
                                 )}
                             </div>
@@ -707,7 +741,7 @@ export default function POSReportsPanel() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#ECECE9]">
-                                        {completedBookings.map((b) => {
+                                        {filteredForBreakdown.map((b) => {
                                             const timeStr = new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                             const guestName = b.profiles?.display_name || b.pickup_contact_name || 'Walk-in';
 
@@ -756,10 +790,10 @@ export default function POSReportsPanel() {
                                                 </tr>
                                             );
                                         })}
-                                        {completedBookings.length === 0 && (
+                                        {filteredForBreakdown.length === 0 && (
                                             <tr>
                                                 <td colSpan="7" className="py-10 text-center font-mono text-[9px] text-[#767673] uppercase italic">
-                                                    No completed bills logged for this day
+                                                    No completed bills logged for this payment method
                                                 </td>
                                             </tr>
                                         )}
