@@ -134,6 +134,7 @@ export default function StockCard({
                         src={item.image_url} 
                         alt={item.name} 
                         className="sc-image"
+                        loading="lazy"
                     />
                 ) : (
                     <span className="sc-image-placeholder">

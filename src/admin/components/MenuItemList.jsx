@@ -477,7 +477,8 @@ export default function MenuItemList() {
             let imageUrl = editingItem?.image_url || ''
             if (imageRemoved) imageUrl = ''
             if (imageFile) {
-                const fileName = `menu_${Date.now()}.jpg`
+                const ext = imageFile.name.split('.').pop() || 'webp'
+                const fileName = `menu_${Date.now()}.${ext}`
                 const { error } = await supabase.storage.from('public-assets').upload(fileName, imageFile, {
                     cacheControl: '15552000'
                 })

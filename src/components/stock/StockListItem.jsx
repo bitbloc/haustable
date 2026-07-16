@@ -96,7 +96,7 @@ export default function StockListItem({
             <div className="sli-item__main">
                 <div className="sli-image-wrap">
                     {item.image_url ? (
-                        <img src={item.image_url} alt="" className="sli-image" />
+                        <img src={item.image_url} alt="" className="sli-image" loading="lazy" />
                     ) : (
                         <div className="sli-image-placeholder">
                             <Package className="w-5 h-5" />

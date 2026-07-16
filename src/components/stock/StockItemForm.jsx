@@ -240,8 +240,8 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     canvas.toBlob((blob) => {
-                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-                    }, 'image/jpeg', 0.8);
+                        resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp', lastModified: Date.now() }));
+                    }, 'image/webp', 0.8);
                 };
                 img.src = e.target.result;
             };
@@ -255,7 +255,7 @@ export default function StockItemForm({ item, categories, onClose, onUpdate }) {
         try {
             setLoading(true);
             const resizedFile = await resizeImage(file);
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.webp`;
             const { error: uploadError } = await supabase.storage.from('stock-images').upload(fileName, resizedFile, {
                 cacheControl: '15552000'
             });

@@ -649,7 +649,7 @@ export default function CustomerOrderLanding() {
                         >
                             <div className="aspect-[4/3] rounded-xl bg-[#F5F5F2] overflow-hidden relative border border-[#D1D1CD]/40">
                                 {item.image_url ? (
-                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-[#767673] font-bold text-lg uppercase font-mono">
                                         {item.name.charAt(0)}

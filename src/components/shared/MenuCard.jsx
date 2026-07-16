@@ -55,7 +55,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
                 {/* Main Steak Image */}
                 <div className={`bg-gray-100 rounded-xl overflow-hidden relative ${mode === 'list' ? 'aspect-square' : 'aspect-[4/3]'}`}>
                     {item.image_url ? (
-                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300">
                             <span className="text-xs">No Image</span>
@@ -85,7 +85,7 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
                             <div key={sd.id} className="aspect-square rounded-lg overflow-visible relative group/sd cursor-help">
                                 {/* Thumbnail */}
                                 <div className="w-full h-full rounded-lg bg-gray-100 overflow-hidden border border-gray-100 shadow-sm transition-transform hover:scale-105 relative z-10">
-                                     <img src={sd.url} alt={sd.name} className="w-full h-full object-cover" />
+                                     <img src={sd.url} alt={sd.name} className="w-full h-full object-cover" loading="lazy" />
                                 </div>
                                 
                                 {/* Tooltip (Popping UP) */}
