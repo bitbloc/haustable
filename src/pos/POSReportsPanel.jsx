@@ -11,14 +11,16 @@ import {
     RefreshCw, 
     CheckCircle2, 
     FileText,
-    Clock
+    Clock,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
 import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData } from '../utils/printerHelper';
-import { getShiftHistory, syncShiftHistoryFromCloud } from '../utils/shiftHelper';
+import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud } from '../utils/shiftHelper';
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
@@ -26,6 +28,8 @@ export default function POSReportsPanel() {
     const [categories, setCategories] = useState([]);
     const [activeReprintBooking, setActiveReprintBooking] = useState(null);
     const [shiftHistory, setShiftHistory] = useState([]);
+    const [activeShift, setActiveShift] = useState(null);
+    const [expandedShiftId, setExpandedShiftId] = useState(null);
 
     // Filter Date (Defaults to Today in Asia/Bangkok)
     const getBangkokDate = () => {
@@ -45,12 +49,18 @@ export default function POSReportsPanel() {
         });
     };
 
+    const loadActiveShift = () => {
+        setActiveShift(getCurrentShift());
+    };
+
     useEffect(() => {
         fetchReportData();
         loadShiftHistoryData();
+        loadActiveShift();
 
         const handleShiftChanged = () => {
             loadShiftHistoryData();
+            loadActiveShift();
         };
         window.addEventListener('pos-shift-changed', handleShiftChanged);
         return () => {
@@ -378,6 +388,15 @@ export default function POSReportsPanel() {
         } catch (err) {
             console.error("Historical Shift Print failed:", err);
             toast.dismiss(toastId);
+            
+            // Build adjustments list for printing
+            const adjsHtml = adjs.map(a => `
+                <div class="row" style="padding-left: 10px; font-size: 9px; color: #333;">
+                    <span>• [${a.type === 'in' ? 'เงินเข้า' : 'เงินออก'}] ${a.note || ''}</span>
+                    <span>${a.type === 'in' ? '+' : '-'}฿${a.amount.toLocaleString()}.-</span>
+                </div>
+            `).join('') || '<div class="row" style="padding-left: 10px; font-size: 9px; color: #777;"><i>ไม่มีรายการเบิกจ่ายเงินสด</i></div>';
+
             // Fallback: generate HTML for system print dialog
             const htmlContent = `
                 <html>
@@ -396,7 +415,7 @@ export default function POSReportsPanel() {
                         <div class="divider"></div>
                         <div class="row"><span>Staff:</span> <span>${shift.staffName}</span></div>
                         <div class="row"><span>Opened:</span> <span>${new Date(shift.openedAt).toLocaleString('th-TH')}</span></div>
-                        <div class="row"><span>Closed:</span> <span>${new Date(shift.closedAt).toLocaleString('th-TH')}</span></div>
+                        <div class="row"><span>Closed:</span> <span>${shift.closedAt ? new Date(shift.closedAt).toLocaleString('th-TH') : 'กำลังใช้งาน (Active)'}</span></div>
                         <div class="divider"></div>
                         <div class="row"><span>Opening Float:</span> <span>฿${shift.openingFloat.toLocaleString()}.-</span></div>
                         <div class="row"><span>Cash Sales:</span> <span>฿${(shift.cashSales || 0).toLocaleString()}.-</span></div>
@@ -404,9 +423,12 @@ export default function POSReportsPanel() {
                         <div class="row"><span>Cash In (+):</span> <span>+฿${totalIn.toLocaleString()}.-</span></div>
                         <div class="row"><span>Cash Out (-):</span> <span>-฿${totalOut.toLocaleString()}.-</span></div>
                         <div class="divider"></div>
+                        <div style="font-weight: bold; margin-bottom: 5px;">CASH ADJUSTMENTS / รายการเบิกจ่าย:</div>
+                        ${adjsHtml}
+                        <div class="divider"></div>
                         <div class="row"><span>Expected Cash:</span> <span>฿${shift.expectedCash?.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Actual Cash:</span> <span>฿${shift.closedCash?.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Difference:</span> <span>${shift.difference >= 0 ? '+' : ''}฿${shift.difference?.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Actual Cash:</span> <span>${shift.status === 'open' ? '-' : `฿${shift.closedCash?.toLocaleString()}.-`}</span></div>
+                        <div class="row"><span>Difference:</span> <span>${shift.status === 'open' ? '-' : (shift.difference >= 0 ? '+' : '') + '฿' + shift.difference?.toLocaleString() + '.-'}</span></div>
                         <div class="divider"></div>
                         <script>window.onload = function() { window.print(); }</script>
                     </body>
@@ -537,8 +559,101 @@ export default function POSReportsPanel() {
                             <p className="text-xl font-black font-mono text-purple-600 mt-2">฿{activeUnpaid.toLocaleString()}</p>
                             <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">{activeBookings.length} TABLES UNPAID</p>
                         </div>
-
                     </div>
+
+                    {/* Active Shift / รอบการขายปัจจุบัน */}
+                    {filterDate === getBangkokDate() && activeShift && (
+                        <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-[#D1D1CD] pb-3 mb-4 select-none">
+                                <div>
+                                    <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        รอบการขายปัจจุบัน (Active Shift) - {activeShift.staffName}
+                                    </h4>
+                                    <p className="text-[9px] text-[#767673] font-mono uppercase tracking-tight mt-0.5">
+                                        เปิดกะเมื่อ: {new Date(activeShift.openedAt).toLocaleString('th-TH')}
+                                    </p>
+                                </div>
+                                <span className="px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                    กะกำลังใช้งาน (Open)
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold">Opening Float / เงินต้นกะ</p>
+                                    <p className="text-sm font-black mt-1 text-[#1A1A1A]">฿{activeShift.openingFloat?.toLocaleString()}</p>
+                                </div>
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-emerald-600">Cash In / เงินเข้า (+)</p>
+                                    <p className="text-sm font-black mt-1 text-emerald-600">+฿{(activeShift.totalIn || activeShift.adjustments?.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0) || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-red-500">Cash Out / เงินออก (-)</p>
+                                    <p className="text-sm font-black mt-1 text-red-500">-฿{(activeShift.totalOut || activeShift.adjustments?.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0) || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-blue-600">Cash Sales / ขายเงินสด</p>
+                                    <p className="text-sm font-black mt-1 text-blue-600">฿{(activeShift.cashSales || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono col-span-2 md:col-span-1">
+                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-[#ff0000]">Expected Cash / ควรมีในลิ้นชัก</p>
+                                    <p className="text-sm font-black mt-1 text-[#ff0000]">฿{(activeShift.expectedCash || (activeShift.openingFloat + (activeShift.cashSales || 0) + (activeShift.totalIn || 0) - (activeShift.totalOut || 0))).toLocaleString()}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <div className="text-[9px] font-mono font-bold tracking-wider text-[#767673] uppercase select-none">
+                                    รายการนำเงินเข้า-ออกในรอบนี้ (Current Shift Cash Adjustments)
+                                </div>
+                                <div className="border border-[#D1D1CD] rounded-lg overflow-hidden bg-white max-h-[160px] overflow-y-auto">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead>
+                                            <tr className="bg-[#F5F5F2] border-b border-[#D1D1CD] font-mono text-[8px] uppercase tracking-wider text-[#767673] select-none sticky top-0">
+                                                <th className="py-2 px-3 w-24">เวลา (Time)</th>
+                                                <th className="py-2 px-3 w-32">ประเภท (Type)</th>
+                                                <th className="py-2 px-3 text-right w-36">จำนวน (Amount)</th>
+                                                <th className="py-2 px-3">เหตุผล / รายละเอียด (Reason)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#ECECE9] font-sans font-bold text-[#1A1A1A]">
+                                            {(activeShift.adjustments || []).map((adj, idx) => (
+                                                <tr key={adj.id || idx} className="hover:bg-[#F5F5F2] transition-colors">
+                                                    <td className="py-2 px-3 font-mono text-[9px] text-[#767673]">
+                                                        {new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </td>
+                                                    <td className="py-2 px-3">
+                                                        {adj.type === 'in' ? (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                เงินเข้า (Deposit)
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-50 text-red-700 border-red-200">
+                                                                เงินออก (Payout)
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`py-2 px-3 text-right font-mono font-black ${adj.type === 'in' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                        {adj.type === 'in' ? '+' : '-'}฿{adj.amount?.toLocaleString()}.-
+                                                    </td>
+                                                    <td className="py-2 px-3 text-[10px] uppercase truncate max-w-xs">
+                                                        {adj.note || '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {(!activeShift.adjustments || activeShift.adjustments.length === 0) && (
+                                                <tr>
+                                                    <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[#767673] uppercase italic">
+                                                        ไม่มีรายการเบิกเงินสดในกะปัจจุบัน (No cash adjustments recorded in active shift)
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Bottom Split Layout: Categories & Log */}
                     <div className="grid md:grid-cols-3 gap-6">
@@ -680,35 +795,112 @@ export default function POSReportsPanel() {
                                 <tbody className="divide-y divide-[#ECECE9]">
                                     {shiftHistory.map((s, i) => {
                                         const openTime = new Date(s.openedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
-                                        const closeTime = s.closedAt ? new Date(s.closedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+                                        const isShiftOpen = s.status === 'open';
+                                        
+                                        const closeTime = isShiftOpen ? (
+                                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                กำลังใช้งาน
+                                            </span>
+                                        ) : s.closedAt ? new Date(s.closedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-';
                                         
                                         const adjs = s.adjustments || [];
                                         const totalIn = s.totalIn !== undefined ? s.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
                                         const totalOut = s.totalOut !== undefined ? s.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+                                        const isExpanded = expandedShiftId === s.id;
 
                                         return (
-                                            <tr key={i} className="hover:bg-[#F5F5F2] transition-colors font-mono text-[10px]">
-                                                <td className="py-2.5 px-3 font-sans font-bold text-[#1A1A1A] uppercase">{s.staffName}</td>
-                                                <td className="py-2.5 px-3 text-[#767673]">{openTime}</td>
-                                                <td className="py-2.5 px-3 text-[#767673]">{closeTime}</td>
-                                                <td className="py-2.5 px-3 text-right">฿{s.openingFloat?.toLocaleString()}</td>
-                                                <td className="py-2.5 px-3 text-right">฿{s.cashSales?.toLocaleString()}</td>
-                                                <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">+฿{totalIn.toLocaleString()}</td>
-                                                <td className="py-2.5 px-3 text-right text-red-500 font-bold">-฿{totalOut.toLocaleString()}</td>
-                                                <td className="py-2.5 px-3 text-right font-bold">฿{s.expectedCash?.toLocaleString()}</td>
-                                                <td className="py-2.5 px-3 text-right font-bold text-[#1A1A1A]">฿{s.closedCash?.toLocaleString()}</td>
-                                                <td className={`py-2.5 px-3 text-right font-black ${s.difference === 0 ? 'text-[#767673]' : s.difference > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                    {s.difference > 0 ? '+' : ''}{s.difference?.toLocaleString()}
-                                                </td>
-                                                <td className="py-2.5 px-3 text-center">
-                                                    <button 
-                                                        onClick={() => handlePrintHistoricalShiftReport(s)}
-                                                        className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer inline-flex items-center gap-1 font-sans text-[9px] font-bold uppercase tracking-wider"
-                                                    >
-                                                        <PrinterIcon size={10} /> Reprint
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={s.id || i}>
+                                                <tr 
+                                                    onClick={() => setExpandedShiftId(prev => prev === s.id ? null : s.id)}
+                                                    className="hover:bg-[#F5F5F2] cursor-pointer transition-colors font-mono text-[10px]"
+                                                >
+                                                    <td className="py-2.5 px-3 font-sans font-bold text-[#1A1A1A] uppercase flex items-center gap-1 select-none">
+                                                        {isExpanded ? <ChevronUp size={10} className="text-[#ff0000]" /> : <ChevronDown size={10} className="text-[#767673]" />}
+                                                        <span>{s.staffName}</span>
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-[#767673]">{openTime}</td>
+                                                    <td className="py-2.5 px-3 text-[#767673]">{closeTime}</td>
+                                                    <td className="py-2.5 px-3 text-right">฿{s.openingFloat?.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right">฿{s.cashSales?.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">+฿{totalIn.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right text-red-500 font-bold">-฿{totalOut.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right font-bold">฿{s.expectedCash?.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right font-bold text-[#767673]">
+                                                        {isShiftOpen ? '-' : `฿${s.closedCash?.toLocaleString()}`}
+                                                    </td>
+                                                    <td className={`py-2.5 px-3 text-right font-black ${isShiftOpen ? 'text-[#767673]' : s.difference === 0 ? 'text-[#767673]' : s.difference > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                        {isShiftOpen ? '-' : (s.difference > 0 ? '+' : '') + s.difference?.toLocaleString()}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handlePrintHistoricalShiftReport(s);
+                                                            }}
+                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer inline-flex items-center gap-1 font-sans text-[9px] font-bold uppercase tracking-wider"
+                                                        >
+                                                            <PrinterIcon size={10} /> Reprint
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && (
+                                                    <tr className="bg-[#F9F9F7]">
+                                                        <td colSpan="11" className="p-4 border-t border-b border-[#D1D1CD]">
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="text-[9px] font-mono font-bold tracking-wider text-[#767673] uppercase mb-1 select-none">
+                                                                    รายการนำเงินเข้า-ออกระหว่างรอบ (Cash Adjustments Details)
+                                                                </div>
+                                                                <div className="border border-[#D1D1CD] rounded-lg overflow-hidden bg-white max-w-2xl shadow-sm">
+                                                                    <table className="w-full text-left text-xs border-collapse">
+                                                                        <thead>
+                                                                            <tr className="bg-[#F2F2EF] border-b border-[#D1D1CD] font-mono text-[8px] uppercase tracking-wider text-[#767673] select-none">
+                                                                                <th className="py-2 px-3 w-24">เวลา (Time)</th>
+                                                                                <th className="py-2 px-3 w-32">ประเภท (Type)</th>
+                                                                                <th className="py-2 px-3 text-right w-36">จำนวน (Amount)</th>
+                                                                                <th className="py-2 px-3">เหตุผล / รายละเอียด (Reason)</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-[#ECECE9] font-sans font-bold text-[#1A1A1A]">
+                                                                            {adjs.map((adj, idx) => (
+                                                                                <tr key={adj.id || idx} className="hover:bg-[#F5F5F2] transition-colors">
+                                                                                    <td className="py-2 px-3 font-mono text-[9px] text-[#767673]">
+                                                                                        {new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3">
+                                                                                        {adj.type === 'in' ? (
+                                                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                                                                เงินเข้า (Deposit)
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-50 text-red-700 border-red-200">
+                                                                                                เงินออก (Payout)
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td className={`py-2 px-3 text-right font-mono font-black ${adj.type === 'in' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                                        {adj.type === 'in' ? '+' : '-'}฿{adj.amount?.toLocaleString()}.-
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-[10px] uppercase truncate max-w-xs">
+                                                                                        {adj.note || '-'}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                            {adjs.length === 0 && (
+                                                                                <tr>
+                                                                                    <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[#767673] uppercase italic">
+                                                                                        ไม่มีรายการเบิกจ่ายเงินสดระหว่างรอบ
+                                                                                    </td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                     {shiftHistory.length === 0 && (
