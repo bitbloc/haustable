@@ -13,14 +13,15 @@ import {
     FileText,
     Clock,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
 import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData } from '../utils/printerHelper';
-import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud } from '../utils/shiftHelper';
+import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction } from '../utils/shiftHelper';
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
@@ -460,7 +461,7 @@ export default function POSReportsPanel() {
             iframe.style.border = '0';
             document.body.appendChild(iframe);
             
-            iframe.contentDocument.write(htmlContent);
+iframe.contentDocument.write(htmlContent);
             iframe.contentDocument.close();
             iframe.onload = () => {
                 iframe.contentWindow.focus();
@@ -469,6 +470,36 @@ export default function POSReportsPanel() {
                     document.body.removeChild(iframe);
                 }, 1000);
             };
+        }
+    };
+
+    const handleVoidBill = async (bookingId, amount) => {
+        const isConfirmed = window.confirm(`คุณแน่ใจหรือไม่ที่จะทำการยกเลิก (Void) บิลยอด ฿${amount.toLocaleString()}.- ใช่หรือไม่?\nการดำเนินการนี้จะเปลี่ยนสถานะบิลเป็นโมฆะและคำนวณยอดขายใหม่ (บิลที่ถูก Void จะไม่แสดงในสถิติยอดขาย)`);
+        if (!isConfirmed) return;
+
+        try {
+            // 1. Update status to 'void' in Supabase bookings table
+            const { error } = await supabase
+                .from('bookings')
+                .update({ status: 'void' })
+                .eq('id', bookingId);
+
+            if (error) throw error;
+
+            // 2. Check if the booking exists in the active shift transactions and void it
+            const currentShift = getCurrentShift();
+            if (currentShift && currentShift.transactions?.some(tx => tx.bookingId === bookingId)) {
+                voidShiftTransaction(bookingId);
+                loadActiveShift();
+            }
+
+            toast.success("ยกเลิกบิล (Void) สำเร็จแล้ว");
+
+            // 3. Reload report data to refresh lists & totals immediately
+            fetchReportData();
+        } catch (err) {
+            console.error("Failed to void bill:", err);
+            toast.error(`เกิดข้อผิดพลาดในการยกเลิกบิล: ${err.message || err}`);
         }
     };
 
@@ -737,7 +768,7 @@ export default function POSReportsPanel() {
                                             <th className="py-2.5 px-3">Guest</th>
                                             <th className="py-2.5 px-3 w-24">Pay Method</th>
                                             <th className="py-2.5 px-3 text-right">Amount</th>
-                                            <th className="py-2.5 px-3 text-right w-16">Action</th>
+                                            <th className="py-2.5 px-3 text-right w-24">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#ECECE9]">
@@ -778,13 +809,20 @@ export default function POSReportsPanel() {
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold">
                                                         ฿{b.total_amount?.toLocaleString()}
                                                     </td>
-                                                    <td className="py-2.5 px-3 text-right">
+                                                    <td className="py-2.5 px-3 text-right flex justify-end gap-1">
                                                         <button 
                                                             onClick={() => setActiveReprintBooking(b)}
-                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                             title="Reprint Bill / Receipt"
                                                         >
                                                             <PrinterIcon size={10} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleVoidBill(b.id, b.total_amount)}
+                                                            className="p-1.5 bg-white hover:bg-[#ff0000]/10 border border-[#D1D1CD] hover:border-[#ff0000]/20 rounded-lg text-red-500 hover:text-[#ff0000] transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                            title="Void Bill / ยกเลิกบิล"
+                                                        >
+                                                            <X size={10} />
                                                         </button>
                                                     </td>
                                                 </tr>

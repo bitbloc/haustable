@@ -217,6 +217,55 @@ export function recordShiftTransaction(bookingId, totalAmount, paymentMethod) {
     window.dispatchEvent(new Event('pos-shift-changed'));
 }
 
+// Void a transaction in the active shift
+export function voidShiftTransaction(bookingId) {
+    const shift = getCurrentShift();
+    if (!shift) {
+        console.warn('[Shift Management] No active shift to void transaction');
+        return;
+    }
+    
+    const originalLength = shift.transactions.length;
+    shift.transactions = shift.transactions.filter(tx => tx.bookingId !== bookingId);
+    
+    if (shift.transactions.length === originalLength) {
+        console.warn('[Shift Management] Transaction not found in active shift:', bookingId);
+        return;
+    }
+    
+    // Recalculate cash, qr, credit sales & expected cash
+    const cashSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'cash')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+    const qrSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'qr')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+    const creditSales = shift.transactions
+        .filter(tx => tx.paymentMethod === 'credit')
+        .reduce((sum, tx) => sum + tx.amount, 0);
+        
+    const adjustments = shift.adjustments || [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    
+    shift.cashSales = cashSales;
+    shift.qrSales = qrSales;
+    shift.creditSales = creditSales;
+    shift.totalSales = cashSales + qrSales + creditSales;
+    shift.totalIn = totalIn;
+    shift.totalOut = totalOut;
+    shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
+    
+    localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
+    console.log('[Shift Management] Transaction voided in shift:', bookingId);
+    
+    // Sync to cloud
+    syncShiftToCloud(shift);
+
+    window.dispatchEvent(new Event('pos-shift-changed'));
+}
+
+
 // 4. Add cash adjustment (petty cash in/out)
 export function addShiftAdjustment(amount, note, type) {
     const shift = getCurrentShift();
