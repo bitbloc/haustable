@@ -196,7 +196,19 @@ export default function CustomerOrderLanding() {
             ]);
             
             setCategories(catRes.data || []);
-            setMenuItems(itemRes.data || []);
+            
+            const sortedItems = (itemRes.data || []).sort((a, b) => {
+                const recA = a.is_recommended === true;
+                const recB = b.is_recommended === true;
+                if (recA !== recB) return recA ? -1 : 1;
+
+                const orderA = a.sort_order ?? a.display_order ?? 999999;
+                const orderB = b.sort_order ?? b.display_order ?? 999999;
+                if (orderA !== orderB) return orderA - orderB;
+
+                return a.name.localeCompare(b.name);
+            });
+            setMenuItems(sortedItems);
             
         } catch (err) {
             console.error('Initialization error:', err);
@@ -511,7 +523,7 @@ export default function CustomerOrderLanding() {
     if (loading) {
         return (
             <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans">
-                <div className="w-12 h-12 border-4 border-[#FF5500] border-t-transparent rounded-full animate-spin mb-4" />
+                <div className="w-12 h-12 border-4 border-[#ff0000] border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-[#767673] text-xs font-mono font-bold tracking-widest uppercase">Connecting to table...</p>
             </div>
         );
@@ -520,7 +532,7 @@ export default function CustomerOrderLanding() {
     if (gpsChecking) {
         return (
             <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans p-6 text-center">
-                <MapPin size={48} className="text-[#FF5500] animate-bounce mb-6" />
+                <MapPin size={48} className="text-[#ff0000] animate-bounce mb-6" />
                 <h3 className="font-mono font-bold text-sm tracking-wider uppercase mb-2">Verifying Location</h3>
                 <p className="text-[#767673] text-xs max-w-xs leading-relaxed">
                     Confirming you are inside the restaurant to enable ordering at table. Please allow GPS access.
@@ -543,10 +555,10 @@ export default function CustomerOrderLanding() {
 
         return (
             <div className="min-h-screen bg-[#ECECE9] text-[#1A1A1A] flex flex-col items-center justify-center font-sans p-6 text-center">
-                <div className="w-20 h-20 bg-[#FF5500]/10 border border-[#FF5500]/20 rounded-full flex items-center justify-center text-[#FF5500] mb-6 animate-pulse">
+                <div className="w-20 h-20 bg-[#ff0000]/10 border border-[#ff0000]/20 rounded-full flex items-center justify-center text-[#ff0000] mb-6 animate-pulse">
                     <AlertTriangle size={36} />
                 </div>
-                <h3 className="font-mono font-bold text-sm tracking-wider uppercase mb-3 text-[#FF5500]">{errorTitle}</h3>
+                <h3 className="font-mono font-bold text-sm tracking-wider uppercase mb-3 text-[#ff0000]">{errorTitle}</h3>
                 <p className="text-[#767673] text-xs max-w-sm leading-relaxed mb-8">
                     {gpsError || 'You must be physically at the restaurant to place an order.'}
                 </p>
@@ -569,7 +581,7 @@ export default function CustomerOrderLanding() {
                 <div>
                     <div className="flex items-center gap-2">
                         <span className="font-mono font-black text-lg tracking-wider text-[#1A1A1A] uppercase">IN THE HAUS</span>
-                        <div className="bg-[#FF5500] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded">
+                        <div className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded">
                             QR
                         </div>
                     </div>
@@ -600,7 +612,7 @@ export default function CustomerOrderLanding() {
                     <input 
                         type="search" 
                         placeholder="ค้นหาเมนูอร่อย..." 
-                        className="w-full bg-white border border-[#D1D1CD] rounded-xl py-2.5 pl-10 pr-4 text-[#1A1A1A] focus:outline-none focus:border-[#FF5500] text-xs transition-colors"
+                        className="w-full bg-white border border-[#D1D1CD] rounded-xl py-2.5 pl-10 pr-4 text-[#1A1A1A] focus:outline-none focus:border-[#ff0000] text-xs transition-colors"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -609,7 +621,7 @@ export default function CustomerOrderLanding() {
                 <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
                     <button 
                         onClick={() => setActiveCategory('all')} 
-                        className={`px-4 py-2 rounded-xl text-[11px] font-sans font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === 'all' ? 'bg-[#FF5500] border-[#D04500] text-white shadow-sm' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC] shadow-sm'}`}
+                        className={`px-4 py-2 rounded-xl text-[11px] font-sans font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === 'all' ? 'bg-[#ff0000] border-[#c00000] text-white shadow-sm' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC] shadow-sm'}`}
                     >
                         เมนูทั้งหมด
                     </button>
@@ -617,7 +629,7 @@ export default function CustomerOrderLanding() {
                         <button 
                             key={cat.id} 
                             onClick={() => setActiveCategory(cat.id)} 
-                            className={`px-4 py-2 rounded-xl text-[11px] font-sans font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-[#FF5500] border-[#D04500] text-white shadow-sm' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC] shadow-sm'}`}
+                            className={`px-4 py-2 rounded-xl text-[11px] font-sans font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${activeCategory === cat.id ? 'bg-[#ff0000] border-[#c00000] text-white shadow-sm' : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC] shadow-sm'}`}
                         >
                             {cat.name}
                         </button>
@@ -644,18 +656,30 @@ export default function CustomerOrderLanding() {
                                     </div>
                                 )}
                                 <div className="absolute inset-0 bg-black/5"></div>
-                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#FF5500] text-white flex items-center justify-center shadow transition-all hover:scale-105">
+                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-[#ff0000] text-white flex items-center justify-center shadow transition-all hover:scale-105">
                                     <Plus size={14} />
                                 </div>
+                                {item.is_recommended && (
+                                    <div className="absolute top-2 left-2 bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded shadow-sm uppercase tracking-wider">
+                                        BOLD
+                                    </div>
+                                )}
                             </div>
                             
                             <div className="flex flex-col flex-1 px-1 justify-between min-h-[60px]">
                                 <div>
-                                    <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-1 leading-tight">{item.name}</h4>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-1 leading-tight">{item.name}</h4>
+                                        {item.is_recommended && (
+                                            <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1.5 py-0.2 rounded uppercase tracking-wider scale-90 origin-left">
+                                                BOLD
+                                            </span>
+                                        )}
+                                    </div>
                                     {item.description && <p className="text-[9px] text-[#767673] line-clamp-2 mt-0.5 leading-snug">{item.description}</p>}
                                 </div>
                                 <div className="pt-2 flex items-center justify-between">
-                                    <span className="text-[#FF5500] font-mono font-bold text-xs">฿{item.price}</span>
+                                    <span className="text-[#ff0000] font-mono font-bold text-xs">฿{item.price}</span>
                                 </div>
                             </div>
                         </motion.div>
@@ -689,7 +713,7 @@ export default function CustomerOrderLanding() {
                         onClick={handleCallStaff}
                         className="flex-1 bg-white border border-[#D1D1CD] hover:border-[#B0B0AC] text-[#1A1A1A] py-2.5 px-4 rounded-xl font-sans font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-sm"
                     >
-                        <Bell size={14} className="text-[#FF5500]" />
+                        <Bell size={14} className="text-[#ff0000]" />
                         <span>เรียกพนักงาน (Call Staff)</span>
                     </button>
 
@@ -717,11 +741,11 @@ export default function CustomerOrderLanding() {
                 {cart.length > 0 ? (
                     <button 
                         onClick={() => setCartOpen(true)}
-                        className="w-full bg-[#FF5500] hover:bg-[#E04B00] text-white py-3 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer"
+                        className="w-full bg-[#ff0000] hover:bg-[#d00000] text-white py-3 px-5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer"
                     >
                         <div className="flex items-center gap-2">
                             <ShoppingBag size={14} />
-                            <span className="bg-white text-[#FF5500] text-[9px] px-1.5 py-0.5 rounded font-black font-mono animate-pulse">
+                            <span className="bg-white text-[#ff0000] text-[9px] px-1.5 py-0.5 rounded font-black font-mono animate-pulse">
                                 {cartCount}
                             </span>
                         </div>
@@ -789,7 +813,7 @@ export default function CustomerOrderLanding() {
                                                     ))}
                                                 </div>
                                             )}
-                                            <p className="text-[#FF5500] font-mono font-bold text-xs mt-2">฿{(item.totalPricePerUnit * item.qty).toLocaleString()}</p>
+                                            <p className="text-[#ff0000] font-mono font-bold text-xs mt-2">฿{(item.totalPricePerUnit * item.qty).toLocaleString()}</p>
                                         </div>
 
                                         <div className="flex items-center bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg p-0.5 gap-1 shrink-0">
@@ -815,13 +839,13 @@ export default function CustomerOrderLanding() {
                             <div className="border-t border-[#D1D1CD] pt-4 space-y-4 shrink-0">
                                 <div className="flex justify-between items-baseline">
                                     <span className="text-[#767673] text-[10px] uppercase font-mono font-bold tracking-wider">ยอดรวมสุทธิ (Subtotal)</span>
-                                    <span className="text-xl font-black text-[#FF5500] font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
+                                    <span className="text-xl font-black text-[#ff0000] font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
                                 </div>
 
                                 <button 
                                     onClick={handleCheckout}
                                     disabled={submitting}
-                                    className="w-full bg-[#FF5500] disabled:bg-[#FF5500]/50 text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                    className="w-full bg-[#ff0000] disabled:bg-[#ff0000]/50 text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                                 >
                                     {submitting ? (
                                         <>
@@ -903,7 +927,7 @@ export default function CustomerOrderLanding() {
                                                     <div key={step.key} className="relative">
                                                         <div className="absolute -left-7 top-0.5 w-4 h-4 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center">
                                                             {isCurrent ? (
-                                                                <span className="w-2 h-2 rounded-full bg-[#FF5500] shadow-[0_0_6px_#FF5500] animate-pulse" />
+                                                                <span className="w-2 h-2 rounded-full bg-[#ff0000] shadow-[0_0_6px_#ff0000] animate-pulse" />
                                                             ) : isDone ? (
                                                                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                                             ) : (
@@ -917,7 +941,7 @@ export default function CustomerOrderLanding() {
                                                                     {step.label}
                                                                 </span>
                                                                 {isCurrent && (
-                                                                    <span className="bg-[#FF5500]/10 text-[#FF5500] text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded leading-none">
+                                                                    <span className="bg-[#ff0000]/10 text-[#ff0000] text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded leading-none">
                                                                         กำลังเตรียม
                                                                     </span>
                                                                 )}
@@ -937,7 +961,7 @@ export default function CustomerOrderLanding() {
                                             {orderItems.map((item, idx) => (
                                                 <div key={idx} className="flex justify-between items-start text-xs text-[#1A1A1A] pb-3 border-b border-[#D1D1CD]/30 last:border-b-0 last:pb-0">
                                                     <div className="flex gap-2.5">
-                                                        <span className="font-bold text-[#FF5500]">{item.quantity}x</span>
+                                                        <span className="font-bold text-[#ff0000]">{item.quantity}x</span>
                                                         <div>
                                                             <span className="font-bold text-[#1A1A1A] block leading-tight">{item.menu_items?.name}</span>
                                                             {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
@@ -959,7 +983,7 @@ export default function CustomerOrderLanding() {
 
                                             <div className="border-t border-[#D1D1CD] pt-3.5 mt-2 flex justify-between items-baseline">
                                                 <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหารสุทธิ</span>
-                                                <span className="text-lg font-black text-[#FF5500] font-mono">฿{activeBooking.total_amount?.toLocaleString() || 0}.-</span>
+                                                <span className="text-lg font-black text-[#ff0000] font-mono">฿{activeBooking.total_amount?.toLocaleString() || 0}.-</span>
                                             </div>
                                         </div>
                                     </div>
@@ -978,7 +1002,7 @@ export default function CustomerOrderLanding() {
                                                 <button
                                                     onClick={handleRequestBill}
                                                     disabled={requestingBill}
-                                                    className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-97"
+                                                    className="w-full bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-97"
                                                 >
                                                     <Receipt size={12} />
                                                     {requestingBill ? 'กำลังดำเนินการ...' : 'เรียกพนักงานเช็คบิล (Request Bill)'}

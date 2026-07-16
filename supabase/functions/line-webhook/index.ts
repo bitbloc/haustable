@@ -925,6 +925,465 @@ Deno.serve(async (req) => {
           }
         }
 
+        // --- NEW: Active Orders Command (storder) ---
+        if (text === 'storder') {
+          console.log('Processing storder command...')
+          try {
+            const eighteenHoursAgo = new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString()
+            const { data: bookings, error } = await supabaseAdmin
+              .from('bookings')
+              .select('*, tables_layout(table_name), order_items(*, menu_items(name))')
+              .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+              .gte('booking_time', eighteenHoursAgo)
+              .order('booking_time', { ascending: true })
+
+            if (error) throw error
+
+            const translateType = (type: string) => {
+              if (type === 'pickup') return 'สั่งกลับบ้าน (TAKEAWAY)'
+              if (type === 'dine_in') return 'ทานที่ร้าน (DINE-IN)'
+              if (type === 'walk_in') return 'ลูกค้าวอล์กอิน (WALK-IN)'
+              if (type === 'steak') return 'โต๊ะสเต็ก (STEAK)'
+              return 'ทั่วไป (DINE-IN)'
+            }
+
+            const translateStatus = (status: string) => {
+              if (status === 'pending') return 'รอรับออเดอร์ (PENDING)'
+              if (status === 'confirmed') return 'กำลังปรุง (CONFIRMED)'
+              if (status === 'seated') return 'นั่งที่โต๊ะ (SEATED)'
+              if (status === 'ready') return 'พร้อมเสิร์ฟ (READY)'
+              return status.toUpperCase()
+            }
+
+            const getStatusColor = (status: string) => {
+              if (status === 'pending') return '#E63946' // Red
+              if (status === 'ready') return '#2D804E' // Green
+              return '#F4A261' // Orange for seated/confirmed
+            }
+
+            const formatOptions = (options: any) => {
+              if (!options) return ''
+              let opts: string[] = []
+              if (Array.isArray(options)) {
+                opts = options.map(o => typeof o === 'object' ? `${o.name}` : o)
+              } else if (typeof options === 'object') {
+                opts = Object.entries(options).map(([key, value]) => `${key}: ${value}`)
+              }
+              return opts.length > 0 ? ` (${opts.join(', ')})` : ''
+            }
+
+            let messages = []
+
+            if (!bookings || bookings.length === 0) {
+              messages.push({
+                type: "flex",
+                altText: "📦 ออเดอร์ปัจจุบัน: ไม่มีออเดอร์ค้างอยู่",
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "ACTIVE ORDERS", weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: "ออเดอร์โต๊ะและสั่งกลับบ้าน", color: "#666666", size: "xs", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "ไม่มีออเดอร์ค้างอยู่ในขณะนี้ 🟢", color: "#2D804E", size: "sm", align: "center", weight: "bold" }
+                    ]
+                  },
+                  styles: {
+                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
+                    body: { backgroundColor: "#FFFFFF" }
+                  }
+                }
+              })
+            } else {
+              const bubbles: any[] = []
+
+              for (const booking of bookings) {
+                const isPickup = booking.booking_type === 'pickup'
+                const displayName = isPickup 
+                  ? `🛍️ TAKEAWAY - ${booking.pickup_contact_name || booking.customer_note || 'ลูกค้า'}`
+                  : `🪑 ${booking.tables_layout?.table_name || 'TABLE'}`
+                
+                const typeText = translateType(booking.booking_type)
+                const statusText = translateStatus(booking.status)
+                const indicatorColor = getStatusColor(booking.status)
+
+                let orderTimeStr = ''
+                try {
+                  const bTime = new Date(booking.booking_time)
+                  const thTime = new Date(bTime.getTime() + (7 * 60 * 60 * 1000))
+                  orderTimeStr = thTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+                } catch (e) {
+                  orderTimeStr = booking.booking_time ? booking.booking_time.substring(11, 16) : ''
+                }
+
+                const itemContents: any[] = []
+                let subtotal = 0
+
+                if (booking.order_items && booking.order_items.length > 0) {
+                  booking.order_items.forEach((item: any) => {
+                    const name = item.menu_items?.name || 'Unknown Item'
+                    const qty = item.quantity || 0
+                    const price = item.price_at_time || 0
+                    const itemTotal = qty * price
+                    subtotal += itemTotal
+
+                    const optionsStr = formatOptions(item.selected_options)
+
+                    itemContents.push({
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "sm",
+                      contents: [
+                        { type: "text", text: `${qty} x`, weight: "bold", size: "sm", color: "#1A1A1A", flex: 2 },
+                        { type: "text", text: `${name}${optionsStr}`, size: "sm", color: "#1A1A1A", wrap: true, flex: 6 },
+                        { type: "text", text: `฿${itemTotal}`, size: "sm", color: "#1A1A1A", align: "end", flex: 2 }
+                      ]
+                    })
+                  })
+                } else {
+                  itemContents.push({
+                    type: "text",
+                    text: "ไม่มีรายการอาหาร",
+                    color: "#888888",
+                    size: "xs",
+                    align: "center",
+                    margin: "md"
+                  })
+                }
+
+                const bodyContents = [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        width: "4px",
+                        backgroundColor: indicatorColor,
+                        cornerRadius: "sm",
+                        contents: []
+                      },
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        margin: "md",
+                        contents: [
+                          { type: "text", text: statusText, color: indicatorColor, weight: "bold", size: "xs" },
+                          { type: "text", text: `ประเภท: ${typeText}`, color: "#666666", size: "xs", margin: "xs" },
+                          { type: "text", text: `เวลาสั่ง: ${orderTimeStr}`, color: "#666666", size: "xs", margin: "xs" }
+                        ]
+                      }
+                    ]
+                  },
+                  { type: "separator", margin: "md", color: "#E2E2E0" },
+                  { type: "text", text: "รายการสั่งซื้อ", weight: "bold", size: "xs", color: "#888888", margin: "md" },
+                  ...itemContents,
+                  { type: "separator", margin: "md", color: "#E2E2E0" },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    margin: "md",
+                    contents: [
+                      { type: "text", text: "ยอดรวมทั้งหมด", weight: "bold", size: "sm", color: "#1A1A1A", flex: 5 },
+                      { type: "text", text: `฿${subtotal.toLocaleString('th-TH')}`, weight: "bold", size: "sm", color: "#9E2D2D", align: "end", flex: 5 }
+                    ]
+                  }
+                ]
+
+                bubbles.push({
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "horizontal",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: displayName.toUpperCase(), weight: "bold", color: "#1A1A1A", size: "sm", flex: 8, wrap: true },
+                      { type: "text", text: booking.pax ? `👥 ${booking.pax} PAX` : (isPickup ? "🛍️ TAKEAWAY" : ""), color: "#666666", size: "xs", align: "end", flex: 4, gravity: "center" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: bodyContents
+                  },
+                  styles: {
+                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
+                    body: { backgroundColor: "#FFFFFF" }
+                  }
+                })
+              }
+
+              if (bubbles.length > 12) bubbles.length = 12;
+              let flexContent = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
+              messages.push({
+                type: "flex",
+                altText: `📦 ออเดอร์ค้างในระบบ (${bookings.length} รายการ)`,
+                contents: flexContent
+              })
+            }
+
+            console.log('Sending storder reply...')
+            const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: messages
+              }),
+            })
+            if (!resp.ok) {
+              console.error('storder reply failed:', await resp.text())
+            }
+          } catch (err: any) {
+            console.error('storder Command Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการออเดอร์: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
+        // --- NEW: Top 5 Hero Items Command (sthero) ---
+        if (text === 'sthero') {
+          console.log('Processing sthero command...')
+          try {
+            const now = new Date()
+            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+            
+            const queryDateStart = new Date(thNow)
+            queryDateStart.setHours(0, 0, 0, 0)
+            const queryDateEnd = new Date(queryDateStart)
+            queryDateEnd.setHours(23, 59, 59, 999)
+
+            const dbStart = new Date(queryDateStart.getTime() - (7 * 60 * 60 * 1000)).toISOString()
+            const dbEnd = new Date(queryDateEnd.getTime() - (7 * 60 * 60 * 1000)).toISOString()
+
+            let titleDateStr = ""
+            try {
+              titleDateStr = queryDateStart.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+            } catch (e) {
+              titleDateStr = queryDateStart.toISOString().split('T')[0]
+            }
+
+            console.log(`Querying hero items from ${dbStart} to ${dbEnd}`)
+
+            const { data: bookingsData, error } = await supabaseAdmin
+              .from('bookings')
+              .select('id, order_items(quantity, menu_item_id, menu_items(name))')
+              .gte('booking_time', dbStart)
+              .lte('booking_time', dbEnd)
+              .not('status', 'eq', 'void')
+              .not('status', 'eq', 'cancelled')
+
+            if (error) throw error
+
+            const itemTotals: { [key: string]: { name: string; quantity: number } } = {}
+            bookingsData?.forEach((b: any) => {
+              b.order_items?.forEach((item: any) => {
+                const itemId = item.menu_item_id
+                if (!itemId) return
+                const itemName = item.menu_items?.name || 'Unknown Item'
+                const qty = Number(item.quantity) || 0
+                if (!itemTotals[itemId]) {
+                  itemTotals[itemId] = { name: itemName, quantity: 0 }
+                }
+                itemTotals[itemId].quantity += qty
+              })
+            })
+
+            const sortedItems = Object.entries(itemTotals)
+              .map(([id, val]) => ({ id, name: val.name, quantity: val.quantity }))
+              .sort((a, b) => b.quantity - a.quantity)
+              .slice(0, 5)
+
+            let messages = []
+
+            if (sortedItems.length === 0) {
+              messages.push({
+                type: "flex",
+                altText: `🏆 5 อันดับเมนูฮิตวันนี้: ${titleDateStr}`,
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "ยังไม่มีรายการสั่งอาหารในวันนี้ 📭", color: "#888888", size: "sm", align: "center", weight: "bold" }
+                    ]
+                  },
+                  styles: {
+                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
+                    body: { backgroundColor: "#FFFFFF" }
+                  }
+                }
+              })
+            } else {
+              const maxQty = sortedItems[0].quantity
+              const flexContents: any[] = []
+
+              sortedItems.forEach((item, index) => {
+                const percent = maxQty > 0 ? Math.round((item.quantity / maxQty) * 100) : 0
+                const rankColors = ["#E63946", "#F4A261", "#2D804E", "#888888", "#aaaaaa"]
+                const rankColor = rankColors[index] || "#888888"
+
+                flexContents.push({
+                  type: "box",
+                  layout: "vertical",
+                  margin: "md",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      contents: [
+                        {
+                          type: "box",
+                          layout: "vertical",
+                          width: "20px",
+                          height: "20px",
+                          backgroundColor: rankColor,
+                          cornerRadius: "4px",
+                          contents: [
+                            { type: "text", text: String(index + 1), color: "#FFFFFF", size: "xs", weight: "bold", align: "center", gravity: "center" }
+                          ]
+                        },
+                        {
+                          type: "text",
+                          text: item.name.toUpperCase(),
+                          weight: "bold",
+                          size: "sm",
+                          color: "#1A1A1A",
+                          margin: "md",
+                          gravity: "center",
+                          flex: 7
+                        },
+                        {
+                          type: "text",
+                          text: `${item.quantity} ที่`,
+                          weight: "bold",
+                          size: "sm",
+                          color: "#1A1A1A",
+                          align: "end",
+                          gravity: "center",
+                          flex: 3
+                        }
+                      ]
+                    },
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "sm",
+                      height: "8px",
+                      backgroundColor: "#F0F0EE",
+                      cornerRadius: "sm",
+                      contents: [
+                        {
+                          type: "box",
+                          layout: "vertical",
+                          width: `${percent}%`,
+                          backgroundColor: "#1A1A1A",
+                          cornerRadius: "sm",
+                          contents: []
+                        }
+                      ]
+                    }
+                  ]
+                })
+
+                if (index < sortedItems.length - 1) {
+                  flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                }
+              })
+
+              messages.push({
+                type: "flex",
+                altText: `🏆 5 อันดับเมนูฮิตวันนี้: ${titleDateStr}`,
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "5 อันดับเมนูฮิตวันนี้ 🏆", weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: `ยอดขายสะสม ณ วันที่ ${titleDateStr}`, color: "#666666", size: "xs", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: flexContents
+                  },
+                  styles: {
+                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
+                    body: { backgroundColor: "#FFFFFF" }
+                  }
+                }
+              })
+            }
+
+            console.log('Sending sthero reply...')
+            const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: messages
+              }),
+            })
+            if (!resp.ok) {
+              console.error('sthero reply failed:', await resp.text())
+            }
+          } catch (err: any) {
+            console.error('sthero Command Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการคำนวณเมนูฮิต: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
         // --- NEW: Web Price Search Command (Replaces Makro Search) ---
         if (text.startsWith('ราคา ') || text.startsWith('makro ')) {
           console.log('Processing price search command...')
