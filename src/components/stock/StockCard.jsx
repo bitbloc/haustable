@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Package, AlertTriangle, FileText, Minus, Plus, Loader2, Check } from 'lucide-react';
 import { formatStockDisplay } from '../../utils/stockUtils';
 
@@ -13,6 +13,7 @@ export default function StockCard({
 }) {
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
+    const lockRef = useRef(false); // Debounce lock to prevent concurrent saves
 
     // Status Logic
     const qty = Number(item.current_quantity) || 0;
@@ -56,7 +57,8 @@ export default function StockCard({
     );
 
     const triggerUpdate = async (newQty) => {
-        if (!onUpdate) return;
+        if (!onUpdate || lockRef.current) return; // Skip if already saving
+        lockRef.current = true;
         setSaving(true);
         setSuccess(false);
         try {
@@ -69,6 +71,7 @@ export default function StockCard({
             console.error(e);
         } finally {
             setSaving(false);
+            lockRef.current = false;
         }
     };
 

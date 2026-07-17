@@ -1,5 +1,5 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Catalogue · theme: custom · designed-as-app */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { formatStockDisplay } from './utils/stockUtils';
 import { 
@@ -59,6 +59,9 @@ export default function StockPage() {
     const [categories, setCategories] = useState([]); // Dynamic
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState(null); // For Adjustment Modal
+
+    // Track items currently being adjusted to prevent realtime flicker
+    const pendingAdjustIds = useRef(new Set());
 
      const fetchCategories = async () => {
          const { data, error } = await supabase.from('stock_categories').select('*').order('sort_order');
@@ -125,10 +128,14 @@ export default function StockPage() {
     };
 
     // Real-time Subscription
+    // FIX: Skip items currently being adjusted (pendingAdjustIds) to prevent
+    // intermediate values from overwriting the verification fetch.
     useEffect(() => {
         const channel = supabase
             .channel('public:stock_items')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stock_items' }, (payload) => {
+                // Skip if this item has a pending adjustment in flight
+                if (pendingAdjustIds.current.has(payload.new.id)) return;
                 setItems(currentItems => 
                     currentItems.map(item => 
                         item.id === payload.new.id ? { ...item, ...payload.new } : item
@@ -143,48 +150,24 @@ export default function StockPage() {
     }, []);
 
     const handleAdjustment = async (itemId, changeAmount, type, meta = {}) => {
-        const item = items.find(i => i.id === itemId) || { current_quantity: 0 };
-        const currentQty = Number(Number(item.current_quantity || 0).toFixed(4));
         const roundedChange = Number(Number(changeAmount).toFixed(4));
-        let newQty = currentQty;
 
-        // Optimistic Update
-        setItems(prev => prev.map(i => {
-            if (i.id === itemId) {
-                newQty = type === 'set' 
-                    ? roundedChange 
-                    : Number((Number(i.current_quantity || 0) + roundedChange).toFixed(4));
-                return { ...i, current_quantity: newQty };
-            }
-            return i;
-        }));
+        // Mark this item as pending (realtime subscription will skip it)
+        pendingAdjustIds.current.add(itemId);
 
         try {
             const performedBy = currentUser?.user_metadata?.full_name || currentUser?.email || 'Staff';
-
             const diagNote = (meta.note || 'Adjustment');
             
             if (type === 'set') {
-                 // Absolute Update (Audit/Count) - Use RPC to calculate diff and log transaction
+                 // Absolute Update (Audit/Count) - Atomic RPC with row lock
                  const { error } = await supabase.rpc('set_stock_quantity', {
                      p_item_id: itemId,
                      p_new_quantity: roundedChange,
                      p_reason: diagNote, 
                      p_performed_by: performedBy
                  });
-                 
-                 // If RPC fails (e.g. function not found), fallback to direct transaction logging
-                 if (error) {
-                      console.warn("RPC failed, falling back to direct log:", error);
-                      const { error: directError } = await supabase.from('stock_transactions').insert({
-                        stock_item_id: itemId,
-                        transaction_type: 'set',
-                        quantity_change: Number((roundedChange - currentQty).toFixed(4)),
-                        performed_by: performedBy, 
-                        note: diagNote + ' (Fallback)'
-                      });
-                      if (directError) throw directError;
-                 }
+                 if (error) throw error;
             } else {
                  // Relative Update (In/Out)
                  const { error } = await supabase.from('stock_transactions').insert({
@@ -212,9 +195,12 @@ export default function StockPage() {
             toast.success(type === 'set' ? `Stock Set to: ${verifiedItem?.current_quantity || changeAmount}` : `Updated stock: ${changeAmount > 0 ? '+' : ''}${changeAmount}`);
             
         } catch (err) {
-            toast.error('Sync failed');
+            toast.error('Sync failed: ' + (err.message || 'Unknown error'));
             console.error(err);
-            fetchItems(); // Full Revert
+            fetchItems(); // Full Revert on error
+        } finally {
+            // Release the pending lock so realtime can resume for this item
+            pendingAdjustIds.current.delete(itemId);
         }
     };
 
