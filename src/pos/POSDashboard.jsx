@@ -13,7 +13,7 @@ import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
-import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search } from 'lucide-react';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins } from 'lucide-react';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
@@ -27,6 +27,12 @@ export default function POSDashboard() {
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
     const [activeSlipType, setActiveSlipType] = useState('billing');
     const [refreshKey, setRefreshKey] = useState(0);
+
+    // Move / Merge / Split States
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [showMergeModal, setShowMergeModal] = useState(false);
+    const [showSplitModal, setShowSplitModal] = useState(false);
+    const [availableTables, setAvailableTables] = useState([]);
 
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
@@ -1001,6 +1007,268 @@ export default function POSDashboard() {
         }
     };
 
+    const handleOpenMoveModal = async () => {
+        if (!selectedTable || !activeBooking) return;
+        try {
+            const { data: allTables } = await supabase.from('tables_layout').select('*').order('table_name');
+            const today = new Date().toISOString().split('T')[0];
+            const { data: activeBookings } = await supabase
+                .from('bookings')
+                .select('*')
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .gte('booking_time', `${today}T00:00:00`);
+
+            const occupiedTableIds = (activeBookings || []).map(b => b.table_id);
+            const free = (allTables || []).filter(t => !occupiedTableIds.includes(t.id));
+            setAvailableTables(free);
+            setShowMoveModal(true);
+        } catch (err) {
+            console.error("Failed to load tables for move, fallback to cache:", err);
+            try {
+                const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
+                const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                const occupiedIds = cachedBookings.map(b => b.table_id);
+                const free = cachedTables.filter(t => !occupiedIds.includes(t.id));
+                setAvailableTables(free);
+                setShowMoveModal(true);
+            } catch (e) {
+                toast.error("ไม่สามารถดึงข้อมูลโต๊ะได้ในขณะนี้");
+            }
+        }
+    };
+
+    const handleExecuteMoveTable = async (targetTable) => {
+        if (!activeBooking || !selectedTable) return;
+        const toastId = toast.loading(`กำลังย้ายจากโต๊ะ ${selectedTable.table_name} ไปโต๊ะ ${targetTable.table_name}...`);
+        
+        if (!isOnline()) {
+            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const updated = cachedBookings.map(b => {
+                if (b.id === activeBooking.id) {
+                    return { ...b, table_id: targetTable.id };
+                }
+                return b;
+            });
+            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updated));
+            
+            addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id });
+            
+            toast.success(`⚠️ ออฟไลน์: ย้ายโต๊ะสำเร็จ!`, { id: toastId });
+            setShowMoveModal(false);
+            setSelectedTable(targetTable);
+            setRefreshKey(prev => prev + 1);
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .update({ table_id: targetTable.id })
+                .eq('id', activeBooking.id);
+                
+            if (error) throw error;
+            
+            toast.success(`ย้ายโต๊ะสำเร็จ ไปที่โต๊ะ ${targetTable.table_name}`, { id: toastId });
+            setShowMoveModal(false);
+            setSelectedTable(targetTable);
+            setRefreshKey(prev => prev + 1);
+        } catch (err) {
+            console.error("Move table failed:", err);
+            toast.error("ย้ายโต๊ะไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
+        }
+    };
+
+    const handleOpenMergeModal = async () => {
+        if (!selectedTable || !activeBooking) return;
+        try {
+            const { data: allTables } = await supabase.from('tables_layout').select('*').order('table_name');
+            const today = new Date().toISOString().split('T')[0];
+            const { data: activeBookings } = await supabase
+                .from('bookings')
+                .select('*')
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .gte('booking_time', `${today}T00:00:00`);
+
+            const activeBookingMap = {};
+            (activeBookings || []).forEach(b => {
+                activeBookingMap[b.table_id] = b;
+            });
+
+            const occupied = (allTables || [])
+                .filter(t => t.id !== selectedTable.id && activeBookingMap[t.id])
+                .map(t => ({
+                    ...t,
+                    booking: activeBookingMap[t.id]
+                }));
+
+            setAvailableTables(occupied);
+            setShowMergeModal(true);
+        } catch (err) {
+            console.error("Failed to load tables for merge, fallback to cache:", err);
+            try {
+                const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
+                const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                const activeMap = {};
+                cachedBookings.forEach(b => { activeMap[b.table_id] = b; });
+                const occupied = cachedTables
+                    .filter(t => t.id !== selectedTable.id && activeMap[t.id])
+                    .map(t => ({
+                        ...t,
+                        booking: activeMap[t.id]
+                    }));
+                setAvailableTables(occupied);
+                setShowMergeModal(true);
+            } catch (e) {
+                toast.error("ไม่สามารถดึงข้อมูลโต๊ะได้ในขณะนี้");
+            }
+        }
+    };
+
+    const handleExecuteMergeBill = async (targetTable) => {
+        if (!activeBooking || !selectedTable || !targetTable.booking) return;
+        const targetBooking = targetTable.booking;
+        
+        const isConfirmed = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการรวมบิลจากโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}?\nรายการอาหารทั้งหมดจะถูกย้าย และโต๊ะ ${selectedTable.table_name} จะว่างลง`);
+        if (!isConfirmed) return;
+
+        const toastId = toast.loading(`กำลังรวมบิลโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}...`);
+
+        if (!isOnline()) {
+            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const updatedBookings = cachedBookings.map(b => {
+                if (b.id === targetBooking.id) {
+                    const sourceItems = activeBooking.order_items || [];
+                    const targetItems = b.order_items || [];
+                    const mergedItems = [...targetItems, ...sourceItems.map(item => ({ ...item, booking_id: targetBooking.id }))];
+                    return { ...b, order_items: mergedItems };
+                }
+                return b;
+            }).filter(b => b.id !== activeBooking.id);
+            
+            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
+            addToOfflineQueue('merge_bills', { sourceBookingId: activeBooking.id, targetBookingId: targetBooking.id });
+            
+            toast.success(`⚠️ ออฟไลน์: รวมบิลสำเร็จ!`, { id: toastId });
+            setShowMergeModal(false);
+            setSelectedTable(targetTable);
+            setRefreshKey(prev => prev + 1);
+            return;
+        }
+
+        try {
+            const { error: itemsErr } = await supabase
+                .from('order_items')
+                .update({ booking_id: targetBooking.id })
+                .eq('booking_id', activeBooking.id);
+                
+            if (itemsErr) throw itemsErr;
+
+            const { error: voidErr } = await supabase
+                .from('bookings')
+                .update({ status: 'void', staff_remark: `Merged into Table ${targetTable.table_name}` })
+                .eq('id', activeBooking.id);
+                
+            if (voidErr) throw voidErr;
+            
+            toast.success(`รวมบิลเข้าโต๊ะ ${targetTable.table_name} สำเร็จ!`, { id: toastId });
+            setShowMergeModal(false);
+            setSelectedTable(targetTable);
+            setRefreshKey(prev => prev + 1);
+        } catch (err) {
+            console.error("Merge bills failed:", err);
+            toast.error("รวมบิลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
+        }
+    };
+
+    const handleExecuteSplitPayment = async (paidItems, splitTotal, splitPaymentMethod, splitCashReceived, splitChange) => {
+        if (!activeBooking || !selectedTable) return;
+        const toastId = toast.loading('กำลังบันทึกแบ่งชำระเงิน...');
+
+        const mockSplitBooking = {
+            ...activeBooking,
+            total_amount: splitTotal,
+            discount_amount: 0,
+            staff_remark: `Split Paid by ${splitPaymentMethod.toUpperCase()}`,
+            order_items: paidItems.map(item => ({
+                id: item.db_id || `split_${Date.now()}_${item.id}`,
+                booking_id: activeBooking.id,
+                menu_item_id: item.id,
+                quantity: item.selectedQty,
+                price_at_time: item.price,
+                selected_options: item.selected_options || [],
+                menu_items: { name: item.name }
+            }))
+        };
+
+        if (splitPaymentMethod === 'cash') {
+            localStorage.setItem('last_cash_received', splitCashReceived);
+            localStorage.setItem('last_cash_change', splitChange);
+        }
+
+        if (!isOnline()) {
+            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const updatedBookings = cachedBookings.map(b => {
+                if (b.id === activeBooking.id) {
+                    const remainingItems = b.order_items.map(dbItem => {
+                        const paid = paidItems.find(p => p.id === dbItem.menu_item_id);
+                        if (paid) {
+                            return { ...dbItem, quantity: Math.max(0, dbItem.quantity - paid.selectedQty) };
+                        }
+                        return dbItem;
+                    }).filter(dbItem => dbItem.quantity > 0);
+                    return { ...b, order_items: remainingItems };
+                }
+                return b;
+            });
+            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
+
+            addToOfflineQueue('split_payment', {
+                bookingId: activeBooking.id,
+                paidItems: paidItems.map(p => ({ menu_item_id: p.id, quantity: p.selectedQty })),
+                paymentMethod: splitPaymentMethod,
+                totalAmount: splitTotal
+            });
+
+            recordShiftTransaction(activeBooking.id, splitTotal, splitPaymentMethod);
+
+            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายสำเร็จ!`, { id: toastId });
+            setShowSplitModal(false);
+            setActiveSlipBooking(mockSplitBooking);
+            setActiveSlipType('receipt');
+            setRefreshKey(prev => prev + 1);
+            return;
+        }
+
+        try {
+            for (const item of paidItems) {
+                if (item.selectedQty === item.quantity) {
+                    const { error } = await supabase
+                        .from('order_items')
+                        .delete()
+                        .eq('id', item.db_id);
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabase
+                        .from('order_items')
+                        .update({ quantity: item.quantity - item.selectedQty })
+                        .eq('id', item.db_id);
+                    if (error) throw error;
+                }
+            }
+
+            recordShiftTransaction(activeBooking.id, splitTotal, splitPaymentMethod);
+
+            toast.success('แบ่งจ่ายสำเร็จ!', { id: toastId });
+            setShowSplitModal(false);
+            setActiveSlipBooking(mockSplitBooking);
+            setActiveSlipType('receipt');
+            setRefreshKey(prev => prev + 1);
+        } catch (err) {
+            console.error("Split payment failed:", err);
+            toast.error("บันทึกแบ่งจ่ายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
+        }
+    };
+
     return (
         <div className="h-screen w-full bg-[#ECECE9] text-[#1A1A1A] overflow-hidden flex flex-col font-sans select-none">
             
@@ -1060,6 +1328,9 @@ export default function POSDashboard() {
                                 }
                             }}
                             onOpenSlip={handleSaveAndOpenSlip}
+                            onOpenSplitPayment={() => setShowSplitModal(true)}
+                            onMoveTable={handleOpenMoveModal}
+                            onMergeBill={handleOpenMergeModal}
                             onAttachCustomer={() => {
                                 if (!activeBooking) {
                                     toast.error("กรุณากดเปิดโต๊ะ (Seated Table) ก่อนผูกโปรไฟล์ลูกค้าครับ");
@@ -1091,12 +1362,97 @@ export default function POSDashboard() {
                     booking={activeSlipBooking}
                     type={activeSlipType}
                     onClose={() => {
+                        const isSplit = activeSlipBooking?.staff_remark?.includes('Split Paid');
                         setActiveSlipBooking(null);
-                        if (activeSlipType === 'receipt') {
+                        if (activeSlipType === 'receipt' && !isSplit) {
                             handleBackToTables();
                         }
                     }}
                 />
+            )}
+
+            {showMoveModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm shadow-xl p-5 flex flex-col gap-4">
+                        <div className="flex justify-between items-center pb-2 border-b border-[#D1D1CD]">
+                            <div>
+                                <h3 className="text-xs font-mono font-bold tracking-widest text-[#767673] uppercase">MOVE TABLE / ย้ายโต๊ะ</h3>
+                                <p className="text-sm font-bold text-[#1A1A1A] mt-0.5">เลือกโต๊ะปลายทางที่จะย้ายไป</p>
+                            </div>
+                            <button 
+                                onClick={() => setShowMoveModal(false)}
+                                className="w-7 h-7 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        
+                        <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                            {availableTables.length === 0 ? (
+                                <p className="text-[10px] text-center text-[#767673] py-8 uppercase font-mono tracking-wider">ไม่มีโต๊ะว่างในขณะนี้</p>
+                            ) : (
+                                availableTables.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => handleExecuteMoveTable(t)}
+                                        className="w-full bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between font-bold text-xs text-[#1A1A1A] shadow-sm active:scale-99"
+                                    >
+                                        <span>โต๊ะ {t.table_name}</span>
+                                        <span className="text-[8px] font-mono text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">FREE</span>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showMergeModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm shadow-xl p-5 flex flex-col gap-4">
+                        <div className="flex justify-between items-center pb-2 border-b border-[#D1D1CD]">
+                            <div>
+                                <h3 className="text-xs font-mono font-bold tracking-widest text-[#767673] uppercase">MERGE BILLS / รวมบิล</h3>
+                                <p className="text-sm font-bold text-[#1A1A1A] mt-0.5">เลือกโต๊ะปลายทางที่จะรวมบิลเข้าด้วยกัน</p>
+                            </div>
+                            <button 
+                                onClick={() => setShowMergeModal(false)}
+                                className="w-7 h-7 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        
+                        <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                            {availableTables.length === 0 ? (
+                                <p className="text-[10px] text-center text-[#767673] py-8 uppercase font-mono tracking-wider">ไม่มีโต๊ะอื่นที่เปิดออเดอร์อยู่</p>
+                            ) : (
+                                availableTables.map(t => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => handleExecuteMergeBill(t)}
+                                        className="w-full bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between font-bold text-xs text-[#1A1A1A] shadow-sm active:scale-99"
+                                    >
+                                        <span>โต๊ะ {t.table_name}</span>
+                                        <span className="text-[8px] font-mono text-[#ff0000] uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded border border-red-100">OCCUPIED</span>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showSplitModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
+                    <SplitPaymentModalInner 
+                        order={currentOrder}
+                        activeBooking={activeBooking}
+                        includeTax={includeTax}
+                        onClose={() => setShowSplitModal(false)}
+                        onConfirmSplit={handleExecuteSplitPayment}
+                    />
+                </div>
             )}
 
             {/* Attach Customer CRM Modal */}
@@ -1805,3 +2161,183 @@ export default function POSDashboard() {
         </div>
     );
 }
+
+function SplitPaymentModalInner({ order, activeBooking, includeTax, onClose, onConfirmSplit }) {
+    const [splitQuantities, setSplitQuantities] = useState({});
+    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [cashReceived, setCashReceived] = useState('');
+
+    useEffect(() => {
+        const initial = {};
+        order.items.forEach(item => {
+            initial[item.id] = 0;
+        });
+        setSplitQuantities(initial);
+    }, [order.items]);
+
+    const handleQtyChange = (itemId, change, maxQty) => {
+        setSplitQuantities(prev => {
+            const current = prev[itemId] || 0;
+            const next = Math.max(0, Math.min(maxQty, current + change));
+            return { ...prev, [itemId]: next };
+        });
+    };
+
+    const hasNewItems = order.items.some(item => !item.db_id);
+    const selectedItems = order.items.map(item => ({
+        ...item,
+        selectedQty: splitQuantities[item.id] || 0
+    })).filter(item => item.selectedQty > 0);
+
+    const splitSubtotal = selectedItems.reduce((sum, item) => sum + (item.price * item.selectedQty), 0);
+    const splitTax = includeTax ? splitSubtotal * 0.07 : 0;
+    const splitTotal = splitSubtotal + splitTax;
+
+    const isPayingAll = selectedItems.length > 0 && selectedItems.every(item => item.selectedQty === item.quantity) && selectedItems.length === order.items.length;
+
+    const handleConfirmClick = () => {
+        if (selectedItems.length === 0) {
+            toast.error("กรุณาเลือกรายการสินค้าที่จะชำระเงินก่อนครับ");
+            return;
+        }
+
+        if (paymentMethod === 'cash') {
+            const cashRecvVal = parseFloat(cashReceived) || 0;
+            if (cashRecvVal < splitTotal) {
+                toast.error("จำนวนเงินสดที่รับมาไม่เพียงพอครับ");
+                return;
+            }
+        }
+
+        if (isPayingAll) {
+            toast.info("เลือกทุกรายการสินค้า ระบบจะเปลี่ยนเป็นการเช็คบิลปกติโดยอัตโนมัติ");
+            onClose();
+            // Trigger regular checkout by finding checkout button or closing modal
+            return;
+        }
+
+        const changeVal = paymentMethod === 'cash' ? Math.max(0, (parseFloat(cashReceived) || 0) - splitTotal).toFixed(2) : '0.00';
+        onConfirmSplit(selectedItems, splitTotal, paymentMethod, parseFloat(cashReceived) || 0, changeVal);
+    };
+
+    return (
+        <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-md shadow-xl p-5 flex flex-col gap-4 text-[#1A1A1A]">
+            <div className="flex justify-between items-center pb-2 border-b border-[#D1D1CD]">
+                <div>
+                    <h3 className="text-xs font-mono font-bold tracking-widest text-[#767673] uppercase">SPLIT BILL / แบ่งชำระเงิน</h3>
+                    <p className="text-sm font-bold text-[#1A1A1A] mt-0.5">เลือกรายการสินค้าและจำนวนที่จะจ่ายรอบนี้</p>
+                </div>
+                <button 
+                    onClick={onClose}
+                    className="w-7 h-7 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                >
+                    <X size={14} />
+                </button>
+            </div>
+
+            {hasNewItems && (
+                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-3 text-[10px] text-amber-800 font-medium">
+                    ⚠️ มีรายการยังไม่ส่งครัว! กรุณากดส่งครัว (Send to Kitchen) เพื่อบันทึกออเดอร์ให้เรียบร้อยก่อนทำการแบ่งจ่ายครับ
+                </div>
+            )}
+
+            {/* Items Listing */}
+            <div className="flex-1 overflow-y-auto max-h-60 space-y-1.5 pr-1">
+                {order.items.map(item => {
+                    const currentSelected = splitQuantities[item.id] || 0;
+                    return (
+                        <div key={item.id} className="bg-white border border-[#D1D1CD] p-2.5 rounded-xl flex items-center justify-between shadow-sm">
+                            <div className="min-w-0 flex-1">
+                                <h5 className="font-bold text-[11px] text-[#1A1A1A] uppercase truncate">{item.name}</h5>
+                                <p className="text-[9px] text-[#ff0000] font-mono font-bold">฿{item.price}</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-[10px] font-mono text-[#767673] font-bold">Max: {item.quantity}</span>
+                                <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-md p-0.5 gap-0.5 scale-90">
+                                    <button 
+                                        type="button"
+                                        disabled={hasNewItems}
+                                        onClick={() => handleQtyChange(item.id, -1, item.quantity)}
+                                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer disabled:opacity-30"
+                                    >
+                                        <Minus size={8} />
+                                    </button>
+                                    <span className="w-5 text-center font-mono font-bold text-[10px]">{currentSelected}</span>
+                                    <button 
+                                        type="button"
+                                        disabled={hasNewItems}
+                                        onClick={() => handleQtyChange(item.id, 1, item.quantity)}
+                                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer disabled:opacity-30"
+                                    >
+                                        <Plus size={8} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Split total & payment selector */}
+            <div className="border-t border-[#D1D1CD] pt-3 space-y-2">
+                <div className="flex justify-between items-center text-[10px] font-bold">
+                    <span>ยอดที่เลือกจ่ายรอบนี้ (Selected Total)</span>
+                    <span className="text-sm font-black text-[#ff0000]">฿{splitTotal.toFixed(2)}</span>
+                </div>
+
+                <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] w-full font-mono text-[9px] font-bold uppercase tracking-wider gap-0.5">
+                    <button 
+                        type="button"
+                        onClick={() => setPaymentMethod('cash')}
+                        className={`flex-1 py-1 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                    >
+                        CASH
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => setPaymentMethod('qr')}
+                        className={`flex-1 py-1 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                    >
+                        QR
+                    </button>
+                </div>
+
+                {paymentMethod === 'cash' && (
+                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-2.5 space-y-2 text-left shadow-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673]">
+                                Cash Received (รับเงินมา)
+                            </span>
+                            <input 
+                                type="number"
+                                placeholder="0.00"
+                                value={cashReceived}
+                                onChange={(e) => setCashReceived(e.target.value)}
+                                className="w-24 text-right bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-black"
+                            />
+                        </div>
+                        <div className="flex justify-between items-center text-[9px] border-t border-dashed border-[#D1D1CD] pt-2">
+                            <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
+                            <span className={`font-mono font-bold text-xs ${parseFloat(cashReceived) >= splitTotal ? 'text-green-600' : 'text-[#ff0000]'}`}>
+                                {parseFloat(cashReceived) >= splitTotal 
+                                    ? `฿${(parseFloat(cashReceived) - splitTotal).toFixed(2)}` 
+                                    : cashReceived ? `ขาดอีก ฿${(splitTotal - parseFloat(cashReceived)).toFixed(2)}` : '฿0.00'}
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                <button
+                    type="button"
+                    disabled={hasNewItems || selectedItems.length === 0}
+                    onClick={handleConfirmClick}
+                    className="w-full bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer mt-1"
+                >
+                    Confirm Pay Split / ยืนยันชำระเงิน
+                </button>
+            </div>
+        </div>
+    );
+}
+

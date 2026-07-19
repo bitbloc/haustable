@@ -16,10 +16,14 @@ export default function POSOrderPanel({
     onOpenSlip, 
     onAttachCustomer, 
     onDetachCustomer,
-    onUpdateItemNote 
+    onUpdateItemNote,
+    onOpenSplitPayment,
+    onMoveTable,
+    onMergeBill
 }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
+    const [cashReceivedInput, setCashReceivedInput] = React.useState('');
     
     // Points states
     const [xhausToRedeem, setXhausToRedeem] = React.useState(0);
@@ -111,6 +115,7 @@ export default function POSOrderPanel({
         setRewardCodeInput('');
         setAppliedReward(null);
         setRewardDiscount(0);
+        setCashReceivedInput('');
     }, [booking?.id]);
 
     const handleApplyRewardCode = async () => {
@@ -281,6 +286,22 @@ export default function POSOrderPanel({
                     <p className="text-[10px] text-[#767673] font-bold font-mono mt-0.5 uppercase tracking-tight">
                         {order.table ? `TABLE: ${order.table.table_name}` : (booking?.booking_type === 'pickup' ? 'PICK-UP ORDER' : 'WALK-IN ORDER')}
                     </p>
+                    {booking && (
+                        <div className="flex gap-1.5 mt-1.5">
+                            <button 
+                                onClick={() => onMoveTable?.()}
+                                className="text-[8px] font-bold bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded cursor-pointer transition-all active:scale-95"
+                            >
+                                ย้ายโต๊ะ (Move)
+                            </button>
+                            <button 
+                                onClick={() => onMergeBill?.()}
+                                className="text-[8px] font-bold bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded cursor-pointer transition-all active:scale-95"
+                            >
+                                รวมบิล (Merge)
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <button 
                     onClick={onClear}
@@ -827,6 +848,69 @@ export default function POSOrderPanel({
                                 <CreditCard size={10} /> CREDIT / บัตร
                             </button>
                         </div>
+ 
+                        {/* Cash Calculator UI */}
+                        {paymentMethod === 'cash' && (
+                            <div className="bg-white border border-[#D1D1CD] rounded-xl p-2.5 space-y-2 text-left shadow-sm">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673]">
+                                        Cash Received (รับเงินมา)
+                                    </span>
+                                    <input 
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={cashReceivedInput}
+                                        onChange={(e) => setCashReceivedInput(e.target.value)}
+                                        className="w-24 text-right bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-black"
+                                    />
+                                </div>
+                                
+                                {/* Quick Cash buttons */}
+                                <div className="grid grid-cols-4 gap-1">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setCashReceivedInput(total.toFixed(2))}
+                                        className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                    >
+                                        พอดี
+                                    </button>
+                                    {Math.ceil(total / 100) * 100 !== total && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => setCashReceivedInput((Math.ceil(total / 100) * 100).toFixed(2))}
+                                            className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                        >
+                                            ฿{Math.ceil(total / 100) * 100}
+                                        </button>
+                                    )}
+                                    {total <= 500 && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => setCashReceivedInput('500.00')}
+                                            className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                        >
+                                            ฿500
+                                        </button>
+                                    )}
+                                    <button 
+                                        type="button"
+                                        onClick={() => setCashReceivedInput('1000.00')}
+                                        className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                    >
+                                        ฿1000
+                                    </button>
+                                </div>
+
+                                <div className="flex justify-between items-center text-[9px] border-t border-dashed border-[#D1D1CD] pt-2">
+                                    <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
+                                    <span className={`font-mono font-bold text-xs ${parseFloat(cashReceivedInput) >= total ? 'text-green-600' : 'text-[#ff0000]'}`}>
+                                        {parseFloat(cashReceivedInput) >= total 
+                                            ? `฿${(parseFloat(cashReceivedInput) - total).toFixed(2)}` 
+                                            : cashReceivedInput ? `ขาดอีก ฿${(total - parseFloat(cashReceivedInput)).toFixed(2)}` : '฿0.00'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Print Bill / Show QR button if QR is chosen */}
                         {paymentMethod === 'qr' && (
@@ -873,6 +957,17 @@ export default function POSOrderPanel({
                                     </button>
                                     <button 
                                         onClick={() => {
+                                            if (paymentMethod === 'cash') {
+                                                const cashRecv = parseFloat(cashReceivedInput) || 0;
+                                                if (cashRecv < total) {
+                                                    toast.error("กรุณากรอกจำนวนเงินรับมาให้พอดีหรือมากกว่ายอดรวมครับ");
+                                                    return;
+                                                }
+                                                // Save to local storage for printing receipts
+                                                localStorage.setItem('last_cash_received', cashRecv);
+                                                localStorage.setItem('last_cash_change', (cashRecv - total).toFixed(2));
+                                            }
+                                            
                                             onCheckout(
                                                 paymentMethod, 
                                                 includeTax, 
@@ -895,6 +990,17 @@ export default function POSOrderPanel({
                                 </>
                             )}
                         </div>
+
+                        {/* Split Payment trigger */}
+                        {booking && (
+                            <button 
+                                type="button"
+                                onClick={() => onOpenSplitPayment?.()}
+                                className="w-full mt-1 bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-2 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer active:scale-98"
+                            >
+                                <Coins size={10} /> แบ่งจ่าย / Split Payment
+                            </button>
+                        )}
                     </div>
                 )}
                 

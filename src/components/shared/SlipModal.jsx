@@ -325,9 +325,27 @@ export default function SlipModal({ booking, type, onClose }) {
             const methodLabel = paymentMethod === 'cash' 
                 ? 'เงินสด' 
                 : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR')
+            
+            let cashChangeHtml = ''
+            if (paymentMethod === 'cash') {
+                const storedRecv = localStorage.getItem('last_cash_received');
+                const storedChange = localStorage.getItem('last_cash_change');
+                if (storedRecv !== null && storedChange !== null) {
+                    const cashRecvVal = parseFloat(storedRecv).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    const cashChangeVal = parseFloat(storedChange).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    cashChangeHtml = `
+                        <div style="font-size: 10px; margin-top: 6px; text-align: left; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px dashed black; padding-bottom: 4px; margin-bottom: 4px;">
+                            <div style="display: flex; justify-content: space-between;"><span>รับเงินสดมา:</span> <span>฿${cashRecvVal}</span></div>
+                            <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>เงินทอน:</span> <span>฿${cashChangeVal}</span></div>
+                        </div>
+                    `
+                }
+            }
+
             paymentMethodHtml = `
                 <div class="payment-section">
                     <div class="payment-method">ช่องทางชำระเงิน: ${methodLabel}</div>
+                    ${cashChangeHtml}
                     <div class="paid-badge">ชำระเงินแล้ว / PAID</div>
                 </div>
             `

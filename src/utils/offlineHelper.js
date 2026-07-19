@@ -206,6 +206,51 @@ export async function syncOfflineQueue() {
                     
                 if (error) throw error;
             }
+
+            else if (action.type === 'move_table') {
+                let { bookingId, tableId } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
+                }
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ table_id: tableId })
+                    .eq('id', bookingId);
+                if (error) throw error;
+            }
+            
+            else if (action.type === 'merge_bills') {
+                let { sourceBookingId, targetBookingId } = action.payload;
+                if (idMapping[sourceBookingId]) {
+                    sourceBookingId = idMapping[sourceBookingId];
+                }
+                if (idMapping[targetBookingId]) {
+                    targetBookingId = idMapping[targetBookingId];
+                }
+                if (typeof sourceBookingId === 'string' && sourceBookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local source booking: ${sourceBookingId}`);
+                }
+                if (typeof targetBookingId === 'string' && targetBookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local target booking: ${targetBookingId}`);
+                }
+                
+                // Move items
+                const { error: itemsErr } = await supabase
+                    .from('order_items')
+                    .update({ booking_id: targetBookingId })
+                    .eq('booking_id', sourceBookingId);
+                if (itemsErr) throw itemsErr;
+                
+                // Void source booking
+                const { error: voidErr } = await supabase
+                    .from('bookings')
+                    .update({ status: 'void', staff_remark: 'Merged offline' })
+                    .eq('id', sourceBookingId);
+                if (voidErr) throw voidErr;
+            }
             
         } catch (err) {
             console.error(`[Offline Sync] Failed to sync action:`, action, err);

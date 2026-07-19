@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { motion } from 'framer-motion';
 import { 
@@ -68,57 +68,65 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
         }
     };
 
-    const fetchTables = async () => {
-        try {
-            const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
-            
-            // Simplified status check for POC
-            const today = new Date().toISOString().split('T')[0];
-            const { data: activeBookings } = await supabase
-                .from('bookings')
-                .select('*')
-                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`);
+    const fetchTimeoutRef = useRef(null);
 
-            const currentTables = tablesData || [];
-            const currentBookings = activeBookings || [];
-
-            // Cache data
-            localStorage.setItem('pos_cache_tables_layout', JSON.stringify(currentTables));
-            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
-
-            const merged = currentTables.map(t => {
-                const booking = currentBookings.find(b => b.table_id === t.id);
-                return {
-                    ...t,
-                    status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                    booking: booking
-                };
-            });
-
-            setTables(merged);
-        } catch (err) {
-            console.warn('[Offline Mode] Failed to fetch tables online, loading cache:', err);
+    const fetchTables = useCallback(async () => {
+        if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+        }
+        
+        fetchTimeoutRef.current = setTimeout(async () => {
             try {
-                const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
-                const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                const merged = cachedTables.map(t => {
-                    const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed');
+                // Simplified status check for POC
+                const today = new Date().toISOString().split('T')[0];
+                const { data: activeBookings } = await supabase
+                    .from('bookings')
+                    .select('*')
+                    .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                    .gte('booking_time', `${today}T00:00:00`);
+
+                const currentTables = tablesData || [];
+                const currentBookings = activeBookings || [];
+
+                // Cache data
+                localStorage.setItem('pos_cache_tables_layout', JSON.stringify(currentTables));
+                localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
+
+                const merged = currentTables.map(t => {
+                    const booking = currentBookings.find(b => b.table_id === t.id);
                     return {
                         ...t,
                         status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
                         booking: booking
                     };
                 });
+
                 setTables(merged);
-            } catch (cacheErr) {
-                console.error('Failed to load tables cache:', cacheErr);
+            } catch (err) {
+                console.warn('[Offline Mode] Failed to fetch tables online, loading cache:', err);
+                try {
+                    const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
+                    const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                    
+                    const merged = cachedTables.map(t => {
+                        const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed');
+                        return {
+                            ...t,
+                            status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
+                            booking: booking
+                        };
+                    });
+                    setTables(merged);
+                } catch (cacheErr) {
+                    console.error('Failed to load tables cache:', cacheErr);
+                }
+            } finally {
+                setLoading(false);
             }
-        } finally {
-            setLoading(false);
-        }
-    };
+        }, 150);
+    }, []);
 
     const filteredTables = tables.filter(table => {
         const matchesSearch = table.table_name.toLowerCase().includes(searchQuery.toLowerCase());

@@ -70,6 +70,17 @@ class EscPosEncoder {
         return this;
     }
 
+    raw(bytes) {
+        this.buffer.push(...bytes);
+        return this;
+    }
+
+    kickDrawer() {
+        // Sunmi/ESC/POS cash drawer kick command DLE DC4 m t1 t2 (10 14 00 3c ff)
+        this.buffer.push(0x10, 0x14, 0x00, 0x3C, 0xFF);
+        return this;
+    }
+
     encode() {
         return new Uint8Array(this.buffer);
     }
@@ -152,6 +163,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     const encoder = new EscPosEncoder(printerType === 'sunmi');
     encoder.initialize();
+
+    // Auto kick cash drawer if this is a cash receipt printout
+    if (activeTab === 'receipt' && paymentMethod === 'cash') {
+        encoder.kickDrawer();
+    }
 
     const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) 
         ? booking.tracking_token 
@@ -373,7 +389,23 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (activeTab === 'receipt') {
         const methodLabel = paymentMethod === 'cash' ? 'เงินสด' : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
         encoder.align('center')
-               .line(`ช่องทางชำระเงิน: ${methodLabel}`)
+               .line(`ช่องทางชำระเงิน: ${methodLabel}`);
+               
+        if (paymentMethod === 'cash') {
+            const storedRecv = localStorage.getItem('last_cash_received');
+            const storedChange = localStorage.getItem('last_cash_change');
+            if (storedRecv !== null) {
+                const cashRecvVal = parseFloat(storedRecv).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                encoder.align('left')
+                       .text(`รับเงินสดมา`.padEnd(maxCols - 12, ' ') + cashRecvVal.padStart(12, ' ') + '\n');
+            }
+            if (storedChange !== null) {
+                const cashChangeVal = parseFloat(storedChange).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                encoder.text(`เงินทอน`.padEnd(maxCols - 12, ' ') + cashChangeVal.padStart(12, ' ') + '\n');
+            }
+        }
+        
+        encoder.align('center')
                .line('')
                .bold(true)
                .line('[ ชำระเงินแล้ว ]')
