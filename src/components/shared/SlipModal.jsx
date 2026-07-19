@@ -39,8 +39,8 @@ export default function SlipModal({ booking, type, onClose }) {
                 const config = JSON.parse(stored);
                 const currentTab = getInitialTab();
                 const printerType = currentTab === 'kitchen' 
-                    ? (config.kitchen_printer_type || 'universal')
-                    : (config.cashier_printer_type || 'universal');
+                    ? (config.kitchen_printer_type || 'sunmi')
+                    : (config.cashier_printer_type || 'sunmi');
                 return printerType === 'sunmi';
             }
         } catch (err) {
@@ -113,15 +113,15 @@ export default function SlipModal({ booking, type, onClose }) {
             }
 
             // 3. Check printer configuration
-            let printerType = 'universal';
+            let printerType = 'sunmi';
             try {
                 const stored = localStorage.getItem('onhaus_printer_config');
                 if (stored) {
                     const config = JSON.parse(stored);
                     if (activeTab === 'kitchen') {
-                        printerType = config.kitchen_printer_type || 'universal';
+                        printerType = config.kitchen_printer_type || 'sunmi';
                     } else {
-                        printerType = config.cashier_printer_type || 'universal';
+                        printerType = config.cashier_printer_type || 'sunmi';
                     }
                 }
             } catch (err) {
@@ -250,11 +250,11 @@ export default function SlipModal({ booking, type, onClose }) {
                     ${optsHtml ? `<div class="opts">${optsHtml}</div>` : ''}
                 </div>
             `
-        }).join('') || '<div class="empty">No Items</div>'
+        }).join('') || '<div class="empty">ไม่มีรายการสินค้า</div>'
 
         const discountHtml = (activeTab !== 'kitchen' && activeTab !== 'bar' && booking.discount_amount > 0) ? `
             <div class="row meta-row">
-                <span>Discount (${booking.promotion_codes?.code || 'PROMO'})</span>
+                <span>ส่วนลด (${booking.promotion_codes?.code || 'โปรโมชั่น'})</span>
                 <span>-${booking.discount_amount.toLocaleString()}</span>
             </div>
         ` : ''
@@ -268,16 +268,19 @@ export default function SlipModal({ booking, type, onClose }) {
             : 0;
 
         const vatHtml = vatVal > 0 ? `
-            <div class="row"><span>VAT (7%)</span> <span>${vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+            <div class="row"><span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span> <span>${vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
         ` : '';
+
+        const totalQty = booking.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
         const totalsHtml = (activeTab !== 'kitchen' && activeTab !== 'bar') ? `
             <div class="totals">
-                <div class="row"><span>Subtotal</span> <span>${subtotal.toLocaleString()}</span></div>
+                <div class="row"><span>จำนวนชิ้น (QTY)</span> <span>${totalQty}</span></div>
+                <div class="row"><span>ยอดรวมก่อนหัก</span> <span>${subtotal.toLocaleString()}</span></div>
                 ${discountHtml}
                 ${vatHtml}
                 <div class="row total-row" style="font-size: 15px; border-top: 1px dashed black; padding-top: 5px;">
-                    <span>TOTAL</span>
+                    <span>ยอดรวมทั้งสิ้น (TOTAL)</span>
                     <span>${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
             </div>
@@ -285,7 +288,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
         const noteHtml = (booking.customer_note && (activeTab === 'kitchen' || activeTab === 'bar')) ? `
             <div class="kitchen-note-box">
-                <div class="kitchen-note-label">NOTE FOR STAFF</div>
+                <div class="kitchen-note-label">หมายเหตุ / NOTE FOR STAFF</div>
                 ${booking.customer_note}
             </div>
         ` : ''
@@ -320,12 +323,12 @@ export default function SlipModal({ booking, type, onClose }) {
         let paymentMethodHtml = ''
         if (activeTab === 'receipt') {
             const methodLabel = paymentMethod === 'cash' 
-                ? 'CASH / เงินสด' 
-                : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')
+                ? 'เงินสด' 
+                : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR')
             paymentMethodHtml = `
                 <div class="payment-section">
-                    <div class="payment-method">Payment Method: ${methodLabel}</div>
-                    <div class="paid-badge">PAID / ชำระแล้ว</div>
+                    <div class="payment-method">ช่องทางชำระเงิน: ${methodLabel}</div>
+                    <div class="paid-badge">ชำระเงินแล้ว / PAID</div>
                 </div>
             `
         }
@@ -504,12 +507,12 @@ export default function SlipModal({ booking, type, onClose }) {
                     </div>
                     
                     <div class="meta">
-                        <div class="row"><span class="label">QUEUE NO</span> <span class="val">#${queueNo}</span></div>
-                        <div class="row"><span class="label">DATE</span> <span class="val">${dateStr}</span></div>
-                        <div class="row"><span class="label">GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</span></div>
-                        ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
+                        <div class="row"><span class="label">หมายเลขคิว / QUEUE NO</span> <span class="val">#${queueNo}</span></div>
+                        <div class="row"><span class="label">วันที่-เวลา / DATE</span> <span class="val">${dateStr}</span></div>
+                        <div class="row"><span class="label">ลูกค้า / GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}</span></div>
+                        ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">เบอร์โทร / PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
                         <!-- Cashier shift staff info if customer receipt -->
-                        ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">STAFF</span> <span class="val">${staffName}</span></div>` : ''}
+                        ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">พนักงาน / STAFF</span> <span class="val">${staffName}</span></div>` : ''}
                     </div>
 
                     <div class="items">
@@ -537,7 +540,7 @@ export default function SlipModal({ booking, type, onClose }) {
     }
 
     const handlePrint = async () => {
-        let printerType = 'universal';
+        let printerType = 'sunmi';
         let btDeviceName = '';
         let paperSize = '58mm';
         
@@ -546,11 +549,11 @@ export default function SlipModal({ booking, type, onClose }) {
             if (stored) {
                 const config = JSON.parse(stored);
                 if (activeTab === 'kitchen') {
-                    printerType = config.kitchen_printer_type || 'universal';
+                    printerType = config.kitchen_printer_type || 'sunmi';
                     btDeviceName = config.kitchen_printer_bt_name || '';
                     paperSize = config.kitchen_paper_size || '58mm';
                 } else {
-                    printerType = config.cashier_printer_type || 'universal';
+                    printerType = config.cashier_printer_type || 'sunmi';
                     btDeviceName = config.cashier_printer_bt_name || '';
                     paperSize = config.cashier_paper_size || '58mm';
                 }

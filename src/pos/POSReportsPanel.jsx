@@ -178,7 +178,7 @@ export default function POSReportsPanel() {
     // Print Shift Report HTML
     const handlePrintShiftReport = async () => {
         let paperSize = '58mm';
-        let printerType = 'universal';
+        let printerType = 'sunmi';
         let btDeviceName = '';
         
         try {
@@ -186,9 +186,9 @@ export default function POSReportsPanel() {
             if (stored) {
                 const config = JSON.parse(stored);
                 // Shift summary report is printed by cashier printer
-                printerType = config.cashier_printer_type || 'universal';
+                printerType = config.cashier_printer_type || 'sunmi';
                 btDeviceName = config.cashier_printer_bt_name || '';
-                paperSize = config.cashier_paper_size || '58mm';
+                paperSize = config.cashier_paper_size || '80mm';
             }
         } catch (err) {
             console.error("Failed to read printer config:", err);

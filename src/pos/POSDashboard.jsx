@@ -10,7 +10,7 @@ import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
 import SlipModal from '../components/shared/SlipModal';
-import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search } from 'lucide-react';
@@ -31,6 +31,7 @@ export default function POSDashboard() {
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
+    const prevHasPendingOrdersRef = useRef(false);
 
     // Track unique realtime alerts to prevent audio overlap and duplicates
     const activeNotificationsRef = useRef(new Set());
@@ -48,9 +49,25 @@ export default function POSDashboard() {
     const [pinInput, setPinInput] = useState('');
     const [showOpeningFloatModal, setShowOpeningFloatModal] = useState(false);
     const [showCashAdjustmentModal, setShowCashAdjustmentModal] = useState(false);
-    const [isLocked, setIsLocked] = useState(false);
+    const [isLocked, setIsLocked] = useState(() => {
+        return localStorage.getItem('pos_is_locked') === 'true';
+    });
     const [selectedStaffForUnlock, setSelectedStaffForUnlock] = useState(null);
     const [lockPinInput, setLockPinInput] = useState('');
+
+    const lockScreen = () => {
+        setIsLocked(true);
+        localStorage.setItem('pos_is_locked', 'true');
+        setLockPinInput('');
+        setSelectedStaffForUnlock(null);
+    };
+
+    const unlockScreen = () => {
+        setIsLocked(false);
+        localStorage.setItem('pos_is_locked', 'false');
+        setSelectedStaffForUnlock(null);
+        setLockPinInput('');
+    };
     const [cashAdjustmentForm, setCashAdjustmentForm] = useState({ amount: '', note: '', type: 'out' });
 
     // CRM Profile Attach States
@@ -186,9 +203,7 @@ export default function POSDashboard() {
             setShowCashAdjustmentModal(true);
         };
         const handleTriggerLock = () => {
-            setIsLocked(true);
-            setLockPinInput('');
-            setSelectedStaffForUnlock(null);
+            lockScreen();
         };
 
         window.addEventListener('pos-shift-changed', handleShiftChanged);
@@ -359,7 +374,6 @@ export default function POSDashboard() {
         setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
     };
 
-    // Check pending orders helper
     const checkPendingOrders = async () => {
         try {
             const today = new Date().toISOString().split('T')[0];
@@ -370,7 +384,12 @@ export default function POSDashboard() {
                 .gte('booking_time', `${today}T00:00:00`);
             
             if (!error) {
-                setHasPendingOrders((count || 0) > 0);
+                const hasPending = (count || 0) > 0;
+                setHasPendingOrders(hasPending);
+                if (hasPending !== prevHasPendingOrdersRef.current) {
+                    prevHasPendingOrdersRef.current = hasPending;
+                    setRefreshKey(prev => prev + 1);
+                }
             }
         } catch (err) {
             console.error("Check pending orders failed:", err);
@@ -395,8 +414,8 @@ export default function POSDashboard() {
         // Warning toast to unlock sound (De-duplicated using id)
         toast.info("🔊 กรุณาแตะที่ใดก็ได้บนหน้าจอ 1 ครั้ง เพื่อเปิดระบบเสียงแจ้งเตือนออเดอร์", { id: "unlock-sound-toast" });
 
-        // Poll pending orders every 8 seconds
-        const pollInterval = setInterval(checkPendingOrders, 8000);
+        // Poll pending orders every 4 seconds
+        const pollInterval = setInterval(checkPendingOrders, 4000);
 
         // Unlock audio context on first click/touch
         const unlock = () => {
@@ -867,6 +886,45 @@ export default function POSDashboard() {
         }));
     };
 
+    const handleClearOrderOrTable = async () => {
+        if (activeBooking) {
+            const isConfirmed = window.confirm(`⚠️ คุณต้องการยกเลิกบิล / เคลียร์โต๊ะนี้ใช่หรือไม่?\nการดำเนินการนี้จะเปลี่ยนสถานะบิลเป็นยกเลิก (Void) และคืนค่าโต๊ะเป็นว่างทันที`);
+            if (isConfirmed) {
+                const toastId = toast.loading('กำลังยกเลิกบิลและเคลียร์โต๊ะ...');
+                try {
+                    const { error } = await supabase
+                        .from('bookings')
+                        .update({ status: 'void' })
+                        .eq('id', activeBooking.id);
+                    
+                    if (error) throw error;
+                    
+                    // Void in active shift transactions if present
+                    voidShiftTransaction(activeBooking.id);
+                    
+                    toast.success('ยกเลิกบิลและเคลียร์โต๊ะสำเร็จแล้ว', { id: toastId });
+                    
+                    // Clear states
+                    setCurrentOrder({ items: [], customer: null, table: selectedTable });
+                    setActiveBooking(null);
+                    setAttachedMemberCrm(null);
+                    setRefreshKey(prev => prev + 1);
+                    
+                    // Back to tables grid
+                    setView('tables');
+                    setSelectedTable(null);
+                } catch (err) {
+                    console.error("Failed to clear booking:", err);
+                    toast.error('ไม่สามารถยกเลิกบิลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง', { id: toastId });
+                }
+            }
+        } else {
+            // Cart has unsaved items only, no active booking in DB
+            setCurrentOrder({ items: [], customer: null, table: selectedTable });
+            setAttachedMemberCrm(null);
+        }
+    };
+
     const handleCheckout = async (
         paymentMethod, 
         includeTax, 
@@ -976,7 +1034,7 @@ export default function POSDashboard() {
                             attachedMemberCrm={attachedMemberCrm}
                             onUpdateQuantity={handleUpdateQuantity}
                             onUpdateItemNote={handleUpdateItemNote}
-                            onClear={() => setCurrentOrder({ items: [], customer: null, table: selectedTable })}
+                            onClear={handleClearOrderOrTable}
                             onCheckout={handleCheckout}
                             onAcceptOrder={async () => {
                                 if (activeBooking) {
@@ -1671,9 +1729,7 @@ export default function POSDashboard() {
                                                             } else {
                                                                 toast.success('ปลดล็อคหน้าจอสำเร็จ');
                                                             }
-                                                            setIsLocked(false);
-                                                            setSelectedStaffForUnlock(null);
-                                                            setLockPinInput('');
+                                                            unlockScreen();
                                                         } else {
                                                             toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
                                                             setLockPinInput('');

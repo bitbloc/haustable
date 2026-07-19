@@ -108,12 +108,12 @@ export default function AdminSettings() {
 
     // Printer Configuration
     const [printerConfig, setPrinterConfig] = useState({
-        cashier_printer_type: 'universal', // 'universal' | 'lan' | 'bluetooth'
+        cashier_printer_type: 'sunmi', // 'sunmi' | 'universal' | 'lan' | 'bluetooth'
         cashier_printer_ip: '192.168.1.100',
         cashier_printer_port: '9100',
         cashier_printer_bt_name: 'CashierPrinter',
         cashier_paper_size: '80mm',
-        kitchen_printer_type: 'universal',
+        kitchen_printer_type: 'sunmi',
         kitchen_printer_ip: '192.168.1.200',
         kitchen_printer_port: '9100',
         kitchen_printer_bt_name: 'KitchenPrinter',

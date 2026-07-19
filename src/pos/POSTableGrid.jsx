@@ -35,9 +35,15 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, fetchTables)
             .subscribe();
 
+        // 5-second polling fallback to keep grid fresh if realtime fails
+        const pollInterval = setInterval(() => {
+            fetchTables();
+        }, 5000);
+
         return () => {
             supabase.removeChannel(bookingsSub);
             supabase.removeChannel(tablesSub);
+            clearInterval(pollInterval);
         };
     }, []);
 

@@ -74,6 +74,15 @@ export const posCache = {
 // 3. Sync offline queue to Supabase
 let isSyncing = false;
 
+export async function verifyConnection() {
+    try {
+        const { error } = await supabase.from('tables_layout').select('id', { count: 'exact', head: true }).limit(1);
+        return !error;
+    } catch {
+        return false;
+    }
+}
+
 export async function syncOfflineQueue() {
     if (isSyncing) return;
     if (!isOnline()) return;
@@ -82,6 +91,15 @@ export async function syncOfflineQueue() {
     if (queue.length === 0) return;
     
     isSyncing = true;
+
+    // Verify actual server connectivity before triggering toasts or sync queries
+    const connected = await verifyConnection();
+    if (!connected) {
+        console.log('[Offline Sync] Supabase server is unreachable. Postponing sync.');
+        isSyncing = false;
+        return;
+    }
+    
     console.log(`[Offline Sync] Starting sync for ${queue.length} actions...`);
     toast.info(`🔄 ตรวจพบข้อมูลค้างในเครื่อง ${queue.length} รายการ กำลังเชื่อมโยงข้อมูลกับเซิร์ฟเวอร์...`);
 
@@ -214,4 +232,13 @@ if (typeof window !== 'undefined') {
         console.log('[Network] Internet restored. Syncing queue...');
         syncOfflineQueue();
     });
+
+    // Background interval check to auto-sync offline queue when internet connection drops/restores silently
+    setInterval(() => {
+        const queue = getOfflineQueue();
+        if (queue.length > 0 && navigator.onLine) {
+            console.log('[Network] Background polling: offline queue has items. Syncing...');
+            syncOfflineQueue();
+        }
+    }, 15000);
 }

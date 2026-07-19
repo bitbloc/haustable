@@ -91,7 +91,6 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                     <NavIcon icon={LayoutGrid} onClick={() => window.location.href = '/staff'} label="Staff DB" />
                     <NavIcon icon={Clock} onClick={() => window.location.href = '/staff/orders'} label="Live Orders" />
                     <NavIcon icon={Settings} onClick={() => window.location.href = '/admin/settings'} label="Settings" />
-                    <NavIcon icon={LogOut} onClick={() => window.location.href = '/'} label="Exit" />
                     
                     {/* Subtle Side Branding */}
                     <div className="mt-3 [writing-mode:vertical-lr] text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase select-none opacity-50 text-center">

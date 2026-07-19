@@ -273,7 +273,7 @@ export default function POSOrderPanel({
     const hasNewItems = order.items.some(item => !item.db_id);
 
     return (
-        <aside className="w-[320px] md:w-[340px] bg-[#F5F5F2] border-l border-[#D1D1CD] flex flex-col h-full shadow-sm z-30 font-sans text-[#1A1A1A] select-none shrink-0 overflow-hidden">
+        <aside className="w-[380px] lg:w-[440px] bg-[#F5F5F2] border-l border-[#D1D1CD] flex flex-col h-full shadow-sm z-30 font-sans text-[#1A1A1A] select-none shrink-0 overflow-hidden">
             {/* Order Header */}
             <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between shrink-0">
                 <div>
@@ -586,77 +586,72 @@ export default function POSOrderPanel({
 
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5 scrollbar-none">
-                <AnimatePresence>
-                    {order.items.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-2 opacity-50 font-mono text-[9px] font-bold uppercase tracking-wider py-8">
-                            <UtensilsIcon size={24} strokeWidth={1.5} />
-                            <span>Cart is empty</span>
-                        </div>
-                    ) : (
-                        order.items.map(item => (
-                            <motion.div 
-                                key={item.id}
-                                initial={{ x: 10, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: -10, opacity: 0 }}
-                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg flex items-center justify-between shadow-sm"
-                            >
-                                <div className="flex-1 min-w-0 mr-2">
-                                    <h5 className="font-bold text-[11px] leading-tight text-[#1A1A1A] uppercase truncate">{item.name}</h5>
-                                    
-                                    {/* Display existing options/notes if any */}
-                                    {item.selected_options && item.selected_options.length > 0 && (
-                                        <div className="text-[9px] text-[#767673] font-mono leading-tight mt-0.5">
-                                            {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Display newly added note */}
-                                    {item.item_note && (
-                                        <div className="text-[9px] text-blue-600 font-mono font-bold leading-tight mt-0.5">
-                                            Note: {item.item_note}
-                                        </div>
-                                    )}
-                                    
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <p className="text-[9px] text-[#ff0000] font-mono font-bold">฿{item.price}</p>
-                                        
-                                        {/* Only allow adding notes to new (unsubmitted) items */}
-                                        {!item.db_id && (
-                                            <button 
-                                                onClick={() => {
-                                                    const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
-                                                    if (note !== null && onUpdateItemNote) {
-                                                        onUpdateItemNote(item.id, note.trim());
-                                                    }
-                                                }}
-                                                className="text-[8px] bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-1.5 py-0.5 rounded cursor-pointer transition-colors"
-                                            >
-                                                + Note
-                                            </button>
-                                        )}
+                {order.items.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-2 opacity-50 font-mono text-[9px] font-bold uppercase tracking-wider py-8">
+                        <UtensilsIcon size={24} strokeWidth={1.5} />
+                        <span>Cart is empty</span>
+                    </div>
+                ) : (
+                    order.items.map(item => (
+                        <div 
+                            key={item.id}
+                            className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg flex items-center justify-between shadow-sm"
+                        >
+                            <div className="flex-1 min-w-0 mr-2">
+                                <h5 className="font-bold text-[11px] leading-tight text-[#1A1A1A] uppercase truncate">{item.name}</h5>
+                                
+                                {/* Display existing options/notes if any */}
+                                {item.selected_options && item.selected_options.length > 0 && (
+                                    <div className="text-[9px] text-[#767673] font-mono leading-tight mt-0.5">
+                                        {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
                                     </div>
+                                )}
+                                
+                                {/* Display newly added note */}
+                                {item.item_note && (
+                                    <div className="text-[9px] text-blue-600 font-mono font-bold leading-tight mt-0.5">
+                                        Note: {item.item_note}
+                                    </div>
+                                )}
+                                
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-[9px] text-[#ff0000] font-mono font-bold">฿{item.price}</p>
+                                    
+                                    {/* Only allow adding notes to new (unsubmitted) items */}
+                                    {!item.db_id && (
+                                        <button 
+                                            onClick={() => {
+                                                const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
+                                                if (note !== null && onUpdateItemNote) {
+                                                    onUpdateItemNote(item.id, note.trim());
+                                                }
+                                            }}
+                                            className="text-[8px] bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                                        >
+                                            + Note
+                                        </button>
+                                    )}
                                 </div>
+                            </div>
 
-                                <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-md p-0.5 gap-0.5 shrink-0 scale-90 origin-right">
-                                    <button 
-                                        onClick={() => onUpdateQuantity(item.id, -1)}
-                                        className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
-                                    >
-                                        <Minus size={10} />
-                                    </button>
-                                    <span className="w-6 text-center font-mono font-bold text-[11px] text-[#1A1A1A]">{item.quantity}</span>
-                                    <button 
-                                        onClick={() => onUpdateQuantity(item.id, 1)}
-                                        className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
-                                    >
-                                        <Plus size={10} />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))
-                    )}
-                </AnimatePresence>
+                            <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-md p-0.5 gap-0.5 shrink-0 scale-90 origin-right">
+                                <button 
+                                    onClick={() => onUpdateQuantity(item.id, -1)}
+                                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                >
+                                    <Minus size={10} />
+                                </button>
+                                <span className="w-6 text-center font-mono font-bold text-[11px] text-[#1A1A1A]">{item.quantity}</span>
+                                <button 
+                                    onClick={() => onUpdateQuantity(item.id, 1)}
+                                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                >
+                                    <Plus size={10} />
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
             {/* Summary & Checkout */}

@@ -13,7 +13,9 @@ class EscPosEncoder {
     initialize() {
         this.buffer.push(ESC, 0x40); // Initialize printer
         if (this.isUtf8) {
-            // Sunmi defaults to UTF-8 parsing, no need to set standard single-byte TIS-620 code page
+            // Exit Chinese mode and set character encoding to UTF-8 for Sunmi built-in
+            this.buffer.push(0x1C, 0x2E); // Exit Chinese mode (FS .)
+            this.buffer.push(0x1C, 0x43, 0xFF); // Set character encoding to UTF-8 (FS C \xff)
         } else {
             this.buffer.push(0x1C, 0x2E); // Exit Chinese mode (FS .)
             this.buffer.push(ESC, 0x74, 21); // Set Thai code page CP874 (TIS-620)
@@ -228,14 +230,14 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(`TABLE ${tableName}`)
-               .line(`Q: #${queueNo}`)
+               .line(`โต๊ะ ${tableName}`)
+               .line(`คิว: #${queueNo}`)
                .size(0, 0)
                .line(divider)
                .align('left')
                .bold(true)
                .size(0, 1) // Double height order time
-               .line(`TIME: ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
+               .line(`เวลา: ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
                .size(0, 0)
                .bold(false)
                .line(divider);
@@ -243,8 +245,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(`TABLE ${tableName}`)
-               .line(`Q: #${queueNo}`)
+               .line(`โต๊ะ ${tableName}`)
+               .line(`คิว: #${queueNo}`)
                .size(0, 0)
                .bold(false)
                .line(divider);
@@ -253,22 +255,22 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     // 3. Meta info
     if (activeTab !== 'kitchen' && activeTab !== 'bar') {
         encoder.align('left')
-               .line(`DATE : ${dateStr}`)
-               .line(`GUEST: ${booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}`);
+               .line(`วันที่-เวลา: ${dateStr}`)
+               .line(`ลูกค้า: ${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}`);
 
         const phone = booking.profiles?.phone_number || booking.pickup_contact_phone;
         if (phone) {
-            encoder.line(`PHONE: ${phone}`);
+            encoder.line(`เบอร์โทร: ${phone}`);
         }
         if (staffName) {
-            encoder.line(`STAFF: ${staffName.toUpperCase()}`);
+            encoder.line(`พนักงาน: ${staffName.toUpperCase()}`);
         }
         encoder.line(divider);
     }
 
     // 4. Items Header
     encoder.bold(true)
-           .line(activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : 'ITEMS')
+           .line(activeTab === 'kitchen' ? 'รายการอาหาร (ครัว)' : activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : 'รายการอาหารและเครื่องดื่ม')
            .bold(false)
            .line(divider);
 
@@ -349,17 +351,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             ? (netAfterDiscount * 0.07) 
             : 0;
 
-        encoder.text(`SUBTOTAL`.padEnd(maxCols - 12, ' ') + subtotal.toLocaleString().padStart(12, ' ') + '\n');
+        const totalQty = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
+        encoder.text(`จำนวนชิ้น`.padEnd(maxCols - 12, ' ') + totalQty.toString().padStart(12, ' ') + '\n');
+        encoder.text(`ยอดรวมก่อนหัก`.padEnd(maxCols - 12, ' ') + subtotal.toLocaleString().padStart(12, ' ') + '\n');
         if (discount > 0) {
-            encoder.text(`DISCOUNT`.padEnd(maxCols - 12, ' ') + `-${discount.toLocaleString()}`.padStart(12, ' ') + '\n');
+            encoder.text(`ส่วนลด`.padEnd(maxCols - 12, ' ') + `-${discount.toLocaleString()}`.padStart(12, ' ') + '\n');
         }
         if (vatVal > 0) {
-            encoder.text(`VAT (7%)`.padEnd(maxCols - 12, ' ') + vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12, ' ') + '\n');
+            encoder.text(`ภาษีมูลค่าเพิ่ม (7%)`.padEnd(maxCols - 12, ' ') + vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12, ' ') + '\n');
         }
         encoder.line(divider)
                .bold(true)
                .size(0, 1)
-               .text(`TOTAL`.padEnd(maxCols - 12, ' ') + `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`.padStart(12, ' ') + '\n')
+               .text(`ยอดรวมสุทธิ`.padEnd(maxCols - 12, ' ') + `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`.padStart(12, ' ') + '\n')
                .size(0, 0)
                .bold(false)
                .line(doubleDivider);
@@ -367,12 +371,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 7. Payment details (Omit for kitchen)
     if (activeTab === 'receipt') {
-        const methodLabel = paymentMethod === 'cash' ? 'CASH / เงินสด' : 'QR TRANSFER / โอนเงินผ่าน QR';
+        const methodLabel = paymentMethod === 'cash' ? 'เงินสด' : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
         encoder.align('center')
-               .line(`Payment: ${methodLabel}`)
+               .line(`ช่องทางชำระเงิน: ${methodLabel}`)
                .line('')
                .bold(true)
-               .line('[ PAID / ชำระแล้ว ]')
+               .line('[ ชำระเงินแล้ว ]')
                .bold(false)
                .line(doubleDivider);
     }
@@ -381,7 +385,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (booking.customer_note) {
         encoder.align('left')
                .bold(true)
-               .line('NOTE FOR KITCHEN:')
+               .line('หมายเหตุ:')
                .bold(false)
                .line(booking.customer_note)
                .line(divider);
@@ -991,7 +995,7 @@ export async function printToRawBTWebSocket(rawData) {
 let sunmiPrintQueue = Promise.resolve();
 
 // Download and resize image url to base64 JPEG format for thermal printers
-async function downloadAndResizeLogoToBase64(logoUrl) {
+async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -999,7 +1003,6 @@ async function downloadAndResizeLogoToBase64(logoUrl) {
         img.onload = () => {
             try {
                 const canvas = document.createElement('canvas');
-                const targetWidth = 200; // Auto resizing to max 200px width for clean thermal print
                 const scale = targetWidth / img.width;
                 canvas.width = targetWidth;
                 canvas.height = img.height * scale;
@@ -1074,11 +1077,11 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                 await SunmiPrinter.sendRAWBase64Data({ data: base64Data });
                 logger.info("SUNMI: sendRAWBase64Data completed successfully");
                 
-                // If QR URL is provided, print it at the bottom
+                // If QR URL is provided, print it at the bottom (enlarged to 360px for easy scanning)
                 if (qrUrl) {
                     try {
                         logger.info("SUNMI: downloading and resizing QR code: " + qrUrl);
-                        const base64Qr = await downloadAndResizeLogoToBase64(qrUrl);
+                        const base64Qr = await downloadAndResizeLogoToBase64(qrUrl, 360);
                         logger.info("SUNMI: printing QR code bitmap");
                         await SunmiPrinter.setAlignment({ alignment: "center" });
                         await SunmiPrinter.printBitmap({ bitmap: base64Qr });
