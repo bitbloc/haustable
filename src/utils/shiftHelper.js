@@ -319,22 +319,22 @@ export function addShiftAdjustment(amount, note, type) {
 }
 
 // 5. Close the current shift
-export function closeShift(actualCash) {
+export function closeShift(actualCash, computedSummary = null) {
     const shift = getCurrentShift();
     if (!shift) return null;
     
     const cashActual = parseFloat(actualCash) || 0;
     
-    // Calculate totals
-    const cashSales = shift.transactions
+    // Calculate totals or use computedSummary
+    const cashSales = computedSummary ? computedSummary.cashSales : shift.transactions
         .filter(tx => tx.paymentMethod === 'cash')
         .reduce((sum, tx) => sum + tx.amount, 0);
         
-    const qrSales = shift.transactions
+    const qrSales = computedSummary ? computedSummary.qrSales : shift.transactions
         .filter(tx => tx.paymentMethod === 'qr')
         .reduce((sum, tx) => sum + tx.amount, 0);
         
-    const creditSales = shift.transactions
+    const creditSales = computedSummary ? computedSummary.creditSales : shift.transactions
         .filter(tx => tx.paymentMethod === 'credit')
         .reduce((sum, tx) => sum + tx.amount, 0);
         
@@ -344,7 +344,7 @@ export function closeShift(actualCash) {
     const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
     const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
     
-    const expectedCashInDrawer = shift.openingFloat + cashSales + totalIn - totalOut;
+    const expectedCashInDrawer = computedSummary ? computedSummary.expectedCash : (shift.openingFloat + cashSales + totalIn - totalOut);
     const diff = cashActual - expectedCashInDrawer;
     
     const closedShift = {

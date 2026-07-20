@@ -45,6 +45,7 @@ export default function POSDashboard() {
 
     // Shift Management States
     const [activeShift, setActiveShift] = useState(getCurrentShift());
+    const [realtimeShiftSummary, setRealtimeShiftSummary] = useState(null);
     const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
     const [openShiftForm, setOpenShiftForm] = useState({ staffName: '', openingFloat: '1000' });
     const [closeShiftForm, setCloseShiftForm] = useState({ actualCash: '' });
@@ -225,7 +226,96 @@ export default function POSDashboard() {
         };
     }, []);
 
+    useEffect(() => {
+        if (!activeShift) {
+            setRealtimeShiftSummary(null);
+            return;
+        }
+
+        let isMounted = true;
+        const fetchRealtimeSummary = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select('id, status, total_amount, staff_remark, payment_slip_url')
+                    .eq('status', 'completed')
+                    .gte('booking_time', activeShift.openedAt);
+
+                if (error) throw error;
+                if (!isMounted) return;
+
+                let cashSales = 0;
+                let qrSales = 0;
+                let creditSales = 0;
+
+                (data || []).forEach(b => {
+                    const remark = (b.staff_remark || '').toLowerCase();
+                    const amt = parseFloat(b.total_amount) || 0;
+                    
+                    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
+                        creditSales += amt;
+                    } else if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) {
+                        qrSales += amt;
+                    } else {
+                        cashSales += amt;
+                    }
+                });
+
+                const adjustments = activeShift.adjustments || [];
+                const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+                const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+
+                setRealtimeShiftSummary({
+                    cashSales,
+                    qrSales,
+                    creditSales,
+                    totalSales: cashSales + qrSales + creditSales,
+                    totalIn,
+                    totalOut,
+                    expectedCash: activeShift.openingFloat + cashSales + totalIn - totalOut
+                });
+            } catch (err) {
+                console.error("Failed to fetch realtime shift summary:", err);
+                if (!isMounted) return;
+                const cashSales = activeShift.transactions
+                    .filter(tx => tx.paymentMethod === 'cash')
+                    .reduce((sum, tx) => sum + tx.amount, 0);
+                const qrSales = activeShift.transactions
+                    .filter(tx => tx.paymentMethod === 'qr')
+                    .reduce((sum, tx) => sum + tx.amount, 0);
+                const creditSales = activeShift.transactions
+                    .filter(tx => tx.paymentMethod === 'credit')
+                    .reduce((sum, tx) => sum + tx.amount, 0);
+                const adjustments = activeShift.adjustments || [];
+                const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
+                const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+                setRealtimeShiftSummary({
+                    cashSales,
+                    qrSales,
+                    creditSales,
+                    totalSales: cashSales + qrSales + creditSales,
+                    totalIn,
+                    totalOut,
+                    expectedCash: activeShift.openingFloat + cashSales + totalIn - totalOut
+                });
+            }
+        };
+
+        fetchRealtimeSummary();
+
+        const handleLocalTx = () => {
+            fetchRealtimeSummary();
+        };
+        window.addEventListener('pos-shift-changed', handleLocalTx);
+        return () => {
+            isMounted = false;
+            window.removeEventListener('pos-shift-changed', handleLocalTx);
+        };
+    }, [activeShift, refreshKey]);
+
     const getShiftSummary = () => {
+        if (realtimeShiftSummary) return realtimeShiftSummary;
+
         if (!activeShift) return { cashSales: 0, qrSales: 0, creditSales: 0, totalSales: 0, expectedCash: 0, totalIn: 0, totalOut: 0 };
         const cashSales = activeShift.transactions
             .filter(tx => tx.paymentMethod === 'cash')
@@ -271,11 +361,10 @@ export default function POSDashboard() {
         
         try {
             // 1. Fetch bookings in this shift
-            const completedBookingIds = activeShift.transactions?.map(tx => tx.bookingId) || [];
             let bookingsData = [];
             
             if (isOnline()) {
-                let bookingsQuery = supabase
+                const { data } = await supabase
                     .from('bookings')
                     .select(`
                         *,
@@ -291,18 +380,10 @@ export default function POSDashboard() {
                                 category_id
                             )
                         )
-                    `);
-
-                if (completedBookingIds.length > 0) {
-                    const orFilter = `id.in.(${completedBookingIds.join(',')}),and(status.in.(void,cancelled),booking_time.gte.${activeShift.openedAt})`;
-                    const { data } = await bookingsQuery.or(orFilter);
-                    bookingsData = data || [];
-                } else {
-                    const { data } = await bookingsQuery
-                        .in('status', ['void', 'cancelled'])
-                        .gte('booking_time', activeShift.openedAt);
-                    bookingsData = data || [];
-                }
+                    `)
+                    .gte('booking_time', activeShift.openedAt)
+                    .lte('booking_time', new Date().toISOString());
+                bookingsData = data || [];
             }
             
             // 2. Fetch categories
@@ -337,7 +418,7 @@ export default function POSDashboard() {
             const printRes = await printToSunmiBuiltIn(rawBytes);
             
             // 5. Close shift locally & cloud
-            closeShift(actual);
+            closeShift(actual, summary);
             setShowCloseShiftModal(false);
             setCloseShiftForm({ actualCash: '' });
             
@@ -352,7 +433,7 @@ export default function POSDashboard() {
             
             // Fallback close shift locally in case of error
             try {
-                closeShift(actual);
+                closeShift(actual, summary);
                 setShowCloseShiftModal(false);
                 setCloseShiftForm({ actualCash: '' });
                 toast.success('ปิดรอบการทำงานสำเร็จ (เกิดข้อผิดพลาดในการดึงข้อมูลพิมพ์)');
