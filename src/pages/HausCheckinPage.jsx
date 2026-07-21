@@ -592,77 +592,79 @@ export default function HausCheckinPage() {
                 )}
             </div>
 
-            {/* ─── FLOATING OVERLAY: TOP LEFT BACK BUTTON ─── */}
-            <div className="absolute top-4 left-4 z-40">
-                <a
-                    href="/link"
-                    className="flex items-center justify-center w-10 h-10 rounded-xs bg-[#12130f]/80 backdrop-blur-md border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition-all cursor-pointer shadow-lg"
-                    title="BACK TO DIRECTORY"
-                >
-                    <ArrowLeft size={15} />
-                </a>
+            {/* ─── TOP CONSOLE BAR (Dieter Rams Bezel) ─── */}
+            <div className="fixed top-4 left-4 right-4 z-40 bg-[var(--color-dark-panel)] backdrop-blur-md border border-[var(--color-dark-border)] px-4 py-2.5 rounded-xs flex items-center justify-between gap-4 shadow-2xl select-none">
+                {/* Left section: Back button & Shop title */}
+                <div className="flex items-center gap-3">
+                    <a
+                        href="/link"
+                        className="flex items-center justify-center w-8 h-8 rounded-xs hover:bg-neutral-800/40 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                        title="BACK TO DIRECTORY"
+                    >
+                        <ArrowLeft size={16} />
+                    </a>
+                    <span className="w-[1px] h-4 bg-[var(--color-dark-border)]" />
+                    <span className="text-[10px] font-mono font-extrabold tracking-widest text-white uppercase whitespace-nowrap">
+                        {shopName} STREAM
+                    </span>
+                </div>
+
+                {/* Center section: Simulated Tuner / Online Status */}
+                <div className="hidden md:flex flex-col items-center gap-1 text-[8px] font-mono whitespace-nowrap">
+                    {/* Tuner scale ticks */}
+                    <div className="flex items-center gap-[3px] text-neutral-700 h-1.5 select-none pointer-events-none mb-0.5">
+                        {[...Array(19)].map((_, i) => (
+                            <span key={i} className={`w-[1px] ${i === 9 ? 'h-1.5 bg-[var(--color-brand)]' : i % 3 === 0 ? 'h-1 bg-[var(--color-dark-ink-muted)]' : 'h-0.5 bg-[var(--color-dark-border)]'}`} />
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-xs bg-[var(--color-brand)] animate-pulse" />
+                        <span className="text-white tracking-widest font-bold">// STATUS: ONLINE</span>
+                    </div>
+                </div>
+
+                {/* Right section: Write note action */}
+                <div>
+                    <button
+                        onClick={() => setShowAddTextModal(true)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xs bg-[var(--color-brand)] text-neutral-900 font-mono text-[9px] font-extrabold tracking-widest uppercase hover:opacity-90 active:scale-95 transition-all cursor-pointer border border-neutral-950/20 shadow-sm font-bold"
+                        title="ฝากข้อความบนบอร์ด"
+                    >
+                        <Plus size={12} strokeWidth={3} />
+                        <span className="hidden sm:inline">WRITE NOTE / ฝากข้อความ</span>
+                    </button>
+                </div>
             </div>
 
-            {/* ─── FLOATING OVERLAY: TOP CENTER TITLE / TUNER SCALE STATUS ─── */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[#12130f]/90 backdrop-blur-md border border-neutral-800 px-5 py-2.5 rounded-xs flex flex-col items-center gap-1.5 text-[9px] font-mono select-none shadow-lg whitespace-nowrap max-w-[90vw]">
-                {/* Tuner scale ticks */}
-                <div className="flex items-center gap-[3px] text-neutral-700 h-2 select-none pointer-events-none mb-0.5">
-                    {[...Array(19)].map((_, i) => (
-                        <span key={i} className={`w-[1px] ${i === 9 ? 'h-2 bg-[var(--color-brand)]' : i % 3 === 0 ? 'h-1.5 bg-neutral-600' : 'h-1 bg-neutral-800'}`} />
+            {/* ─── BOTTOM CONSOLE BAR (Platform filters & stats) ─── */}
+            <div className="fixed bottom-4 left-4 right-4 z-40 bg-[var(--color-dark-panel)] backdrop-blur-md border border-[var(--color-dark-border)] px-4 py-2.5 rounded-xs flex items-center justify-between gap-4 shadow-2xl select-none">
+                {/* Left section: drag help */}
+                <div className="hidden lg:flex items-center gap-2 text-[9px] font-mono text-[var(--color-dark-ink-muted)] uppercase tracking-wider">
+                    <span>🖱️ CLICK & DRAG TO EXPLORE</span>
+                </div>
+
+                {/* Center section: filter tabs */}
+                <div className="flex items-center gap-1 p-0.5 bg-neutral-950/50 rounded-xs border border-[var(--color-dark-border)] mx-auto lg:mx-0">
+                    {[
+                        { id: 'all', label: 'ALL', icon: <Compass size={11} /> },
+                        { id: 'instagram', label: 'INSTAGRAM', icon: <Instagram size={11} /> },
+                        { id: 'facebook', label: 'FACEBOOK', icon: <Facebook size={11} /> },
+                        { id: 'google', label: 'GOOGLE', icon: <Star size={11} /> }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveFilter(tab.id)}
+                            className={`px-3.5 py-1.5 rounded-xs font-mono text-[9px] font-extrabold tracking-widest flex items-center gap-1.5 cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-brand)] text-neutral-900 shadow-sm font-bold' : 'text-[var(--color-dark-ink-muted)] hover:text-white bg-transparent hover:bg-neutral-800/40'}`}
+                        >
+                            {tab.icon}
+                            <span className="hidden sm:inline">{tab.label}</span>
+                        </button>
                     ))}
                 </div>
-                <div className="flex items-center gap-3">
-                    <span className="w-1.5 h-1.5 rounded-xs bg-[var(--color-brand)] animate-pulse" />
-                    <span className="text-white font-extrabold tracking-widest uppercase">{shopName} STREAM // ONLINE</span>
-                    <span className="hidden md:inline text-neutral-700">|</span>
-                    <span className="hidden md:inline text-neutral-400">TAG @inthehaus #inthehaus</span>
-                </div>
-            </div>
 
-            {/* ─── FLOATING OVERLAY: BOTTOM CENTER PLATFORM FILTERS (Rams Console Buttons) ─── */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#12130f]/95 border border-neutral-800 p-1.5 rounded-xs flex items-center gap-1 shadow-2xl">
-                {[
-                    { id: 'all', label: 'ALL', icon: <Compass size={11} /> },
-                    { id: 'instagram', label: 'INSTAGRAM', icon: <Instagram size={11} /> },
-                    { id: 'facebook', label: 'FACEBOOK', icon: <Facebook size={11} /> },
-                    { id: 'google', label: 'GOOGLE', icon: <Star size={11} /> }
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveFilter(tab.id)}
-                        className={`px-3.5 py-2 rounded-xs font-mono text-[9px] font-extrabold tracking-widest flex items-center gap-1.5 cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-brand)] text-neutral-900 shadow-sm font-bold' : 'text-neutral-400 hover:text-white bg-transparent hover:bg-[#1a1b15]'}`}
-                    >
-                        {tab.icon}
-                        <span className="hidden sm:inline">{tab.label}</span>
-                    </button>
-                ))}
-            </div>
-
-            {/* ─── FLOATING OVERLAY: BOTTOM RIGHT JOIN CARD ─── */}
-            <div className="absolute bottom-6 right-6 z-40 hidden md:flex items-center">
-                <div className="bg-[#12130f]/95 border border-neutral-800 border-t-2 border-t-[var(--color-brand)] px-5 py-3.5 rounded-xs text-[10px] text-neutral-400 max-w-[260px] text-left shadow-2xl leading-relaxed font-mono">
-                    <span className="block font-bold text-white uppercase tracking-widest text-[9px] mb-1.5">
-                        // SHARE INSTRUCTIONS
-                    </span>
-                    Tag <span className="text-[var(--color-brand)] font-bold">@inthehaus</span> or <span className="text-[var(--color-brand)] font-bold">#inthehaus</span> on IG or Check-in to list your photos here.
-                </div>
-            </div>
-
-            {/* ─── FLOATING OVERLAY: ADD TEXT (+) ORANGE TACTILE BUTTON ─── */}
-            <div className="absolute bottom-6 right-6 md:right-[290px] z-40">
-                <button
-                    onClick={() => setShowAddTextModal(true)}
-                    className="flex items-center justify-center w-11 h-11 rounded-xs bg-[var(--color-brand)] text-neutral-900 hover:bg-[var(--color-brand)]/90 transition-all cursor-pointer shadow-lg border border-neutral-950 focus:outline-none active:scale-95"
-                    title="ฝากข้อความบนบอร์ด"
-                >
-                    <Plus size={18} strokeWidth={3} />
-                </button>
-            </div>
-
-            {/* ─── FLOATING OVERLAY: BOTTOM LEFT HELP DRAG INDICATOR ─── */}
-            <div className="absolute bottom-6 left-6 z-40 hidden lg:flex items-center gap-2 select-none pointer-events-none">
-                <div className="bg-[#12130f]/60 border border-neutral-850 px-3.5 py-2 rounded-xs text-[9px] text-neutral-500 font-mono flex items-center gap-2 uppercase tracking-wider">
-                    <span>🖱️ Click & Drag to explore</span>
+                {/* Right section: join instruction brief */}
+                <div className="hidden lg:flex items-center text-[9px] font-mono text-[var(--color-dark-ink-muted)] text-right leading-none max-w-[300px]">
+                    <span>TAG <span className="text-[var(--color-brand)] font-bold">@inthehaus</span> OR <span className="text-[var(--color-brand)] font-bold">#inthehaus</span> TO JOIN THE STREAM</span>
                 </div>
             </div>
 
@@ -681,20 +683,20 @@ export default function HausCheckinPage() {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 10 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-sm bg-[#FAF9F5] border border-neutral-300 p-6 rounded-xs shadow-2xl relative text-[#1a1a1a]"
+                            className="w-full max-w-sm bg-[var(--color-paper)] border border-[var(--color-rule)] p-6 rounded-xs shadow-2xl relative text-[var(--color-ink)]"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Close button */}
                             <button
                                 onClick={() => setShowAddTextModal(false)}
-                                className="absolute top-4 right-4 text-[9px] font-mono font-bold hover:text-red-650 cursor-pointer text-neutral-400 border-0 bg-transparent outline-none p-1 tracking-wider"
+                                className="absolute top-4 right-4 text-[9px] font-mono font-bold hover:text-[var(--color-accent)] cursor-pointer text-[var(--color-neutral)] border-0 bg-transparent outline-none p-1 tracking-wider"
                             >
                                 [ CLOSE ]
                             </button>
 
                             {/* Header */}
-                            <div className="border-b border-neutral-200/60 pb-3 mb-4">
-                                <h3 className="font-mono text-[9px] font-extrabold uppercase tracking-widest text-neutral-400">
+                            <div className="border-b border-[var(--color-rule)] pb-3 mb-4">
+                                <h3 className="font-mono text-[9px] font-extrabold uppercase tracking-widest text-[var(--color-neutral)]">
                                     // WRITE A NOTE / ฝากข้อความ
                                 </h3>
                             </div>
@@ -702,7 +704,7 @@ export default function HausCheckinPage() {
                             <form onSubmit={handleNoteSubmit} className="space-y-4">
                                 {/* Name Input */}
                                 <div className="space-y-1">
-                                    <label className="block font-mono text-[8px] uppercase tracking-wider text-neutral-400 font-bold">
+                                    <label className="block font-mono text-[8px] uppercase tracking-wider text-[var(--color-neutral)] font-bold">
                                         Your Name (ชื่อของคุณ)
                                     </label>
                                     <input
@@ -711,13 +713,13 @@ export default function HausCheckinPage() {
                                         onChange={(e) => setNoteName(e.target.value)}
                                         placeholder="Guest"
                                         maxLength={25}
-                                        className="w-full bg-white border border-neutral-300 p-2.5 rounded-xs font-mono text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors"
+                                        className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2.5 rounded-xs font-mono text-xs text-[var(--color-ink)] focus:border-[var(--color-neutral)] outline-none transition-colors"
                                     />
                                 </div>
 
                                 {/* Message Input */}
                                 <div className="space-y-1">
-                                    <label className="block font-mono text-[8px] uppercase tracking-wider text-neutral-400 font-bold">
+                                    <label className="block font-mono text-[8px] uppercase tracking-wider text-[var(--color-neutral)] font-bold">
                                         Your Message (ข้อความของคุณ) *
                                     </label>
                                     <textarea
@@ -727,10 +729,10 @@ export default function HausCheckinPage() {
                                         required
                                         maxLength={70}
                                         rows={4}
-                                        style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}
-                                        className="w-full bg-white border border-neutral-300 p-2.5 rounded-xs text-xs text-neutral-800 focus:border-neutral-500 outline-none transition-colors resize-none leading-relaxed"
+                                        style={{ fontFamily: "var(--font-outlier)" }}
+                                        className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2.5 rounded-xs text-xs text-[var(--color-ink)] focus:border-[var(--color-neutral)] outline-none transition-colors resize-none leading-relaxed"
                                     />
-                                    <div className="flex justify-between items-center text-[8px] font-mono text-neutral-400 mt-1">
+                                    <div className="flex justify-between items-center text-[8px] font-mono text-[var(--color-neutral)] mt-1">
                                         <span>* สูงสุด 70 ตัวอักษร</span>
                                         <span>{noteText.length}/70</span>
                                     </div>
@@ -740,13 +742,13 @@ export default function HausCheckinPage() {
                                 <button
                                     type="submit"
                                     disabled={isSubmittingNote || !noteText.trim()}
-                                    className="w-full bg-[var(--color-brand)] hover:opacity-90 disabled:bg-neutral-200 disabled:text-neutral-400 text-neutral-900 border border-neutral-800 font-mono text-[9px] font-extrabold uppercase tracking-widest py-3 rounded-xs cursor-pointer disabled:cursor-not-allowed transition-all select-none"
+                                    className="w-full bg-[var(--color-brand)] hover:opacity-90 disabled:bg-[var(--color-paper-2)] disabled:text-[var(--color-muted)] text-neutral-900 border border-neutral-800 font-mono text-[9px] font-extrabold uppercase tracking-widest py-3 rounded-xs cursor-pointer disabled:cursor-not-allowed transition-all select-none"
                                 >
                                     {isSubmittingNote ? "SUBMITTING..." : "[ POST NOTE // ส่งข้อความ ]"}
                                 </button>
 
                                 {/* Footer Disclaimer */}
-                                <p className="text-[8px] font-mono text-neutral-400 leading-normal text-center mt-2">
+                                <p className="text-[8px] font-mono text-[var(--color-neutral)] leading-normal text-center mt-2">
                                     * ข้อความจะถูกตรวจสอบโดย Admin ก่อนนำขึ้นแสดงบนบอร์ดนี้
                                 </p>
                             </form>
@@ -770,26 +772,26 @@ export default function HausCheckinPage() {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.96, y: 10 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-3xl bg-[#0e0f0a] border border-neutral-850 rounded-sm overflow-hidden flex flex-col md:flex-row cursor-default shadow-2xl relative"
+                            className="w-full max-w-3xl bg-[var(--color-dark-bg)] border border-[var(--color-dark-border)] rounded-xs overflow-hidden flex flex-col md:flex-row cursor-default shadow-2xl relative"
                         >
                             {/* Close button in modal */}
                             <button
                                 onClick={() => setSelectedItem(null)}
-                                className="absolute top-4 right-4 w-8 h-8 rounded-sm bg-black/60 border border-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center font-mono text-[10px] tracking-wide transition-all z-20 cursor-pointer"
+                                className="absolute top-4 right-4 w-8 h-8 rounded-xs bg-black/60 border border-[var(--color-dark-border)] text-[var(--color-dark-ink-muted)] hover:text-white flex items-center justify-center font-mono text-[10px] tracking-wide transition-all z-20 cursor-pointer"
                             >
                                 [X]
                             </button>
 
                             {/* Image side */}
-                            <div className="w-full md:w-1/2 aspect-square md:aspect-auto md:h-[480px] bg-neutral-950 relative border-b md:border-b-0 md:border-r border-neutral-800 flex items-center justify-center">
+                            <div className="w-full md:w-1/2 aspect-square md:aspect-auto md:h-[480px] bg-neutral-950 relative border-b md:border-b-0 md:border-r border-[var(--color-dark-border)] flex items-center justify-center">
                                 {selectedItem.image_url === 'text_only' ? (
-                                    <div className="w-full h-full bg-[#FAF9F5] p-8 flex flex-col justify-between text-[#1a1a1a] select-text">
+                                    <div className="w-full h-full bg-[var(--color-paper)] p-8 flex flex-col justify-between text-[var(--color-ink)] select-text">
                                         <div className="flex justify-between items-center w-full">
-                                            <span className="font-mono text-[9px] text-neutral-400 tracking-widest">
+                                            <span className="font-mono text-[9px] text-[var(--color-neutral)] tracking-widest">
                                                 {selectedItem.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}
                                             </span>
                                             {selectedItem.rating && (
-                                                <div className="flex gap-0.5 text-amber-500">
+                                                <div className="flex gap-0.5 text-[var(--color-accent-terracotta)]">
                                                     {Array.from({ length: 5 }).map((_, i) => (
                                                         <span key={i} className="text-xs">
                                                             {i < selectedItem.rating ? '★' : '☆'}
@@ -798,10 +800,10 @@ export default function HausCheckinPage() {
                                                 </div>
                                             )}
                                         </div>
-                                        <p className="font-mono text-center leading-relaxed text-sm text-neutral-800 break-words w-full my-auto" style={{ fontFamily: "Space Mono, Courier New, Courier, monospace" }}>
+                                        <p className="font-mono text-center leading-relaxed text-sm text-[var(--color-ink)] break-words w-full my-auto" style={{ fontFamily: "var(--font-outlier)" }}>
                                             "{selectedItem.text}"
                                         </p>
-                                        <span className="font-mono text-[9px] text-neutral-400 text-center tracking-wider uppercase border-t border-neutral-200/50 pt-3">
+                                        <span className="font-mono text-[9px] text-[var(--color-neutral)] text-center tracking-wider uppercase border-t border-[var(--color-rule)] pt-3">
                                             BY {selectedItem.user.name}
                                         </span>
                                     </div>
@@ -816,22 +818,22 @@ export default function HausCheckinPage() {
                                 {/* Platform label Overlay */}
                                 <div className="absolute bottom-4 left-4 z-10">
                                     {selectedItem.source === 'instagram' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#E1306C] text-white rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#E1306C] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider">
                                             <Instagram size={10} /> INSTAGRAM
                                         </span>
                                     )}
                                     {selectedItem.source === 'facebook' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1877F2] text-white rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1877F2] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider">
                                             <Facebook size={10} /> FACEBOOK
                                         </span>
                                     )}
                                     {selectedItem.source === 'google' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#4285F4] text-white rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#4285F4] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider">
                                             <Star size={10} className="fill-white" /> GOOGLE REVIEWS
                                         </span>
                                     )}
                                     {selectedItem.source === 'note' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-650 text-white rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-650 text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider">
                                             <MessageCircle size={10} /> GUEST NOTE
                                         </span>
                                     )}
@@ -839,23 +841,23 @@ export default function HausCheckinPage() {
                             </div>
 
                             {/* Details side */}
-                            <div className="w-full md:w-1/2 p-6 flex flex-col justify-between md:h-[480px] bg-[#0e0f0a]">
+                            <div className="w-full md:w-1/2 p-6 flex flex-col justify-between md:h-[480px] bg-[var(--color-dark-panel)]">
                                 <div className="space-y-5">
                                     
                                     {/* User Profile info */}
-                                    <div className="flex items-center gap-3 pb-3 border-b border-neutral-900">
+                                    <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-dark-border)]">
                                         <img
                                             src={getProxiedImageUrl(selectedItem.user.avatar)}
                                             alt={selectedItem.user.name}
                                             crossOrigin="anonymous"
-                                            className="w-10 h-10 rounded-xs object-cover border border-neutral-800"
+                                            className="w-10 h-10 rounded-xs object-cover border border-[var(--color-dark-border)]"
                                         />
                                         <div className="min-w-0">
                                             <h4 className="text-xs font-bold text-white tracking-tight uppercase">
                                                 {selectedItem.user.name}
                                             </h4>
                                             {selectedItem.user.handle && (
-                                                <span className="text-[10px] font-mono text-neutral-500 block">
+                                                <span className="text-[10px] font-mono text-[var(--color-dark-ink-muted)] block">
                                                     {selectedItem.user.handle}
                                                 </span>
                                             )}
@@ -873,7 +875,7 @@ export default function HausCheckinPage() {
                                                     <Star
                                                         key={i}
                                                         size={12}
-                                                        className={i < selectedItem.rating ? 'fill-[var(--color-brand)] text-[var(--color-brand)]' : 'text-neutral-700'}
+                                                        className={i < selectedItem.rating ? 'fill-[var(--color-accent-terracotta)] text-[var(--color-accent-terracotta)]' : 'text-neutral-800'}
                                                     />
                                                 ))}
                                             </div>
@@ -881,13 +883,13 @@ export default function HausCheckinPage() {
                                     </div>
 
                                     {/* User Text */}
-                                    <p className="text-xs text-neutral-300 leading-relaxed font-sans font-medium whitespace-pre-line pr-2 overflow-y-auto max-h-[160px]">
+                                    <p className="text-xs text-[var(--color-dark-ink)] leading-relaxed font-sans font-medium whitespace-pre-line pr-2 overflow-y-auto max-h-[160px]">
                                         {selectedItem.text}
                                     </p>
                                 </div>
 
-                                <div className="pt-4 border-t border-neutral-900 mt-4 space-y-4">
-                                    <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
+                                <div className="pt-4 border-t border-[var(--color-dark-border)] mt-4 space-y-4">
+                                    <div className="flex items-center justify-between text-[10px] font-mono text-[var(--color-dark-ink-muted)]">
                                         <span>POSTED: {selectedItem.date}</span>
                                         
                                         {/* Likes & Comments Counters */}
@@ -895,13 +897,13 @@ export default function HausCheckinPage() {
                                             <div className="flex items-center gap-3">
                                                  <button
                                                      onClick={(e) => handleLikeToggle(e, selectedItem.id)}
-                                                     className="flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-0 outline-none"
+                                                     className="flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all text-[var(--color-dark-ink-muted)] hover:text-white cursor-pointer bg-transparent border-0 p-0 outline-none"
                                                  >
                                                      <Heart
                                                          size={12}
-                                                         className={likedIds.includes(selectedItem.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
+                                                         className={likedIds.includes(selectedItem.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-[var(--color-dark-ink-muted)]"}
                                                      />
-                                                     <span className={likedIds.includes(selectedItem.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}>
+                                                     <span className={likedIds.includes(selectedItem.id) ? "text-[#E1306C] font-bold" : "text-[var(--color-dark-ink-muted)]"}>
                                                          {selectedItem.likes}
                                                      </span>
                                                  </button>
@@ -918,7 +920,7 @@ export default function HausCheckinPage() {
                                             href={selectedItem.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="w-full py-2.5 rounded-sm bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800/40 text-white font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                            className="w-full py-2.5 rounded-xs bg-neutral-950 border border-[var(--color-dark-border)] hover:border-neutral-800 hover:bg-neutral-900/40 text-white font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                                         >
                                             <ExternalLink size={11} /> VIEW ORIGINAL POST
                                         </a>
@@ -931,8 +933,16 @@ export default function HausCheckinPage() {
                 )}
             </AnimatePresence>
             
-            {/* Custom Embedded animations styling */}
+            {/* Custom Embedded animations & variables styling */}
             <style>{`
+                :root {
+                    --color-dark-bg: oklch(12% 0.008 28);
+                    --color-dark-panel: oklch(16% 0.008 28 / 85%);
+                    --color-dark-border: oklch(26% 0.012 28);
+                    --color-dark-ink: oklch(95% 0.008 28);
+                    --color-dark-ink-muted: oklch(65% 0.01 28);
+                    --color-accent-terracotta: oklch(52% 0.16 28);
+                }
                 @keyframes spin-slow {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }

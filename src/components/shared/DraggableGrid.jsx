@@ -211,14 +211,14 @@ function LazyCard({
                 whileHover={(isVisible || hasBeenVisible) ? { scale: 1.03, y: -3 } : undefined}
                 whileTap={(isVisible || hasBeenVisible) ? { scale: 0.97 } : undefined}
                 transition={{ type: "spring", stiffness: 350, damping: 22 }}
-                className={`select-none flex flex-col justify-between p-3 text-left ${(isVisible || hasBeenVisible) ? "border border-neutral-800/25 shadow-sm" : ""}`}
+                className={`select-none flex flex-col justify-between p-3 text-left ${(isVisible || hasBeenVisible) ? "border border-[var(--color-rule)] shadow-sm" : ""}`}
                 style={{
                     position: "relative",
                     width: safeImageWidth,
                     height: safeImageHeight,
                     borderRadius: 2, // Minimalist Rams clean rounding (rounded-xs)
-                    backgroundColor: (isVisible || hasBeenVisible) ? "#FAF9F5" : "transparent", // Warm Hallmark Paper color when visible, transparent when hidden
-                    color: "#1a1a1a", // Deep hallmark ink
+                    backgroundColor: (isVisible || hasBeenVisible) ? "var(--color-paper, #FAF9F5)" : "oklch(15% 0.005 28)", // Warm paper color when visible, carbon cell when hidden
+                    color: "var(--color-ink, #1a1a1a)", // Deep hallmark ink
                     cursor: isDragging ? "grabbing" : "pointer",
                     transformOrigin: "center center",
                     boxSizing: "border-box",
@@ -287,7 +287,7 @@ function LazyCard({
                 height: safeImageHeight,
                 overflow: "hidden",
                 borderRadius: radius,
-                backgroundColor: (isVisible || hasBeenVisible) && src && !failed ? "#111111" : "transparent",
+                backgroundColor: (isVisible || hasBeenVisible) && src && !failed ? "#111111" : "oklch(15% 0.005 28)",
                 color: "rgba(255,255,255,0.85)",
                 display: "flex",
                 alignItems: "center",
