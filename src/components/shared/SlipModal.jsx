@@ -35,18 +35,19 @@ export default function SlipModal({ booking, type, onClose }) {
     const getIsAutoPrintingInitial = () => {
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
+            let config = {};
             if (stored) {
-                const config = JSON.parse(stored);
-                const currentTab = getInitialTab();
-                const printerType = currentTab === 'kitchen' 
-                    ? (config.kitchen_printer_type || 'sunmi')
-                    : (config.cashier_printer_type || 'sunmi');
-                return printerType === 'sunmi';
+                config = JSON.parse(stored);
             }
+            const currentTab = getInitialTab();
+            const printerType = currentTab === 'kitchen' 
+                ? (config.kitchen_printer_type || 'sunmi')
+                : (config.cashier_printer_type || 'sunmi');
+            return printerType === 'sunmi';
         } catch (err) {
             console.error("Failed to read printer config initially:", err);
+            return true; // Default to true on error to remain silent
         }
-        return false;
     };
 
     const [isAutoPrinting, setIsAutoPrinting] = useState(getIsAutoPrintingInitial)

@@ -1457,6 +1457,17 @@ export default function POSDashboard() {
                                     }
                                 }
                             }}
+                            onUpdateCustomerProfile={async () => {
+                                if (activeBooking) {
+                                    if (selectedTable) {
+                                        const updatedBooking = await getActiveBooking(selectedTable.id);
+                                        setActiveBooking(updatedBooking);
+                                    } else {
+                                        const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))').eq('id', activeBooking.id).single();
+                                        if (data) setActiveBooking(data);
+                                    }
+                                }
+                            }}
                         />
                     )}
                 </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -19,7 +19,8 @@ export default function POSOrderPanel({
     onUpdateItemNote,
     onOpenSplitPayment,
     onMoveTable,
-    onMergeBill
+    onMergeBill,
+    onUpdateCustomerProfile
 }) {
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
@@ -49,6 +50,53 @@ export default function POSOrderPanel({
     const [crmMembers, setCrmMembers] = React.useState([]);
     const [crmLoading, setCrmLoading] = React.useState(false);
 
+    // Profile editing states
+    const [editingProfile, setEditingProfile] = React.useState(null);
+    const [editDisplayName, setEditDisplayName] = React.useState('');
+    const [editPhone, setEditPhone] = React.useState('');
+    const [editEmail, setEditEmail] = React.useState('');
+    const [isSavingProfile, setIsSavingProfile] = React.useState(false);
+
+    const startEditingProfile = (profile) => {
+        setEditingProfile(profile);
+        setEditDisplayName(profile.display_name || '');
+        setEditPhone(profile.phone_number || profile.phone || '');
+        setEditEmail(profile.email || '');
+    };
+
+    const handleSaveProfile = async () => {
+        if (!editingProfile) return;
+        setIsSavingProfile(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    display_name: editDisplayName,
+                    phone_number: editPhone,
+                    email: editEmail
+                })
+                .eq('id', editingProfile.id);
+            
+            if (error) throw error;
+            
+            toast.success("Updated customer profile successfully");
+            setEditingProfile(null);
+            
+            // Reload crm registry to reflect updates
+            await loadCrmMembers();
+            
+            // Trigger callback to dashboard to update active booking
+            if (onUpdateCustomerProfile) {
+                await onUpdateCustomerProfile();
+            }
+        } catch (err) {
+            console.error("Error updating profile:", err);
+            toast.error("Failed to update profile: " + err.message);
+        } finally {
+            setIsSavingProfile(false);
+        }
+    };
+
     const loadCrmMembers = async () => {
         setCrmLoading(true);
         try {
@@ -77,6 +125,7 @@ export default function POSOrderPanel({
         crm_redeem_rate_xhaus: 1.0,
         crm_min_redeem_xhaus: 10.0
     });
+
 
     React.useEffect(() => {
         const loadDefaultVat = async () => {
@@ -723,7 +772,82 @@ export default function POSOrderPanel({
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
-                                {booking?.profiles ? (
+                                {editingProfile ? (
+                                    /* Edit Customer Profile Form */
+                                    <div className="space-y-4 text-left p-4 bg-[#F5F5F2] rounded-xl border border-[#D1D1CD] shadow-inner font-sans">
+                                        <h4 className="font-mono font-bold text-[10px] text-[#767673] uppercase tracking-wider">
+                                            Edit Customer Profile / แก้ไขข้อมูลลูกค้า
+                                        </h4>
+                                        
+                                        {/* Display Name Input */}
+                                        <div className="space-y-1">
+                                            <label className="block text-[9px] font-mono font-bold text-[#767673] uppercase">
+                                                Customer Name / ชื่อลูกค้า
+                                            </label>
+                                            <input 
+                                                type="text"
+                                                value={editDisplayName}
+                                                onChange={(e) => setEditDisplayName(e.target.value)}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-lg px-3 py-2 text-xs font-semibold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                            />
+                                        </div>
+
+                                        {/* Phone Number Input */}
+                                        <div className="space-y-1">
+                                            <label className="block text-[9px] font-mono font-bold text-[#767673] uppercase">
+                                                Phone Number / เบอร์โทรศัพท์
+                                            </label>
+                                            <input 
+                                                type="text"
+                                                placeholder="e.g. 0812345678"
+                                                value={editPhone}
+                                                onChange={(e) => setEditPhone(e.target.value)}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                            />
+                                        </div>
+
+                                        {/* Email Input */}
+                                        <div className="space-y-1">
+                                            <label className="block text-[9px] font-mono font-bold text-[#767673] uppercase">
+                                                Email Address / อีเมล
+                                            </label>
+                                            <input 
+                                                type="email"
+                                                placeholder="e.g. customer@example.com"
+                                                value={editEmail}
+                                                onChange={(e) => setEditEmail(e.target.value)}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                            />
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex gap-2.5 pt-2.5 border-t border-[#D1D1CD]/50">
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditingProfile(null)}
+                                                disabled={isSavingProfile}
+                                                className="flex-1 bg-white hover:bg-[#EBEBE9] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-2 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveProfile}
+                                                disabled={isSavingProfile}
+                                                className="flex-1 bg-[#1A1A1A] hover:bg-[#333330] text-white py-2 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                                            >
+                                                {isSavingProfile ? (
+                                                    <>
+                                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                                        <span>Saving...</span>
+                                                    </>
+                                                ) : (
+                                                    <span>Save Changes</span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : booking?.profiles ? (
                                     <div className="space-y-4 text-left">
                                         {/* Member Profile Card */}
                                         <div className="bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-3.5 flex items-center justify-between shadow-sm">
@@ -741,29 +865,52 @@ export default function POSOrderPanel({
                                                         )}
                                                     </div>
                                                     <p className="text-xs font-bold text-[#1A1A1A] uppercase mt-1 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-[#767673] leading-none">
-                                                        <span>{booking.profiles.phone_number || booking.profiles.phone || '-'}</span>
+                                                    
+                                                    {/* Display Phone & Email */}
+                                                    <div className="flex flex-col gap-0.5 mt-1.5 text-[9px] font-mono text-[#767673]">
+                                                        {booking.profiles.phone_number ? (
+                                                            <span>📞 {booking.profiles.phone_number}</span>
+                                                        ) : (
+                                                            <span className="text-red-500 font-bold">📞 No Phone (ไม่มีเบอร์)</span>
+                                                        )}
+                                                        {booking.profiles.email ? (
+                                                            <span>✉️ {booking.profiles.email}</span>
+                                                        ) : (
+                                                            <span className="text-amber-600/70 font-semibold">✉️ No Email</span>
+                                                        )}
                                                         {booking.profiles.xhaus_balance !== undefined && (
-                                                            <>
-                                                                <span>•</span>
-                                                                <span className="text-amber-700 font-bold">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
-                                                            </>
+                                                            <span className="text-amber-700 font-bold mt-0.5">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button 
-                                                onClick={async () => {
-                                                    await onDetachCustomer?.();
-                                                    setXhausToRedeem(0);
-                                                    setAppliedReward(null);
-                                                    setRewardDiscount(0);
-                                                }} 
-                                                className="p-2 bg-white hover:bg-red-50 text-[#767673] hover:text-red-650 border border-[#D1D1CD] hover:border-red-200 rounded-lg transition-colors cursor-pointer"
-                                                title="Detach Customer"
-                                            >
-                                                <Trash2 size={13} />
-                                            </button>
+                                            
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {/* Edit customer details button */}
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => startEditingProfile(booking.profiles)}
+                                                    className="p-2 bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-lg transition-colors cursor-pointer"
+                                                    title="Edit Customer Profile"
+                                                >
+                                                    <Edit size={13} />
+                                                </button>
+
+                                                {/* Detach customer button */}
+                                                <button 
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        await onDetachCustomer?.();
+                                                        setXhausToRedeem(0);
+                                                        setAppliedReward(null);
+                                                        setRewardDiscount(0);
+                                                    }} 
+                                                    className="p-2 bg-white hover:bg-red-50 text-[#767673] hover:text-red-650 border border-[#D1D1CD] hover:border-red-200 rounded-lg transition-colors cursor-pointer"
+                                                    title="Detach Customer"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         {/* xhaus Coins Redemption Panel */}
@@ -848,7 +995,7 @@ export default function POSOrderPanel({
                                                     </div>
                                                     <button 
                                                         onClick={handleCancelReward}
-                                                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[9px] font-mono font-bold uppercase rounded cursor-pointer transition-colors"
+                                                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-650 border border-red-200 text-[9px] font-mono font-bold uppercase rounded cursor-pointer transition-colors"
                                                     >
                                                         Cancel
                                                     </button>
@@ -896,12 +1043,14 @@ export default function POSOrderPanel({
                                             ) : (crmMembers.filter(m => {
                                                 const term = crmSearchTerm.toLowerCase();
                                                 return (m.display_name || '').toLowerCase().includes(term) ||
+                                                       (m.phone_number || '').toLowerCase().includes(term) ||
                                                        (m.phone || '').toLowerCase().includes(term) ||
                                                        (m.email || '').toLowerCase().includes(term);
                                             }).length > 0) ? (
                                                 crmMembers.filter(m => {
                                                     const term = crmSearchTerm.toLowerCase();
                                                     return (m.display_name || '').toLowerCase().includes(term) ||
+                                                           (m.phone_number || '').toLowerCase().includes(term) ||
                                                            (m.phone || '').toLowerCase().includes(term) ||
                                                            (m.email || '').toLowerCase().includes(term);
                                                 }).map(m => (
@@ -923,12 +1072,41 @@ export default function POSOrderPanel({
                                                             </div>
                                                             <div className="min-w-0">
                                                                 <p className="font-bold text-xs text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
-                                                                <p className="text-[9px] font-mono text-[#767673] mt-0.5">{m.phone || m.email || 'No Phone/Email'}</p>
+                                                                
+                                                                {/* Display Phone & Email in Search Items */}
+                                                                <div className="flex flex-col gap-0.5 mt-1 text-[9px] font-mono text-[#767673]">
+                                                                    {m.phone_number ? (
+                                                                        <span>📞 {m.phone_number}</span>
+                                                                    ) : (
+                                                                        <span className="text-red-500 font-semibold">📞 No Phone (ไม่มีเบอร์)</span>
+                                                                    )}
+                                                                    {m.email ? (
+                                                                        <span>✉️ {m.email}</span>
+                                                                    ) : (
+                                                                        <span className="text-amber-600/70 font-semibold">✉️ No Email</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <span className="text-[9px] font-mono font-bold text-[var(--color-accent)] uppercase tracking-wider border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/5 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            ATTACH
-                                                        </span>
+
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {/* Inline edit button for search registry item */}
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation(); // prevent select/attach
+                                                                    startEditingProfile(m);
+                                                                }}
+                                                                className="p-1.5 bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-lg transition-colors cursor-pointer"
+                                                                title="Edit Profile"
+                                                            >
+                                                                <Edit size={11} />
+                                                            </button>
+                                                            
+                                                            <span className="text-[9px] font-mono font-bold text-[var(--color-accent)] uppercase tracking-wider border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/5 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                ATTACH
+                                                            </span>
+                                                        </div>
                                                     </button>
                                                 ))
                                             ) : (
