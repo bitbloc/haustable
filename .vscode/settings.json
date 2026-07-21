@@ -6,5 +6,8 @@
     "deno.unstable": true,
     "deno.importMap": "./supabase/functions/deno.json",
     "editor.defaultFormatter": "denoland.vscode-deno",
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "manual",
+    "java.import.gradle.enabled": false,
+    "java.autobuild.enabled": false,
+    "gradle.autoDetect": "off"
 }

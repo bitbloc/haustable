@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { motion } from 'framer-motion';
+
 import { 
     Users, 
     Clock, 
@@ -330,12 +330,10 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                 }
                                                 
                                                 return (
-                                                    <motion.button
+                                                    <button
                                                         key={table.id}
-                                                        whileHover={{ scale: 1.03, zIndex: 30 }}
-                                                        whileTap={{ scale: 0.98 }}
                                                         onClick={() => onSelectTable(table)}
-                                                        className={`absolute select-none flex flex-col items-center justify-center transition-all p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass}`}
+                                                        className={`absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:scale-[1.03] hover:z-[30] active:scale-[0.98] transition-transform duration-100`}
                                                         style={{
                                                             left: `${table.pos_x}%`,
                                                             top: `${table.pos_y}%`,
@@ -394,7 +392,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    </motion.button>
+                                                    </button>
                                                 );
                                             })}
                                         </div>
@@ -444,12 +442,10 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                     }
 
                                     return (
-                                        <motion.button
+                                        <button
                                             key={table.id}
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
                                             onClick={() => onSelectTable(table)}
-                                            className={`min-h-[135px] rounded-xl p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-200 ${cellBgClass}`}
+                                            className={`min-h-[135px] rounded-xl p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.02] active:scale-[0.98] ${cellBgClass}`}
                                         >
                                             {/* Top row: Status LEDs */}
                                             <div className="flex justify-between items-center w-full">
@@ -469,13 +465,13 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                 </div>
                                                 <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
                                             </div>
-                    
+                                            
                                             {/* Center row: Table Info */}
                                             <div className="flex flex-col items-center gap-1 my-3 select-none">
                                                  <span className="font-mono font-black text-2xl tracking-tighter">{table.table_name}</span>
                                                  <span className="text-[9px] font-mono font-bold tracking-widest text-[#767673] uppercase">TABLE UNIT</span>
                                             </div>
-                    
+                                            
                                             {/* Bottom row: Capacity / Timing */}
                                             <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
                                                 <span>CAPACITY: {table.capacity}P</span>
@@ -486,7 +482,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                     </div>
                                                 )}
                                             </div>
-                                        </motion.button>
+                                        </button>
                                     );
                                 })}
                             </div>

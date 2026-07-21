@@ -1362,15 +1362,22 @@ export default function POSDashboard() {
                 <div className="flex h-full w-full overflow-hidden">
                     {/* Main Content Area */}
                     <div className="flex-1 h-full overflow-hidden relative">
-                        {view === 'tables' ? (
+                        {/* Core views kept mounted for instant switching */}
+                        <div className={view === 'tables' ? 'h-full' : 'hidden'}>
                             <POSTableGrid onSelectTable={handleSelectTable} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
-                        ) : view === 'pickup' ? (
-                            <POSPickupGrid onSelectOrder={handleSelectPickupOrder} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
-                        ) : view === 'menu' ? (
+                        </div>
+                        <div className={view === 'menu' ? 'h-full' : 'hidden'}>
                             <POSMenuGrid onAddItem={handleAddToOrder} />
-                        ) : view === 'crm' ? (
+                        </div>
+
+                        {/* Less frequent panels mounted conditionally */}
+                        {view === 'pickup' && (
+                            <POSPickupGrid onSelectOrder={handleSelectPickupOrder} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
+                        )}
+                        {view === 'crm' && (
                             <POSCRMPanel />
-                        ) : (
+                        )}
+                        {view === 'reports' && (
                             <POSReportsPanel />
                         )}
                     </div>
@@ -1613,56 +1620,15 @@ export default function POSDashboard() {
                 <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
-                        {!selectedStaffForLogin ? (
-                            /* Step 1: Select Staff Member */
-                            <div className="flex flex-col gap-5">
+                        {!showOpeningFloatModal ? (
+                            /* Step 1: Enter PIN Code to Identify Staff */
+                            <div className="flex flex-col gap-4">
                                 <div className="text-center">
                                     <div className="w-14 h-14 bg-[#ff0000]/10 text-[#ff0000] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#ff0000]/20 shadow-inner">
                                         <Users size={28} />
                                     </div>
                                     <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
-                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">Select Cashier Staff Profile</p>
-                                </div>
-
-                                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-                                    {staffList.map(staff => (
-                                        <button
-                                            key={staff.id}
-                                            onClick={() => {
-                                                setSelectedStaffForLogin(staff);
-                                                setPinInput('');
-                                                setShowOpeningFloatModal(false);
-                                            }}
-                                            className="w-full bg-white border border-[#D1D1CD] hover:border-[#ff0000]/40 rounded-xl p-3 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-sm group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-[#EAEAEA] flex items-center justify-center font-bold text-[#ff0000] uppercase text-xs border border-[#D1D1CD] group-hover:bg-[#ff0000]/10 transition-colors">
-                                                    {staff.display_name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-[#1A1A1A] leading-tight">{staff.display_name}</p>
-                                                    <p className="text-[8px] font-mono text-[#767673] uppercase tracking-widest leading-none mt-0.5">{staff.role}</p>
-                                                </div>
-                                            </div>
-                                            <Lock size={12} className="text-[#D1D1CD] group-hover:text-[#ff0000] transition-colors" />
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Debug Dev PIN Help (Manager view for easy testing) */}
-                                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight">
-                                    <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
-                                    {staffList.map(s => (
-                                        <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : !showOpeningFloatModal ? (
-                            /* Step 2: Enter PIN Code */
-                            <div className="flex flex-col gap-4">
-                                <div className="text-center">
-                                    <p className="text-[9px] font-mono font-bold text-[#767673] uppercase tracking-widest">SECURITY VERIFICATION</p>
-                                    <h3 className="text-sm font-bold text-[#1A1A1A] mt-0.5">ระบุรหัส PIN ของ {selectedStaffForLogin.display_name}</h3>
+                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>
                                     
                                     {/* PIN Dot Indicators */}
                                     <div className="flex justify-center gap-3.5 my-4">
@@ -1687,7 +1653,9 @@ export default function POSDashboard() {
                                                     const newPin = pinInput + num;
                                                     setPinInput(newPin);
                                                     if (newPin.length === 4) {
-                                                        if (newPin === selectedStaffForLogin.pin) {
+                                                        const staff = staffList.find(s => s.pin === newPin);
+                                                        if (staff) {
+                                                            setSelectedStaffForLogin(staff);
                                                             setShowOpeningFloatModal(true);
                                                         } else {
                                                             toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
@@ -1713,7 +1681,9 @@ export default function POSDashboard() {
                                                 const newPin = pinInput + '0';
                                                 setPinInput(newPin);
                                                 if (newPin.length === 4) {
-                                                    if (newPin === selectedStaffForLogin.pin) {
+                                                    const staff = staffList.find(s => s.pin === newPin);
+                                                    if (staff) {
+                                                        setSelectedStaffForLogin(staff);
                                                         setShowOpeningFloatModal(true);
                                                     } else {
                                                         toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
@@ -1733,13 +1703,14 @@ export default function POSDashboard() {
                                         ←
                                     </button>
                                 </div>
-
-                                <button
-                                    onClick={() => setSelectedStaffForLogin(null)}
-                                    className="w-full text-center text-[#767673] hover:text-[#1A1A1A] text-[10px] font-bold uppercase tracking-wider py-1.5 transition-colors cursor-pointer mt-2"
-                                >
-                                    ย้อนกลับเลือกพนักงาน (Change Staff)
-                                </button>
+                                
+                                {/* Debug Dev PIN Help (Manager view for easy testing) */}
+                                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight mt-4 mx-auto w-[260px]">
+                                    <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
+                                    {staffList.map(s => (
+                                        <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             /* Step 3: Enter Cash Float to Open Shift */
@@ -2079,134 +2050,55 @@ export default function POSDashboard() {
                 <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
-                        {!selectedStaffForUnlock ? (
-                            /* Step 1: Select Staff Member */
-                            <div className="flex flex-col gap-5">
-                                <div className="text-center">
-                                    <div className="w-14 h-14 bg-[#ff0000]/10 text-[#ff0000] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#ff0000]/20 shadow-inner">
-                                        <Lock size={28} />
-                                    </div>
-                                    <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">POS หน้าจอถูกล็อค</h2>
-                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">Select staff to unlock</p>
+                        {/* Enter PIN Code to Unlock */}
+                        <div className="flex flex-col gap-4">
+                            <div className="text-center">
+                                <div className="w-14 h-14 bg-[#ff0000]/10 text-[#ff0000] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#ff0000]/20 shadow-inner">
+                                    <Lock size={28} />
                                 </div>
-
-                                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-                                    {staffList.map(staff => (
-                                        <button
-                                            key={staff.id}
-                                            onClick={() => {
-                                                setSelectedStaffForUnlock(staff);
-                                                setLockPinInput('');
-                                            }}
-                                            className="w-full bg-white border border-[#D1D1CD] hover:border-[#ff0000]/40 rounded-xl p-3 flex items-center justify-between text-left transition-all active:scale-[0.99] cursor-pointer shadow-sm group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-[#EAEAEA] flex items-center justify-center font-bold text-[#ff0000] uppercase text-xs border border-[#D1D1CD] group-hover:bg-[#ff0000]/10 transition-colors">
-                                                    {staff.display_name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-[#1A1A1A] leading-tight">{staff.display_name}</p>
-                                                    <p className="text-[8px] font-mono text-[#767673] uppercase tracking-widest leading-none mt-0.5">{staff.role}</p>
-                                                </div>
-                                            </div>
-                                            <Lock size={12} className="text-[#D1D1CD] group-hover:text-[#ff0000] transition-colors" />
-                                        </button>
-                                    ))}
-                                </div>
+                                <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">POS หน้าจอถูกล็อค</h2>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO UNLOCK</p>
                                 
-                                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight">
-                                    <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
-                                    {staffList.map(s => (
-                                        <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
+                                {/* PIN Dot Indicators */}
+                                <div className="flex justify-center gap-3.5 my-4">
+                                    {[1, 2, 3, 4].map(idx => (
+                                        <div 
+                                            key={idx} 
+                                            className={`w-3.5 h-3.5 rounded-full border border-[#D1D1CD] transition-all duration-100 ${
+                                                lockPinInput.length >= idx ? 'bg-[#ff0000] border-[#ff0000] scale-110 shadow-sm' : 'bg-white'
+                                            }`}
+                                        />
                                     ))}
                                 </div>
                             </div>
-                        ) : (
-                            /* Step 2: Enter PIN Code to Unlock */
-                            <div className="flex flex-col gap-4">
-                                <div className="text-center">
-                                    <p className="text-[9px] font-mono font-bold text-[#767673] uppercase tracking-widest">SECURITY UNLOCK</p>
-                                    <h3 className="text-sm font-bold text-[#1A1A1A] mt-0.5">ระบุรหัส PIN ของ {selectedStaffForUnlock.display_name}</h3>
-                                    
-                                    {/* PIN Dot Indicators */}
-                                    <div className="flex justify-center gap-3.5 my-4">
-                                        {[1, 2, 3, 4].map(idx => (
-                                            <div 
-                                                key={idx} 
-                                                className={`w-3.5 h-3.5 rounded-full border border-[#D1D1CD] transition-all duration-100 ${
-                                                    lockPinInput.length >= idx ? 'bg-[#ff0000] border-[#ff0000] scale-110 shadow-sm' : 'bg-white'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
 
-                                {/* Numeric PIN Grid */}
-                                <div className="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto w-full">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                        <button
-                                            key={num}
-                                            onClick={() => {
-                                                if (lockPinInput.length < 4) {
-                                                    const newPin = lockPinInput + num;
-                                                    setLockPinInput(newPin);
-                                                    if (newPin.length === 4) {
-                                                        if (newPin === selectedStaffForUnlock.pin) {
-                                                            // Verify / Switch active shift staff name
-                                                            if (activeShift.staffName !== selectedStaffForUnlock.display_name) {
-                                                                const updatedShift = {
-                                                                    ...activeShift,
-                                                                    staffName: selectedStaffForUnlock.display_name
-                                                                };
-                                                                localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
-                                                                setActiveShift(updatedShift);
-                                                                syncShiftToCloud(updatedShift);
-                                                                window.dispatchEvent(new Event('pos-shift-changed'));
-                                                                toast.success(`เปลี่ยนเป็นพนักงาน: ${selectedStaffForUnlock.display_name}`);
-                                                            } else {
-                                                                toast.success('ปลดล็อคหน้าจอสำเร็จ');
-                                                            }
-                                                            unlockScreen();
-                                                        } else {
-                                                            toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                                            setLockPinInput('');
-                                                        }
-                                                    }
-                                                }
-                                            }}
-                                            className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                        >
-                                            {num}
-                                        </button>
-                                    ))}
+                            {/* Numeric PIN Grid */}
+                            <div className="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto w-full">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                                     <button
-                                        onClick={() => setLockPinInput('')}
-                                        className="h-12 rounded-xl bg-[#FFF0F0] border border-[#FAD2D2] hover:bg-[#FCDCDC] active:scale-95 text-[10px] font-bold text-[#D32F2F] transition-all shadow-sm flex items-center justify-center cursor-pointer uppercase"
-                                    >
-                                        ล้าง (C)
-                                    </button>
-                                    <button
+                                        key={num}
                                         onClick={() => {
                                             if (lockPinInput.length < 4) {
-                                                const newPin = lockPinInput + '0';
+                                                const newPin = lockPinInput + num;
                                                 setLockPinInput(newPin);
                                                 if (newPin.length === 4) {
-                                                    if (newPin === selectedStaffForUnlock.pin) {
-                                                        if (activeShift.staffName !== selectedStaffForUnlock.display_name) {
+                                                    const staff = staffList.find(s => s.pin === newPin);
+                                                    if (staff) {
+                                                        // Verify / Switch active shift staff name
+                                                        if (activeShift.staffName !== staff.display_name) {
                                                             const updatedShift = {
                                                                 ...activeShift,
-                                                                staffName: selectedStaffForUnlock.display_name
+                                                                staffName: staff.display_name
                                                             };
                                                             localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
                                                             setActiveShift(updatedShift);
                                                             syncShiftToCloud(updatedShift);
                                                             window.dispatchEvent(new Event('pos-shift-changed'));
-                                                            toast.success(`เปลี่ยนเป็นพนักงาน: ${selectedStaffForUnlock.display_name}`);
+                                                            toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name}`);
                                                         } else {
                                                             toast.success('ปลดล็อคหน้าจอสำเร็จ');
                                                         }
                                                         setIsLocked(false);
-                                                        setSelectedStaffForUnlock(null);
                                                         setLockPinInput('');
                                                     } else {
                                                         toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
@@ -2217,24 +2109,65 @@ export default function POSDashboard() {
                                         }}
                                         className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
                                     >
-                                        0
+                                        {num}
                                     </button>
-                                    <button
-                                        onClick={() => setLockPinInput(prev => prev.slice(0, -1))}
-                                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                    >
-                                        ←
-                                    </button>
-                                </div>
-
+                                ))}
                                 <button
-                                    onClick={() => setSelectedStaffForUnlock(null)}
-                                    className="w-full text-center text-[#767673] hover:text-[#1A1A1A] text-[10px] font-bold uppercase tracking-wider py-1.5 transition-colors cursor-pointer mt-2"
+                                    onClick={() => setLockPinInput('')}
+                                    className="h-12 rounded-xl bg-[#FFF0F0] border border-[#FAD2D2] hover:bg-[#FCDCDC] active:scale-95 text-[10px] font-bold text-[#D32F2F] transition-all shadow-sm flex items-center justify-center cursor-pointer uppercase"
                                 >
-                                    ย้อนกลับเลือกพนักงาน (Change Staff)
+                                    ล้าง (C)
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (lockPinInput.length < 4) {
+                                            const newPin = lockPinInput + '0';
+                                            setLockPinInput(newPin);
+                                            if (newPin.length === 4) {
+                                                const staff = staffList.find(s => s.pin === newPin);
+                                                if (staff) {
+                                                    if (activeShift.staffName !== staff.display_name) {
+                                                        const updatedShift = {
+                                                            ...activeShift,
+                                                            staffName: staff.display_name
+                                                        };
+                                                        localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
+                                                        setActiveShift(updatedShift);
+                                                        syncShiftToCloud(updatedShift);
+                                                        window.dispatchEvent(new Event('pos-shift-changed'));
+                                                        toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name}`);
+                                                    } else {
+                                                        toast.success('ปลดล็อคหน้าจอสำเร็จ');
+                                                    }
+                                                    setIsLocked(false);
+                                                    setLockPinInput('');
+                                                } else {
+                                                    toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                                    setLockPinInput('');
+                                                }
+                                            }
+                                        }
+                                    }}
+                                    className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                                >
+                                    0
+                                </button>
+                                <button
+                                    onClick={() => setLockPinInput(prev => prev.slice(0, -1))}
+                                    className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                                >
+                                    ←
                                 </button>
                             </div>
-                        )}
+                            
+                            {/* Debug Dev PIN Help (Manager view for easy testing) */}
+                            <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight mt-4 mx-auto w-[260px]">
+                                <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
+                                {staffList.map(s => (
+                                    <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
+                                ))}
+                            </div>
+                        </div>
                         
                     </div>
                 </div>

@@ -161,7 +161,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         });
     }
 
-    const encoder = new EscPosEncoder(printerType === 'sunmi');
+    const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
     // Auto kick cash drawer if this is a cash receipt printout

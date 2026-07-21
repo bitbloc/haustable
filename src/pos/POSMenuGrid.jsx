@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Search, Plus } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function POSMenuGrid({ onAddItem }) {
     const [categories, setCategories] = useState([]);
@@ -96,12 +95,10 @@ export default function POSMenuGrid({ onAddItem }) {
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                     {filteredItems.map(item => (
-                        <motion.button
+                        <button
                             key={item.id}
-                            whileHover={{ y: -2 }}
-                            whileTap={{ scale: 0.98 }}
                             onClick={() => onAddItem(item)}
-                            className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] transition-all cursor-pointer shadow-sm"
+                            className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.98] active:translate-y-[1px] hover:-translate-y-[1px] transition-all cursor-pointer shadow-sm duration-100"
                         >
                             <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
                                 {item.image_url ? (
@@ -125,7 +122,7 @@ export default function POSMenuGrid({ onAddItem }) {
                                     )}
                                 </div>
                             </div>
-                        </motion.button>
+                        </button>
                     ))}
                 </div>
             </div>
