@@ -11,8 +11,24 @@ export default function POSCRMPanel() {
     const [memberHistory, setMemberHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
 
+    const [hasSession, setHasSession] = useState(true);
+
     useEffect(() => {
-        fetchMembers();
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setHasSession(!!session);
+            if (session) {
+                fetchMembers();
+            }
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            setHasSession(!!session);
+            if (session) {
+                fetchMembers();
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const fetchMembers = async () => {
@@ -81,6 +97,28 @@ export default function POSCRMPanel() {
         const emailMatch = (m.email || '').toLowerCase().includes(searchTerm.toLowerCase());
         return nameMatch || phoneMatch || emailMatch;
     });
+
+    if (!hasSession) {
+        return (
+            <div className="h-full w-full flex items-center justify-center bg-[#ECECE9] p-6 font-sans">
+                <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-lg flex flex-col items-center text-center gap-4">
+                    <div className="w-14 h-14 bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] rounded-full flex items-center justify-center border border-[oklch(52%_0.16_28)]/20 shadow-inner">
+                        <User size={28} />
+                    </div>
+                    <h3 className="text-base font-bold text-[#1A1A1A]">ยังไม่ได้เข้าสู่ระบบ LINE / Supabase</h3>
+                    <p className="text-xs text-[oklch(42%_0.010_28)] leading-relaxed">
+                        ไม่สามารถแสดงข้อมูลลูกค้าระบบ CRM ได้เนื่องจากยังไม่ได้ล็อกอินด้วยบัญชีที่มีสิทธิ์ใช้งาน กรุณาเข้าสู่ระบบผ่าน LINE LIFF ก่อนครับ
+                    </p>
+                    <button 
+                        onClick={() => window.location.href = '/login?redirect=/pos'}
+                        className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] py-3 px-6 rounded-xl font-bold text-xs uppercase tracking-wide transition-all shadow-md active:scale-98 cursor-pointer select-none"
+                    >
+                        เข้าสู่ระบบ LINE (LIFF)
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex bg-[#ECECE9] text-[#1A1A1A] font-sans overflow-hidden select-none">

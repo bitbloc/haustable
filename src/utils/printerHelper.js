@@ -126,31 +126,57 @@ function encodeUTF8(str) {
 
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '58mm', receiptConfig = {}, printerType = 'universal') {
-    const BAR_CATEGORIES = [
-        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-    ];
-
-    // Filter items based on activeTab
+    // Filter items based on activeTab (Kitchen vs Bar vs Others) using printer configuration
     let itemsToRender = booking.order_items || [];
-    if (activeTab === 'kitchen') {
-        itemsToRender = itemsToRender.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
-    } else if (activeTab === 'bar') {
-        itemsToRender = itemsToRender.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
+    
+    let kitchenCatIds = [];
+    let barCatIds = [];
+    try {
+        const stored = localStorage.getItem('onhaus_printer_config');
+        if (stored) {
+            const config = JSON.parse(stored);
+            kitchenCatIds = config.kitchen_categories || [];
+            barCatIds = config.bar_categories || [];
+        }
+    } catch (e) {
+        // ignore
+    }
+
+    if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
+        // Fallback default categorization if config is not set up
+        const DEFAULT_BAR_CATEGORIES = [
+            '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+            '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+            'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+            'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+            '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+            '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+            '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+        ];
+        
+        if (activeTab === 'kitchen') {
+            itemsToRender = itemsToRender.filter(item => !DEFAULT_BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        } else if (activeTab === 'bar') {
+            itemsToRender = itemsToRender.filter(item => DEFAULT_BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        }
+    } else {
+        // Dynamically routing categories
+        if (activeTab === 'kitchen') {
+            itemsToRender = itemsToRender.filter(item => kitchenCatIds.includes(item.menu_items?.category_id));
+        } else if (activeTab === 'bar') {
+            itemsToRender = itemsToRender.filter(item => barCatIds.includes(item.menu_items?.category_id));
+        } else if (activeTab === 'other') {
+            itemsToRender = itemsToRender.filter(item => !kitchenCatIds.includes(item.menu_items?.category_id) && !barCatIds.includes(item.menu_items?.category_id));
+        }
     }
 
     // Return null if there are no items to print for this specific tab
-    if ((activeTab === 'kitchen' || activeTab === 'bar') && itemsToRender.length === 0) {
+    if ((activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') && itemsToRender.length === 0) {
         return null;
     }
 
-    // Sort items for kitchen and bar to group by category first, then alphabetically by name
-    if (activeTab === 'kitchen' || activeTab === 'bar') {
+    // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
+    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
         itemsToRender = [...itemsToRender].sort((a, b) => {
             const catA = a.menu_items?.category_id || '';
             const catB = b.menu_items?.category_id || '';
@@ -197,7 +223,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 1. Header (Omit for kitchen and bar)
-    if (activeTab !== 'kitchen' && activeTab !== 'bar') {
+    if (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other') {
         encoder.align('center')
                .line(doubleDivider)
                .size(1, 1)
@@ -222,7 +248,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .size(1, 1) // Double size header for kitchen!
                .line('KITCHEN ORDER')
-               .line('ใบสั่งอาหาร')
                .size(0, 0)
                .bold(false)
                .line(doubleDivider);
@@ -232,7 +257,15 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .size(1, 1) // Double size header for bar!
                .line('BAR ORDER')
-               .line('ใบสั่งเครื่องดื่ม')
+               .size(0, 0)
+               .bold(false)
+               .line(doubleDivider);
+    } else if (activeTab === 'other') {
+        encoder.align('center')
+               .line(doubleDivider)
+               .bold(true)
+               .size(1, 1) // Double size header for other!
+               .line('OTHER ORDER')
                .size(0, 0)
                .bold(false)
                .line(doubleDivider);
@@ -242,7 +275,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const tableName = (booking.tables_layout?.table_name || 'PICKUP').toUpperCase();
     
     // For kitchen/bar: Make Table Name and Queue ID even bigger and print order time prominently
-    if (activeTab === 'kitchen' || activeTab === 'bar') {
+    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+        let serviceType = 'กินที่ร้าน (DINE-IN)';
+        const remark = (booking.staff_remark || '').toLowerCase();
+        const note = (booking.customer_note || '').toLowerCase();
+        if (remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man')) {
+            serviceType = 'LINE MAN DELIVERY';
+        } else if (booking.booking_type === 'pickup') {
+            serviceType = 'กลับบ้าน (TAKEAWAY)';
+        }
+
+        const totalItemsCount = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
+
         encoder.align('center')
                .bold(true)
                .size(1, 1)
@@ -252,9 +296,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(divider)
                .align('left')
                .bold(true)
-               .size(0, 1) // Double height order time
-               .line(`เวลา: ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
-               .size(0, 0)
+               .line(`บริการ: ${serviceType}`)
+               .line(`พนักงานสั่ง: ${staffName.toUpperCase() || 'SYSTEM'}`)
+               .line(`เวลาสั่ง: ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
+               .line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
                .bold(false)
                .line(divider);
     } else {
@@ -269,7 +314,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 3. Meta info
-    if (activeTab !== 'kitchen' && activeTab !== 'bar') {
+    if (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other') {
         encoder.align('left')
                .line(`วันที่-เวลา: ${dateStr}`)
                .line(`ลูกค้า: ${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}`);
@@ -286,20 +331,20 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 4. Items Header
     encoder.bold(true)
-           .line(activeTab === 'kitchen' ? 'รายการอาหาร (ครัว)' : activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : 'รายการอาหารและเครื่องดื่ม')
+           .line(activeTab === 'kitchen' ? 'รายการอาหาร (ครัว)' : activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : activeTab === 'other' ? 'รายการอื่นๆ (ทั่วไป)' : 'รายการอาหารและเครื่องดื่ม')
            .bold(false)
            .line(divider);
 
     // 5. Items List
-    if (activeTab === 'kitchen' || activeTab === 'bar') {
-        itemsToRender.forEach(item => {
-            const qtyStr = `[ ${item.quantity} x ] `;
+    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+        itemsToRender.forEach((item, index) => {
+            const qtyStr = `${item.quantity}x`;
             const name = (item.menu_items?.name || 'Item').toUpperCase();
             
-            // Print item line in double height font for extreme readability!
+            // Print item line in double size (double width + double height) for maximum readability!
             encoder.bold(true)
-                   .size(0, 1) // Double height
-                   .line(`${qtyStr}${name}`)
+                   .size(1, 1) // Double size
+                   .line(`${qtyStr} ${name}`)
                    .size(0, 0)
                    .bold(false);
             
@@ -322,24 +367,15 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         });
     } else {
         itemsToRender.forEach(item => {
-            const qty = `${item.quantity}x `.padEnd(4, ' ');
+            const qty = `${item.quantity}x`;
             const name = (item.menu_items?.name || 'Item').toUpperCase();
+            const priceStr = (item.price_at_time * item.quantity).toLocaleString() + '.-';
             
-            let priceStr = '';
-            priceStr = (item.price_at_time * item.quantity).toLocaleString();
-
-            // Format name + price based on maxCols
-            const leftSpace = maxCols - qty.length - priceStr.length;
-            let displayName = name;
-            if (name.length > leftSpace) {
-                displayName = name.slice(0, leftSpace - 3) + '...';
-            }
-            
-            encoder.text(qty + displayName.padEnd(leftSpace, ' ') + priceStr + '\n');
+            encoder.text(formatItemLine(qty, name, priceStr, maxCols));
 
             // Print unit price details if quantity > 1
             if (item.quantity > 1) {
-                encoder.line(`     (${item.quantity} x ฿${item.price_at_time.toLocaleString()})`);
+                encoder.line(`     (${item.quantity} x ฿${item.price_at_time.toLocaleString()}.-)`);
             }
 
             // Render options (indented nicely)
@@ -368,18 +404,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             : 0;
 
         const totalQty = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
-        encoder.text(`จำนวนชิ้น`.padEnd(maxCols - 12, ' ') + totalQty.toString().padStart(12, ' ') + '\n');
-        encoder.text(`ยอดรวมก่อนหัก`.padEnd(maxCols - 12, ' ') + subtotal.toLocaleString().padStart(12, ' ') + '\n');
+        encoder.text(formatTwoCols('จำนวนชิ้น', totalQty.toString(), maxCols) + '\n');
+        encoder.text(formatTwoCols('ยอดรวมก่อนหัก', subtotal.toLocaleString() + '.-', maxCols) + '\n');
         if (discount > 0) {
-            encoder.text(`ส่วนลด`.padEnd(maxCols - 12, ' ') + `-${discount.toLocaleString()}`.padStart(12, ' ') + '\n');
+            encoder.text(formatTwoCols('ส่วนลด', `-${discount.toLocaleString()}` + '.-', maxCols) + '\n');
         }
         if (vatVal > 0) {
-            encoder.text(`ภาษีมูลค่าเพิ่ม (7%)`.padEnd(maxCols - 12, ' ') + vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12, ' ') + '\n');
+            encoder.text(formatTwoCols('ภาษีมูลค่าเพิ่ม (7%)', vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.-', maxCols) + '\n');
         }
         encoder.line(divider)
                .bold(true)
                .size(0, 1)
-               .text(`ยอดรวมสุทธิ`.padEnd(maxCols - 12, ' ') + `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`.padStart(12, ' ') + '\n')
+               .text(formatTwoCols('ยอดรวมสุทธิ', `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}.-`, maxCols) + '\n')
                .size(0, 0)
                .bold(false)
                .line(doubleDivider);
@@ -395,13 +431,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             const storedRecv = localStorage.getItem('last_cash_received');
             const storedChange = localStorage.getItem('last_cash_change');
             if (storedRecv !== null) {
-                const cashRecvVal = parseFloat(storedRecv).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                encoder.align('left')
-                       .text(`รับเงินสดมา`.padEnd(maxCols - 12, ' ') + cashRecvVal.padStart(12, ' ') + '\n');
+                const cashRecvVal = parseFloat(storedRecv).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.-';
+                encoder.text(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols) + '\n');
             }
             if (storedChange !== null) {
-                const cashChangeVal = parseFloat(storedChange).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                encoder.text(`เงินทอน`.padEnd(maxCols - 12, ' ') + cashChangeVal.padStart(12, ' ') + '\n');
+                const cashChangeVal = parseFloat(storedChange).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.-';
+                encoder.text(formatTwoCols('เงินทอน', cashChangeVal, maxCols) + '\n');
             }
         }
         
@@ -424,7 +459,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 9. Footer
-    if (activeTab !== 'kitchen' && activeTab !== 'bar') {
+    if (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other') {
         encoder.align('center')
                .line(shopFooter)
                .feed(2)
@@ -449,6 +484,70 @@ function formatDateTime(dateStr) {
     return `${day}/${month}/${year} - ${hours}:${minutes}`;
 }
 
+// Calculate visual width of Thai text (ignoring zero-width combining vowels/tone marks)
+function getThaiVisualWidth(str) {
+    let width = 0;
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        const isCombining = (
+            (code >= 0x0E31 && code <= 0x0E3A) || 
+            (code >= 0x0E47 && code <= 0x0E4E)
+        );
+        if (!isCombining) {
+            width++;
+        }
+    }
+    return width;
+}
+
+// Thai-width-aware padEnd helper
+function padEndThai(str, targetWidth, padChar = ' ') {
+    const visualWidth = getThaiVisualWidth(str);
+    const neededPadding = targetWidth - visualWidth;
+    if (neededPadding <= 0) return str;
+    return str + padChar.repeat(neededPadding);
+}
+
+// Thai-width-aware slice helper (ensures combining characters aren't orphaned)
+function sliceThai(str, maxVisualWidth) {
+    let currentWidth = 0;
+    let result = '';
+    for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        const code = str.charCodeAt(i);
+        const isCombining = (
+            (code >= 0x0E31 && code <= 0x0E3A) || 
+            (code >= 0x0E47 && code <= 0x0E4E)
+        );
+        if (!isCombining) {
+            if (currentWidth + 1 > maxVisualWidth) {
+                break;
+            }
+            currentWidth++;
+        }
+        result += char;
+    }
+    return result;
+}
+
+// Thai-width-aware item line formatting
+function formatItemLine(qty, name, priceStr, maxCols) {
+    const qtyColWidth = maxCols === 48 ? 5 : 4;
+    const priceColWidth = maxCols === 48 ? 12 : 9;
+    const nameColWidth = maxCols - qtyColWidth - priceColWidth;
+
+    const qtyStr = padEndThai(qty, qtyColWidth);
+    const rightPriceStr = priceStr.padStart(priceColWidth);
+    
+    let displayName = name;
+    if (getThaiVisualWidth(name) > nameColWidth) {
+        displayName = sliceThai(name, nameColWidth - 3) + '...';
+    }
+    
+    const paddedName = padEndThai(displayName, nameColWidth);
+    return qtyStr + paddedName + rightPriceStr + '\n';
+}
+
 function formatThreeCols(left, mid, right, maxCols) {
     const rightCol = 12;
     const midCol = 5;
@@ -456,11 +555,12 @@ function formatThreeCols(left, mid, right, maxCols) {
     const leftCol = maxCols - rightCol - midCol - 3;
     
     let leftStr = String(left);
-    if (leftStr.length > leftCol) {
-        leftStr = leftStr.slice(0, leftCol - 3) + '...';
+    if (getThaiVisualWidth(leftStr) > leftCol) {
+        leftStr = sliceThai(leftStr, leftCol - 3) + '...';
     }
     
-    return leftStr.padEnd(leftCol, ' ') + '  ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
+    const paddedLeft = padEndThai(leftStr, leftCol);
+    return paddedLeft + '  ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
 }
 
 function formatTwoCols(left, right, maxCols) {
@@ -468,11 +568,12 @@ function formatTwoCols(left, right, maxCols) {
     const leftCol = maxCols - rightCol - 1; // one space separation
     
     let leftStr = String(left);
-    if (leftStr.length > leftCol) {
-        leftStr = leftStr.slice(0, leftCol - 3) + '...';
+    if (getThaiVisualWidth(leftStr) > leftCol) {
+        leftStr = sliceThai(leftStr, leftCol - 3) + '...';
     }
     
-    return leftStr.padEnd(leftCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
+    const paddedLeft = padEndThai(leftStr, leftCol);
+    return paddedLeft + ' ' + String(right).padStart(rightCol, ' ');
 }
 
 // Compile raw bookings into rich structured shift report details
@@ -723,7 +824,7 @@ export function encodeShiftReportData(reportData, paperSize = '58mm', printerTyp
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
 export function encodeShiftClosureReportData(reportData, paperSize = '80mm', printerType = 'universal') {
-    const encoder = new EscPosEncoder(printerType === 'sunmi');
+    const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
     const maxCols = paperSize === '80mm' ? 48 : 30;
@@ -1025,6 +1126,7 @@ export async function printToRawBTWebSocket(rawData) {
 }
 
 let sunmiPrintQueue = Promise.resolve();
+const imageBase64Cache = {};
 
 // Download and resize image url to base64 JPEG format for thermal printers
 async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
@@ -1039,6 +1141,9 @@ async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
                 canvas.width = targetWidth;
                 canvas.height = img.height * scale;
                 const ctx = canvas.getContext('2d');
+                // Fill with white background to handle PNG transparency gracefully
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 const base64Data = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
                 resolve(base64Data);
@@ -1050,6 +1155,41 @@ async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
             reject(new Error("Failed to load image url: " + logoUrl));
         };
     });
+}
+
+// Get cached or download/resize remote image to base64 JPEG
+async function getCachedResizedImage(url, targetWidth) {
+    if (!url) return null;
+    const cacheKey = `img_cache_${url}_w${targetWidth}`;
+    
+    // 1. In-memory check
+    if (imageBase64Cache[cacheKey]) {
+        return imageBase64Cache[cacheKey];
+    }
+    
+    // 2. LocalStorage check
+    try {
+        const stored = localStorage.getItem(cacheKey);
+        if (stored) {
+            imageBase64Cache[cacheKey] = stored;
+            return stored;
+        }
+    } catch (e) {
+        // ignore
+    }
+    
+    // 3. Download and resize
+    const base64 = await downloadAndResizeLogoToBase64(url, targetWidth);
+    
+    // 4. Update cache
+    imageBase64Cache[cacheKey] = base64;
+    try {
+        localStorage.setItem(cacheKey, base64);
+    } catch (e) {
+        // ignore quota errors
+    }
+    
+    return base64;
 }
 
 // Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service) with FIFO Queue
@@ -1080,17 +1220,18 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     }
                 }
 
-                // If logo URL is provided, try to print it first
+                // If logo URL is provided, try to print it first (retrieved from cache if possible)
                 if (logoUrl) {
                     try {
-                        logger.info("SUNMI: downloading and resizing logo: " + logoUrl);
-                        const base64Image = await downloadAndResizeLogoToBase64(logoUrl);
-                        logger.info("SUNMI: printing logo bitmap");
-                        await SunmiPrinter.setAlignment({ alignment: "center" });
-                        await SunmiPrinter.printBitmap({ bitmap: base64Image });
-                        await SunmiPrinter.lineWrap({ lines: 1 });
-                        await SunmiPrinter.setAlignment({ alignment: "left" });
-                        logger.info("SUNMI: logo print completed successfully");
+                        logger.info("SUNMI: getting logo from cache or loading: " + logoUrl);
+                        const base64Image = await getCachedResizedImage(logoUrl, 200);
+                        if (base64Image) {
+                            logger.info("SUNMI: printing logo bitmap");
+                            await SunmiPrinter.setAlignment({ alignment: "center" });
+                            await SunmiPrinter.printBitmap({ bitmap: base64Image });
+                            await SunmiPrinter.lineWrap({ lines: 1 });
+                            await SunmiPrinter.setAlignment({ alignment: "left" });
+                        }
                     } catch (logoErr) {
                         console.warn("SUNMI print logo warning (non-fatal):", logoErr);
                         logger.warn("SUNMI: print logo warning (non-fatal)", logoErr);
@@ -1109,17 +1250,18 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                 await SunmiPrinter.sendRAWBase64Data({ data: base64Data });
                 logger.info("SUNMI: sendRAWBase64Data completed successfully");
                 
-                // If QR URL is provided, print it at the bottom (enlarged to 360px for easy scanning)
+                // If QR URL is provided, print it at the bottom (enlarged to 360px for easy scanning, retrieved from cache if possible)
                 if (qrUrl) {
                     try {
-                        logger.info("SUNMI: downloading and resizing QR code: " + qrUrl);
-                        const base64Qr = await downloadAndResizeLogoToBase64(qrUrl, 360);
-                        logger.info("SUNMI: printing QR code bitmap");
-                        await SunmiPrinter.setAlignment({ alignment: "center" });
-                        await SunmiPrinter.printBitmap({ bitmap: base64Qr });
-                        await SunmiPrinter.lineWrap({ lines: 1 });
-                        await SunmiPrinter.setAlignment({ alignment: "left" });
-                        logger.info("SUNMI: QR code print completed successfully");
+                        logger.info("SUNMI: getting QR from cache or loading: " + qrUrl);
+                        const base64Qr = await getCachedResizedImage(qrUrl, 360);
+                        if (base64Qr) {
+                            logger.info("SUNMI: printing QR code bitmap");
+                            await SunmiPrinter.setAlignment({ alignment: "center" });
+                            await SunmiPrinter.printBitmap({ bitmap: base64Qr });
+                            await SunmiPrinter.lineWrap({ lines: 1 });
+                            await SunmiPrinter.setAlignment({ alignment: "left" });
+                        }
                     } catch (qrErr) {
                         console.warn("SUNMI print QR warning (non-fatal):", qrErr);
                         logger.warn("SUNMI: print QR warning (non-fatal)", qrErr);

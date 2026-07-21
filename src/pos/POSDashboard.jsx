@@ -59,6 +59,7 @@ export default function POSDashboard() {
     const [isLocked, setIsLocked] = useState(() => {
         return localStorage.getItem('pos_is_locked') === 'true';
     });
+    const [hasSession, setHasSession] = useState(false);
     const [selectedStaffForUnlock, setSelectedStaffForUnlock] = useState(null);
     const [lockPinInput, setLockPinInput] = useState('');
 
@@ -192,6 +193,17 @@ export default function POSDashboard() {
     };
 
     useEffect(() => {
+        // Fetch current session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setHasSession(!!session);
+        });
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            setHasSession(!!session);
+            loadStaff();
+        });
+
         loadStaff();
 
         checkAndRestoreActiveShift().then(restored => {
@@ -219,6 +231,7 @@ export default function POSDashboard() {
         window.addEventListener('pos-trigger-lock', handleTriggerLock);
 
         return () => {
+            subscription.unsubscribe();
             window.removeEventListener('pos-shift-changed', handleShiftChanged);
             window.removeEventListener('pos-trigger-close-shift', handleTriggerClose);
             window.removeEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
@@ -1419,12 +1432,16 @@ export default function POSDashboard() {
                             onOpenSplitPayment={() => setShowSplitModal(true)}
                             onMoveTable={handleOpenMoveModal}
                             onMergeBill={handleOpenMergeModal}
-                            onAttachCustomer={() => {
+                            onAttachCustomer={async (member) => {
                                 if (!activeBooking) {
                                     toast.error("กรุณากดเปิดโต๊ะ (Seated Table) ก่อนผูกโปรไฟล์ลูกค้าครับ");
                                     return;
                                 }
-                                setShowAttachCRMModal(true);
+                                const success = await attachCustomerToBooking(activeBooking.id, member.id);
+                                if (success) {
+                                    const updatedBooking = await getActiveBooking(selectedTable.id);
+                                    setActiveBooking(updatedBooking);
+                                }
                             }}
                             onDetachCustomer={async () => {
                                 if (activeBooking) {
@@ -1542,79 +1559,6 @@ export default function POSDashboard() {
                     />
                 </div>
             )}
-
-            {/* Attach Customer CRM Modal */}
-            {showAttachCRMModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[80vh]">
-                        {/* Header */}
-                        <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD]">
-                            <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Attach Customer Profile</h3>
-                            <button 
-                                onClick={() => setShowAttachCRMModal(false)} 
-                                className="p-2 hover:bg-[#E0E0DC] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors cursor-pointer"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        {/* Search Bar */}
-                        <div className="p-4 border-b border-[#D1D1CD] bg-white">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767673]" size={14} />
-                                <input 
-                                    type="text"
-                                    placeholder="SEARCH CUSTOMERS BY NAME OR PHONE..."
-                                    value={crmSearchTerm}
-                                    onChange={(e) => setCrmSearchTerm(e.target.value)}
-                                    className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-2.5 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors font-mono"
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
-
-                        {/* Customer List */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white max-h-[50vh]">
-                            {crmLoading ? (
-                                <div className="flex flex-col items-center justify-center opacity-50 py-12">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#ff0000] mb-2"></div>
-                                    <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#767673]">LOADING REGISTRY...</span>
-                                </div>
-                            ) : filteredCrmMembers.length > 0 ? (
-                                filteredCrmMembers.map(m => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => handleSelectCrmCustomer(m)}
-                                        className="w-full text-left bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] hover:border-[#B0B0AC] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between group shadow-sm"
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-8 h-8 rounded-full border border-[#D1D1CD] bg-white overflow-hidden p-0.5 select-none shrink-0 flex items-center justify-center font-mono font-bold text-xs text-[#767673]">
-                                                {m.avatar_url ? (
-                                                    <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    m.display_name?.charAt(0).toUpperCase() || 'U'
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-xs text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
-                                                <p className="text-[9px] font-mono text-[#767673] mt-0.5">{m.phone || m.email || 'No Phone/Email'}</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-[9px] font-mono font-bold text-[#ff0000] uppercase tracking-wider border border-[#ff0000]/20 bg-[#ff0000]/5 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                            ATTACH
-                                        </span>
-                                    </button>
-                                ))
-                            ) : (
-                                <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic">
-                                    No customer profiles found
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Open Shift Overlay (Full Screen PIN Pad / Staff Grid) */}
             {!activeShift && (
                 <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -1629,6 +1573,20 @@ export default function POSDashboard() {
                                     </div>
                                     <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
                                     <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>
+                                    {!hasSession && (
+                                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)]/30 text-[oklch(18%_0.012_28)] rounded-xl p-3 text-[11px] font-sans text-left mt-3 flex flex-col gap-1.5 shadow-sm leading-normal">
+                                            <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1">⚠️ ไม่ได้เข้าสู่ระบบ (Guest Session)</span>
+                                            <span className="text-[oklch(42%_0.010_28)] font-sans">
+                                                ข้อมูลพนักงานจริงและฐานข้อมูลลูกค้า (CRM) จะไม่ถูกดึงจากระบบคลาวด์ กรุณาเข้าสู่ระบบผ่าน LINE (LIFF) ก่อนเข้าเวรครับ
+                                            </span>
+                                            <button 
+                                                onClick={() => window.location.href = '/login?redirect=/pos'}
+                                                className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] py-1.5 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all w-fit mt-1 shadow-sm cursor-pointer select-none"
+                                            >
+                                                เข้าสู่ระบบ LINE (LIFF)
+                                            </button>
+                                        </div>
+                                    )}
                                     
                                     {/* PIN Dot Indicators */}
                                     <div className="flex justify-center gap-3.5 my-4">
@@ -2058,6 +2016,20 @@ export default function POSDashboard() {
                                 </div>
                                 <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">POS หน้าจอถูกล็อค</h2>
                                 <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO UNLOCK</p>
+                                {!hasSession && (
+                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)]/30 text-[oklch(18%_0.012_28)] rounded-xl p-3 text-[11px] font-sans text-left mt-3 flex flex-col gap-1.5 shadow-sm leading-normal">
+                                        <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1">⚠️ เซสชันเข้าสู่ระบบ LINE ขาดการเชื่อมต่อ</span>
+                                        <span className="text-[oklch(42%_0.010_28)] font-sans">
+                                            ไม่พบข้อมูลบัญชีพนักงานจริง เพื่อให้ระบบบันทึกชื่อผู้ปลดล็อกและการทำรายการได้ถูกต้อง กรุณาเข้าสู่ระบบผ่าน LINE ก่อนครับ
+                                        </span>
+                                        <button 
+                                            onClick={() => window.location.href = '/login?redirect=/pos'}
+                                            className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] py-1.5 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all w-fit mt-1 shadow-sm cursor-pointer select-none"
+                                        >
+                                            เข้าสู่ระบบ LINE (LIFF)
+                                        </button>
+                                    </div>
+                                )}
                                 
                                 {/* PIN Dot Indicators */}
                                 <div className="flex justify-center gap-3.5 my-4">

@@ -50,6 +50,18 @@ export default function SlipModal({ booking, type, onClose }) {
     };
 
     const [isAutoPrinting, setIsAutoPrinting] = useState(getIsAutoPrintingInitial)
+    const [printerConfig, setPrinterConfig] = useState({ kitchen_categories: [], bar_categories: [] });
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                setPrinterConfig(JSON.parse(stored));
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, []);
 
     // Determine initial payment method:
     // Check booking.payment_slip_url or booking.staff_remark
@@ -146,6 +158,12 @@ export default function SlipModal({ booking, type, onClose }) {
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
                         }
+
+                        // Print Other slip
+                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
+                        if (otherBytes) {
+                            await printToSunmiBuiltIn(otherBytes);
+                        }
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
                         if (rawBytes) {
@@ -182,15 +200,28 @@ export default function SlipModal({ booking, type, onClose }) {
             console.error(e)
         }
         
+        const kitchenCatIds = printerConfig.kitchen_categories || [];
+        const barCatIds = printerConfig.bar_categories || [];
+        
         let filteredItems = booking.order_items || [];
-        if (activeTab === 'kitchen') {
-            filteredItems = filteredItems.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
-        } else if (activeTab === 'bar') {
-            filteredItems = filteredItems.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
+            if (activeTab === 'kitchen') {
+                filteredItems = filteredItems.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
+            } else if (activeTab === 'bar') {
+                filteredItems = filteredItems.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
+            }
+        } else {
+            if (activeTab === 'kitchen') {
+                filteredItems = filteredItems.filter(item => kitchenCatIds.includes(item.menu_items?.category_id));
+            } else if (activeTab === 'bar') {
+                filteredItems = filteredItems.filter(item => barCatIds.includes(item.menu_items?.category_id));
+            } else if (activeTab === 'other') {
+                filteredItems = filteredItems.filter(item => !kitchenCatIds.includes(item.menu_items?.category_id) && !barCatIds.includes(item.menu_items?.category_id));
+            }
         }
 
-        // Sort items for kitchen and bar to group by category first, then alphabetically by name
-        if (activeTab === 'kitchen' || activeTab === 'bar') {
+        // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
+        if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
             filteredItems = [...filteredItems].sort((a, b) => {
                 const catA = a.menu_items?.category_id || '';
                 const catB = b.menu_items?.category_id || '';
@@ -566,7 +597,7 @@ export default function SlipModal({ booking, type, onClose }) {
             const stored = localStorage.getItem('onhaus_printer_config');
             if (stored) {
                 const config = JSON.parse(stored);
-                if (activeTab === 'kitchen') {
+                if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
                     printerType = config.kitchen_printer_type || 'sunmi';
                     btDeviceName = config.kitchen_printer_bt_name || '';
                     paperSize = config.kitchen_paper_size || '58mm';
@@ -771,6 +802,12 @@ export default function SlipModal({ booking, type, onClose }) {
                         ใบสั่งบาร์ (Bar)
                     </button>
                     <button 
+                        onClick={() => setActiveTab('other')} 
+                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'other' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                    >
+                        ใบสั่งอื่นๆ (Other)
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('billing')} 
                         className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'billing' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                     >
@@ -870,12 +907,21 @@ export default function SlipModal({ booking, type, onClose }) {
                         {/* Items */}
                         <div className="space-y-3 mb-5">
                             <div className="text-[9px] font-black uppercase tracking-widest text-right mb-1 opacity-55">
-                                {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : '01. ITEMS'}
+                                {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : activeTab === 'other' ? 'OTHER ITEMS' : '01. ITEMS'}
                             </div>
                             {booking.order_items?.filter(item => {
                                 const categoryId = item.menu_items?.category_id;
-                                if (activeTab === 'kitchen') return !BAR_CATEGORIES.includes(categoryId);
-                                if (activeTab === 'bar') return BAR_CATEGORIES.includes(categoryId);
+                                const kitchenCatIds = printerConfig.kitchen_categories || [];
+                                const barCatIds = printerConfig.bar_categories || [];
+
+                                if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
+                                    if (activeTab === 'kitchen') return !BAR_CATEGORIES.includes(categoryId);
+                                    if (activeTab === 'bar') return BAR_CATEGORIES.includes(categoryId);
+                                } else {
+                                    if (activeTab === 'kitchen') return kitchenCatIds.includes(categoryId);
+                                    if (activeTab === 'bar') return barCatIds.includes(categoryId);
+                                    if (activeTab === 'other') return !kitchenCatIds.includes(categoryId) && !barCatIds.includes(categoryId);
+                                }
                                 return true;
                             }).map((item, idx) => {
                                 let optionsList = []
@@ -890,7 +936,7 @@ export default function SlipModal({ booking, type, onClose }) {
                                         <div className="flex justify-between font-bold items-baseline gap-2 mb-0.5">
                                             <span className="w-6 shrink-0 text-sm font-black">{item.quantity}x</span>
                                             <span className="grow font-bold uppercase text-[13px] tracking-tight leading-4">{item.menu_items?.name || 'Item'}</span>
-                                            {activeTab !== 'kitchen' && activeTab !== 'bar' && (
+                                            {activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && (
                                                 <span className="shrink-0 font-mono font-normal">{(item.price_at_time * item.quantity).toLocaleString()}</span>
                                             )}
                                         </div>

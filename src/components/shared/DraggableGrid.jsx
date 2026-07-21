@@ -93,11 +93,42 @@ function getItemColor(index) {
 // This naturally prevents duplicate items from being adjacent to each other.
 function fillChronological(items, target, columns) {
     if (items.length === 0) return []
-    const out = new Array(target)
     const N = items.length
-    for (let idx = 0; idx < target; idx++) {
-        out[idx] = items[idx % N]
+    const rows = Math.ceil(target / columns)
+    const out = new Array(target)
+    
+    // Find center cell of the base grid
+    const cx = Math.floor(columns / 2)
+    const cy = Math.floor(rows / 2)
+    
+    // Create all cell positions and calculate distance to center
+    const cells = []
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < columns; c++) {
+            const dx = c - cx
+            const dy = r - cy
+            const dist = dx * dx + dy * dy
+            const angle = Math.atan2(dy, dx)
+            cells.push({ r, c, dist, angle })
+        }
     }
+    
+    // Sort cells: closest to center first.
+    // If distances are equal, sort by angle to distribute them in a spiral/circle.
+    cells.sort((a, b) => {
+        if (Math.abs(a.dist - b.dist) < 0.001) {
+            return a.angle - b.angle
+        }
+        return a.dist - b.dist
+    })
+    
+    // Assign items (newest first) to cells closest to center
+    cells.forEach((cell, idx) => {
+        const itemIdx = idx % N
+        const flatIdx = cell.r * columns + cell.c
+        out[flatIdx] = items[itemIdx]
+    })
+    
     return out
 }
 
@@ -121,6 +152,13 @@ function LazyCard({
     const cardRef = useRef(null)
     const overlayRef = useRef(null)
     const [isVisible, setIsVisible] = useState(false)
+    const [hasBeenVisible, setHasBeenVisible] = useState(false)
+
+    useEffect(() => {
+        if (isVisible) {
+            setHasBeenVisible(true)
+        }
+    }, [isVisible])
 
     useEffect(() => {
         const el = overlayRef.current
@@ -170,23 +208,23 @@ function LazyCard({
                 ref={cardRef}
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
-                whileHover={isVisible ? { scale: 1.03, y: -3 } : undefined}
-                whileTap={isVisible ? { scale: 0.97 } : undefined}
+                whileHover={(isVisible || hasBeenVisible) ? { scale: 1.03, y: -3 } : undefined}
+                whileTap={(isVisible || hasBeenVisible) ? { scale: 0.97 } : undefined}
                 transition={{ type: "spring", stiffness: 350, damping: 22 }}
-                className={`select-none flex flex-col justify-between p-3 text-left ${isVisible ? "border border-neutral-800/25 shadow-sm" : ""}`}
+                className={`select-none flex flex-col justify-between p-3 text-left ${(isVisible || hasBeenVisible) ? "border border-neutral-800/25 shadow-sm" : ""}`}
                 style={{
                     position: "relative",
                     width: safeImageWidth,
                     height: safeImageHeight,
                     borderRadius: 2, // Minimalist Rams clean rounding (rounded-xs)
-                    backgroundColor: isVisible ? "#FAF9F5" : "transparent", // Warm Hallmark Paper color when visible, transparent when hidden
+                    backgroundColor: (isVisible || hasBeenVisible) ? "#FAF9F5" : "transparent", // Warm Hallmark Paper color when visible, transparent when hidden
                     color: "#1a1a1a", // Deep hallmark ink
                     cursor: isDragging ? "grabbing" : "pointer",
                     transformOrigin: "center center",
                     boxSizing: "border-box",
                 }}
             >
-                {isVisible && (
+                {(isVisible || hasBeenVisible) && (
                     <>
                         {/* Header label in typewriter style */}
                         <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
@@ -240,8 +278,8 @@ function LazyCard({
             ref={cardRef}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
-            whileHover={isVisible ? { scale: 1.03, y: -3 } : undefined}
-            whileTap={isVisible ? { scale: 0.97 } : undefined}
+            whileHover={(isVisible || hasBeenVisible) ? { scale: 1.03, y: -3 } : undefined}
+            whileTap={(isVisible || hasBeenVisible) ? { scale: 0.97 } : undefined}
             transition={{ type: "spring", stiffness: 350, damping: 22 }}
             style={{
                 position: "relative",
@@ -249,7 +287,7 @@ function LazyCard({
                 height: safeImageHeight,
                 overflow: "hidden",
                 borderRadius: radius,
-                backgroundColor: isVisible && src && !failed ? "#111111" : "transparent",
+                backgroundColor: (isVisible || hasBeenVisible) && src && !failed ? "#111111" : "transparent",
                 color: "rgba(255,255,255,0.85)",
                 display: "flex",
                 alignItems: "center",
@@ -266,7 +304,7 @@ function LazyCard({
                 WebkitMaskImage: "-webkit-radial-gradient(white, black)",
             }}
         >
-            {isVisible && (
+            {(isVisible || hasBeenVisible) && (
                 <>
                     {/* Hidden index helper, overlays check-in type if loaded */}
                     <div className="absolute inset-0 bg-black/10 flex flex-col justify-between p-3 z-10 text-white select-none pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
@@ -678,7 +716,7 @@ export default function DraggableGrid(props) {
                     const failed = failedImages.current.has(index)
                     return (
                         <LazyCard
-                            key={index}
+                            key={`${item.id || index}-${index}`}
                             item={item}
                             index={index}
                             safeImageWidth={safeImageWidth}

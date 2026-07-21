@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -42,6 +42,36 @@ export default function POSOrderPanel({
     // Promotions states
     const [activePromotions, setActivePromotions] = React.useState([]);
     const [selectedPromo, setSelectedPromo] = React.useState(null);
+
+    // Modal and CRM Search States
+    const [activeModal, setActiveModal] = React.useState(null); // 'crm' | 'discount' | 'checkout' | null
+    const [crmSearchTerm, setCrmSearchTerm] = React.useState('');
+    const [crmMembers, setCrmMembers] = React.useState([]);
+    const [crmLoading, setCrmLoading] = React.useState(false);
+
+    const loadCrmMembers = async () => {
+        setCrmLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('display_name', { ascending: true });
+            if (error) throw error;
+            setCrmMembers(data || []);
+        } catch (err) {
+            console.error("Error loading profiles in panel:", err);
+            toast.error("Failed to load customer profiles");
+        } finally {
+            setCrmLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        if (activeModal === 'crm' && !booking?.profiles) {
+            loadCrmMembers();
+            setCrmSearchTerm('');
+        }
+    }, [activeModal, booking?.profiles]);
 
     const [crmSettings, setCrmSettings] = React.useState({
         crm_redeem_rate_xhaus: 1.0,
@@ -406,204 +436,46 @@ export default function POSOrderPanel({
                 </div>
             )}
 
-            {/* Customer Lookup (CRM Hook) */}
-            {booking?.profiles ? (
-                <div className="px-3 py-2 shrink-0 space-y-2">
-                    <div className="w-full bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-2.5 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-7 h-7 rounded-full bg-[#ff0000]/10 border border-[#ff0000]/20 flex items-center justify-center text-[#ff0000] shrink-0">
-                                <UserPlus size={14} />
-                            </div>
+            {/* Customer CRM Summary Header */}
+            <div className="px-3 py-1.5 shrink-0 border-b border-[#D1D1CD]/50 bg-white/40">
+                {booking?.profiles ? (
+                    <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-2)] shrink-0 animate-pulse" />
                             <div className="text-left min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                    <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                <span className="font-mono text-[8px] font-bold text-[var(--color-neutral)] uppercase tracking-wider block">Attached Customer</span>
+                                <p className="text-[11px] font-bold text-[var(--color-ink)] truncate uppercase">
+                                    {booking.profiles.display_name || 'Anonymous User'} 
                                     {attachedMemberCrm && (
-                                        <span className="px-1.5 py-0.2 bg-[#1A1A1A] text-white text-[7px] font-mono font-bold rounded uppercase tracking-wider">
+                                        <span className="ml-1.5 px-1 py-0.2 bg-[var(--color-ink)] text-[var(--color-paper)] text-[7px] font-mono font-bold rounded uppercase">
                                             {attachedMemberCrm.current_tier}
                                         </span>
                                     )}
-                                </div>
-                                <p className="text-[11px] font-bold uppercase mt-0.5 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
-                                <div className="flex items-center gap-2 mt-0.5 text-[8px] font-mono text-[#767673] leading-none">
-                                    <span>{booking.profiles.phone_number || booking.profiles.phone || '-'}</span>
-                                    {booking.profiles.xhaus_balance !== undefined && (
-                                        <>
-                                            <span>•</span>
-                                            <span className="text-amber-700 font-bold">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
-                                        </>
-                                    )}
-                                </div>
+                                </p>
                             </div>
                         </div>
-                        <div className="flex gap-1 shrink-0">
-                            <button 
-                                onClick={() => onAttachCustomer?.()} 
-                                className="p-1.5 hover:bg-white text-[#767673] hover:text-[#1A1A1A] rounded-md transition-colors cursor-pointer"
-                                title="Change Customer"
-                            >
-                                <RefreshCw size={12} />
-                            </button>
-                            <button 
-                                onClick={() => onDetachCustomer?.()} 
-                                className="p-1.5 hover:bg-[#FFD6D6] text-[#767673] hover:text-red-600 rounded-md transition-colors cursor-pointer"
-                                title="Detach Customer"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setActiveModal('crm')}
+                            className="text-[9px] font-mono font-bold text-[var(--color-accent)] hover:underline px-2 py-1 bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded transition-all cursor-pointer"
+                        >
+                            CRM & Rewards
+                        </button>
                     </div>
-
-                    {/* xhaus Coins Redemption Panel */}
-                    <div className="bg-[#FFF9E6] border border-amber-200 rounded-xl p-2.5 flex flex-col gap-2 shadow-sm font-sans">
-                        {!showRedeemInput ? (
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                    <Coins size={12} className="text-[#FFAA00]" />
-                                    <div className="text-left">
-                                        {xhausToRedeem > 0 ? (
-                                            <p className="text-[9px] font-bold text-amber-900 leading-none">
-                                                Redeemed {xhausToRedeem} xhaus (-฿{xhausDiscount.toFixed(2)})
-                                            </p>
-                                        ) : (
-                                            <p className="text-[9px] text-amber-800 font-medium leading-none">
-                                                Use xhaus for discount (1 xhaus = ฿{crmSettings.crm_redeem_rate_xhaus})
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                                {xhausToRedeem > 0 ? (
-                                    <button 
-                                        onClick={() => {
-                                            setXhausToRedeem(0);
-                                            setRedeemInputVal('');
-                                        }}
-                                        className="px-2 py-0.5 bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 text-[8px] font-bold uppercase rounded cursor-pointer transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                ) : (
-                                    <button 
-                                        onClick={() => {
-                                            setRedeemInputVal(Math.min(parseFloat(booking.profiles.xhaus_balance || 0), Math.floor(total)).toString());
-                                            setShowRedeemInput(true);
-                                        }}
-                                        className="px-2.5 py-1 bg-[#1A1A1A] hover:bg-[#333330] text-white text-[8px] font-bold uppercase rounded-lg cursor-pointer transition-all active:scale-95"
-                                    >
-                                        Redeem
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="space-y-1.5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-amber-900">
-                                        Enter coins to redeem (Max: {parseFloat(booking.profiles.xhaus_balance || 0).toFixed(2)})
-                                    </span>
-                                    <button 
-                                        onClick={() => setShowRedeemInput(false)}
-                                        className="text-amber-800 hover:text-amber-950 font-bold font-mono text-[9px] uppercase cursor-pointer"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                                <div className="flex gap-1.5">
-                                    <input 
-                                        type="number"
-                                        value={redeemInputVal}
-                                        onChange={(e) => setRedeemInputVal(e.target.value)}
-                                        placeholder="e.g. 50"
-                                        className="flex-1 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-xs font-bold font-mono text-[#1A1A1A] outline-none"
-                                    />
-                                    <button 
-                                        onClick={() => {
-                                            const points = parseFloat(redeemInputVal) || 0;
-                                            const maxBalance = parseFloat(booking.profiles.xhaus_balance) || 0;
-                                            const minRedeem = crmSettings.crm_min_redeem_xhaus || 10.0;
-                                            
-                                            if (points < minRedeem) {
-                                                toast.error(`จำนวนเหรียญที่แลกต้องไม่ต่ำกว่า ${minRedeem} xhaus ครับ`);
-                                                return;
-                                            }
-                                            if (points > maxBalance) {
-                                                toast.error(`คะแนนคงเหลือมีเพียง ${maxBalance.toFixed(2)} xhaus ครับ`);
-                                                return;
-                                            }
-                                            if (points > total) {
-                                                toast.error('แต้มส่วนลดห้ามเกินมูลค่ารวมของบิลอาหารครับ');
-                                                return;
-                                            }
-                                            setXhausToRedeem(points);
-                                            setShowRedeemInput(false);
-                                            toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toFixed(2)}`);
-                                        }}
-                                        className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-[8px] font-bold uppercase rounded-lg px-3 cursor-pointer transition-all active:scale-95"
-                                    >
-                                        Apply
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                ) : (
+                    <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                            <UserPlus size={13} className="text-[#767673]" />
+                            <span className="text-[9px] font-mono font-bold text-[#767673] uppercase tracking-wider">No Customer Attached</span>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('crm')}
+                            className="text-[9px] font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-2.5 py-1 rounded transition-all cursor-pointer shadow-sm active:scale-95"
+                        >
+                            + Attach CRM
+                        </button>
                     </div>
-
-                    {/* xhaus Reward Code Redemption Panel */}
-                    <div className="bg-[#E6F4FF] border border-blue-200 rounded-xl p-2.5 flex flex-col gap-2 shadow-sm font-sans mt-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <Gift size={12} className="text-blue-500 shrink-0" />
-                                <p className="text-[9px] text-blue-900 font-bold leading-none">Redeem Reward Code</p>
-                            </div>
-                        </div>
-                        {appliedReward ? (
-                            <div className="bg-white border border-blue-300 p-2 rounded-lg flex justify-between items-center text-[9px]">
-                                <div className="space-y-0.5 text-left">
-                                    <p className="font-bold text-blue-950 truncate max-w-[170px]">{appliedReward.title}</p>
-                                    <p className="text-[8px] text-neutral-500 font-mono">
-                                        Cost: {appliedReward.xhaus_cost} xhaus ({appliedReward.claim_code})
-                                        {appliedReward.usage_limit && ` | สิทธิ์คงเหลือ: ${Math.max(0, appliedReward.usage_limit - (appliedReward.used_count || 0))}/${appliedReward.usage_limit}`}
-                                    </p>
-                                </div>
-                                <button 
-                                    onClick={handleCancelReward}
-                                    className="px-2 py-0.5 bg-red-50 hover:bg-red-100 text-red-650 border border-red-200 text-[8px] font-bold uppercase rounded cursor-pointer transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex gap-1.5">
-                                <input 
-                                    type="text"
-                                    placeholder="Enter Code (e.g. IHGLASS50)"
-                                    value={rewardCodeInput}
-                                    onChange={(e) => setRewardCodeInput(e.target.value.toUpperCase())}
-                                    className="flex-1 bg-white border border-blue-300 rounded-lg px-2.5 py-1 text-xs font-bold font-mono text-[#1A1A1A] outline-none placeholder:text-neutral-400 placeholder:font-sans uppercase"
-                                />
-                                <button 
-                                    onClick={handleApplyRewardCode}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase rounded-lg px-3 cursor-pointer transition-all active:scale-95"
-                                >
-                                    Apply
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            ) : (
-                <div className="px-3 py-2 shrink-0">
-                    <button 
-                        onClick={() => onAttachCustomer?.()}
-                        className="w-full bg-white border border-[#D1D1CD] rounded-xl p-2.5 flex items-center gap-3 hover:border-[#B0B0AC] transition-all cursor-pointer group shadow-sm"
-                    >
-                        <div className="w-7 h-7 rounded-full bg-[#E0E0DC] flex items-center justify-center text-[#1A1A1A] shrink-0">
-                            <UserPlus size={14} />
-                        </div>
-                        <div className="text-left flex-1 min-w-0">
-                            <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">CUSTOMER CRM</p>
-                            <p className="text-[11px] font-bold uppercase mt-0.5 truncate">Attach Customer Profile</p>
-                        </div>
-                    </button>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5 scrollbar-none">
@@ -677,129 +549,58 @@ export default function POSOrderPanel({
 
             {/* Summary & Checkout */}
             <div className="p-4 bg-[#EBEBE9] border-t border-[#D1D1CD] space-y-3 shrink-0">
-                {/* Custom Discount & Promotions Panel */}
-                <div className="bg-white border border-[#D1D1CD] rounded-xl p-2.5 space-y-2.5 shadow-sm">
-                    {/* Header */}
-                    <div className="flex items-center gap-1.5 border-b border-[#F5F5F2] pb-1.5">
-                        <Tag size={12} className="text-[#1A1A1A]" />
-                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
-                            Discounts & Promo (ส่วนลดและโปรโมชั่น)
-                        </span>
-                    </div>
-
-                    {/* Promotion Code Dropdown */}
-                    <div className="space-y-1">
-                        <label className="block text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
-                            <Ticket size={10} /> Select Promotion (เลือกโปรโมชั่น)
-                        </label>
-                        <select
-                            value={selectedPromo ? selectedPromo.id : ''}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (!val) {
-                                    setSelectedPromo(null);
-                                    return;
-                                }
-                                const found = activePromotions.find(p => p.id === val);
-                                if (found) {
-                                    if (subtotal < parseFloat(found.min_spend || 0)) {
-                                        toast.error(`โปรโมชั่นนี้ต้องการยอดขั้นต่ำ ฿${parseFloat(found.min_spend).toLocaleString()} ครับ (ยอดปัจจุบัน: ฿${subtotal.toLocaleString()})`);
-                                        return;
-                                    }
-                                    setSelectedPromo(found);
-                                    toast.success(`ใช้โปรโมชั่น ${found.code} สำเร็จ!`);
-                                }
-                            }}
-                            className="w-full px-2 py-1.5 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-[10px] text-[#1A1A1A] font-semibold outline-none cursor-pointer"
-                        >
-                            <option value="">-- No Promotion Code --</option>
-                            {activePromotions.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    🎟 {p.code} ({p.discount_type === 'percentage' ? `${p.discount_value}%` : `฿${p.discount_value}`} Off)
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Manual Discount Entry */}
-                    <div className="space-y-1">
-                        <label className="block text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
-                            <Percent size={10} /> Custom Manual Discount (ใส่ส่วนลดเอง)
-                        </label>
-                        <div className="flex gap-1.5">
-                            {/* Unit Toggle */}
-                            <div className="flex bg-[#F5F5F2] border border-[#D1D1CD] p-0.5 rounded-lg">
-                                <button
-                                    type="button"
-                                    onClick={() => setManualDiscountType('amount')}
-                                    className={`px-2 py-0.5 text-[9px] font-bold rounded ${manualDiscountType === 'amount' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
-                                >
-                                    ฿
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setManualDiscountType('percent')}
-                                    className={`px-2 py-0.5 text-[9px] font-bold rounded ${manualDiscountType === 'percent' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
-                                >
-                                    %
-                                </button>
-                            </div>
-                            {/* Input box */}
-                            <input
-                                type="number"
-                                placeholder={manualDiscountType === 'amount' ? 'e.g. 50' : 'e.g. 10'}
-                                value={manualDiscountVal}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setManualDiscountVal(val);
-                                }}
-                                className="flex-1 px-2.5 py-1 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-xs font-bold font-mono text-[#1A1A1A] outline-none"
-                            />
-                        </div>
-                    </div>
-                </div>
-
                 <div className="space-y-1 font-mono text-[9px] font-bold uppercase tracking-wider text-[#767673]">
                     <div className="flex justify-between items-center">
                         <span>SUBTOTAL</span>
                         <span className="text-[#1A1A1A]">฿{subtotal.toFixed(2)}</span>
                     </div>
 
-                    {memberDiscount > 0 && (
-                        <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
-                            <span>DISCOUNT ({discountLabel})</span>
-                            <span>-฿{memberDiscount.toFixed(2)}</span>
-                        </div>
-                    )}
+                    {(memberDiscount > 0 || promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
+                        <div className="space-y-0.5 border-t border-[#D1D1CD]/30 pt-1 mt-1">
+                            {memberDiscount > 0 && (
+                                <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
+                                    <span>DISCOUNT ({discountLabel})</span>
+                                    <span>-฿{memberDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
 
-                    {promoDiscount > 0 && (
-                        <div className="flex justify-between items-center text-green-600 font-bold py-0.5 animate-fade-in">
-                            <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
-                            <span>-฿{promoDiscount.toFixed(2)}</span>
-                        </div>
-                    )}
+                            {promoDiscount > 0 && (
+                                <div className="flex justify-between items-center text-green-600 font-bold py-0.5 animate-fade-in">
+                                    <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
+                                    <span>-฿{promoDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
 
-                    {manualDiscount > 0 && (
-                        <div className="flex justify-between items-center text-blue-600 font-bold py-0.5 animate-fade-in">
-                            <span>MANUAL DISCOUNT</span>
-                            <span>-฿{manualDiscount.toFixed(2)}</span>
-                        </div>
-                    )}
+                            {manualDiscount > 0 && (
+                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5 animate-fade-in">
+                                    <span>MANUAL DISCOUNT</span>
+                                    <span>-฿{manualDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
 
-                    {xhausDiscount > 0 && (
-                        <div className="flex justify-between items-center text-amber-700 font-bold py-0.5 animate-fade-in">
-                            <span>xhaus REDEEMED</span>
-                            <span>-฿{xhausDiscount.toFixed(2)}</span>
+                            {xhausDiscount > 0 && (
+                                <div className="flex justify-between items-center text-amber-700 font-bold py-0.5 animate-fade-in">
+                                    <span>xhaus REDEEMED</span>
+                                    <span>-฿{xhausDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
+                            
+                            {rewardDiscount > 0 && (
+                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5 animate-fade-in">
+                                    <span>REWARD DISCOUNT</span>
+                                    <span>-฿{rewardDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
                         </div>
                     )}
                     
                     {/* VAT Toggle Row */}
-                    <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5">
+                    <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5 mt-1">
                         <div className="flex items-center gap-1.5">
                             <span>VAT (7%)</span>
                             <button 
                                 onClick={() => setIncludeTax(!includeTax)}
-                                className={`w-7 h-3.5 rounded-full transition-colors relative flex items-center cursor-pointer ${includeTax ? 'bg-[#ff0000]' : 'bg-white/30'}`}
+                                className={`w-7 h-3.5 rounded-full transition-colors relative flex items-center cursor-pointer ${includeTax ? 'bg-[var(--color-accent)]' : 'bg-white/30'}`}
                             >
                                 <div className={`absolute w-2.5 h-2.5 bg-white rounded-full transition-transform ${includeTax ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
                             </button>
@@ -811,195 +612,77 @@ export default function POSOrderPanel({
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-1">
                         <span className="text-[9px] font-bold pb-0.5">NET TOTAL</span>
-                        <span className="text-lg font-black text-[#ff0000]">฿{total.toFixed(2)}</span>
+                        <span className="text-lg font-black text-[var(--color-accent)]">฿{total.toFixed(2)}</span>
                     </div>
 
                     {attachedMemberCrm && pointsEarned > 0 && (
                         <div className="flex justify-between items-center text-emerald-600 font-bold pt-1.5 border-t border-dashed border-[#D1D1CD] animate-fade-in">
-                            <span>COINS TO EARN (สะสมเพิ่ม)</span>
+                            <span>COINS TO EARN</span>
                             <span>+{pointsEarned.toFixed(2)} xhaus</span>
                         </div>
                     )}
                 </div>
 
-                {/* Payment Method Selector / Actions */}
+                {/* Primary Action Row */}
                 {(order.items.length > 0 || booking) && (
                     <div className="space-y-2">
-                        <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] w-full font-mono text-[9px] font-bold uppercase tracking-wider gap-0.5">
-                            <button 
-                                type="button"
-                                onClick={() => setPaymentMethod('cash')}
-                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                            >
-                                <Banknote size={10} /> CASH / เงินสด
-                            </button>
-                            <button 
-                                type="button"
-                                onClick={() => setPaymentMethod('qr')}
-                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                            >
-                                <QrCode size={10} /> QR / โอน
-                            </button>
-                            <button 
-                                type="button"
-                                onClick={() => setPaymentMethod('credit')}
-                                className={`flex-1 py-1.5 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'credit' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                            >
-                                <CreditCard size={10} /> CREDIT / บัตร
-                            </button>
-                        </div>
- 
-                        {/* Cash Calculator UI */}
-                        {paymentMethod === 'cash' && (
-                            <div className="bg-white border border-[#D1D1CD] rounded-xl p-2.5 space-y-2 text-left shadow-sm">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-[#767673]">
-                                        Cash Received (รับเงินมา)
-                                    </span>
-                                    <input 
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={cashReceivedInput}
-                                        onChange={(e) => setCashReceivedInput(e.target.value)}
-                                        className="w-24 text-right bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-black"
-                                    />
-                                </div>
-                                
-                                {/* Quick Cash buttons */}
-                                <div className="grid grid-cols-4 gap-1">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setCashReceivedInput(total.toFixed(2))}
-                                        className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                    >
-                                        พอดี
-                                    </button>
-                                    {Math.ceil(total / 100) * 100 !== total && (
-                                        <button 
-                                            type="button"
-                                            onClick={() => setCashReceivedInput((Math.ceil(total / 100) * 100).toFixed(2))}
-                                            className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                        >
-                                            ฿{Math.ceil(total / 100) * 100}
-                                        </button>
-                                    )}
-                                    {total <= 500 && (
-                                        <button 
-                                            type="button"
-                                            onClick={() => setCashReceivedInput('500.00')}
-                                            className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                        >
-                                            ฿500
-                                        </button>
-                                    )}
-                                    <button 
-                                        type="button"
-                                        onClick={() => setCashReceivedInput('1000.00')}
-                                        className="bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded py-1 text-[8px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                    >
-                                        ฿1000
-                                    </button>
-                                </div>
-
-                                <div className="flex justify-between items-center text-[9px] border-t border-dashed border-[#D1D1CD] pt-2">
-                                    <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
-                                    <span className={`font-mono font-bold text-xs ${parseFloat(cashReceivedInput) >= total ? 'text-green-600' : 'text-[#ff0000]'}`}>
-                                        {parseFloat(cashReceivedInput) >= total 
-                                            ? `฿${(parseFloat(cashReceivedInput) - total).toFixed(2)}` 
-                                            : cashReceivedInput ? `ขาดอีก ฿${(total - parseFloat(cashReceivedInput)).toFixed(2)}` : '฿0.00'}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Print Bill / Show QR button if QR is chosen */}
-                        {paymentMethod === 'qr' && (
-                            <button 
-                                onClick={() => {
-                                    onOpenSlip && onOpenSlip('billing');
-                                    if (cfdChannel.current) {
-                                        cfdChannel.current.postMessage({
-                                            type: 'SHOW_QR',
-                                            payload: {
-                                                orderData: {
-                                                    items: order.items,
-                                                    subtotal,
-                                                    discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
-                                                    tax,
-                                                    total
-                                                },
-                                                total
-                                            }
-                                        });
-                                    }
-                                }}
-                                className="w-full bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] text-[#1A1A1A] py-2 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
-                            >
-                                <Printer size={10} /> DISPLAY QR / พิมพ์ใบแจ้งยอด
-                            </button>
-                        )}
-
                         <div className="grid grid-cols-2 gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                            {/* Promo & Discount Trigger */}
+                            <button
+                                type="button"
+                                onClick={() => setActiveModal('discount')}
+                                className={`w-full py-2 rounded-lg border transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
+                                    (selectedPromo || parseFloat(manualDiscountVal) > 0)
+                                    ? 'bg-[#E6F4FF] border-blue-300 text-blue-800'
+                                    : 'bg-white hover:bg-[#F5F5F2] border-[#D1D1CD] text-[#1A1A1A]'
+                                }`}
+                            >
+                                <Tag size={10} /> 
+                                {(selectedPromo || parseFloat(manualDiscountVal) > 0) ? 'Promo Applied' : 'Discount / Promo'}
+                            </button>
+
+                            {/* Pay / Checkout Trigger */}
                             {hasNewItems ? (
                                 <button 
                                     onClick={() => onOpenSlip && onOpenSlip('kitchen')}
-                                    className="col-span-2 bg-[#00CC44] hover:bg-[#00B33C] border border-[#009933] text-white py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
+                                    className="w-full bg-[#00CC44] hover:bg-[#00B33C] border border-[#009933] text-white py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
                                 >
-                                    <Send size={10} /> SEND TO KITCHEN / ส่งครัว
+                                    <Send size={10} /> Send to Kitchen
                                 </button>
                             ) : (
-                                <>
-                                    <button 
-                                        onClick={() => onOpenSlip && onOpenSlip('kitchen')}
-                                        className="flex items-center justify-center gap-1 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-2 rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-all shadow-sm cursor-pointer"
-                                    >
-                                        <ReceiptText size={10} /> KITCHEN SLIP
-                                    </button>
-                                    <button 
-                                        onClick={() => {
-                                            if (paymentMethod === 'cash') {
-                                                const cashRecv = parseFloat(cashReceivedInput) || 0;
-                                                if (cashRecv < total) {
-                                                    toast.error("กรุณากรอกจำนวนเงินรับมาให้พอดีหรือมากกว่ายอดรวมครับ");
-                                                    return;
-                                                }
-                                                // Save to local storage for printing receipts
-                                                localStorage.setItem('last_cash_received', cashRecv);
-                                                localStorage.setItem('last_cash_change', (cashRecv - total).toFixed(2));
-                                            }
-                                            
-                                            onCheckout(
-                                                paymentMethod, 
-                                                includeTax, 
-                                                pointsEarned, 
-                                                xhausToRedeem + (appliedReward ? parseFloat(appliedReward.xhaus_cost) : 0), 
-                                                xhausDiscount + rewardDiscount, 
-                                                promoDiscount, 
-                                                manualDiscount,
-                                                appliedReward ? appliedReward.claim_code : null,
-                                                appliedReward ? appliedReward.id : null
-                                            );
-                                            if (cfdChannel.current && paymentMethod === 'qr') {
-                                                cfdChannel.current.postMessage({ type: 'PAYMENT_SUCCESS' });
-                                            }
-                                        }}
-                                        className="flex items-center justify-center gap-1 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer"
-                                    >
-                                        <Check size={10} /> CHECKOUT / ปิดโต๊ะ
-                                    </button>
-                                </>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCashReceivedInput(''); // reset cash received input
+                                        setActiveModal('checkout');
+                                    }}
+                                    className="w-full bg-[var(--color-accent)] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-1"
+                                >
+                                    <CreditCard size={10} /> Pay / Checkout
+                                </button>
                             )}
                         </div>
 
-                        {/* Split Payment trigger */}
-                        {booking && (
-                            <button 
-                                type="button"
-                                onClick={() => onOpenSplitPayment?.()}
-                                className="w-full mt-1 bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-2 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer active:scale-98"
-                            >
-                                <Coins size={10} /> แบ่งจ่าย / Split Payment
-                            </button>
+                        {/* Secondary Slip / Split Payment Row */}
+                        {!hasNewItems && (
+                            <div className="grid grid-cols-2 gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                                <button 
+                                    type="button"
+                                    onClick={() => onOpenSlip && onOpenSlip('kitchen')}
+                                    className="flex items-center justify-center gap-1 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-1.5 rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-all shadow-sm cursor-pointer"
+                                >
+                                    <ReceiptText size={10} /> Kitchen Slip
+                                </button>
+                                {booking && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => onOpenSplitPayment?.()}
+                                        className="flex items-center justify-center gap-1 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-1.5 rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-all shadow-sm cursor-pointer"
+                                    >
+                                        <Coins size={10} /> Split Payment
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
                 )}
@@ -1009,6 +692,595 @@ export default function POSOrderPanel({
                     ONHAUS SYSTEM ©
                 </div>
             </div>
+
+            {/* Overlay Modals */}
+            <AnimatePresence>
+                {activeModal === 'crm' && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 font-sans"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.97, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.97, y: 10 }}
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[85vh]"
+                        >
+                            {/* Header */}
+                            <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
+                                <div>
+                                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Customer CRM & Rewards</h3>
+                                    <p className="text-[9px] text-[#767673] font-mono mt-0.5">จัดการข้อมูลสมาชิกและสิทธิพิเศษ</p>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveModal(null)} 
+                                    className="p-1.5 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+                                {booking?.profiles ? (
+                                    <div className="space-y-4 text-left">
+                                        {/* Member Profile Card */}
+                                        <div className="bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0 font-mono font-bold">
+                                                    {booking.profiles.display_name?.charAt(0).toUpperCase() || 'U'}
+                                                </div>
+                                                <div className="text-left min-w-0">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                                        {attachedMemberCrm && (
+                                                            <span className="px-1.5 py-0.2 bg-[#1A1A1A] text-white text-[7px] font-mono font-bold rounded uppercase tracking-wider">
+                                                                {attachedMemberCrm.current_tier}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs font-bold text-[#1A1A1A] uppercase mt-1 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5 text-[9px] font-mono text-[#767673] leading-none">
+                                                        <span>{booking.profiles.phone_number || booking.profiles.phone || '-'}</span>
+                                                        {booking.profiles.xhaus_balance !== undefined && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="text-amber-700 font-bold">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={async () => {
+                                                    await onDetachCustomer?.();
+                                                    setXhausToRedeem(0);
+                                                    setAppliedReward(null);
+                                                    setRewardDiscount(0);
+                                                }} 
+                                                className="p-2 bg-white hover:bg-red-50 text-[#767673] hover:text-red-650 border border-[#D1D1CD] hover:border-red-200 rounded-lg transition-colors cursor-pointer"
+                                                title="Detach Customer"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+
+                                        {/* xhaus Coins Redemption Panel */}
+                                        <div className="bg-[#FFF9E6] border border-amber-200 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <Coins size={14} className="text-[#FFAA00]" />
+                                                    <div className="text-left">
+                                                        <p className="text-[10px] font-mono font-bold text-amber-900 uppercase tracking-wide leading-none">xhaus Coins Redemption</p>
+                                                        <p className="text-[9px] text-amber-800/80 font-medium leading-none mt-0.5">
+                                                            1 xhaus = ฿{crmSettings.crm_redeem_rate_xhaus} (Min: {crmSettings.crm_min_redeem_xhaus} xhaus)
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {xhausToRedeem > 0 ? (
+                                                <div className="bg-white border border-amber-200 rounded-lg p-2.5 flex justify-between items-center text-xs">
+                                                    <span className="font-bold text-amber-900">Redeemed {xhausToRedeem} xhaus (-฿{xhausDiscount.toFixed(2)})</span>
+                                                    <button 
+                                                        onClick={() => {
+                                                            setXhausToRedeem(0);
+                                                            setRedeemInputVal('');
+                                                        }}
+                                                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-[9px] font-mono font-bold uppercase rounded cursor-pointer transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="number"
+                                                        value={redeemInputVal}
+                                                        onChange={(e) => setRedeemInputVal(e.target.value)}
+                                                        placeholder={`e.g. ${crmSettings.crm_min_redeem_xhaus}`}
+                                                        className="flex-1 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-3 py-1.5 text-xs font-bold font-mono text-[#1A1A1A] outline-none focus:border-amber-400"
+                                                    />
+                                                    <button 
+                                                        onClick={() => {
+                                                            const points = parseFloat(redeemInputVal) || 0;
+                                                            const maxBalance = parseFloat(booking.profiles.xhaus_balance) || 0;
+                                                            const minRedeem = crmSettings.crm_min_redeem_xhaus || 10.0;
+                                                            
+                                                            if (points < minRedeem) {
+                                                                toast.error(`จำนวนเหรียญที่แลกต้องไม่ต่ำกว่า ${minRedeem} xhaus ครับ`);
+                                                                return;
+                                                            }
+                                                            if (points > maxBalance) {
+                                                                toast.error(`คะแนนคงเหลือมีเพียง ${maxBalance.toFixed(2)} xhaus ครับ`);
+                                                                return;
+                                                            }
+                                                            if (points > total) {
+                                                                toast.error('แต้มส่วนลดห้ามเกินมูลค่ารวมของบิลอาหารครับ');
+                                                                return;
+                                                            }
+                                                            setXhausToRedeem(points);
+                                                            toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toFixed(2)}`);
+                                                        }}
+                                                        className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-[9px] font-bold uppercase rounded-lg px-4 cursor-pointer transition-all active:scale-95"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* xhaus Reward Code Redemption Panel */}
+                                        <div className="bg-[#E6F4FF] border border-blue-200 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <Gift size={14} className="text-blue-500 shrink-0" />
+                                                <p className="text-[10px] font-mono font-bold text-blue-900 uppercase tracking-wide leading-none">Redeem Reward Code</p>
+                                            </div>
+
+                                            {appliedReward ? (
+                                                <div className="bg-white border border-blue-300 p-2.5 rounded-lg flex justify-between items-center text-[10px]">
+                                                    <div className="space-y-0.5 text-left">
+                                                        <p className="font-bold text-blue-950 truncate max-w-[200px]">{appliedReward.title}</p>
+                                                        <p className="text-[8px] text-neutral-500 font-mono">
+                                                            Cost: {appliedReward.xhaus_cost} xhaus ({appliedReward.claim_code})
+                                                        </p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={handleCancelReward}
+                                                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[9px] font-mono font-bold uppercase rounded cursor-pointer transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Enter Code (e.g. IHGLASS50)"
+                                                        value={rewardCodeInput}
+                                                        onChange={(e) => setRewardCodeInput(e.target.value.toUpperCase())}
+                                                        className="flex-1 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-3 py-1.5 text-xs font-bold font-mono text-[#1A1A1A] outline-none placeholder:text-neutral-400 placeholder:font-sans uppercase focus:border-blue-400"
+                                                    />
+                                                    <button 
+                                                        onClick={handleApplyRewardCode}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold uppercase rounded-lg px-4 cursor-pointer transition-all active:scale-95"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Customer Search Area */
+                                    <div className="space-y-3">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767673]" size={14} />
+                                            <input 
+                                                type="text"
+                                                placeholder="SEARCH BY NAME OR PHONE..."
+                                                value={crmSearchTerm}
+                                                onChange={(e) => setCrmSearchTerm(e.target.value)}
+                                                className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl py-2.5 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#1A1A1A] font-medium transition-colors font-mono"
+                                                autoFocus
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+                                            {crmLoading ? (
+                                                <div className="flex flex-col items-center justify-center opacity-50 py-12">
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1A1A1A] mb-2"></div>
+                                                    <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#767673]">LOADING REGISTRY...</span>
+                                                </div>
+                                            ) : (crmMembers.filter(m => {
+                                                const term = crmSearchTerm.toLowerCase();
+                                                return (m.display_name || '').toLowerCase().includes(term) ||
+                                                       (m.phone || '').toLowerCase().includes(term) ||
+                                                       (m.email || '').toLowerCase().includes(term);
+                                            }).length > 0) ? (
+                                                crmMembers.filter(m => {
+                                                    const term = crmSearchTerm.toLowerCase();
+                                                    return (m.display_name || '').toLowerCase().includes(term) ||
+                                                           (m.phone || '').toLowerCase().includes(term) ||
+                                                           (m.email || '').toLowerCase().includes(term);
+                                                }).map(m => (
+                                                    <button
+                                                        key={m.id}
+                                                        onClick={async () => {
+                                                            await onAttachCustomer?.(m);
+                                                            setActiveModal('crm');
+                                                        }}
+                                                        className="w-full text-left bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] hover:border-[#B0B0AC] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between group shadow-sm active:scale-99"
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="w-8 h-8 rounded-full border border-[#D1D1CD] bg-white overflow-hidden select-none shrink-0 flex items-center justify-center font-mono font-bold text-xs text-[#767673]">
+                                                                {m.avatar_url ? (
+                                                                    <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                                                                ) : (
+                                                                    m.display_name?.charAt(0).toUpperCase() || 'U'
+                                                                )}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="font-bold text-xs text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
+                                                                <p className="text-[9px] font-mono text-[#767673] mt-0.5">{m.phone || m.email || 'No Phone/Email'}</p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[9px] font-mono font-bold text-[var(--color-accent)] uppercase tracking-wider border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/5 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            ATTACH
+                                                        </span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic bg-[#F5F5F2] rounded-xl border border-dashed border-[#D1D1CD]">
+                                                    No customer profiles found
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex justify-end">
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    className="bg-[#1A1A1A] hover:bg-[#333330] text-white px-4 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow"
+                                >
+                                    Close Window
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {activeModal === 'discount' && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 font-sans"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.97, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.97, y: 10 }}
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
+                        >
+                            {/* Header */}
+                            <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
+                                <div>
+                                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Apply Discount / Promo</h3>
+                                    <p className="text-[9px] text-[#767673] font-mono mt-0.5">เลือกส่วนลดและโปรโมชั่นพิเศษสำหรับโต๊ะนี้</p>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveModal(null)} 
+                                    className="p-1.5 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-4 space-y-4 bg-white text-left">
+                                {/* Promotion Code Dropdown */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
+                                        <Ticket size={11} /> Select Promotion (เลือกโปรโมชั่น)
+                                    </label>
+                                    <select
+                                        value={selectedPromo ? selectedPromo.id : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (!val) {
+                                                setSelectedPromo(null);
+                                                return;
+                                            }
+                                            const found = activePromotions.find(p => p.id === val);
+                                            if (found) {
+                                                if (subtotal < parseFloat(found.min_spend || 0)) {
+                                                    toast.error(`โปรโมชั่นนี้ต้องการยอดขั้นต่ำ ฿${parseFloat(found.min_spend).toLocaleString()} ครับ (ยอดปัจจุบัน: ฿${subtotal.toLocaleString()})`);
+                                                    return;
+                                                }
+                                                setSelectedPromo(found);
+                                                toast.success(`ใช้โปรโมชั่น ${found.code} สำเร็จ!`);
+                                            }
+                                        }}
+                                        className="w-full px-3 py-2 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-semibold outline-none cursor-pointer focus:border-[#1A1A1A]"
+                                    >
+                                        <option value="">-- No Promotion Code --</option>
+                                        {activePromotions.map(p => (
+                                            <option key={p.id} value={p.id}>
+                                                🎟 {p.code} ({p.discount_type === 'percentage' ? `${p.discount_value}%` : `฿${p.discount_value}`} Off)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Manual Discount Entry */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
+                                        <Percent size={11} /> Custom Manual Discount (ใส่ส่วนลดเอง)
+                                    </label>
+                                    <div className="flex gap-2">
+                                        {/* Unit Toggle */}
+                                        <div className="flex bg-[#F5F5F2] border border-[#D1D1CD] p-0.5 rounded-lg shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => setManualDiscountType('amount')}
+                                                className={`px-3 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${manualDiscountType === 'amount' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
+                                            >
+                                                ฿
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setManualDiscountType('percent')}
+                                                className={`px-3 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${manualDiscountType === 'percent' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
+                                            >
+                                                %
+                                            </button>
+                                        </div>
+                                        {/* Input box */}
+                                        <input
+                                            type="number"
+                                            placeholder={manualDiscountType === 'amount' ? 'e.g. 50' : 'e.g. 10'}
+                                            value={manualDiscountVal}
+                                            onChange={(e) => setManualDiscountVal(e.target.value)}
+                                            className="flex-1 px-3 py-1.5 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-xs font-bold font-mono text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex justify-end">
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    className="bg-[#1A1A1A] hover:bg-[#333330] text-white px-5 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow"
+                                >
+                                    Confirm Discount
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {activeModal === 'checkout' && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 font-sans"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.97, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.97, y: 10 }}
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
+                        >
+                            {/* Header */}
+                            <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
+                                <div>
+                                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Payment & Settlement</h3>
+                                    <p className="text-[9px] text-[#767673] font-mono mt-0.5">เลือกช่องทางชำระเงินและรับเงิน</p>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveModal(null)} 
+                                    className="p-1.5 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-4 space-y-4 bg-white text-left">
+                                {/* Bill summary list inside checkout */}
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-3.5 space-y-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#767673]">
+                                    <div className="flex justify-between items-center">
+                                        <span>SUBTOTAL</span>
+                                        <span className="text-[#1A1A1A]">฿{subtotal.toFixed(2)}</span>
+                                    </div>
+                                    {(memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount > 0) && (
+                                        <div className="flex justify-between items-center text-green-600">
+                                            <span>TOTAL DISCOUNTS</span>
+                                            <span>-฿{(memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5">
+                                        <span>VAT (7%)</span>
+                                        <span className={`font-bold ${includeTax ? 'text-[#1A1A1A]' : 'text-gray-400 line-through'}`}>
+                                            ฿{(netBeforeTax * 0.07).toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-end text-[#1A1A1A] pt-1">
+                                        <span className="text-[9px] font-bold pb-0.5">NET TOTAL TO PAY</span>
+                                        <span className="text-xl font-black text-[var(--color-accent)]">฿{total.toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Payment Method Selector */}
+                                <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] w-full font-mono text-[9px] font-bold uppercase tracking-wider gap-0.5">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('cash')}
+                                        className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                    >
+                                        <Banknote size={10} /> CASH / เงินสด
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('qr')}
+                                        className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                    >
+                                        <QrCode size={10} /> QR / โอน
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setPaymentMethod('credit')}
+                                        className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'credit' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                    >
+                                        <CreditCard size={10} /> CREDIT / บัตร
+                                    </button>
+                                </div>
+
+                                {/* Cash calculator inside modal */}
+                                {paymentMethod === 'cash' && (
+                                    <div className="bg-[#FFF9E6] border border-amber-200 rounded-xl p-3.5 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673]">
+                                                Cash Received (รับเงินมา)
+                                            </span>
+                                            <input 
+                                                type="number"
+                                                placeholder="0.00"
+                                                value={cashReceivedInput}
+                                                onChange={(e) => setCashReceivedInput(e.target.value)}
+                                                className="w-28 text-right bg-white border border-[#D1D1CD] rounded-lg px-3 py-1 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-amber-400"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        
+                                        {/* Quick Cash buttons */}
+                                        <div className="grid grid-cols-4 gap-1.5">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setCashReceivedInput(total.toFixed(2))}
+                                                className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                            >
+                                                พอดี
+                                            </button>
+                                            {Math.ceil(total / 100) * 100 !== total && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setCashReceivedInput((Math.ceil(total / 100) * 100).toFixed(2))}
+                                                    className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                                >
+                                                    ฿{Math.ceil(total / 100) * 100}
+                                                </button>
+                                            )}
+                                            {total <= 500 && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setCashReceivedInput('500.00')}
+                                                    className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                                >
+                                                    ฿500
+                                                </button>
+                                            )}
+                                            <button 
+                                                type="button"
+                                                onClick={() => setCashReceivedInput('1000.00')}
+                                                className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
+                                            >
+                                                ฿1000
+                                            </button>
+                                        </div>
+
+                                        <div className="flex justify-between items-center text-[10px] border-t border-dashed border-[#D1D1CD]/50 pt-2.5">
+                                            <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
+                                            <span className={`font-mono font-bold text-sm ${parseFloat(cashReceivedInput) >= total ? 'text-green-600' : 'text-[#ff0000]'}`}>
+                                                {parseFloat(cashReceivedInput) >= total 
+                                                    ? `฿${(parseFloat(cashReceivedInput) - total).toFixed(2)}` 
+                                                    : cashReceivedInput ? `ขาดอีก ฿${(total - parseFloat(cashReceivedInput)).toFixed(2)}` : '฿0.00'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* QR buttons */}
+                                {paymentMethod === 'qr' && (
+                                    <button 
+                                        onClick={() => {
+                                            onOpenSlip && onOpenSlip('billing');
+                                            if (cfdChannel.current) {
+                                                cfdChannel.current.postMessage({
+                                                    type: 'SHOW_QR',
+                                                    payload: {
+                                                        orderData: {
+                                                            items: order.items,
+                                                            subtotal,
+                                                            discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                                                            tax,
+                                                            total
+                                                        },
+                                                        total
+                                                    }
+                                                });
+                                            }
+                                            toast.info("พิมพ์ใบแจ้งยอด/แสดงคิวอาร์โค้ดแล้ว");
+                                        }}
+                                        className="w-full bg-[#E6F4FF] hover:bg-blue-100 border border-blue-200 text-blue-800 py-2.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                    >
+                                        <Printer size={12} /> DISPLAY QR / พิมพ์ใบแจ้งยอด
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Footer Checkout Action */}
+                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex justify-between gap-3">
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#F5F5F2] text-[#1A1A1A] py-2.5 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-98"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        if (paymentMethod === 'cash') {
+                                            const cashRecv = parseFloat(cashReceivedInput) || 0;
+                                            if (cashRecv < total) {
+                                                toast.error("กรุณากรอกจำนวนเงินรับมาให้พอดีหรือมากกว่ายอดรวมครับ");
+                                                return;
+                                            }
+                                            localStorage.setItem('last_cash_received', cashRecv);
+                                            localStorage.setItem('last_cash_change', (cashRecv - total).toFixed(2));
+                                        }
+                                        
+                                        onCheckout(
+                                            paymentMethod, 
+                                            includeTax, 
+                                            pointsEarned, 
+                                            xhausToRedeem + (appliedReward ? parseFloat(appliedReward.xhaus_cost) : 0), 
+                                            xhausDiscount + rewardDiscount, 
+                                            promoDiscount, 
+                                            manualDiscount,
+                                            appliedReward ? appliedReward.claim_code : null,
+                                            appliedReward ? appliedReward.id : null
+                                        );
+                                        setActiveModal(null);
+                                        if (cfdChannel.current && paymentMethod === 'qr') {
+                                            cfdChannel.current.postMessage({ type: 'PAYMENT_SUCCESS' });
+                                        }
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-accent)] hover:bg-[#d00000] border border-[#c00000] text-white py-2.5 rounded-lg transition-all shadow-md active:scale-98 cursor-pointer font-mono text-[10px] font-bold uppercase tracking-wider"
+                                >
+                                    <Check size={11} /> CHECKOUT / ปิดโต๊ะ
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </aside>
     );
 }

@@ -177,10 +177,13 @@ const parseSocialFeed = (feedData) => {
 
         // Format date dynamically if possible
         let dateText = 'Recently'
+        let timestamp = 0
         const rawDate = item.date || item.created_at || item.timestamp
         if (rawDate) {
             try {
-                dateText = new Date(rawDate).toLocaleDateString('th-TH', { 
+                const parsedDate = new Date(rawDate)
+                timestamp = parsedDate.getTime()
+                dateText = parsedDate.toLocaleDateString('th-TH', { 
                     year: 'numeric', 
                     month: 'short', 
                     day: 'numeric' 
@@ -198,6 +201,7 @@ const parseSocialFeed = (feedData) => {
             rating: rating ? parseInt(rating) : null,
             location: item.location || 'IN THE HAUS ในบ้าน นครพนม',
             date: dateText,
+            timestamp,
             likes: parseInt(item.likes || item.likes_count || 0),
             comments: parseInt(item.comments || item.comments_count || 0),
             image_url,
@@ -450,9 +454,12 @@ export default function HausCheckinPage() {
         if (dbCheckins.length > 0) {
             dbCheckins.forEach(item => {
                 let displayDate = 'Recently'
+                let timestamp = 0
                 if (item.created_at) {
                     try {
-                        displayDate = new Date(item.created_at).toLocaleDateString('th-TH', { 
+                        const parsedDate = new Date(item.created_at)
+                        timestamp = parsedDate.getTime()
+                        displayDate = parsedDate.toLocaleDateString('th-TH', { 
                             year: 'numeric', 
                             month: 'short', 
                             day: 'numeric' 
@@ -476,6 +483,7 @@ export default function HausCheckinPage() {
                     rating: item.rating,
                     location: item.location,
                     date: displayDate,
+                    timestamp,
                     likes: item.likes,
                     comments: item.comments,
                     url: item.post_url,
@@ -503,6 +511,9 @@ export default function HausCheckinPage() {
                 }
             })
         }
+
+        // Sort combined chronologically (newest first)
+        combined.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
 
         if (combined.length > 0) {
             return combined

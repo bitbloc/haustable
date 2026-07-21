@@ -15,6 +15,17 @@
 }
 
 :root {
+  /* Thai Modern OKLCH Palette Tokens (Anchor Hue: 28 - Terracotta Clay) */
+  --color-paper: oklch(97% 0.008 28);
+  --color-paper-2: oklch(94% 0.010 28);
+  --color-rule: oklch(85% 0.012 28);
+  --color-neutral: oklch(55% 0.010 28);
+  --color-muted: oklch(42% 0.010 28);
+  --color-ink: oklch(18% 0.012 28);
+  --color-accent: oklch(52% 0.16 28);
+  --color-accent-2: oklch(45% 0.08 140);
+  --color-focus: oklch(60% 0.15 28);
+
   /* Hallmark Typography Tokens */
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;

@@ -12,11 +12,13 @@ import {
 } from 'lucide-react';
 import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
 import { getCurrentShift } from '../utils/shiftHelper';
+import { supabase } from '../lib/supabaseClient';
 
 export default function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
     const [online, setOnline] = useState(isOnline());
     const [queueLength, setQueueLength] = useState(getOfflineQueue().length);
     const [activeShift, setActiveShift] = useState(getCurrentShift());
+    const [hasSession, setHasSession] = useState(false);
 
     useEffect(() => {
         const handleStatus = () => setOnline(isOnline());
@@ -28,6 +30,16 @@ export default function POSLayout({ children, activeView, onViewChange, selected
         window.addEventListener('offline-queue-changed', handleQueue);
         window.addEventListener('pos-shift-changed', handleShift);
 
+        // Fetch current session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setHasSession(!!session);
+        });
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            setHasSession(!!session);
+        });
+
         // Auto trigger sync on mount if online and queue has items
         if (isOnline() && getOfflineQueue().length > 0) {
             syncOfflineQueue();
@@ -38,6 +50,7 @@ export default function POSLayout({ children, activeView, onViewChange, selected
             window.removeEventListener('offline', handleStatus);
             window.removeEventListener('offline-queue-changed', handleQueue);
             window.removeEventListener('pos-shift-changed', handleShift);
+            subscription.unsubscribe();
         };
     }, []);
     return (
@@ -141,6 +154,16 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 <span>ONLINE</span>
                             </div>
+                        )}
+
+                        {!hasSession && (
+                            <button
+                                onClick={() => window.location.href = '/login?redirect=/pos'}
+                                className="flex items-center gap-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-sans text-xs font-bold px-3.5 py-1.5 rounded-full shadow-sm cursor-pointer select-none active:scale-95 transition-all"
+                            >
+                                <Users size={12} />
+                                <span>เข้าสู่ระบบ LINE</span>
+                            </button>
                         )}
                         
                         {/* Active Shift Employee */}

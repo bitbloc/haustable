@@ -120,8 +120,101 @@ export default function AdminSettings() {
         kitchen_paper_size: '80mm'
     });
     const [isScanning, setIsScanning] = useState(false);
-    const [scannedDevices, setScannedDevices] = useState([]);
-    const [scanningTargetType, setScanningTargetType] = useState(null); // 'cashier' | 'kitchen'
+    const [allCategories, setAllCategories] = useState([]);
+    const [draggedOverColumn, setDraggedOverColumn] = useState(null);
+
+    useEffect(() => {
+        const fetchCats = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('menu_categories')
+                    .select('*')
+                    .order('display_order');
+                if (!error && data) {
+                    setAllCategories(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch menu categories:", err);
+            }
+        };
+        fetchCats();
+    }, []);
+
+    const handleCategoryDragStart = (e, catId) => {
+        e.dataTransfer.setData('text/plain', catId);
+    };
+
+    const handleCategoryDragOver = (e, column) => {
+        e.preventDefault();
+        if (draggedOverColumn !== column) {
+            setDraggedOverColumn(column);
+        }
+    };
+
+    const handleCategoryDrop = (e, targetColumn) => {
+        e.preventDefault();
+        setDraggedOverColumn(null);
+        const catId = e.dataTransfer.getData('text/plain');
+        if (!catId) return;
+
+        let newKitchen = [...(printerConfig.kitchen_categories || [])];
+        let newBar = [...(printerConfig.bar_categories || [])];
+
+        newKitchen = newKitchen.filter(id => id !== catId);
+        newBar = newBar.filter(id => id !== catId);
+
+        if (targetColumn === 'kitchen') {
+            newKitchen.push(catId);
+        } else if (targetColumn === 'bar') {
+            newBar.push(catId);
+        }
+
+        const updated = {
+            ...printerConfig,
+            kitchen_categories: newKitchen,
+            bar_categories: newBar
+        };
+        handleSavePrinter(updated);
+    };
+
+    const handleAssignCategory = (catId, target) => {
+        let newKitchen = [...(printerConfig.kitchen_categories || [])];
+        let newBar = [...(printerConfig.bar_categories || [])];
+
+        newKitchen = newKitchen.filter(id => id !== catId);
+        newBar = newBar.filter(id => id !== catId);
+
+        if (target === 'kitchen') {
+            newKitchen.push(catId);
+        } else if (target === 'bar') {
+            newBar.push(catId);
+        }
+
+        const updated = {
+            ...printerConfig,
+            kitchen_categories: newKitchen,
+            bar_categories: newBar
+        };
+        handleSavePrinter(updated);
+    };
+
+    const handleRemoveCategory = (catId, source) => {
+        let newKitchen = [...(printerConfig.kitchen_categories || [])];
+        let newBar = [...(printerConfig.bar_categories || [])];
+
+        if (source === 'kitchen') {
+            newKitchen = newKitchen.filter(id => id !== catId);
+        } else if (source === 'bar') {
+            newBar = newBar.filter(id => id !== catId);
+        }
+
+        const updated = {
+            ...printerConfig,
+            kitchen_categories: newKitchen,
+            bar_categories: newBar
+        };
+        handleSavePrinter(updated);
+    };
 
     useEffect(() => {
         const stored = localStorage.getItem('onhaus_printer_config');
@@ -1471,8 +1564,142 @@ export default function AdminSettings() {
                                 </button>
                             </div>
                         </div>
+
+                    {/* Category Printer Routing Card */}
+                    <div className="col-span-2 bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm space-y-4 mt-2 font-sans text-[#1A1A1A]">
+                        <div className="border-b border-[#D1D1CD] pb-3">
+                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
+                                <span>🔀</span> การจัดเส้นทางหมวดหมู่พิมพ์ (Printer Category Routing)
+                            </h2>
+                            <p className="text-[10px] text-[#767673] font-sans mt-1">ลากหมวดหมู่อาหารไปวางในฝั่งเครื่องพิมพ์ที่ต้องการ เพื่อแยกรายการพิมพ์ออกเป็นใบสั่งครัว/สั่งเครื่องดื่มโดยอัตโนมัติ</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Unassigned Categories Column */}
+                            <div 
+                                onDragOver={(e) => handleCategoryDragOver(e, 'unassigned')}
+                                onDrop={(e) => handleCategoryDrop(e, 'unassigned')}
+                                className="bg-white border border-[#D1D1CD] p-4 rounded-xl space-y-3 min-h-[250px]"
+                            >
+                                <h3 className="text-xs font-mono font-bold uppercase text-[#767673] border-b border-[#F0F0EC] pb-2 flex justify-between items-center">
+                                    <span>📂 หมวดหมู่ยังไม่ระบุ</span>
+                                    <span className="text-[10px] bg-[#F5F5F2] px-1.5 py-0.5 rounded text-[#1A1A1A] font-bold font-mono">
+                                        {allCategories.filter(cat => !(printerConfig.kitchen_categories || []).includes(cat.id) && !(printerConfig.bar_categories || []).includes(cat.id)).length}
+                                    </span>
+                                </h3>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                    {allCategories
+                                        .filter(cat => !(printerConfig.kitchen_categories || []).includes(cat.id) && !(printerConfig.bar_categories || []).includes(cat.id))
+                                        .map(cat => (
+                                            <div
+                                                key={cat.id}
+                                                draggable
+                                                onDragStart={(e) => handleCategoryDragStart(e, cat.id)}
+                                                className="bg-[#F5F5F2] border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-[#FF5500] hover:bg-orange-50/10 transition-all flex justify-between items-center group"
+                                            >
+                                                <span>{cat.name}</span>
+                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => handleAssignCategory(cat.id, 'kitchen')}
+                                                        className="bg-emerald-600 text-white font-mono text-[9px] px-1 py-0.5 rounded hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        + ครัว
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAssignCategory(cat.id, 'bar')}
+                                                        className="bg-blue-600 text-white font-mono text-[9px] px-1 py-0.5 rounded hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                                                    >
+                                                        + บาร์
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    }
+                                    {allCategories.filter(cat => !(printerConfig.kitchen_categories || []).includes(cat.id) && !(printerConfig.bar_categories || []).includes(cat.id)).length === 0 && (
+                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">จัดสรรครบทุกหมวดหมู่แล้ว</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Kitchen Printer Categories Column */}
+                            <div 
+                                onDragOver={(e) => handleCategoryDragOver(e, 'kitchen')}
+                                onDrop={(e) => handleCategoryDrop(e, 'kitchen')}
+                                className={`bg-[#E6F4EA]/20 border ${draggedOverColumn === 'kitchen' ? 'border-[#00CC44] bg-[#E6F4EA]/40' : 'border-[#D1D1CD]'} p-4 rounded-xl space-y-3 min-h-[250px] transition-all`}
+                            >
+                                <h3 className="text-xs font-mono font-bold uppercase text-[#00CC44] border-b border-[#E6F4EA] pb-2 flex justify-between items-center">
+                                    <span>🍳 พิมพ์ออกครัว (Kitchen)</span>
+                                    <span className="text-[10px] bg-emerald-600/10 px-1.5 py-0.5 rounded text-emerald-600 font-bold font-mono">
+                                        {(printerConfig.kitchen_categories || []).length}
+                                    </span>
+                                </h3>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                    {allCategories
+                                        .filter(cat => (printerConfig.kitchen_categories || []).includes(cat.id))
+                                        .map(cat => (
+                                            <div
+                                                key={cat.id}
+                                                draggable
+                                                onDragStart={(e) => handleCategoryDragStart(e, cat.id)}
+                                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-red-500 transition-all flex justify-between items-center"
+                                            >
+                                                <span>{cat.name}</span>
+                                                <button
+                                                    onClick={() => handleRemoveCategory(cat.id, 'kitchen')}
+                                                    className="text-[#767673] hover:text-red-500 font-mono text-xs font-bold px-1.5 hover:bg-red-50 rounded cursor-pointer"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))
+                                    }
+                                    {(printerConfig.kitchen_categories || []).length === 0 && (
+                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">ลากหมวดหมู่มาวางที่นี่เพื่อส่งเข้าเครื่องพิมพ์ครัว</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Bar Printer Categories Column */}
+                            <div 
+                                onDragOver={(e) => handleCategoryDragOver(e, 'bar')}
+                                onDrop={(e) => handleCategoryDrop(e, 'bar')}
+                                className={`bg-[#E8F0FE]/20 border ${draggedOverColumn === 'bar' ? 'border-blue-500 bg-[#E8F0FE]/40' : 'border-[#D1D1CD]'} p-4 rounded-xl space-y-3 min-h-[250px] transition-all`}
+                            >
+                                <h3 className="text-xs font-mono font-bold uppercase text-blue-600 border-b border-[#E8F0FE] pb-2 flex justify-between items-center">
+                                    <span>🍺 พิมพ์ออกบาร์ (Bar)</span>
+                                    <span className="text-[10px] bg-blue-600/10 px-1.5 py-0.5 rounded text-blue-600 font-bold font-mono">
+                                        {(printerConfig.bar_categories || []).length}
+                                    </span>
+                                </h3>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                    {allCategories
+                                        .filter(cat => (printerConfig.bar_categories || []).includes(cat.id))
+                                        .map(cat => (
+                                            <div
+                                                key={cat.id}
+                                                draggable
+                                                onDragStart={(e) => handleCategoryDragStart(e, cat.id)}
+                                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-red-500 transition-all flex justify-between items-center"
+                                            >
+                                                <span>{cat.name}</span>
+                                                <button
+                                                    onClick={() => handleRemoveCategory(cat.id, 'bar')}
+                                                    className="text-[#767673] hover:text-red-500 font-mono text-xs font-bold px-1.5 hover:bg-red-50 rounded cursor-pointer"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))
+                                    }
+                                    {(printerConfig.bar_categories || []).length === 0 && (
+                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">ลากหมวดหมู่มาวางที่นี่เพื่อส่งเข้าเครื่องพิมพ์บาร์</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
+                </div>
+            )}
 
                 {/* TAB 7: Receipt Settings */}
                 {activeSettingsTab === 'receipt' && (
