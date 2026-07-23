@@ -48,39 +48,41 @@ function wrapOffset(val, cycle) {
     return rem
 }
 
-function fillChronological(items, target, columns) {
-    if (items.length === 0) return []
+// Calculate golden-ratio coprime step to ensure no duplicate items are adjacent horizontally, vertically or diagonally
+function getCoprimeStride(n) {
+    if (n <= 1) return 1
+    const golden = Math.round(n * 0.61803398875)
+    function gcd(a, b) {
+        while (b) {
+            let t = b
+            b = a % b
+            a = t
+        }
+        return a
+    }
+    for (let delta = 0; delta < n; delta++) {
+        let candidate = golden + delta
+        if (candidate > 1 && candidate < n && gcd(candidate, n) === 1) return candidate
+        candidate = golden - delta
+        if (candidate > 1 && candidate < n && gcd(candidate, n) === 1) return candidate
+    }
+    return Math.max(1, n - 2)
+}
+
+// Fill matrix using golden coprime step to maximize physical separation between duplicate items across infinite canvas
+function fillNonAdjacentMatrix(items, targetCells, columns) {
+    if (!items || items.length === 0) return []
     const N = items.length
-    const rows = Math.ceil(target / columns)
-    const out = new Array(target)
-    
-    const cx = Math.floor(columns / 2)
-    const cy = Math.floor(rows / 2)
-    
-    const cells = []
+    const rows = Math.ceil(targetCells / columns)
+    const stride = getCoprimeStride(N)
+    const out = new Array(rows * columns)
+
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < columns; c++) {
-            const dx = c - cx
-            const dy = r - cy
-            const dist = dx * dx + dy * dy
-            const angle = Math.atan2(dy, dx)
-            cells.push({ r, c, dist, angle })
+            const itemIdx = (r * stride + c) % N
+            out[r * columns + c] = items[itemIdx]
         }
     }
-    
-    cells.sort((a, b) => {
-        if (Math.abs(a.dist - b.dist) < 0.001) {
-            return a.angle - b.angle
-        }
-        return a.dist - b.dist
-    })
-    
-    cells.forEach((cell, idx) => {
-        const itemIdx = idx % N
-        const flatIdx = cell.r * columns + cell.c
-        out[flatIdx] = items[itemIdx]
-    })
-    
     return out
 }
 
@@ -123,25 +125,25 @@ const GridCard = memo(function GridCard({
             <div
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
-                className="select-none flex flex-col justify-between p-3.5 text-left border border-[var(--color-rule)] shadow-sm hover:scale-[1.02] transition-transform duration-150"
+                className="select-none flex flex-col justify-between p-4 text-left border border-[var(--color-rule,#E2DDD3)] shadow-xs hover:shadow-md hover:scale-[1.015] transition-all duration-150"
                 style={{
                     width: safeImageWidth,
                     height: safeImageHeight,
                     borderRadius: radius || 2,
-                    backgroundColor: "var(--color-paper, #FAF9F5)",
-                    color: "var(--color-ink, #1a1a1a)",
+                    backgroundColor: "var(--color-paper, #FBF9F5)",
+                    color: "var(--color-ink, #23201D)",
                     cursor: isDragging ? "grabbing" : "pointer",
                     boxSizing: "border-box"
                 }}
             >
                 {/* Header */}
                 <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
-                    <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase">
+                    <div className="flex justify-between items-center text-[7.5px] font-mono tracking-widest text-[var(--color-neutral,#888279)] uppercase">
                         <span>{item.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}</span>
                         <span>POSTED</span>
                     </div>
                     {item.rating && (
-                        <div className="flex gap-0.5 mt-0.5 text-amber-500 justify-start select-none">
+                        <div className="flex gap-0.5 mt-0.5 text-[var(--color-accent,#D85436)] justify-start select-none">
                             {Array.from({ length: 5 }).map((_, i) => (
                                 <span key={i} className="text-[10px] leading-none">
                                     {i < item.rating ? '★' : '☆'}
@@ -160,11 +162,11 @@ const GridCard = memo(function GridCard({
                             WebkitLineClamp: 8,
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
-                            fontFamily: "Space Mono, Courier New, Courier, monospace",
+                            fontFamily: "Space Mono, Geist Mono, Courier New, monospace",
                             fontWeight: 500,
-                            fontSize: (item.text || "").length <= 15 ? "20px" : ((item.text || "").length <= 30 ? "16px" : ((item.text || "").length <= 50 ? "13.5px" : "11px")),
+                            fontSize: (item.text || "").length <= 15 ? "19px" : ((item.text || "").length <= 30 ? "15.5px" : ((item.text || "").length <= 50 ? "13px" : "11px")),
                             lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),
-                            color: "#262626",
+                            color: "var(--color-ink, #23201D)",
                         }}
                     >
                         {item.text || "Hello IN THE HAUS!"}
@@ -172,7 +174,7 @@ const GridCard = memo(function GridCard({
                 </div>
 
                 {/* Footer */}
-                <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
+                <div className="text-[7.5px] font-mono tracking-wider text-[var(--color-neutral,#888279)] text-center uppercase border-t border-[var(--color-rule,#E2DDD3)] pt-2 truncate select-none pointer-events-none font-bold">
                     BY {item.user?.name || item.user_name || "GUEST"}
                 </div>
             </div>
@@ -183,12 +185,12 @@ const GridCard = memo(function GridCard({
         <div
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
-            className="group relative overflow-hidden transition-transform duration-150 hover:scale-[1.02] hover:z-20"
+            className="group relative overflow-hidden border border-[var(--color-rule,#E2DDD3)] shadow-xs hover:shadow-md transition-all duration-150 hover:scale-[1.015] hover:z-20"
             style={{
                 width: safeImageWidth,
                 height: safeImageHeight,
                 borderRadius: radius || 2,
-                backgroundColor: "#161714",
+                backgroundColor: "var(--color-paper-2, #F4F1EA)",
                 boxSizing: "border-box",
                 cursor: isDragging ? "grabbing" : "pointer"
             }}
@@ -211,25 +213,25 @@ const GridCard = memo(function GridCard({
                     }`}
                 />
             ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono text-neutral-500">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono text-[var(--color-neutral,#888279)]">
                     <span className="text-xl">📸</span>
-                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
+                    <span className="text-[9px] uppercase tracking-wider mt-2 font-bold">{item.user?.name || item.user_name || "Check-in"}</span>
                 </div>
             )}
 
-            {/* Hover subtle dark vignette */}
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" />
+            {/* Hover subtle warm vignette */}
+            <div className="absolute inset-0 bg-[var(--color-ink,#23201D)]/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" />
 
-            {/* Caption & Like footer overlay */}
+            {/* Caption & Like footer overlay in Rams Light Warm Paper */}
             <div 
                 ref={overlayRef}
-                className="absolute bottom-0 left-0 right-0 z-20 bg-[#0e0f0b]/90 border-t border-white/10 px-3 py-2 flex items-center justify-between gap-2 pointer-events-auto select-none backdrop-blur-xs"
+                className="absolute bottom-0 left-0 right-0 z-20 bg-[var(--color-paper,#FBF9F5)]/95 border-t border-[var(--color-rule,#E2DDD3)] px-3 py-2 flex items-center justify-between gap-2 pointer-events-auto select-none backdrop-blur-xs shadow-xs"
             >
                 <div className="flex-1 min-w-0 pointer-events-none">
-                    <p className="font-mono text-[8px] text-neutral-300 leading-tight truncate">
+                    <p className="font-mono text-[8.5px] text-[var(--color-ink,#23201D)] font-bold leading-tight truncate">
                         {item.text ? item.text : `@${item.user?.name || item.user_name || "Customer"}`}
                     </p>
-                    <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest block mt-0.5">
+                    <span className="font-mono text-[7px] text-[var(--color-neutral,#888279)] uppercase tracking-widest block mt-0.5">
                         {item.source || "post"}
                     </span>
                 </div>
@@ -237,13 +239,13 @@ const GridCard = memo(function GridCard({
                 {onLikeToggle && (
                     <button
                         onClick={(e) => onLikeToggle(e, item.id)}
-                        className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-1 outline-none select-none"
+                        className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all cursor-pointer bg-transparent border-0 p-1 outline-none select-none"
                     >
                         <Heart
                             size={11}
-                            className={likedIds && likedIds.includes(item.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
+                            className={likedIds && likedIds.includes(item.id) ? "text-[var(--color-accent,#D85436)] fill-[var(--color-accent,#D85436)]" : "text-[var(--color-neutral,#888279)]"}
                         />
-                        <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}`}>
+                        <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[var(--color-accent,#D85436)] font-bold" : "text-[var(--color-neutral,#888279)]"}`}>
                             {item.likes || 0}
                         </span>
                     </button>
@@ -303,8 +305,9 @@ export default function DraggableGrid(props) {
     const rows = Math.max(safeColumns, Math.ceil(safeItems.length / safeColumns))
     const totalCells = safeColumns * rows
 
+    // Fill base matrix using golden step coprime stride algorithm so duplicate items are far apart
     const displayItems = useMemo(
-        () => fillChronological(safeItems, totalCells, safeColumns),
+        () => fillNonAdjacentMatrix(safeItems, totalCells, safeColumns),
         [safeItems, totalCells, safeColumns]
     )
 
@@ -564,3 +567,4 @@ export default function DraggableGrid(props) {
         </div>
     )
 }
+
