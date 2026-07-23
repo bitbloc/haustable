@@ -165,8 +165,22 @@ export default function CheckinManager() {
         }
     }
 
+const decodeHTMLEntities = (text) => {
+    if (!text) return ''
+    return text
+        .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+        .replace(/&#x([0-9a-fA-F]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+}
+
     // Download an external image via proxy and upload it directly to Supabase storage
     const uploadExternalImageToSupabase = async (externalUrl) => {
+        if (!externalUrl) return null
         try {
             let blob
             let mimeType = 'image/jpeg'
@@ -184,15 +198,28 @@ export default function CheckinManager() {
                 }
                 blob = new Blob([u8arr], { type: mimeType })
             } else {
-                // Fetch the image through CORS proxy to get it as a Blob
-                const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(externalUrl)}`
-                const res = await fetch(proxyUrl)
-                if (!res.ok) throw new Error('Failed to download image from proxy')
-                blob = await res.blob()
-                mimeType = blob.type
+                // 1. Try Weserv proxy
+                try {
+                    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(externalUrl)}`
+                    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) })
+                    if (res.ok) {
+                        blob = await res.blob()
+                        mimeType = blob.type
+                    }
+                } catch (pErr) {
+                    console.warn('Weserv proxy fetch failed:', pErr)
+                }
+
+                // 2. Direct browser fetch fallback (works if CDN sends Access-Control-Allow-Origin: *)
+                if (!blob) {
+                    const directRes = await fetch(externalUrl, { signal: AbortSignal.timeout(8000) })
+                    if (!directRes.ok) throw new Error(`Direct download failed with status ${directRes.status}`)
+                    blob = await directRes.blob()
+                    mimeType = blob.type
+                }
             }
 
-            const ext = mimeType.split('/')[1] || 'jpg'
+            const ext = (mimeType.split('/')[1] || 'jpg').replace('jpeg', 'jpg')
             const fileName = `checkins/scraped_${Date.now()}.${ext}`
 
             const { error: uploadError } = await supabase.storage
@@ -216,6 +243,48 @@ export default function CheckinManager() {
         }
     }
 
+    const fetchMetadataForUrl = async (cleanUrl, source) => {
+        let json = null
+
+        // 1. Fast path for Facebook links via serverless proxy (uses Twitterbot UA to bypass FB login wall)
+        if (source === 'facebook') {
+            try {
+                const proxyRes = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
+                if (proxyRes.ok) {
+                    json = await proxyRes.json()
+                }
+            } catch (err) {
+                console.warn('Server-side FB scrape failed, trying microlink:', err)
+            }
+        }
+
+        // 2. Try client-side microlink query
+        if (!json || json.status !== 'success' || !json.data) {
+            try {
+                const clientRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&prerender=true`, { signal: AbortSignal.timeout(8000) })
+                if (clientRes.ok) {
+                    json = await clientRes.json()
+                }
+            } catch (err) {
+                console.warn('Client-side microlink query failed, trying server-side proxy:', err)
+            }
+        }
+
+        // 3. Fallback to server-side proxy
+        if (!json || json.status !== 'success' || !json.data) {
+            const proxyRes = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
+            if (proxyRes.ok) {
+                json = await proxyRes.json()
+            }
+        }
+
+        if (!json || json.status !== 'success' || !json.data) {
+            throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง หรือเพิ่มด้วยตนเอง')
+        }
+
+        return json.data
+    }
+
     const handleQuickAdd = async (e) => {
         if (e && e.preventDefault) e.preventDefault()
         
@@ -236,32 +305,9 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            let json = null
-            try {
-                // 1. Try direct client-side fetch from the user's browser (no Vercel shared rate limits)
-                const clientRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&prerender=true`, { signal: AbortSignal.timeout(8000) })
-                if (clientRes.ok) {
-                    json = await clientRes.json()
-                }
-            } catch (err) {
-                console.warn('Client-side microlink query failed, trying server-side proxy:', err)
-            }
-
-            if (!json || json.status !== 'success' || !json.data) {
-                // 2. Fallback to server-side proxy if client-side query failed or got rate-limited
-                const proxyRes = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
-                if (proxyRes.ok) {
-                    json = await proxyRes.json()
-                }
-            }
-
-            if (!json || json.status !== 'success' || !json.data) {
-                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
-            }
-
-            const data = json.data
-            const title = data.title || ''
-            const description = data.description || ''
+            const data = await fetchMetadataForUrl(cleanUrl, source)
+            const title = decodeHTMLEntities(data.title || '')
+            const description = decodeHTMLEntities(data.description || '')
 
             const isLoginWall = 
                 (source === 'instagram') && 
@@ -275,7 +321,7 @@ export default function CheckinManager() {
             }
 
             // Extract display name, user handle, and clean text
-            let user_name = data.author || 'Customer'
+            let user_name = decodeHTMLEntities(data.author || 'Customer')
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
             let text = description || title || ''
             
@@ -288,7 +334,6 @@ export default function CheckinManager() {
                     }
                 }
 
-                // Clean up hidden unicode directional marks from name and handle
                 if (user_name) {
                     user_name = user_name.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
                 }
@@ -296,13 +341,11 @@ export default function CheckinManager() {
                     user_handle = user_handle.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
                 }
 
-                // Fallback for user name
                 if (!user_name || user_name === 'Customer') {
                     user_name = user_handle ? user_handle.replace(/^@/, '') : 'Instagram User'
                 }
 
                 if (description) {
-                    // Extract the text inside the quotation marks at the end of the Instagram description meta tag
                     const captionMatch = description.match(/:\s*[”"“‟]([\s\S]*?)[”"”‟]\.?$/)
                     if (captionMatch) {
                         text = captionMatch[1].trim()
@@ -316,13 +359,12 @@ export default function CheckinManager() {
                     }
                 }
             } else if (source === 'facebook') {
-                if (title && title !== 'Facebook' && !title.includes('log in') && !title.includes('Log In')) {
+                if (title && title !== 'Facebook' && title !== 'Facebook Post' && !title.includes('log in') && !title.includes('Log In') && !title.includes('Security Check')) {
                     user_name = title.trim()
                 }
                 user_handle = 'Facebook User'
-                text = description || ''
+                text = description || title || ''
             } else if (source === 'google') {
-                // Parse reviewer name from title. Google reviews title usually contains "by [Author]" or "โดย [Author]"
                 const authorMatch = title.match(/by\s+([^,|-]+)/i) || title.match(/โดย\s+([^,|-]+)/);
                 if (authorMatch) {
                     user_name = authorMatch[1].trim();
@@ -332,7 +374,6 @@ export default function CheckinManager() {
                     user_handle = 'Local Guide';
                 }
                 
-                // Clean up star ratings and meta information from description for cleaner comments
                 if (description) {
                     let cleanText = description.replace(/[★☆⭐]/g, '').replace(/^[·\s\-\u2022]+/g, '').trim();
                     const quoteMatch = cleanText.match(/^[”"“‟]([\s\S]*?)[”"”‟]$/);
@@ -345,7 +386,7 @@ export default function CheckinManager() {
                 }
             }
 
-            // Three-tier robust image fetching fallback
+            // Image fetching & upload
             const scrapedImageUrl = data.image?.url || data.screenshot?.url || ''
             const igShortcode = getInstagramShortcode(cleanUrl)
             let primaryImageUrl = scrapedImageUrl
@@ -368,30 +409,21 @@ export default function CheckinManager() {
 
             let image_url = ''
             if (!primaryImageUrl && !scrapedImageUrl) {
-                if (source === 'google') {
-                    image_url = 'text_only'
-                } else {
-                    throw new Error('ไม่พบรูปภาพในลิงก์นี้ โปรดตรวจสอบลิงก์ หรือกดปุ่ม \"เพิ่มด้วยตนเอง\" เพื่อทำการอัปโหลดรูป')
-                }
+                image_url = 'text_only'
             } else {
-                // 1. Try uploading the primary (uncropped) image URL
-                image_url = await uploadExternalImageToSupabase(primaryImageUrl)
-                
-                // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
-                if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
-                    console.log('Uncropped media URL failed, falling back to scraped image URL...')
+                if (primaryImageUrl) {
+                    image_url = await uploadExternalImageToSupabase(primaryImageUrl)
+                }
+                if (!image_url && scrapedImageUrl && primaryImageUrl !== scrapedImageUrl) {
                     image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
                 }
-
-                // 3. If that also fails, use the scraped image URL directly
                 if (!image_url) {
-                    image_url = scrapedImageUrl || primaryImageUrl
+                    image_url = scrapedImageUrl || primaryImageUrl || 'text_only'
                 }
             }
 
             let ratingValue = source === 'google' ? 5 : null
             if (source === 'google' && description) {
-                // Dynamically count stars in description (e.g. ★★★★★ or ⭐⭐⭐⭐⭐)
                 const starCount = (description.match(/[★⭐]/g) || []).length;
                 if (starCount >= 1 && starCount <= 5) {
                     ratingValue = starCount;
@@ -403,7 +435,7 @@ export default function CheckinManager() {
                 user_name,
                 user_handle,
                 user_avatar: data.logo?.url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
-                text: text.slice(0, 500), // Clamp to prevent overflow
+                text: text.slice(0, 500),
                 rating: ratingValue,
                 location: 'IN THE HAUS ในบ้าน นครพนม',
                 image_url,
@@ -442,10 +474,8 @@ export default function CheckinManager() {
 
         setFetchLoading(true)
         try {
-            // Clean url to remove query parameters
             let cleanUrl = urlToFetch.trim();
             
-            // Determine source
             let source = 'instagram'
             if (cleanUrl.includes('facebook.com') || cleanUrl.includes('fb.watch')) {
                 source = 'facebook'
@@ -453,32 +483,9 @@ export default function CheckinManager() {
                 source = 'google'
             }
 
-            let json = null
-            try {
-                // 1. Try direct client-side fetch from the user's browser (no Vercel shared rate limits)
-                const clientRes = await fetch(`https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&prerender=true`, { signal: AbortSignal.timeout(8000) })
-                if (clientRes.ok) {
-                    json = await clientRes.json()
-                }
-            } catch (err) {
-                console.warn('Client-side microlink query failed, trying server-side proxy:', err)
-            }
-
-            if (!json || json.status !== 'success' || !json.data) {
-                // 2. Fallback to server-side proxy if client-side query failed or got rate-limited
-                const proxyRes = await fetch(`/api/scrape-meta?url=${encodeURIComponent(cleanUrl)}`)
-                if (proxyRes.ok) {
-                    json = await proxyRes.json()
-                }
-            }
-
-            if (!json || json.status !== 'success' || !json.data) {
-                throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง')
-            }
-
-            const data = json.data
-            const title = data.title || ''
-            const description = data.description || ''
+            const data = await fetchMetadataForUrl(cleanUrl, source)
+            const title = decodeHTMLEntities(data.title || '')
+            const description = decodeHTMLEntities(data.description || '')
 
             const isLoginWall = 
                 (source === 'instagram') && 
@@ -491,21 +498,18 @@ export default function CheckinManager() {
                 throw new Error('ระบบรักษาความปลอดภัยของ Instagram บล็อกการเข้าถึงอัตโนมัติชั่วคราว (Login Wall / Rate Limit) โปรดรอประมาณ 1 นาทีแล้วลองใหม่อีกครั้ง หรือระบุข้อมูลและรูปภาพลงฟอร์มด้วยตนเอง')
             }
 
-            // Extract display name, user handle, and clean text
-            let user_name = data.author || 'Customer'
+            let user_name = decodeHTMLEntities(data.author || 'Customer')
             let user_handle = source === 'instagram' ? '@instagram_user' : (source === 'google' ? 'Google Reviewer' : 'Facebook User')
             let text = description || title || ''
             
-            // Parsing logic
             if (source === 'instagram') {
                 if (title) {
                     const handleMatch = title.match(/\(([^)]+)\)/)
                     if (handleMatch) {
-                        user_handle = handleMatch[1] // e.g. "@taewaewg"
+                        user_handle = handleMatch[1]
                     }
                 }
 
-                // Clean up hidden unicode directional marks from name and handle
                 if (user_name) {
                     user_name = user_name.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
                 }
@@ -513,13 +517,11 @@ export default function CheckinManager() {
                     user_handle = user_handle.replace(/[\u200e\u200f\u202a-\u202e]/g, '').trim()
                 }
 
-                // Fallback for user name
                 if (!user_name || user_name === 'Customer') {
                     user_name = user_handle ? user_handle.replace(/^@/, '') : 'Instagram User'
                 }
 
                 if (description) {
-                    // Extract the text inside the quotation marks at the end of the Instagram description meta tag
                     const captionMatch = description.match(/:\s*[”"“‟]([\s\S]*?)[”"”‟]\.?$/)
                     if (captionMatch) {
                         text = captionMatch[1].trim()
@@ -533,13 +535,12 @@ export default function CheckinManager() {
                     }
                 }
             } else if (source === 'facebook') {
-                if (title && title !== 'Facebook' && !title.includes('log in') && !title.includes('Log In')) {
+                if (title && title !== 'Facebook' && title !== 'Facebook Post' && !title.includes('log in') && !title.includes('Log In') && !title.includes('Security Check')) {
                     user_name = title.trim()
                 }
                 user_handle = 'Facebook User'
-                text = description || ''
+                text = description || title || ''
             } else if (source === 'google') {
-                // Parse reviewer name from title. Google reviews title usually contains "by [Author]" or "โดย [Author]"
                 const authorMatch = title.match(/by\s+([^,|-]+)/i) || title.match(/โดย\s+([^,|-]+)/);
                 if (authorMatch) {
                     user_name = authorMatch[1].trim();
@@ -549,7 +550,6 @@ export default function CheckinManager() {
                     user_handle = 'Local Guide';
                 }
                 
-                // Clean up star ratings and meta information from description for cleaner comments
                 if (description) {
                     let cleanText = description.replace(/[★☆⭐]/g, '').replace(/^[·\s\-\u2022]+/g, '').trim();
                     const quoteMatch = cleanText.match(/^[”"“‟]([\s\S]*?)[”"”‟]$/);
@@ -562,7 +562,6 @@ export default function CheckinManager() {
                 }
             }
 
-            // Three-tier robust image fetching fallback
             const scrapedImageUrl = data.image?.url || data.screenshot?.url || ''
             const igShortcode = getInstagramShortcode(cleanUrl)
             let primaryImageUrl = scrapedImageUrl
@@ -585,24 +584,16 @@ export default function CheckinManager() {
 
             let image_url = ''
             if (!primaryImageUrl && !scrapedImageUrl) {
-                if (source === 'google') {
-                    image_url = 'text_only'
-                } else {
-                    throw new Error('ไม่พบรูปภาพในลิงก์นี้')
-                }
+                image_url = 'text_only'
             } else {
-                // 1. Try uploading the primary (uncropped) image URL
-                image_url = await uploadExternalImageToSupabase(primaryImageUrl)
-                
-                // 2. If it fails, fallback to uploading the scraped cropped image URL (direct CDN link)
-                if (!image_url && primaryImageUrl !== scrapedImageUrl && scrapedImageUrl) {
-                    console.log('Uncropped media URL failed, falling back to scraped image URL...')
+                if (primaryImageUrl) {
+                    image_url = await uploadExternalImageToSupabase(primaryImageUrl)
+                }
+                if (!image_url && scrapedImageUrl && primaryImageUrl !== scrapedImageUrl) {
                     image_url = await uploadExternalImageToSupabase(scrapedImageUrl)
                 }
-
-                // 3. If that also fails, use the scraped image URL directly
                 if (!image_url) {
-                    image_url = scrapedImageUrl || primaryImageUrl
+                    image_url = scrapedImageUrl || primaryImageUrl || 'text_only'
                 }
             }
 
