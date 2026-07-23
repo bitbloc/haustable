@@ -1,70 +1,30 @@
 "use client"
 
-import { motion, useMotionValue, animate } from "framer-motion"
-import { useEffect, useMemo, useRef, useState, useCallback } from "react"
+import { motion, useMotionValue, useTransform } from "framer-motion"
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react"
 import { Heart } from "lucide-react"
 
+// Global set to track loaded image URLs for zero-flicker instant rendering
+const LOADED_IMAGE_SET = new Set()
+
 const defaultItems = [
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/612d1402-0ad9-4135-3bbc-a30a6a252b00/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/6d2ad64a-102d-4eab-0efe-31479e34b500/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/be854dd1-37aa-4fc7-f569-fdb948109300/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/51984031-9176-484b-f5e0-4af9a8e9ed00/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/34ce1842-4b7a-4d52-0302-38582c341700/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/88369c6d-00cc-4ac9-74ca-0f0965e06300/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/aeaa0756-9647-4f6c-d900-204bd25e4a00/w=800",
-        },
-        alt: "",
-    },
-    {
-        image: {
-            src: "https://imagedelivery.net/IEUjvl3YUlxY-MrTpOAWDQ/316d1761-fd79-4ca9-b8d4-f2bb20521a00/w=800",
-        },
-        alt: "",
-    },
+    { image: { src: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800&auto=format&fit=crop" }, alt: "Chef plating food" },
+    { image: { src: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=800&auto=format&fit=crop" }, alt: "Dining atmosphere" },
+    { image: { src: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800&auto=format&fit=crop" }, alt: "Southern dish" },
+    { image: { src: "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop" }, alt: "Roast plate" },
+    { image: { src: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=800&auto=format&fit=crop" }, alt: "Pizza plate" },
+    { image: { src: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?q=80&w=800&auto=format&fit=crop" }, alt: "Restaurant vibe" }
 ]
 
 const COMPONENT_DEFAULTS = {
     items: defaultItems,
-    columns: 15,
-    imageWidth: 200,
-    imageHeight: 200,
-    rounded: 3,
-    gap: 5,
-    enableWheel: false,
-    placeholderColor: "#1a1a1f",
-    rotation: 0, // Set to 0 to keep the grid and photos upright (no tilt)
+    columns: 14,
+    imageWidth: 256,
+    imageHeight: 320,
+    rounded: 1,
+    gap: 4,
+    enableWheel: true,
+    rotation: 0
 }
 
 const getProxiedImageUrl = (url) => {
@@ -81,27 +41,22 @@ const getProxiedImageUrl = (url) => {
     return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`
 }
 
-// Distinct visible color per tile (golden-angle hue rotation) so the grid is
-// always visible even when images don't load.
-function getItemColor(index) {
-    const hue = (index * 137.508) % 360
-    return `hsl(${hue}, 45%, 40%)` // Slightly deeper saturation for contrast
+function wrapOffset(val, cycle) {
+    if (!cycle || cycle <= 0) return 0
+    let rem = val % cycle
+    if (rem > 0) rem -= cycle
+    return rem
 }
 
-// Fill a target length by repeating items, prioritizing placing the newest items (first in list)
-// at the center of the grid (index 0,0 and surrounding cells) and moving progressively outwards.
-// This naturally prevents duplicate items from being adjacent to each other.
 function fillChronological(items, target, columns) {
     if (items.length === 0) return []
     const N = items.length
     const rows = Math.ceil(target / columns)
     const out = new Array(target)
     
-    // Find center cell of the base grid
     const cx = Math.floor(columns / 2)
     const cy = Math.floor(rows / 2)
     
-    // Create all cell positions and calculate distance to center
     const cells = []
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < columns; c++) {
@@ -113,8 +68,6 @@ function fillChronological(items, target, columns) {
         }
     }
     
-    // Sort cells: closest to center first.
-    // If distances are equal, sort by angle to distribute them in a spiral/circle.
     cells.sort((a, b) => {
         if (Math.abs(a.dist - b.dist) < 0.001) {
             return a.angle - b.angle
@@ -122,7 +75,6 @@ function fillChronological(items, target, columns) {
         return a.dist - b.dist
     })
     
-    // Assign items (newest first) to cells closest to center
     cells.forEach((cell, idx) => {
         const itemIdx = idx % N
         const flatIdx = cell.r * columns + cell.c
@@ -132,256 +84,174 @@ function fillChronological(items, target, columns) {
     return out
 }
 
-// Viewport-aware lazy loaded card to prevent memory leaks and slow down loading for 1000+ items
-function LazyCard({
+const GridCard = memo(function GridCard({
     item,
-    index,
     safeImageWidth,
     safeImageHeight,
     radius,
     isDragging,
-    failed,
-    getProxiedImageUrl,
-    handleImageError,
     handlePointerDown,
     handlePointerUp,
-    rotation,
     likedIds,
-    onLikeToggle,
+    onLikeToggle
 }) {
-    const cardRef = useRef(null)
+    const src = item?.image?.src
+    const proxiedSrc = useMemo(() => getProxiedImageUrl(src), [src])
+    const isAlreadyLoaded = proxiedSrc && LOADED_IMAGE_SET.has(proxiedSrc)
+    const [imgLoaded, setImgLoaded] = useState(isAlreadyLoaded)
+    const [imgFailed, setImgFailed] = useState(false)
     const overlayRef = useRef(null)
-    const [isVisible, setIsVisible] = useState(false)
-    const [hasBeenVisible, setHasBeenVisible] = useState(false)
-
-    useEffect(() => {
-        if (isVisible) {
-            setHasBeenVisible(true)
-        }
-    }, [isVisible])
 
     useEffect(() => {
         const el = overlayRef.current
         if (!el) return
-
-        const stop = (e) => {
-            e.stopPropagation()
-        }
-
-        // Native DOM interception before Framer Motion grabs the event
+        const stop = (e) => e.stopPropagation()
         el.addEventListener('pointerdown', stop, { capture: true })
         el.addEventListener('mousedown', stop, { capture: true })
         el.addEventListener('touchstart', stop, { capture: true, passive: true })
-
         return () => {
             el.removeEventListener('pointerdown', stop, { capture: true })
             el.removeEventListener('mousedown', stop, { capture: true })
             el.removeEventListener('touchstart', stop, { capture: true })
         }
-    }, [isVisible])
-
-    useEffect(() => {
-        const el = cardRef.current
-        if (!el) return
-
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                setIsVisible(entry.isIntersecting)
-            },
-            {
-                root: el.closest('.draggable-container-viewport') || null,
-                rootMargin: '450px', // Fetch 450px before entering viewport for smooth experience
-            }
-        )
-
-        observer.observe(el)
-        return () => observer.disconnect()
     }, [])
 
-    const src = item?.image?.src
-    const alt = item?.alt ?? item?.image?.alt ?? ""
     const isNote = item?.source === 'note' || !src || item?.image_url === 'text_only' || item?.image_url?.startsWith('text_only')
 
     if (isNote) {
         return (
-            <motion.div
-                ref={cardRef}
+            <div
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
-                whileHover={(isVisible || hasBeenVisible) ? { scale: 1.03, y: -3 } : undefined}
-                whileTap={(isVisible || hasBeenVisible) ? { scale: 0.97 } : undefined}
-                transition={{ type: "spring", stiffness: 350, damping: 22 }}
-                className={`select-none flex flex-col justify-between p-3 text-left ${(isVisible || hasBeenVisible) ? "border border-[var(--color-rule)] shadow-sm" : ""}`}
+                className="select-none flex flex-col justify-between p-3.5 text-left border border-[var(--color-rule)] shadow-sm hover:scale-[1.02] transition-transform duration-150"
                 style={{
-                    position: "relative",
                     width: safeImageWidth,
                     height: safeImageHeight,
-                    borderRadius: 2, // Minimalist Rams clean rounding (rounded-xs)
-                    backgroundColor: (isVisible || hasBeenVisible) ? "var(--color-paper, #FAF9F5)" : "oklch(15% 0.005 28)", // Warm paper color when visible, carbon cell when hidden
-                    color: "var(--color-ink, #1a1a1a)", // Deep hallmark ink
+                    borderRadius: radius || 2,
+                    backgroundColor: "var(--color-paper, #FAF9F5)",
+                    color: "var(--color-ink, #1a1a1a)",
                     cursor: isDragging ? "grabbing" : "pointer",
-                    transformOrigin: "center center",
-                    boxSizing: "border-box",
+                    boxSizing: "border-box"
                 }}
             >
-                {(isVisible || hasBeenVisible) && (
-                    <>
-                        {/* Header label in typewriter style */}
-                        <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
-                            <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase">
-                                <span>{item.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}</span>
-                                <span>POSTED</span>
-                            </div>
-                            {item.rating && (
-                                <div className="flex gap-0.5 mt-0.5 text-amber-500 justify-start select-none">
-                                    {Array.from({ length: 5 }).map((_, i) => (
-                                        <span key={i} className="text-[10px] leading-none">
-                                            {i < item.rating ? '★' : '☆'}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Central body text in center-aligned slab mono */}
-                        <div className="flex-grow flex items-center justify-center p-1 select-none pointer-events-none">
-                            <p 
-                                className="font-mono text-center break-words w-full"
-                                style={{
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 8,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                    fontFamily: "Space Mono, Courier New, Courier, monospace",
-                                    fontWeight: 500,
-                                     fontSize: (item.text || "").length <= 15 ? "20px" : ((item.text || "").length <= 30 ? "16px" : ((item.text || "").length <= 50 ? "13.5px" : "11px")),
-                                    lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),
-                                    color: "#262626",
-                                }}
-                            >
-                                {item.text || "Hello IN THE HAUS!"}
-                            </p>
-                        </div>
- 
-                        {/* Footer label with guest user name */}
-                        <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
-                            BY {item.user?.name || item.user_name || "GUEST"}
-                        </div>
-                    </>
-                )}
-            </motion.div>
-        )
-    }
- 
-    return (
-        <motion.div
-            ref={cardRef}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            whileHover={(isVisible || hasBeenVisible) ? { scale: 1.03, y: -3 } : undefined}
-            whileTap={(isVisible || hasBeenVisible) ? { scale: 0.97 } : undefined}
-            transition={{ type: "spring", stiffness: 350, damping: 22 }}
-            style={{
-                position: "relative",
-                width: safeImageWidth,
-                height: safeImageHeight,
-                overflow: "hidden",
-                borderRadius: radius,
-                backgroundColor: (isVisible || hasBeenVisible) && src && !failed ? "#111111" : "oklch(15% 0.005 28)",
-                color: "rgba(255,255,255,0.85)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-                fontSize: Math.max(
-                    14,
-                    Math.round(Math.min(safeImageWidth, safeImageHeight) * 0.16)
-                ),
-                fontWeight: 600,
-                cursor: isDragging ? "grabbing" : "pointer",
-                transformOrigin: "center center",
-                isolation: "isolate",
-                WebkitMaskImage: "-webkit-radial-gradient(white, black)",
-            }}
-        >
-            {(isVisible || hasBeenVisible) && (
-                <>
-                    {/* Hidden index helper, overlays check-in type if loaded */}
-                    <div className="absolute inset-0 bg-black/10 flex flex-col justify-between p-3 z-10 text-white select-none pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
-                        <span className="text-[10px] font-mono opacity-80 uppercase tracking-widest">{item.source || 'tag'}</span>
+                {/* Header */}
+                <div className="flex flex-col gap-1 select-none pointer-events-none w-full">
+                    <div className="flex justify-between items-center text-[7px] font-mono tracking-widest text-neutral-400 uppercase">
+                        <span>{item.source === 'google' ? '// GOOGLE REVIEW' : '// GUEST NOTE'}</span>
+                        <span>POSTED</span>
                     </div>
-                    
-                    {src && !failed ? (
-                        <>
-                            <img
-                                src={getProxiedImageUrl(src)}
-                                alt={alt}
-                                draggable={false}
-                                crossOrigin="anonymous"
-                                onError={handleImageError}
-                                style={{
-                                    position: "absolute",
-                                    inset: 0,
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                    pointerEvents: "none",
-                                    userSelect: "none",
-                                    display: "block",
-                                    zIndex: 1,
-                                    animation: "lazyCardFadeIn 0.3s ease-out forwards",
-                                }}
-                            />
-                            
-                            {/* Minimalist Rams Caption & Interactive Likes overlay */}
-                            <div 
-                                ref={overlayRef}
-                                className="absolute bottom-0 left-0 right-0 z-10 bg-[#111111]/90 border-t border-white/5 px-4 pt-2.5 pb-3.5 flex items-center justify-between gap-2 pointer-events-auto select-none"
-                                style={{ 
-                                    boxSizing: "border-box",
-                                    borderBottomLeftRadius: radius,
-                                    borderBottomRightRadius: radius,
-                                }}
-                            >
-                                <div className="flex-1 min-w-0">
-                                    {/* Short caption text */}
-                                    <p className="font-mono text-[8px] text-neutral-300 leading-tight truncate">
-                                        {item.text ? item.text : `@${item.user?.name || item.user_name || "Customer"}`}
-                                    </p>
-                                    {/* Platform source */}
-                                    <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest block mt-0.5">
-                                        {item.source || "post"}
-                                    </span>
-                                </div>
-
-                                {/* Interactive heart button */}
-                                {onLikeToggle && (
-                                    <button
-                                        onClick={(e) => onLikeToggle(e, item.id)}
-                                        className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-1 outline-none select-none animate-fade-in"
-                                    >
-                                        <Heart
-                                            size={10}
-                                            className={likedIds && likedIds.includes(item.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
-                                        />
-                                        <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}`}>
-                                            {item.likes || 0}
-                                        </span>
-                                    </button>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono">
-                            <span className="text-xl">📸</span>
-                            <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
+                    {item.rating && (
+                        <div className="flex gap-0.5 mt-0.5 text-amber-500 justify-start select-none">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <span key={i} className="text-[10px] leading-none">
+                                    {i < item.rating ? '★' : '☆'}
+                                </span>
+                            ))}
                         </div>
                     )}
-                </>
+                </div>
+
+                {/* Body */}
+                <div className="flex-grow flex items-center justify-center p-1 select-none pointer-events-none">
+                    <p 
+                        className="font-mono text-center break-words w-full"
+                        style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 8,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            fontFamily: "Space Mono, Courier New, Courier, monospace",
+                            fontWeight: 500,
+                            fontSize: (item.text || "").length <= 15 ? "20px" : ((item.text || "").length <= 30 ? "16px" : ((item.text || "").length <= 50 ? "13.5px" : "11px")),
+                            lineHeight: (item.text || "").length <= 15 ? "1.3" : ((item.text || "").length <= 30 ? "1.35" : ((item.text || "").length <= 50 ? "1.4" : "1.45")),
+                            color: "#262626",
+                        }}
+                    >
+                        {item.text || "Hello IN THE HAUS!"}
+                    </p>
+                </div>
+
+                {/* Footer */}
+                <div className="text-[7px] font-mono tracking-wider text-neutral-400 text-center uppercase border-t border-neutral-200/50 pt-2 truncate select-none pointer-events-none">
+                    BY {item.user?.name || item.user_name || "GUEST"}
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            className="group relative overflow-hidden transition-transform duration-150 hover:scale-[1.02] hover:z-20"
+            style={{
+                width: safeImageWidth,
+                height: safeImageHeight,
+                borderRadius: radius || 2,
+                backgroundColor: "#161714",
+                boxSizing: "border-box",
+                cursor: isDragging ? "grabbing" : "pointer"
+            }}
+        >
+            {/* Image */}
+            {proxiedSrc && !imgFailed ? (
+                <img
+                    src={proxiedSrc}
+                    alt={item.text || item.user?.name || "Check-in"}
+                    draggable={false}
+                    decoding="async"
+                    loading="eager"
+                    onLoad={() => {
+                        LOADED_IMAGE_SET.add(proxiedSrc)
+                        setImgLoaded(true)
+                    }}
+                    onError={() => setImgFailed(true)}
+                    className={`absolute inset-0 w-full h-full object-cover pointer-events-none select-none transition-opacity duration-200 ${
+                        imgLoaded || isAlreadyLoaded ? "opacity-100" : "opacity-0"
+                    }`}
+                />
+            ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono text-neutral-500">
+                    <span className="text-xl">📸</span>
+                    <span className="text-[9px] uppercase tracking-wider mt-2 opacity-80">{item.user?.name || item.user_name || "Check-in"}</span>
+                </div>
             )}
-        </motion.div>
+
+            {/* Hover subtle dark vignette */}
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10" />
+
+            {/* Caption & Like footer overlay */}
+            <div 
+                ref={overlayRef}
+                className="absolute bottom-0 left-0 right-0 z-20 bg-[#0e0f0b]/90 border-t border-white/10 px-3 py-2 flex items-center justify-between gap-2 pointer-events-auto select-none backdrop-blur-xs"
+            >
+                <div className="flex-1 min-w-0 pointer-events-none">
+                    <p className="font-mono text-[8px] text-neutral-300 leading-tight truncate">
+                        {item.text ? item.text : `@${item.user?.name || item.user_name || "Customer"}`}
+                    </p>
+                    <span className="font-mono text-[7px] text-neutral-500 uppercase tracking-widest block mt-0.5">
+                        {item.source || "post"}
+                    </span>
+                </div>
+
+                {onLikeToggle && (
+                    <button
+                        onClick={(e) => onLikeToggle(e, item.id)}
+                        className="flex items-center gap-1 hover:scale-110 active:scale-95 transition-all text-neutral-400 hover:text-white cursor-pointer bg-transparent border-0 p-1 outline-none select-none"
+                    >
+                        <Heart
+                            size={11}
+                            className={likedIds && likedIds.includes(item.id) ? "text-[#E1306C] fill-[#E1306C]" : "text-neutral-400"}
+                        />
+                        <span className={`font-mono text-[8px] ${likedIds && likedIds.includes(item.id) ? "text-[#E1306C] font-bold" : "text-neutral-400"}`}>
+                            {item.likes || 0}
+                        </span>
+                    </button>
+                )}
+            </div>
+        </div>
     )
-}
+})
 
 export default function DraggableGrid(props) {
     const finalProps = { ...COMPONENT_DEFAULTS, ...props }
@@ -395,34 +265,27 @@ export default function DraggableGrid(props) {
         enableWheel,
         onItemClick,
         style,
-        rotation,
         likedIds,
-        onLikeToggle,
+        onLikeToggle
     } = finalProps
 
     const containerRef = useRef(null)
-    const x = useMotionValue(0)
-    const y = useMotionValue(0)
-
-    const [containerSize, setContainerSize] = useState({ w: 800, h: 600 })
+    const [containerSize, setContainerSize] = useState({ w: 1000, h: 800 })
     const [isDragging, setIsDragging] = useState(false)
+    const isPointerDown = useRef(false)
+    const pointerDownPos = useRef(null)
+    const lastPointer = useRef({ x: 0, y: 0, time: 0 })
+    const velocity = useRef({ x: 0, y: 0 })
+    const animFrame = useRef(null)
+
+    const rawX = useMotionValue(0)
+    const rawY = useMotionValue(0)
     const initializedRef = useRef(false)
 
-    const pointerDownPos = useRef(null)
-    const wheelAnimX = useRef(null)
-    const wheelAnimY = useRef(null)
-    const failedImages = useRef(new Set())
-    const [, forceRender] = useState(0)
-
-
-
-    const safeItems =
-        Array.isArray(items) && items.length > 0 ? items : defaultItems
+    const safeItems = Array.isArray(items) && items.length > 0 ? items : defaultItems
     const safeColumns = useMemo(() => {
         const count = safeItems.length
         if (count === 0) return 4
-        // Dynamically reduce column count for low number of uploaded images
-        // so that they look like a nice, filled collage instead of a massive matrix of duplicates
         let cols = columns || 14
         if (count <= 3) cols = 3
         else if (count <= 8) cols = 4
@@ -430,19 +293,16 @@ export default function DraggableGrid(props) {
         else if (count <= 30) cols = 10
         return Math.max(1, Math.min(20, Math.floor(cols)))
     }, [safeItems.length, columns])
-    // Image dimensions match CurveGallery (px, clamped 20–4000).
-    const safeImageWidth = Math.max(20, Math.min(4000, imageWidth ?? 150))
-    const safeImageHeight = Math.max(20, Math.min(4000, imageHeight ?? 210))
-    // Gap matches CurveGallery: control is 0–100, ×4 → px. Same value spaces
-    // tiles from each other AND the grid edge from the boundary (padding).
+
+    const safeImageWidth = Math.max(20, Math.min(4000, imageWidth ?? 256))
+    const safeImageHeight = Math.max(20, Math.min(4000, imageHeight ?? 320))
     const safeGap = Math.max(0, Math.min(100, gap ?? 4)) * 4
-    // Rounded matches CurveGallery: 0 = square … 20 = circle (on short side).
-    const r = Math.max(0, Math.min(20, rounded ?? 3))
+    const r = Math.max(0, Math.min(20, rounded ?? 1))
     const radius = (r / 20) * (Math.min(safeImageWidth, safeImageHeight) / 2)
 
-    // Calculate grid rows dynamically to fit all loaded items (at least safeColumns size)
     const rows = Math.max(safeColumns, Math.ceil(safeItems.length / safeColumns))
     const totalCells = safeColumns * rows
+
     const displayItems = useMemo(
         () => fillChronological(safeItems, totalCells, safeColumns),
         [safeItems, totalCells, safeColumns]
@@ -450,33 +310,23 @@ export default function DraggableGrid(props) {
 
     const extendedColumns = safeColumns * 3
     const extendedRows = rows * 3
-    const expandedGridW = extendedColumns * safeImageWidth + (extendedColumns - 1) * safeGap
-    const expandedGridH = extendedRows * safeImageHeight + (extendedRows - 1) * safeGap
-
-    const displayItemsExtended = useMemo(() => {
-        const out = []
-        const baseLen = displayItems.length
-        if (baseLen === 0) return []
-        
-        for (let r_ext = 0; r_ext < extendedRows; r_ext++) {
-            for (let c_ext = 0; c_ext < extendedColumns; c_ext++) {
-                const r_base = r_ext % rows
-                const c_base = c_ext % safeColumns
-                const baseIdx = r_base * safeColumns + c_base
-                out.push(displayItems[baseIdx % baseLen])
-            }
-        }
-        return out
-    }, [displayItems, safeColumns, rows, extendedColumns, extendedRows])
 
     const gridW = safeColumns * safeImageWidth + (safeColumns - 1) * safeGap
     const gridH = rows * safeImageHeight + (rows - 1) * safeGap
 
-    // Measure container with ResizeObserver
+    const cycleW = gridW + safeGap
+    const cycleH = gridH + safeGap
+
+    const expandedGridW = extendedColumns * safeImageWidth + (extendedColumns - 1) * safeGap
+    const expandedGridH = extendedRows * safeImageHeight + (extendedRows - 1) * safeGap
+
+    const wrappedX = useTransform(rawX, (val) => wrapOffset(val, cycleW))
+    const wrappedY = useTransform(rawY, (val) => wrapOffset(val, cycleH))
+
+    // Measure container size
     useEffect(() => {
         const el = containerRef.current
         if (!el) return
-
         const measure = () => {
             const rect = el.getBoundingClientRect()
             if (rect.width > 0 && rect.height > 0) {
@@ -484,126 +334,110 @@ export default function DraggableGrid(props) {
             }
         }
         measure()
-
         const ro = new ResizeObserver(measure)
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
 
-    // Drag constraints: at either extreme the edge images stop exactly one
-    // gap from the container border — no overshoot into empty space.
-    // maxX/maxY: grid pinned `gap` from the top-left border.
-    // minX/minY: grid's far edge `gap` from the bottom-right border.
-    // When the grid is smaller than the container the range collapses to the
-    // top-left position (min clamped to max), so it can't drift.
-
-
-    // Scale boundaries and cycles for infinite loops
-    const cycleW = gridW + safeGap
-    const cycleH = gridH + safeGap
-
-    // Infinite wrapping logic centered around the middle copy
-    useEffect(() => {
-        let isWrappingX = false
-        let isWrappingY = false
-
-        const unsubscribeX = x.onChange((latest) => {
-            if (isWrappingX) return
-            const half = 0.5 * cycleW
-            const center = -cycleW
-            const minLimit = center - half
-            const maxLimit = center + half
-
-            if (latest > maxLimit) {
-                isWrappingX = true
-                x.set(latest - cycleW)
-                isWrappingX = false
-            } else if (latest < minLimit) {
-                isWrappingX = true
-                x.set(latest + cycleW)
-                isWrappingX = false
-            }
-        })
-
-        const unsubscribeY = y.onChange((latest) => {
-            if (isWrappingY) return
-            const half = 0.5 * cycleH
-            const center = -cycleH
-            const minLimit = center - half
-            const maxLimit = center + half
-
-            if (latest > maxLimit) {
-                isWrappingY = true
-                y.set(latest - cycleH)
-                isWrappingY = false
-            } else if (latest < minLimit) {
-                isWrappingY = true
-                y.set(latest + cycleH)
-                isWrappingY = false
-            }
-        })
-
-        return () => {
-            unsubscribeX()
-            unsubscribeY()
-        }
-    }, [cycleW, cycleH, x, y])
-
-    // Center the grid initially (focusing on the middle repeat copy aligned to viewport center)
+    // Set initial centered position
     useEffect(() => {
         if (initializedRef.current) return
-        if (containerSize.w === 0 || containerSize.h === 0) return
+        if (containerSize.w === 0 || containerSize.h === 0 || !cycleW || !cycleH) return
 
         const initialX = -cycleW + (containerSize.w - safeImageWidth) / 2
         const initialY = -cycleH + (containerSize.h - safeImageHeight) / 2
-        x.set(initialX)
-        y.set(initialY)
+        rawX.set(initialX)
+        rawY.set(initialY)
         initializedRef.current = true
-    }, [containerSize.w, containerSize.h, cycleW, safeImageWidth, safeImageHeight, x, y])
+    }, [containerSize.w, containerSize.h, cycleW, cycleH, safeImageWidth, safeImageHeight, rawX, rawY])
 
-
-
-    // Global listener to ensure isDragging is reset to false even if drag events
-    // are canceled or bubble out of the container (critical for mobile browsers).
-    useEffect(() => {
-        const handleGlobalRelease = () => {
-            setIsDragging(false)
-        }
-        window.addEventListener('pointerup', handleGlobalRelease)
-        window.addEventListener('touchend', handleGlobalRelease)
-        return () => {
-            window.removeEventListener('pointerup', handleGlobalRelease)
-            window.removeEventListener('touchend', handleGlobalRelease)
+    // Momentum Inertia Decay Physics
+    const stopInertia = useCallback(() => {
+        if (animFrame.current) {
+            cancelAnimationFrame(animFrame.current)
+            animFrame.current = null
         }
     }, [])
 
-    // Disable native viewport zooming and overscroll bouncing on mobile device gestures
+    const startInertia = useCallback(() => {
+        stopInertia()
+        let vx = velocity.current.x * 14
+        let vy = velocity.current.y * 14
+        const friction = 0.94
+
+        if (Math.hypot(vx, vy) < 0.5) return
+
+        const step = () => {
+            if (Math.abs(vx) < 0.1 && Math.abs(vy) < 0.1) {
+                animFrame.current = null
+                return
+            }
+            rawX.set(rawX.get() + vx)
+            rawY.set(rawY.get() + vy)
+            vx *= friction
+            vy *= friction
+            animFrame.current = requestAnimationFrame(step)
+        }
+        animFrame.current = requestAnimationFrame(step)
+    }, [rawX, rawY, stopInertia])
+
+    const handlePointerDownContainer = useCallback((e) => {
+        if (e.button !== undefined && e.button !== 0) return
+        stopInertia()
+        isPointerDown.current = true
+        pointerDownPos.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+        lastPointer.current = { x: e.clientX, y: e.clientY, time: performance.now() }
+        velocity.current = { x: 0, y: 0 }
+    }, [stopInertia])
+
+    const handlePointerMoveContainer = useCallback((e) => {
+        if (!isPointerDown.current) return
+        const dx = e.clientX - lastPointer.current.x
+        const dy = e.clientY - lastPointer.current.y
+
+        if (pointerDownPos.current) {
+            const totalDist = Math.hypot(e.clientX - pointerDownPos.current.x, e.clientY - pointerDownPos.current.y)
+            if (totalDist > 6 && !isDragging) {
+                setIsDragging(true)
+            }
+        }
+
+        const now = performance.now()
+        const dt = Math.max(1, now - lastPointer.current.time)
+        velocity.current = {
+            x: dx / dt,
+            y: dy / dt
+        }
+
+        lastPointer.current = { x: e.clientX, y: e.clientY, time: now }
+
+        rawX.set(rawX.get() + dx)
+        rawY.set(rawY.get() + dy)
+    }, [isDragging, rawX, rawY])
+
+    const handlePointerUpContainer = useCallback(() => {
+        if (!isPointerDown.current) return
+        isPointerDown.current = false
+        if (isDragging) {
+            startInertia()
+            setTimeout(() => setIsDragging(false), 50)
+        }
+    }, [isDragging, startInertia])
+
     useEffect(() => {
-        const el = containerRef.current
-        if (!el) return
-
-        const handleTouchMove = (e) => {
-            // Prevent all native touch actions (overscroll, body scroll bounce, standard gestures)
-            e.preventDefault()
+        const handleGlobalUp = () => {
+            if (isPointerDown.current) {
+                handlePointerUpContainer()
+            }
         }
-
-        const handleGesture = (e) => {
-            e.preventDefault()
-        }
-
-        el.addEventListener('touchmove', handleTouchMove, { passive: false })
-        el.addEventListener('gesturestart', handleGesture, { passive: false })
-        el.addEventListener('gesturechange', handleGesture, { passive: false })
-
+        window.addEventListener('pointerup', handleGlobalUp)
+        window.addEventListener('pointercancel', handleGlobalUp)
         return () => {
-            el.removeEventListener('touchmove', handleTouchMove)
-            el.removeEventListener('gesturestart', handleGesture)
-            el.removeEventListener('gesturechange', handleGesture)
+            window.removeEventListener('pointerup', handleGlobalUp)
+            window.removeEventListener('pointercancel', handleGlobalUp)
         }
-    }, [])
+    }, [handlePointerUpContainer])
 
-
-    // Wheel scrolling
     useEffect(() => {
         if (!enableWheel) return
         const el = containerRef.current
@@ -612,70 +446,77 @@ export default function DraggableGrid(props) {
         const onWheel = (e) => {
             if (e.ctrlKey) {
                 e.preventDefault()
-                return // Block trackpad pinch-to-zoom completely
+                return
             }
             e.preventDefault()
-            const curX = x.get()
-            const curY = y.get()
-            const targetX = curX - e.deltaX
-            const targetY = curY - e.deltaY
-            if (wheelAnimX.current) wheelAnimX.current.stop()
-            if (wheelAnimY.current) wheelAnimY.current.stop()
-            wheelAnimX.current = animate(x, targetX, {
-                duration: 0.3,
-                ease: [0.22, 1, 0.36, 1],
-            })
-            wheelAnimY.current = animate(y, targetY, {
-                duration: 0.3,
-                ease: [0.22, 1, 0.36, 1],
-            })
+            stopInertia()
+            const dx = -e.deltaX
+            const dy = -e.deltaY
+            rawX.set(rawX.get() + dx)
+            rawY.set(rawY.get() + dy)
         }
 
         el.addEventListener("wheel", onWheel, { passive: false })
-        return () => {
-            el.removeEventListener("wheel", onWheel)
-            if (wheelAnimX.current) wheelAnimX.current.stop()
-            if (wheelAnimY.current) wheelAnimY.current.stop()
-        }
-    }, [enableWheel, x, y])
+        return () => el.removeEventListener("wheel", onWheel)
+    }, [enableWheel, rawX, rawY, stopInertia])
 
-    const handlePointerDown = useCallback((e) => {
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+
+        const preventTouch = (e) => {
+            if (e.touches && e.touches.length > 1) {
+                e.preventDefault()
+            }
+        }
+        el.addEventListener('touchmove', preventTouch, { passive: false })
+        return () => el.removeEventListener('touchmove', preventTouch)
+    }, [])
+
+    const handleCardPointerDown = useCallback((e) => {
         pointerDownPos.current = { x: e.clientX, y: e.clientY, t: Date.now() }
     }, [])
 
-    const handlePointerUp = useCallback(
-        (e, item, index) => {
-            const start = pointerDownPos.current
-            pointerDownPos.current = null
-            if (!start) return
-            const dx = e.clientX - start.x
-            const dy = e.clientY - start.y
-            const moved = Math.hypot(dx, dy)
-            if (moved < 5) {
-                onItemClick?.(item, index)
-            }
-        },
-        [onItemClick]
-    )
+    const handleCardPointerUp = useCallback((e, item) => {
+        if (!pointerDownPos.current) return
+        const dx = e.clientX - pointerDownPos.current.x
+        const dy = e.clientY - pointerDownPos.current.y
+        const moved = Math.hypot(dx, dy)
+        if (moved < 6 && !isDragging) {
+            onItemClick?.(item)
+        }
+        pointerDownPos.current = null
+    }, [isDragging, onItemClick])
 
-    const handleImageError = useCallback((index) => {
-        failedImages.current.add(index)
-        forceRender((n) => n + 1)
-    }, [])
+    const displayItemsExtended = useMemo(() => {
+        const out = []
+        const baseLen = displayItems.length
+        if (baseLen === 0) return []
+
+        for (let r_ext = 0; r_ext < extendedRows; r_ext++) {
+            for (let c_ext = 0; c_ext < extendedColumns; c_ext++) {
+                const r_base = r_ext % rows
+                const c_base = c_ext % safeColumns
+                const baseIdx = r_base * safeColumns + c_base
+                out.push({
+                    item: displayItems[baseIdx % baseLen],
+                    r_ext,
+                    c_ext
+                })
+            }
+        }
+        return out
+    }, [displayItems, safeColumns, rows, extendedColumns, extendedRows])
 
     const wrapperStyle = {
         position: "relative",
         width: "100%",
         height: "100%",
-        minWidth: "100%",
-        minHeight: "100%",
-        margin: 0,
-        boxSizing: "border-box",
         overflow: "hidden",
         touchAction: "none",
         userSelect: "none",
         cursor: isDragging ? "grabbing" : "grab",
-        ...style,
+        ...style
     }
 
     const gridStyle = {
@@ -689,46 +530,31 @@ export default function DraggableGrid(props) {
         gridTemplateColumns: `repeat(${extendedColumns}, ${safeImageWidth}px)`,
         gridAutoRows: `${safeImageHeight}px`,
         gap: `${safeGap}px`,
-        willChange: "transform",
-        transform: `rotate(${rotation}deg)`,
-        transformOrigin: "0 0",
+        willChange: "transform"
     }
 
     return (
-        <div ref={containerRef} className="draggable-container-viewport" style={wrapperStyle}>
-            <style>{`
-                @keyframes lazyCardFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-            `}</style>
-            <motion.div
-                style={{ ...gridStyle, x, y }}
-                drag={true}
-                dragElastic={0}
-                dragMomentum={true}
-                onDragStart={() => {
-                    setIsDragging(true)
-                }}
-                onDragEnd={() => setIsDragging(false)}
-            >
-                {displayItemsExtended.map((item, index) => {
-                    const failed = failedImages.current.has(index)
+        <div
+            ref={containerRef}
+            className="draggable-container-viewport"
+            style={wrapperStyle}
+            onPointerDown={handlePointerDownContainer}
+            onPointerMove={handlePointerMoveContainer}
+            onPointerUp={handlePointerUpContainer}
+        >
+            <motion.div style={{ ...gridStyle, x: wrappedX, y: wrappedY }}>
+                {displayItemsExtended.map(({ item, r_ext, c_ext }, index) => {
+                    const stableKey = `card_${item.id || item.image_url || index}_r${r_ext}_c${c_ext}`
                     return (
-                        <LazyCard
-                            key={`${item.id || index}-${index}`}
+                        <GridCard
+                            key={stableKey}
                             item={item}
-                            index={index}
                             safeImageWidth={safeImageWidth}
                             safeImageHeight={safeImageHeight}
                             radius={radius}
                             isDragging={isDragging}
-                            failed={failed}
-                            getProxiedImageUrl={getProxiedImageUrl}
-                            handleImageError={() => handleImageError(index)}
-                            handlePointerDown={handlePointerDown}
-                            handlePointerUp={(e) => handlePointerUp(e, item, index)}
-                            rotation={rotation}
+                            handlePointerDown={handleCardPointerDown}
+                            handlePointerUp={(e) => handleCardPointerUp(e, item)}
                             likedIds={likedIds}
                             onLikeToggle={onLikeToggle}
                         />

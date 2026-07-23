@@ -22,14 +22,19 @@ import DraggableGrid from '../components/shared/DraggableGrid'
 import { toast } from 'sonner'
 
 // Helper for image compression proxy (similar to AdsLandingPage)
-const optimizeImageUrl = (url, width = 800, quality = 75) => {
+const optimizeImageUrl = (url, width = 600, quality = 75) => {
     if (!url) return ''
-    if (url.startsWith('data:') || url.startsWith('/') || !url.startsWith('http')) {
+    if (
+        url.startsWith('data:') || 
+        url.startsWith('/') || 
+        !url.startsWith('http') ||
+        url.includes('wsrv.nl') ||
+        url.includes('images.weserv.nl')
+    ) {
         return url
     }
     try {
-        const cleanUrl = url.split('?')[0]
-        return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`
+        return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&q=${quality}&output=webp`
     } catch (e) {
         console.warn('Image optimization failed:', e)
         return url
@@ -384,42 +389,21 @@ export default function HausCheckinPage() {
                     setStreamImages(uniqueImages)
                 }
 
-                // Progressive paginated fetching (50 rows per batch) to load 1000+ items fast
-                const fetchDbCheckinsProgressively = async (offset = 0) => {
-                    try {
-                        const pageSize = 50
-                        const { data: batch, error: checkinErr } = await supabase
-                            .from('haus_checkins')
-                            .select('*')
-                            .eq('is_visible', true)
-                            .order('created_at', { ascending: false })
-                            .range(offset, offset + pageSize - 1)
+                // Single pass fetch for all active check-ins to prevent 800ms re-render loops
+                try {
+                    const { data: dbData, error: checkinErr } = await supabase
+                        .from('haus_checkins')
+                        .select('*')
+                        .eq('is_visible', true)
+                        .order('created_at', { ascending: false })
+                        .limit(250)
 
-                        if (!checkinErr && batch && batch.length > 0) {
-                            setDbCheckins(prev => {
-                                const existingIds = new Set(prev.map(x => x.id))
-                                const merged = [...prev]
-                                batch.forEach(item => {
-                                    if (!existingIds.has(item.id)) {
-                                        merged.push(item)
-                                    }
-                                })
-                                return merged
-                            })
-
-                            // If we fetched a full page, schedule the next batch progressively in the background
-                            if (batch.length === pageSize) {
-                                setTimeout(() => {
-                                    fetchDbCheckinsProgressively(offset + pageSize)
-                                }, 800) // Delay slightly to prioritize page animations
-                            }
-                        }
-                    } catch (dbErr) {
-                        console.warn('haus_checkins table progressive fetch error:', dbErr)
+                    if (!checkinErr && dbData) {
+                        setDbCheckins(dbData)
                     }
+                } catch (dbErr) {
+                    console.warn('haus_checkins fetch error:', dbErr)
                 }
-
-                fetchDbCheckinsProgressively(0)
 
                 // Fetch third-party social feed (e.g. Elfsight, EmbedSocial widget data) if configured
                 if (map.link_social_feed_url) {
