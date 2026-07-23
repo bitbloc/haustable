@@ -273,8 +273,9 @@ export default function DraggableGrid(props) {
 
     const containerRef = useRef(null)
     const [containerSize, setContainerSize] = useState({ w: 1000, h: 800 })
-    const [isDragging, setIsDragging] = useState(false)
-    const isPointerDown = useRef(false)
+    
+    const isPointerDownRef = useRef(false)
+    const isDraggingRef = useRef(false)
     const pointerDownPos = useRef(null)
     const lastPointer = useRef({ x: 0, y: 0, time: 0 })
     const velocity = useRef({ x: 0, y: 0 })
@@ -364,11 +365,11 @@ export default function DraggableGrid(props) {
 
     const startInertia = useCallback(() => {
         stopInertia()
-        let vx = velocity.current.x * 14
-        let vy = velocity.current.y * 14
-        const friction = 0.94
+        let vx = velocity.current.x * 15
+        let vy = velocity.current.y * 15
+        const friction = 0.935
 
-        if (Math.hypot(vx, vy) < 0.5) return
+        if (Math.hypot(vx, vy) < 0.4) return
 
         const step = () => {
             if (Math.abs(vx) < 0.1 && Math.abs(vy) < 0.1) {
@@ -384,62 +385,91 @@ export default function DraggableGrid(props) {
         animFrame.current = requestAnimationFrame(step)
     }, [rawX, rawY, stopInertia])
 
-    const handlePointerDownContainer = useCallback((e) => {
-        if (e.button !== undefined && e.button !== 0) return
-        stopInertia()
-        isPointerDown.current = true
-        pointerDownPos.current = { x: e.clientX, y: e.clientY, t: Date.now() }
-        lastPointer.current = { x: e.clientX, y: e.clientY, time: performance.now() }
-        velocity.current = { x: 0, y: 0 }
-    }, [stopInertia])
-
-    const handlePointerMoveContainer = useCallback((e) => {
-        if (!isPointerDown.current) return
-        const dx = e.clientX - lastPointer.current.x
-        const dy = e.clientY - lastPointer.current.y
-
-        if (pointerDownPos.current) {
-            const totalDist = Math.hypot(e.clientX - pointerDownPos.current.x, e.clientY - pointerDownPos.current.y)
-            if (totalDist > 6 && !isDragging) {
-                setIsDragging(true)
-            }
-        }
-
-        const now = performance.now()
-        const dt = Math.max(1, now - lastPointer.current.time)
-        velocity.current = {
-            x: dx / dt,
-            y: dy / dt
-        }
-
-        lastPointer.current = { x: e.clientX, y: e.clientY, time: now }
-
-        rawX.set(rawX.get() + dx)
-        rawY.set(rawY.get() + dy)
-    }, [isDragging, rawX, rawY])
-
-    const handlePointerUpContainer = useCallback(() => {
-        if (!isPointerDown.current) return
-        isPointerDown.current = false
-        if (isDragging) {
-            startInertia()
-            setTimeout(() => setIsDragging(false), 50)
-        }
-    }, [isDragging, startInertia])
-
+    // Direct Native Touch & Pointer Listener Engine for 100% 60fps Mobile Dragging
     useEffect(() => {
-        const handleGlobalUp = () => {
-            if (isPointerDown.current) {
-                handlePointerUpContainer()
+        const el = containerRef.current
+        if (!el) return
+
+        const getCoords = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY }
+            }
+            return { x: e.clientX, y: e.clientY }
+        }
+
+        const onStart = (e) => {
+            if (e.touches && e.touches.length > 1) return
+            stopInertia()
+            isPointerDownRef.current = true
+            isDraggingRef.current = false
+
+            const coords = getCoords(e)
+            pointerDownPos.current = { x: coords.x, y: coords.y, t: Date.now() }
+            lastPointer.current = { x: coords.x, y: coords.y, time: performance.now() }
+            velocity.current = { x: 0, y: 0 }
+        }
+
+        const onMove = (e) => {
+            if (!isPointerDownRef.current) return
+            if (e.cancelable) e.preventDefault() // Completely disable touch scroll bounce on mobile
+
+            const coords = getCoords(e)
+            const dx = coords.x - lastPointer.current.x
+            const dy = coords.y - lastPointer.current.y
+
+            const now = performance.now()
+            const dt = Math.max(1, now - lastPointer.current.time)
+
+            // Low-pass velocity smoothing filter
+            velocity.current = {
+                x: velocity.current.x * 0.2 + (dx / dt) * 0.8,
+                y: velocity.current.y * 0.2 + (dy / dt) * 0.8
+            }
+
+            lastPointer.current = { x: coords.x, y: coords.y, time: now }
+
+            if (pointerDownPos.current) {
+                const totalDist = Math.hypot(coords.x - pointerDownPos.current.x, coords.y - pointerDownPos.current.y)
+                if (totalDist > 6) {
+                    isDraggingRef.current = true
+                }
+            }
+
+            rawX.set(rawX.get() + dx)
+            rawY.set(rawY.get() + dy)
+        }
+
+        const onEnd = () => {
+            if (!isPointerDownRef.current) return
+            isPointerDownRef.current = false
+            if (isDraggingRef.current) {
+                startInertia()
+                setTimeout(() => {
+                    isDraggingRef.current = false
+                }, 50)
             }
         }
-        window.addEventListener('pointerup', handleGlobalUp)
-        window.addEventListener('pointercancel', handleGlobalUp)
+
+        el.addEventListener('touchstart', onStart, { passive: true })
+        el.addEventListener('touchmove', onMove, { passive: false })
+        el.addEventListener('touchend', onEnd, { passive: true })
+        el.addEventListener('touchcancel', onEnd, { passive: true })
+
+        el.addEventListener('mousedown', onStart)
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onEnd)
+
         return () => {
-            window.removeEventListener('pointerup', handleGlobalUp)
-            window.removeEventListener('pointercancel', handleGlobalUp)
+            el.removeEventListener('touchstart', onStart)
+            el.removeEventListener('touchmove', onMove)
+            el.removeEventListener('touchend', onEnd)
+            el.removeEventListener('touchcancel', onEnd)
+
+            el.removeEventListener('mousedown', onStart)
+            window.removeEventListener('mousemove', onMove)
+            window.removeEventListener('mouseup', onEnd)
         }
-    }, [handlePointerUpContainer])
+    }, [rawX, rawY, startInertia, stopInertia])
 
     useEffect(() => {
         if (!enableWheel) return
@@ -463,33 +493,26 @@ export default function DraggableGrid(props) {
         return () => el.removeEventListener("wheel", onWheel)
     }, [enableWheel, rawX, rawY, stopInertia])
 
-    useEffect(() => {
-        const el = containerRef.current
-        if (!el) return
-
-        const preventTouch = (e) => {
-            if (e.touches && e.touches.length > 1) {
-                e.preventDefault()
-            }
-        }
-        el.addEventListener('touchmove', preventTouch, { passive: false })
-        return () => el.removeEventListener('touchmove', preventTouch)
-    }, [])
-
     const handleCardPointerDown = useCallback((e) => {
-        pointerDownPos.current = { x: e.clientX, y: e.clientY, t: Date.now() }
+        pointerDownPos.current = { x: e.clientX || (e.touches && e.touches[0].clientX), y: e.clientY || (e.touches && e.touches[0].clientY), t: Date.now() }
     }, [])
 
     const handleCardPointerUp = useCallback((e, item) => {
         if (!pointerDownPos.current) return
-        const dx = e.clientX - pointerDownPos.current.x
-        const dy = e.clientY - pointerDownPos.current.y
-        const moved = Math.hypot(dx, dy)
-        if (moved < 6 && !isDragging) {
+        const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX)
+        const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY)
+        if (clientX !== undefined && clientY !== undefined) {
+            const dx = clientX - pointerDownPos.current.x
+            const dy = clientY - pointerDownPos.current.y
+            const moved = Math.hypot(dx, dy)
+            if (moved < 6 && !isDraggingRef.current) {
+                onItemClick?.(item)
+            }
+        } else if (!isDraggingRef.current) {
             onItemClick?.(item)
         }
         pointerDownPos.current = null
-    }, [isDragging, onItemClick])
+    }, [onItemClick])
 
     const displayItemsExtended = useMemo(() => {
         const out = []
@@ -518,7 +541,7 @@ export default function DraggableGrid(props) {
         overflow: "hidden",
         touchAction: "none",
         userSelect: "none",
-        cursor: isDragging ? "grabbing" : "grab",
+        cursor: "grab",
         ...style
     }
 
@@ -539,11 +562,8 @@ export default function DraggableGrid(props) {
     return (
         <div
             ref={containerRef}
-            className="draggable-container-viewport"
+            className="draggable-container-viewport active:cursor-grabbing"
             style={wrapperStyle}
-            onPointerDown={handlePointerDownContainer}
-            onPointerMove={handlePointerMoveContainer}
-            onPointerUp={handlePointerUpContainer}
         >
             <motion.div style={{ ...gridStyle, x: wrappedX, y: wrappedY }}>
                 {displayItemsExtended.map(({ item, r_ext, c_ext }, index) => {
@@ -555,7 +575,7 @@ export default function DraggableGrid(props) {
                             safeImageWidth={safeImageWidth}
                             safeImageHeight={safeImageHeight}
                             radius={radius}
-                            isDragging={isDragging}
+                            isDragging={false}
                             handlePointerDown={handleCardPointerDown}
                             handlePointerUp={(e) => handleCardPointerUp(e, item)}
                             likedIds={likedIds}
