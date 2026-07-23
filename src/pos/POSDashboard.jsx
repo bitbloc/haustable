@@ -581,6 +581,8 @@ export default function POSDashboard() {
         fetchAttachedMemberCrm();
     }, [activeBooking]);
 
+    const activeAudioElementRef = useRef(null);
+
     // Repeating Sound Alert when pending orders exist
     useEffect(() => {
         if (!hasPendingOrders) return;
@@ -596,11 +598,11 @@ export default function POSDashboard() {
         return () => {
             clearInterval(soundInterval);
         };
-    }, [hasPendingOrders, alertSoundUrl, audioContext]);
+    }, [hasPendingOrders, alertSoundUrl]);
 
     const playSystemAlertSound = () => {
         const now = Date.now();
-        if (now - lastPlayedSoundTimeRef.current < 4000) {
+        if (now - lastPlayedSoundTimeRef.current < 3500) {
             console.log("Sound alert play throttled to prevent overlap.");
             return;
         }
@@ -608,9 +610,13 @@ export default function POSDashboard() {
 
         if (alertSoundUrl) {
             try {
-                const audio = new Audio(alertSoundUrl);
-                audio.play().catch(e => {
-                    console.warn("Failed to play custom sound, playing synth beep:", e);
+                if (!activeAudioElementRef.current || activeAudioElementRef.current.src !== alertSoundUrl) {
+                    activeAudioElementRef.current = new Audio(alertSoundUrl);
+                } else {
+                    activeAudioElementRef.current.currentTime = 0;
+                }
+                activeAudioElementRef.current.play().catch(e => {
+                    console.warn("Failed to play custom sound, playing synth chime:", e);
                     playSynthChime();
                 });
                 return;
@@ -858,6 +864,9 @@ export default function POSDashboard() {
 
     const handleSelectTable = async (table) => {
         setSelectedTable(table);
+        if (table?.id) {
+            localStorage.setItem('pos_active_table_id', table.id);
+        }
         
         // 1. Check for active booking
         const booking = await getActiveBooking(table.id);
@@ -940,14 +949,39 @@ export default function POSDashboard() {
             }
         };
 
+        const autoRestoreActiveTable = async () => {
+            try {
+                const activeTableId = localStorage.getItem('pos_active_table_id');
+                if (activeTableId) {
+                    const { data: tableData } = await supabase
+                        .from('tables_layout')
+                        .select('*')
+                        .eq('id', activeTableId)
+                        .maybeSingle();
+                    if (tableData) {
+                        const booking = await getActiveBooking(tableData.id);
+                        if (booking) {
+                            handleSelectTable(tableData);
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Auto restore active table failed:", err);
+            }
+        };
+
         const params = new URLSearchParams(window.location.search);
         if (params.get('autoSelect') === 'pending') {
             autoSelectPending();
             window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            autoRestoreActiveTable();
         }
     }, []);
 
     const handleBackToTables = () => {
+        localStorage.removeItem('pos_active_table_id');
         setView('tables');
         setSelectedTable(null);
         setActiveBooking(null);
@@ -1014,6 +1048,7 @@ export default function POSDashboard() {
                     toast.success('ยกเลิกบิลและเคลียร์โต๊ะสำเร็จแล้ว', { id: toastId });
                     
                     // Clear states
+                    localStorage.removeItem('pos_active_table_id');
                     setCurrentOrder({ items: [], customer: null, table: selectedTable });
                     setActiveBooking(null);
                     setAttachedMemberCrm(null);
@@ -1099,6 +1134,7 @@ export default function POSDashboard() {
             rewardId
         );
         if (success) {
+            localStorage.removeItem('pos_active_table_id');
             const updatedBooking = await getActiveBooking(selectedTable.id);
             if (updatedBooking) {
                 setActiveSlipBooking(updatedBooking);

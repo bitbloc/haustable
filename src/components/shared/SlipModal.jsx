@@ -152,12 +152,16 @@ export default function SlipModal({ booking, type, onClose }) {
                 // Wait 400ms for stable render state
                 await new Promise(resolve => setTimeout(resolve, 400));
                 try {
-                    let activePaperSize = '58mm';
+                    let activePaperSize = '80mm';
                     try {
                         const stored = localStorage.getItem('onhaus_printer_config');
                         if (stored) {
                             const config = JSON.parse(stored);
-                            if (config.paper_width) activePaperSize = config.paper_width;
+                            if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+                                activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
+                            } else {
+                                activePaperSize = config.cashier_paper_size || config.paper_width || '80mm';
+                            }
                         }
                     } catch (e) {}
 
@@ -636,23 +640,48 @@ export default function SlipModal({ booking, type, onClose }) {
 
         if (printerType === 'sunmi') {
             try {
-                let activePaperSize = '58mm';
+                let activePaperSize = '80mm';
                 try {
                     const stored = localStorage.getItem('onhaus_printer_config');
                     if (stored) {
                         const config = JSON.parse(stored);
-                        if (config.paper_width) activePaperSize = config.paper_width;
+                        if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+                            activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
+                        } else {
+                            activePaperSize = config.cashier_paper_size || config.paper_width || '80mm';
+                        }
                     }
                 } catch (e) {}
 
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                if (rawBytes) {
-                    const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar') ? receiptConfig.shopLogoUrl : null;
-                    // QR code ONLY for billing tab (PromptPay before payment). NEVER on receipt tab after payment!
-                    const qrToPrint = (activeTab === 'billing') ? qrCodeUrl : null;
-                    await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
+                if (activeTab === 'kitchen') {
+                    let printedAny = false;
+                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (kitchenBytes) {
+                        await printToSunmiBuiltIn(kitchenBytes);
+                        printedAny = true;
+                    }
+                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (barBytes) {
+                        await printToSunmiBuiltIn(barBytes);
+                        printedAny = true;
+                    }
+                    const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (otherBytes) {
+                        await printToSunmiBuiltIn(otherBytes);
+                        printedAny = true;
+                    }
+                    if (!printedAny) {
+                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                    }
                 } else {
-                    toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                    const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (rawBytes) {
+                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar') ? receiptConfig.shopLogoUrl : null;
+                        const qrToPrint = (activeTab === 'billing') ? qrCodeUrl : null;
+                        await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
+                    } else {
+                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                    }
                 }
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -1006,11 +1035,11 @@ export default function SlipModal({ booking, type, onClose }) {
                             </div>
                         )}
 
-                        {/* PromptPay QR Code (For Billing always, and Receipt optionally as requested) */}
-                        {(activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) && qrCodeUrl && (
-                            <div className={`border-t border-dashed border-black/40 pt-4 mt-4 text-center flex flex-col items-center ${activeTab === 'receipt' ? 'opacity-70' : ''}`}>
+                        {/* PromptPay QR Code (For Billing tab only, never on paid receipt) */}
+                        {activeTab === 'billing' && qrCodeUrl && (
+                            <div className="border-t border-dashed border-black/40 pt-4 mt-4 text-center flex flex-col items-center">
                                 <span className="text-[9px] font-black tracking-widest uppercase mb-2">
-                                    {activeTab === 'billing' ? 'SCAN TO PAY / สแกนชำระเงิน' : 'SHOP QR CODE / คิวอาร์โค้ดร้านค้า'}
+                                    SCAN TO PAY / สแกนชำระเงิน
                                 </span>
                                 <img src={qrCodeUrl} alt="PromptPay QR" className="w-36 h-36 object-contain rounded-xl border border-gray-100 p-2 bg-white" />
                                 <span className="text-[8px] text-gray-400 font-mono mt-1">IN THE HAUS PROMPTPAY</span>

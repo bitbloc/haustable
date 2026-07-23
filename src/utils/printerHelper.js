@@ -125,7 +125,7 @@ function encodeUTF8(str) {
 }
 
 // Convert receipt/ticket details to ESC/POS binary format
-export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '58mm', receiptConfig = {}, printerType = 'universal') {
+export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '80mm', receiptConfig = {}, printerType = 'universal') {
     // Filter items based on activeTab (Kitchen vs Bar vs Others) using printer configuration
     let itemsToRender = booking.order_items || [];
     
@@ -137,10 +137,17 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             const config = JSON.parse(stored);
             kitchenCatIds = config.kitchen_categories || [];
             barCatIds = config.bar_categories || [];
+            if (!paperSize || paperSize === '58mm') {
+                paperSize = (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other')
+                    ? (config.kitchen_paper_size || config.paper_width || '80mm')
+                    : (config.cashier_paper_size || config.paper_width || '80mm');
+            }
         }
     } catch (e) {
         // ignore
     }
+
+    const getItemCatId = (item) => item.menu_items?.category_id || item.category_id || item.category || '';
 
     if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
         // Fallback default categorization if config is not set up
@@ -155,20 +162,20 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         ];
         
         if (activeTab === 'kitchen') {
-            itemsToRender = itemsToRender.filter(item => !DEFAULT_BAR_CATEGORIES.includes(item.menu_items?.category_id));
+            itemsToRender = itemsToRender.filter(item => !DEFAULT_BAR_CATEGORIES.includes(getItemCatId(item)));
         } else if (activeTab === 'bar') {
-            itemsToRender = itemsToRender.filter(item => DEFAULT_BAR_CATEGORIES.includes(item.menu_items?.category_id));
+            itemsToRender = itemsToRender.filter(item => DEFAULT_BAR_CATEGORIES.includes(getItemCatId(item)));
         } else if (activeTab === 'other') {
             itemsToRender = []; // All items are assigned to either Kitchen or Bar in default fallback mode
         }
     } else {
         // Dynamically routing categories
         if (activeTab === 'kitchen') {
-            itemsToRender = itemsToRender.filter(item => kitchenCatIds.includes(item.menu_items?.category_id));
+            itemsToRender = itemsToRender.filter(item => kitchenCatIds.includes(getItemCatId(item)));
         } else if (activeTab === 'bar') {
-            itemsToRender = itemsToRender.filter(item => barCatIds.includes(item.menu_items?.category_id));
+            itemsToRender = itemsToRender.filter(item => barCatIds.includes(getItemCatId(item)));
         } else if (activeTab === 'other') {
-            itemsToRender = itemsToRender.filter(item => !kitchenCatIds.includes(item.menu_items?.category_id) && !barCatIds.includes(item.menu_items?.category_id));
+            itemsToRender = itemsToRender.filter(item => !kitchenCatIds.includes(getItemCatId(item)) && !barCatIds.includes(getItemCatId(item)));
         }
     }
 
@@ -180,11 +187,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
     if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
         itemsToRender = [...itemsToRender].sort((a, b) => {
-            const catA = a.menu_items?.category_id || '';
-            const catB = b.menu_items?.category_id || '';
+            const catA = getItemCatId(a);
+            const catB = getItemCatId(b);
             if (catA !== catB) return catA.localeCompare(catB);
-            const nameA = a.menu_items?.name || '';
-            const nameB = b.menu_items?.name || '';
+            const nameA = a.menu_items?.name || a.name || '';
+            const nameB = b.menu_items?.name || b.name || '';
             return nameA.localeCompare(nameB);
         });
     }
@@ -202,7 +209,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         : String(booking.id).slice(0, 4);
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
 
-    const maxCols = paperSize === '80mm' ? 48 : 30; // 58mm usually supports 30 or 32 columns. 30 is safest to avoid wrapping.
+    const maxCols = paperSize === '80mm' ? 48 : 30; // 80mm standard paper supports 48 cols. 58mm supports 30 cols.
     const divider = '-'.repeat(maxCols);
     const doubleDivider = '='.repeat(maxCols);
 
@@ -1214,11 +1221,20 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                 let cleanData = rawData;
                 let shouldManualCut = false;
                 if (rawData && rawData.length >= 4) {
-                    const lastFour = rawData.slice(-4);
-                    // 0x1D, 0x56, 66 (0x42), 0x00 is GS V 66 0
-                    if (lastFour[0] === 0x1D && lastFour[1] === 0x56 && lastFour[2] === 66 && lastFour[3] === 0) {
-                        cleanData = rawData.slice(0, -4);
-                        shouldManualCut = true;
+                    // Check if GS V (0x1D 0x56) cut sequence exists within the last 20 bytes
+                    const searchLength = Math.min(20, rawData.length);
+                    const tailBytes = rawData.slice(-searchLength);
+                    for (let i = 0; i < tailBytes.length - 1; i++) {
+                        if (tailBytes[i] === 0x1D && tailBytes[i+1] === 0x56) {
+                            shouldManualCut = true;
+                            break;
+                        }
+                    }
+                    if (shouldManualCut) {
+                        const cutIndex = rawData.lastIndexOf(0x1D);
+                        if (cutIndex !== -1 && cutIndex < rawData.length - 1 && rawData[cutIndex + 1] === 0x56) {
+                            cleanData = rawData.slice(0, cutIndex);
+                        }
                     }
                 }
 
@@ -1272,8 +1288,14 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
 
                 // If we stripped the cut command or explicitly need cutting, trigger it manually
                 if (shouldManualCut) {
-                    logger.info("SUNMI: executing manual cutPaper");
-                    await SunmiPrinter.cutPaper();
+                    try {
+                        logger.info("SUNMI: executing lineWrap and cutPaper");
+                        await SunmiPrinter.lineWrap({ lines: 3 });
+                        await SunmiPrinter.cutPaper();
+                    } catch (cutErr) {
+                        console.warn("SUNMI cutPaper warning (non-fatal):", cutErr);
+                        logger.warn("SUNMI: cutPaper warning (non-fatal)", cutErr);
+                    }
                 }
 
                 // Add a small 150ms buffer delay for physical motor/paper feed sync
