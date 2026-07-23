@@ -7,6 +7,7 @@ import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import { Save, Plus, Trash2, Edit, X, ZoomIn, ZoomOut, Maximize, RotateCw, Upload, QrCode, Printer, Download } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { getAppOrigin } from './utils/urlHelper';
 
 // Component โต๊ะที่ลากได้
 const DraggableTable = ({ table, onSelect, isSelected }) => {
@@ -548,7 +549,7 @@ export default function AdminTableEditor() {
                                 <span className="text-5xl font-black leading-none block mb-4 mt-1">{selectedTable.table_name}</span>
                                 
                                 <img 
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + '/table/' + selectedTable.id)}`} 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getAppOrigin() + '/table/' + selectedTable.id)}`} 
                                     alt="Table QR Code"
                                     className="w-40 h-40 object-contain mb-4 border border-zinc-100 p-1"
                                 />
@@ -565,7 +566,7 @@ export default function AdminTableEditor() {
                                 <div className="flex gap-2 w-full">
                                     <button 
                                         onClick={() => {
-                                            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(window.location.origin + '/table/' + selectedTable.id)}`;
+                                            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getAppOrigin() + '/table/' + selectedTable.id)}`;
                                             const printWindow = window.open('', '_blank', 'width=600,height=800');
                                             printWindow.document.write(`
                                                 <html>
@@ -664,7 +665,7 @@ export default function AdminTableEditor() {
                                     <button 
                                         onClick={async () => {
                                             try {
-                                                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(window.location.origin + '/table/' + selectedTable.id)}`;
+                                                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(getAppOrigin() + '/table/' + selectedTable.id)}`;
                                                 const response = await fetch(qrUrl);
                                                 const blob = await response.blob();
                                                 const blobUrl = window.URL.createObjectURL(blob);

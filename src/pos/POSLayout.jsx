@@ -137,23 +137,29 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                     <div className="flex items-center gap-4">
                         {/* Offline Sync Status Badge */}
                         {!online ? (
-                            <div className="flex items-center gap-1.5 bg-red-100 border border-red-200 text-red-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm animate-pulse">
+                            <button
+                                onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
+                                className="flex items-center gap-1.5 bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm animate-pulse cursor-pointer transition-all active:scale-95"
+                            >
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                                 <span>OFFLINE MODE ({queueLength} PENDING)</span>
-                            </div>
+                            </button>
                         ) : queueLength > 0 ? (
                             <button
-                                onClick={syncOfflineQueue}
+                                onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
                                 className="flex items-center gap-1.5 bg-amber-100 border border-amber-200 text-amber-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full hover:bg-amber-200 cursor-pointer active:scale-95 transition-all shadow-sm"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
                                 <span>SYNC PENDING ({queueLength})</span>
                             </button>
                         ) : (
-                            <div className="flex items-center gap-1.5 bg-emerald-100 border border-emerald-200 text-emerald-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm">
+                            <button
+                                onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
+                                className="flex items-center gap-1.5 bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 text-emerald-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm cursor-pointer transition-all active:scale-95"
+                            >
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                <span>ONLINE</span>
-                            </div>
+                                <span>ONLINE (QUEUE: 0)</span>
+                            </button>
                         )}
 
                         {!hasSession && (

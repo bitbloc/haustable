@@ -62,7 +62,7 @@ public class MainActivity extends BridgeActivity {
             }
             
             webView.setWebViewClient(new WebViewClient());
-            webView.loadUrl("http://localhost/pos/cfd");
+            webView.loadUrl("https://haustable.vercel.app/pos/cfd");
             setContentView(webView);
         }
     }

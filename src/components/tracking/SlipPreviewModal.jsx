@@ -4,6 +4,7 @@ import { X, Download, Save } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '../../context/LanguageContext'
 import BookingSlip from './BookingSlip'
+import { getAppOrigin } from '../../utils/urlHelper'
 
 export default function SlipPreviewModal({ isOpen, onClose, data, optionMap }) {
     const { t } = useLanguage()
@@ -57,7 +58,7 @@ export default function SlipPreviewModal({ isOpen, onClose, data, optionMap }) {
         }
     }
 
-    const checkInUrl = `${window.location.origin}/staff/checkin?id=${data?.tracking_token || data?.id}`
+    const checkInUrl = `${getAppOrigin()}/staff/checkin?id=${data?.tracking_token || data?.id}`
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(checkInUrl)}`
     
     return (

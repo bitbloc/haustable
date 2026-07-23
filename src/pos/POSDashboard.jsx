@@ -9,6 +9,7 @@ import { usePOSOrder } from '../hooks/usePOSOrder';
 import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
+import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
 import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
@@ -192,6 +193,9 @@ export default function POSDashboard() {
         }
     };
 
+    // Offline Queue Drawer State
+    const [showOfflineQueueDrawer, setShowOfflineQueueDrawer] = useState(false);
+
     useEffect(() => {
         // Fetch current session
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -224,11 +228,15 @@ export default function POSDashboard() {
         const handleTriggerLock = () => {
             lockScreen();
         };
+        const handleTriggerOfflineDrawer = () => {
+            setShowOfflineQueueDrawer(true);
+        };
 
         window.addEventListener('pos-shift-changed', handleShiftChanged);
         window.addEventListener('pos-trigger-close-shift', handleTriggerClose);
         window.addEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
         window.addEventListener('pos-trigger-lock', handleTriggerLock);
+        window.addEventListener('pos-trigger-offline-drawer', handleTriggerOfflineDrawer);
 
         return () => {
             subscription.unsubscribe();
@@ -236,6 +244,7 @@ export default function POSDashboard() {
             window.removeEventListener('pos-trigger-close-shift', handleTriggerClose);
             window.removeEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
             window.removeEventListener('pos-trigger-lock', handleTriggerLock);
+            window.removeEventListener('pos-trigger-offline-drawer', handleTriggerOfflineDrawer);
         };
     }, []);
 
@@ -1486,6 +1495,11 @@ export default function POSDashboard() {
                     }}
                 />
             )}
+
+            <POSOfflineQueueDrawer 
+                isOpen={showOfflineQueueDrawer}
+                onClose={() => setShowOfflineQueueDrawer(false)}
+            />
 
             {showMoveModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">

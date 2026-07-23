@@ -160,14 +160,35 @@ export default function StockPage() {
             const diagNote = (meta.note || 'Adjustment');
             
             if (type === 'set') {
-                 // Absolute Update (Audit/Count) - Atomic RPC with row lock
-                 const { error } = await supabase.rpc('set_stock_quantity', {
-                     p_item_id: itemId,
-                     p_new_quantity: roundedChange,
-                     p_reason: diagNote, 
-                     p_performed_by: performedBy
-                 });
-                 if (error) throw error;
+                 // ── Absolute Update (Audit/Count) ──
+                 // FIX: Bypass trigger entirely to prevent double-count.
+                 // 1. Direct UPDATE on stock_items (no trigger involvement)
+                 // 2. Audit log with quantity_change=0 (trigger adds 0 = safe)
+
+                 // Get old quantity for audit note
+                 const oldItem = items.find(i => i.id === itemId);
+                 const oldQty = oldItem?.current_quantity || 0;
+                 const diff = roundedChange - oldQty;
+
+                 const { error: updateError } = await supabase
+                     .from('stock_items')
+                     .update({ 
+                         current_quantity: roundedChange, 
+                         updated_at: new Date().toISOString() 
+                     })
+                     .eq('id', itemId);
+                 if (updateError) throw updateError;
+
+                 // Audit log — quantity_change=0 prevents trigger double-count
+                 // even if trigger doesn't skip 'set' type
+                 await supabase.from('stock_transactions').insert({
+                     stock_item_id: itemId,
+                     transaction_type: 'set',
+                     quantity_change: 0,
+                     performed_by: performedBy,
+                     note: `${diagNote} | ${oldQty} → ${roundedChange} (Δ${diff >= 0 ? '+' : ''}${diff})`
+                 }).catch(() => {}); // fire-and-forget audit log
+
             } else {
                  // Relative Update (In/Out)
                  const { error } = await supabase.from('stock_transactions').insert({
@@ -203,6 +224,7 @@ export default function StockPage() {
             pendingAdjustIds.current.delete(itemId);
         }
     };
+
 
     const handleManualUpdate = async () => {
         if (!confirm('ยืนยันส่งสรุปการอัพเดทสต็อก (1 ชม. ล่าสุด) ลงกลุ่ม LINE?')) return;

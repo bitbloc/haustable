@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { getAppOrigin } from '../../utils/urlHelper';
 import FlappyCatGame from './FlappyCatGame';
 import { Gamepad2, Music, Tag, Trophy, Award, X, MapPin, CheckCircle, ShieldAlert, RefreshCw, LogIn, Gift, Copy } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -388,7 +389,7 @@ export default function ArcadeLobby() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'line',
         options: {
-          redirectTo: window.location.origin + '/arcade'
+          redirectTo: getAppOrigin() + '/arcade'
         }
       });
       if (error) throw error;

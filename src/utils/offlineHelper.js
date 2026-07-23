@@ -7,6 +7,8 @@ const CACHE_MENU_CATS = 'pos_cache_menu_categories';
 const CACHE_TABLES = 'pos_cache_tables_layout';
 const CACHE_BOOKINGS = 'pos_cache_active_bookings';
 
+const CACHE_PROFILES = 'pos_cache_customer_profiles';
+
 // Helper to check if network is available
 export function isOnline() {
     return navigator.onLine;
@@ -68,7 +70,10 @@ export const posCache = {
     setTables: (data) => cacheData(CACHE_TABLES, data),
     
     getBookings: () => getCachedData(CACHE_BOOKINGS) || [],
-    setBookings: (data) => cacheData(CACHE_BOOKINGS, data)
+    setBookings: (data) => cacheData(CACHE_BOOKINGS, data),
+
+    getProfiles: () => getCachedData(CACHE_PROFILES) || [],
+    setProfiles: (data) => cacheData(CACHE_PROFILES, data)
 };
 
 // 3. Sync offline queue to Supabase
@@ -131,17 +136,54 @@ export async function syncOfflineQueue() {
                 // Save mapping
                 idMapping[tempBookingId] = data.id;
                 console.log(`[Offline Sync] Mapped booking local ID ${tempBookingId} -> remote ID ${data.id}`);
-            } 
+            }
+
+            else if (action.type === 'create_pickup') {
+                const { tempBookingId, customerNote, status, bookingTime } = action.payload;
+
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .insert({
+                        table_id: null,
+                        status: status || 'pending',
+                        booking_type: 'pickup',
+                        booking_time: bookingTime || new Date().toISOString(),
+                        pax: 1,
+                        customer_note: customerNote,
+                        pickup_contact_name: customerNote,
+                        staff_remark: 'Walk-in Pick-up (Offline Sync)'
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                idMapping[tempBookingId] = data.id;
+                console.log(`[Offline Sync] Mapped pickup local ID ${tempBookingId} -> remote ID ${data.id}`);
+            }
+
+            else if (action.type === 'attach_customer') {
+                let { bookingId, userId } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
+                }
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ user_id: userId })
+                    .eq('id', bookingId);
+                if (error) throw error;
+            }
             
             else if (action.type === 'submit_items') {
                 let { bookingId, items } = action.payload;
                 
-                // If this references a local booking ID created earlier in the queue, swap it
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
                 }
                 
-                // Make sure bookingId is a valid number, if it's still a local string ID skip/throw
                 if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
@@ -159,7 +201,7 @@ export async function syncOfflineQueue() {
             } 
             
             else if (action.type === 'complete_checkout') {
-                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId } = action.payload;
+                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId, discountAmount, xhausEarned, xhausRedeemed, xhausDiscount } = action.payload;
                 
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
@@ -172,6 +214,7 @@ export async function syncOfflineQueue() {
                 const updatePayload = {
                     status: 'completed',
                     total_amount: totalAmount,
+                    discount_amount: discountAmount || 0,
                     staff_remark: rewardCode 
                         ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode} (Offline Sync)`
                         : `Paid by ${paymentMethod.toUpperCase()} (Offline Sync)`
@@ -186,6 +229,46 @@ export async function syncOfflineQueue() {
                     .eq('id', bookingId);
                 
                 if (error) throw error;
+
+                // Sync xhaus points if redeemed/earned
+                if (xhausEarned || xhausRedeemed) {
+                    await supabase.rpc('process_checkout_xhaus', {
+                        p_booking_id: bookingId,
+                        p_xhaus_earned: xhausEarned || 0,
+                        p_xhaus_redeemed: xhausRedeemed || 0,
+                        p_xhaus_discount: xhausDiscount || 0
+                    }).catch(err => console.warn('Failed RPC process_checkout_xhaus during sync:', err));
+                }
+            }
+
+            else if (action.type === 'split_payment') {
+                let { bookingId, paidItems, paymentMethod, totalAmount } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
+                }
+
+                for (const item of paidItems) {
+                    if (item.menu_item_id) {
+                        const { data: dbItem } = await supabase
+                            .from('order_items')
+                            .select('*')
+                            .eq('booking_id', bookingId)
+                            .eq('menu_item_id', item.menu_item_id)
+                            .limit(1)
+                            .maybeSingle();
+
+                        if (dbItem) {
+                            if (dbItem.quantity <= item.quantity) {
+                                await supabase.from('order_items').delete().eq('id', dbItem.id);
+                            } else {
+                                await supabase.from('order_items').update({ quantity: dbItem.quantity - item.quantity }).eq('id', dbItem.id);
+                            }
+                        }
+                    }
+                }
             }
             
             else if (action.type === 'call_staff') {

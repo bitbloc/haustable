@@ -491,8 +491,14 @@ export function usePOSOrder() {
     };
     const attachCustomerToBooking = async (bookingId, userId) => {
         if (!isOnline()) {
-            toast.error('❌ ออฟไลน์: ไม่สามารถระบุโปรไฟล์ลูกค้าได้ในขณะนี้');
-            return false;
+            console.log('[Offline Mode] Attaching customer profile to local booking cache');
+            const bookings = posCache.getBookings();
+            const updated = bookings.map(b => b.id === bookingId ? { ...b, user_id: userId } : b);
+            posCache.setBookings(updated);
+
+            addToOfflineQueue('attach_customer', { bookingId, userId });
+            toast.warning('⚠️ ออฟไลน์: บันทึกการผูกสิทธิ์สมาชิกในเครื่องแล้ว');
+            return true;
         }
         try {
             const { error } = await supabase

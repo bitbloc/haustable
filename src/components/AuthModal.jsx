@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getAppOrigin } from '../utils/urlHelper'
 import { X, Mail, Lock, User, Phone, Check, Eye, EyeOff, Calendar, Smartphone, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { useBookingContext } from '../context/BookingContext'
@@ -66,7 +67,7 @@ export default function AuthModal({ isOpen, onClose }) {
             localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search)
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: window.location.origin }
+                options: { redirectTo: getAppOrigin() }
             })
             if (error) throw error
         } catch (err) { setError(err.message) }

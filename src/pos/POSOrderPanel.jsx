@@ -327,32 +327,56 @@ export default function POSOrderPanel({
     const pointsMultiplier = attachedMemberCrm ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
     const pointsEarned = Math.floor((total / 100) * pointsMultiplier * 100) / 100;
     
-    // CFD Broadcast Channel
+    // CFD Broadcast Channel (BroadcastChannel + Supabase Realtime for cross-origin)
     const cfdChannel = React.useRef(null);
+    const supabaseCfdRef = React.useRef(null);
+
     React.useEffect(() => {
         cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
+        supabaseCfdRef.current = supabase.channel('pos_cfd_room');
+        supabaseCfdRef.current.subscribe();
+
         return () => {
             if (cfdChannel.current) cfdChannel.current.close();
+            if (supabaseCfdRef.current) supabase.removeChannel(supabaseCfdRef.current);
         };
     }, []);
 
+    const broadcastCFD = (msg) => {
+        if (cfdChannel.current) {
+            try { cfdChannel.current.postMessage(msg); } catch (e) {}
+        }
+        if (supabaseCfdRef.current) {
+            supabaseCfdRef.current.send({
+                type: 'broadcast',
+                event: 'cfd_event',
+                payload: msg
+            }).catch(() => {});
+        }
+        try {
+            localStorage.setItem('pos_cfd_last_event', JSON.stringify(msg));
+        } catch (e) {}
+    };
+
     React.useEffect(() => {
-        if (!cfdChannel.current) return;
         if (order.items && order.items.length > 0) {
-            cfdChannel.current.postMessage({
+            broadcastCFD({
                 type: 'UPDATE_CART',
                 payload: {
                     items: order.items,
                     subtotal,
                     discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
                     tax,
-                    total
+                    total,
+                    customer: order.customer || booking?.customer_name || 'Walk-in Guest',
+                    memberProfile: attachedMemberCrm || booking?.profiles || null,
+                    tableName: order.table?.table_name || booking?.tables_layout?.table_name || null
                 }
             });
         } else {
-            cfdChannel.current.postMessage({ type: 'IDLE' });
+            broadcastCFD({ type: 'IDLE' });
         }
-    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total]);
+    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, attachedMemberCrm, booking]);
     
     const hasNewItems = order.items.some(item => !item.db_id);
 
@@ -1390,21 +1414,19 @@ export default function POSOrderPanel({
                                     <button 
                                         onClick={() => {
                                             onOpenSlip && onOpenSlip('billing');
-                                            if (cfdChannel.current) {
-                                                cfdChannel.current.postMessage({
-                                                    type: 'SHOW_QR',
-                                                    payload: {
-                                                        orderData: {
-                                                            items: order.items,
-                                                            subtotal,
-                                                            discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
-                                                            tax,
-                                                            total
-                                                        },
+                                            broadcastCFD({
+                                                type: 'SHOW_QR',
+                                                payload: {
+                                                    orderData: {
+                                                        items: order.items,
+                                                        subtotal,
+                                                        discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                                                        tax,
                                                         total
-                                                    }
-                                                });
-                                            }
+                                                    },
+                                                    total
+                                                }
+                                            });
                                             toast.info("พิมพ์ใบแจ้งยอด/แสดงคิวอาร์โค้ดแล้ว");
                                         }}
                                         className="w-full bg-[#E6F4FF] hover:bg-blue-100 border border-blue-200 text-blue-800 py-2.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
@@ -1446,8 +1468,8 @@ export default function POSOrderPanel({
                                             appliedReward ? appliedReward.id : null
                                         );
                                         setActiveModal(null);
-                                        if (cfdChannel.current && paymentMethod === 'qr') {
-                                            cfdChannel.current.postMessage({ type: 'PAYMENT_SUCCESS' });
+                                        if (paymentMethod === 'qr') {
+                                            broadcastCFD({ type: 'PAYMENT_SUCCESS' });
                                         }
                                     }}
                                     className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-accent)] hover:bg-[#d00000] border border-[#c00000] text-white py-2.5 rounded-lg transition-all shadow-md active:scale-98 cursor-pointer font-mono text-[10px] font-bold uppercase tracking-wider"

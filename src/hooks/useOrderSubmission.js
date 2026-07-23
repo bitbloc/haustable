@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getAppOrigin } from '../utils/urlHelper'
 
 export function useOrderSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -102,7 +103,7 @@ export function useOrderSubmission() {
                     }
 
                     if (lineUserId) {
-                        const origin = window.location.origin
+                        const origin = getAppOrigin()
                         const shopLogoUrl = `${origin}/logo.png`
                         const checkInUrl = `${origin}/staff/checkin?id=${resultData.tracking_token || resultData.id}`
                         

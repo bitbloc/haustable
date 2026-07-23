@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient'; // Adjusted path
-import AuthModal from '../AuthModal'; // Reuse existing AuthModal for login
-// Ensure path to AuthModal is correct: '../AuthModal' from 'src/components/layout/' -> '../../components/AuthModal' if in layout dir.
-// Wait, AuthModal is in src/components/AuthModal.jsx
-// StaffAuthLayout will be in src/components/layout/StaffAuthLayout.jsx
-// So path is ../../components/AuthModal
+import { supabase } from '../../lib/supabaseClient';
+import AuthModal from '../AuthModal';
 
 export default function StaffAuthLayout() {
     const location = useLocation();
-    const [authStatus, setAuthStatus] = useState('loading'); // loading, unauthenticated, unauthorized, authorized
+    const [authStatus, setAuthStatus] = useState('loading');
     const [userEmail, setUserEmail] = useState(null); 
-    const [showLogin, setShowLogin] = useState(true); // Default to show login if not auth
+    const [showLogin, setShowLogin] = useState(true);
 
     useEffect(() => {
         checkUser();
@@ -26,7 +22,6 @@ export default function StaffAuthLayout() {
     }, []);
 
     const checkUser = async () => {
-        // Optimistic Check
         const cachedRole = localStorage.getItem('staff_role');
         const cachedId = localStorage.getItem('staff_id');
         
@@ -37,15 +32,12 @@ export default function StaffAuthLayout() {
         }
 
         try {
-            // Background / Real Check
             const { data: { session }, error } = await supabase.auth.getSession();
             if (error || !session) {
                 if (isOptimistic) {
-                     // Session expired but we showed authorized. Revert.
                      console.log("Session expired, reverting optimistic auth");
                 }
                 
-                // Explicitly clear Supabase auth state to prevent stale tokens/WebSocket issues
                 await supabase.auth.signOut();
 
                 localStorage.removeItem('staff_role');
@@ -54,13 +46,8 @@ export default function StaffAuthLayout() {
                 return;
             }
 
-            setUserEmail(session.user.email); // Store email for display
+            setUserEmail(session.user.email);
 
-            // Verify Role
-            // Optimization: If optimistic was true and session.id matches cachedId, 
-            // we could skip profile fetch if we trust cache ttl? 
-            // consistently verifying is safer, but let's do it.
-            
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('role')
@@ -74,15 +61,12 @@ export default function StaffAuthLayout() {
                 return;
             }
 
-            // Success (Update Cache)
             localStorage.setItem('staff_role', 'admin');
             localStorage.setItem('staff_id', session.user.id);
             setAuthStatus('authorized');
 
         } catch (err) {
             console.error("Staff Auth Error:", err);
-            // If network error, and we were optimistic, we stay authorized (Offline Mode support)
-            // But if we weren't optimistic, we fail.
             if (!isOptimistic) setAuthStatus('unauthenticated');
         }
     };
@@ -99,7 +83,6 @@ export default function StaffAuthLayout() {
     }
 
     if (authStatus === 'unauthenticated') {
-        // Redirect to Login Page, preserving the current location state
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 

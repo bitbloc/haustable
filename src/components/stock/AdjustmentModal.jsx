@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Minus, Plus, Save, Package, Settings, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import LiquidLevelSlider from './LiquidLevelSlider';
@@ -10,6 +10,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [unitOptions, setUnitOptions] = useState([]);
     const [loading, setLoading] = useState(false);
+    const savingRef = useRef(false); // Sync lock to prevent double-click
     
     // Liquid / Partial State (for Set/Count mode)
     const [showLiquidSlider, setShowLiquidSlider] = useState(false);
@@ -101,6 +102,8 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
     }, [mode, item]);
 
     const handleSave = async () => {
+        if (savingRef.current) return; // Sync lock: prevents double-click
+        savingRef.current = true;
         setLoading(true);
         try {
             // Save Capacity if changed and using calculator
@@ -163,6 +166,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
                 // In / Out
                 if (mainVal <= 0) {
                      setLoading(false);
+                     savingRef.current = false;
                      return;
                 }
                 const actualChange = mainVal * selectedUnit.factor;
@@ -179,6 +183,7 @@ export default function AdjustmentModal({ item, currentUser, onClose, onUpdate, 
             toast.error('Failed to update stock');
         } finally {
             setLoading(false);
+            savingRef.current = false;
         }
     };
 

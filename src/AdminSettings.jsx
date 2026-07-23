@@ -8,6 +8,7 @@ import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { logger } from './utils/logger'
+import { getAppOrigin } from './utils/urlHelper'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -92,7 +93,7 @@ export default function AdminSettings() {
     const [crmQrUrl, setCrmQrUrl] = useState('')
 
     useEffect(() => {
-        const url = `${window.location.origin}/member-card`;
+        const url = `${getAppOrigin()}/member-card`;
         QRCode.toDataURL(url, { width: 300, margin: 2 })
             .then(urlData => setCrmQrUrl(urlData))
             .catch(err => console.error("Failed to generate CRM QR:", err));
@@ -1992,7 +1993,7 @@ export default function AdminSettings() {
                                     <Download size={12} /> Download QR Code Image
                                 </a>
                                 <p className="text-[8px] text-[#767673] font-mono select-all">
-                                    Target: {window.location.origin}/member-card
+                                    Target: {getAppOrigin()}/member-card
                                 </p>
                             </div>
                         </div>
