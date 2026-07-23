@@ -1572,7 +1572,7 @@ export default function AdminSettings() {
                             <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
                                 <span>🔀</span> การจัดเส้นทางหมวดหมู่พิมพ์ (Printer Category Routing)
                             </h2>
-                            <p className="text-[10px] text-[#767673] font-sans mt-1">ลากหมวดหมู่อาหารไปวางในฝั่งเครื่องพิมพ์ที่ต้องการ เพื่อแยกรายการพิมพ์ออกเป็นใบสั่งครัว/สั่งเครื่องดื่มโดยอัตโนมัติ</p>
+                            <p className="text-[10px] text-[#767673] font-sans mt-1">กดปุ่มหรือลากหมวดหมู่อาหารไปวางในฝั่งเครื่องพิมพ์ที่ต้องการ เพื่อแยกรายการพิมพ์ออกเป็นใบสั่งครัว/สั่งเครื่องดื่มโดยอัตโนมัติ (รองรับทั้งมือถือ/APK และ Desktop)</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1596,19 +1596,23 @@ export default function AdminSettings() {
                                                 key={cat.id}
                                                 draggable
                                                 onDragStart={(e) => handleCategoryDragStart(e, cat.id)}
-                                                className="bg-[#F5F5F2] border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-[#FF5500] hover:bg-orange-50/10 transition-all flex justify-between items-center group"
+                                                className="bg-[#F5F5F2] border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-[#FF5500] hover:bg-orange-50/10 transition-all flex justify-between items-center gap-2"
                                             >
-                                                <span>{cat.name}</span>
-                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="truncate">{cat.name}</span>
+                                                <div className="flex gap-1 shrink-0">
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleAssignCategory(cat.id, 'kitchen')}
-                                                        className="bg-emerald-600 text-white font-mono text-[9px] px-1 py-0.5 rounded hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-[10px] font-bold px-2 py-1 rounded active:scale-95 transition-all cursor-pointer shadow-xs"
+                                                        title="ย้ายเข้าเครื่องพิมพ์ครัว"
                                                     >
                                                         + ครัว
                                                     </button>
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleAssignCategory(cat.id, 'bar')}
-                                                        className="bg-blue-600 text-white font-mono text-[9px] px-1 py-0.5 rounded hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white font-mono text-[10px] font-bold px-2 py-1 rounded active:scale-95 transition-all cursor-pointer shadow-xs"
+                                                        title="ย้ายเข้าเครื่องพิมพ์บาร์"
                                                     >
                                                         + บาร์
                                                     </button>
@@ -1642,20 +1646,32 @@ export default function AdminSettings() {
                                                 key={cat.id}
                                                 draggable
                                                 onDragStart={(e) => handleCategoryDragStart(e, cat.id)}
-                                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-red-500 transition-all flex justify-between items-center"
+                                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-emerald-500 transition-all flex justify-between items-center gap-2"
                                             >
-                                                <span>{cat.name}</span>
-                                                <button
-                                                    onClick={() => handleRemoveCategory(cat.id, 'kitchen')}
-                                                    className="text-[#767673] hover:text-red-500 font-mono text-xs font-bold px-1.5 hover:bg-red-50 rounded cursor-pointer"
-                                                >
-                                                    ×
-                                                </button>
+                                                <span className="truncate">{cat.name}</span>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleAssignCategory(cat.id, 'bar')}
+                                                        className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded active:scale-95 transition-all cursor-pointer"
+                                                        title="ย้ายไปเครื่องพิมพ์บาร์"
+                                                    >
+                                                        → บาร์
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveCategory(cat.id, 'kitchen')}
+                                                        className="text-[#767673] hover:text-red-500 font-mono text-xs font-bold px-1.5 py-0.5 hover:bg-red-50 rounded cursor-pointer transition-all"
+                                                        title="ย้ายกลับหมวดหมู่ยังไม่ระบุ"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))
                                     }
                                     {(printerConfig.kitchen_categories || []).length === 0 && (
-                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">ลากหมวดหมู่มาวางที่นี่เพื่อส่งเข้าเครื่องพิมพ์ครัว</div>
+                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">กดปุ่มหรือลากหมวดหมู่มาวางที่นี่ เพื่อส่งเข้าเครื่องพิมพ์ครัว</div>
                                     )}
                                 </div>
                             </div>
@@ -1680,20 +1696,32 @@ export default function AdminSettings() {
                                                 key={cat.id}
                                                 draggable
                                                 onDragStart={(e) => handleCategoryDragStart(e, cat.id)}
-                                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-red-500 transition-all flex justify-between items-center"
+                                                className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg text-xs font-semibold cursor-grab active:cursor-grabbing hover:border-blue-500 transition-all flex justify-between items-center gap-2"
                                             >
-                                                <span>{cat.name}</span>
-                                                <button
-                                                    onClick={() => handleRemoveCategory(cat.id, 'bar')}
-                                                    className="text-[#767673] hover:text-red-500 font-mono text-xs font-bold px-1.5 hover:bg-red-50 rounded cursor-pointer"
-                                                >
-                                                    ×
-                                                </button>
+                                                <span className="truncate">{cat.name}</span>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleAssignCategory(cat.id, 'kitchen')}
+                                                        className="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded active:scale-95 transition-all cursor-pointer"
+                                                        title="ย้ายไปเครื่องพิมพ์ครัว"
+                                                    >
+                                                        ← ครัว
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveCategory(cat.id, 'bar')}
+                                                        className="text-[#767673] hover:text-red-500 font-mono text-xs font-bold px-1.5 py-0.5 hover:bg-red-50 rounded cursor-pointer transition-all"
+                                                        title="ย้ายกลับหมวดหมู่ยังไม่ระบุ"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))
                                     }
                                     {(printerConfig.bar_categories || []).length === 0 && (
-                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">ลากหมวดหมู่มาวางที่นี่เพื่อส่งเข้าเครื่องพิมพ์บาร์</div>
+                                        <div className="text-[10px] text-[#767673] font-mono text-center py-8">กดปุ่มหรือลากหมวดหมู่มาวางที่นี่ เพื่อส่งเข้าเครื่องพิมพ์บาร์</div>
                                     )}
                                 </div>
                             </div>

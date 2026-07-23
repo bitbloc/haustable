@@ -82,6 +82,8 @@ export default function SlipModal({ booking, type, onClose }) {
     const [receiptShopLogoUrl, setReceiptShopLogoUrl] = useState('');
     const [receiptShopFooter, setReceiptShopFooter] = useState('THANK YOU FOR YOUR VISIT');
 
+    const hasAutoPrintedRef = useRef(false);
+
     // Fetch Options mapping, QR settings, and execute SUNMI Auto Print
     useEffect(() => {
         const initAndAutoPrint = async () => {
@@ -141,34 +143,47 @@ export default function SlipModal({ booking, type, onClose }) {
                 console.error("Failed to read printer config:", err);
             }
 
-            // 4. SUNMI Auto Print
+            // 4. SUNMI Auto Print (Guard with hasAutoPrintedRef to prevent duplicate triggers)
             if (printerType === 'sunmi') {
+                if (hasAutoPrintedRef.current) return;
+                hasAutoPrintedRef.current = true;
+
                 setIsAutoPrinting(true);
                 // Wait 400ms for stable render state
                 await new Promise(resolve => setTimeout(resolve, 400));
                 try {
+                    let activePaperSize = '58mm';
+                    try {
+                        const stored = localStorage.getItem('onhaus_printer_config');
+                        if (stored) {
+                            const config = JSON.parse(stored);
+                            if (config.paper_width) activePaperSize = config.paper_width;
+                        }
+                    } catch (e) {}
+
                     if (activeTab === 'kitchen') {
                         // Print Kitchen slip
-                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (kitchenBytes) {
                             await printToSunmiBuiltIn(kitchenBytes);
                         }
                         
                         // Print Bar slip
-                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
                         }
 
                         // Print Other slip
-                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
+                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (otherBytes) {
                             await printToSunmiBuiltIn(otherBytes);
                         }
                     } else {
-                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, '80mm', loadedConfig, 'sunmi');
+                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
-                            const qrToPrint = (activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) ? loadedConfig.paymentQrUrl : null;
+                            // QR code ONLY for billing tab (PromptPay before payment). NEVER on receipt tab after payment!
+                            const qrToPrint = (activeTab === 'billing') ? loadedConfig.paymentQrUrl : null;
                             await printToSunmiBuiltIn(rawBytes, loadedConfig.shopLogoUrl, qrToPrint);
                         }
                     }
@@ -338,14 +353,12 @@ export default function SlipModal({ booking, type, onClose }) {
             docTitle = 'RECEIPT / ใบเสร็จรับเงิน'
         }
 
-        // QR Code Section HTML
+        // QR Code Section HTML - ONLY for billing tab (PromptPay before payment)
         let qrSectionHtml = ''
-        if ((activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) && qrCodeUrl) {
-            const qrTitleText = activeTab === 'billing' ? 'SCAN TO PAY / สแกนชำระเงิน' : 'SHOP QR CODE / คิวอาร์โค้ดร้านค้า'
-            const qrOpacity = activeTab === 'receipt' ? 'opacity: 0.7;' : ''
+        if (activeTab === 'billing' && qrCodeUrl) {
             qrSectionHtml = `
-                <div class="qr-section" style="${qrOpacity}">
-                    <div class="qr-title">${qrTitleText}</div>
+                <div class="qr-section">
+                    <div class="qr-title">PROMPTPAY / สแกนชำระเงิน (พร้อมเพย์)</div>
                     <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
                 </div>
             `
@@ -623,10 +636,20 @@ export default function SlipModal({ booking, type, onClose }) {
 
         if (printerType === 'sunmi') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, '80mm', receiptConfig, 'sunmi');
+                let activePaperSize = '58mm';
+                try {
+                    const stored = localStorage.getItem('onhaus_printer_config');
+                    if (stored) {
+                        const config = JSON.parse(stored);
+                        if (config.paper_width) activePaperSize = config.paper_width;
+                    }
+                } catch (e) {}
+
+                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                 if (rawBytes) {
                     const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar') ? receiptConfig.shopLogoUrl : null;
-                    const qrToPrint = (activeTab === 'billing' || (activeTab === 'receipt' && paymentMethod === 'qr')) ? qrCodeUrl : null;
+                    // QR code ONLY for billing tab (PromptPay before payment). NEVER on receipt tab after payment!
+                    const qrToPrint = (activeTab === 'billing') ? qrCodeUrl : null;
                     await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                 } else {
                     toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");

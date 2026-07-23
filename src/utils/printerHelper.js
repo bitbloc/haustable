@@ -158,6 +158,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             itemsToRender = itemsToRender.filter(item => !DEFAULT_BAR_CATEGORIES.includes(item.menu_items?.category_id));
         } else if (activeTab === 'bar') {
             itemsToRender = itemsToRender.filter(item => DEFAULT_BAR_CATEGORIES.includes(item.menu_items?.category_id));
+        } else if (activeTab === 'other') {
+            itemsToRender = []; // All items are assigned to either Kitchen or Bar in default fallback mode
         }
     } else {
         // Dynamically routing categories
@@ -404,18 +406,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             : 0;
 
         const totalQty = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
-        encoder.text(formatTwoCols('จำนวนชิ้น', totalQty.toString(), maxCols) + '\n');
-        encoder.text(formatTwoCols('ยอดรวมก่อนหัก', subtotal.toLocaleString() + '.-', maxCols) + '\n');
+        encoder.text(formatTwoCols('จำนวนชิ้น', `${totalQty} ชิ้น`, maxCols) + '\n');
+        encoder.text(formatTwoCols('ยอดรวมก่อนหัก', `${subtotal.toLocaleString()}.-`, maxCols) + '\n');
         if (discount > 0) {
-            encoder.text(formatTwoCols('ส่วนลด', `-${discount.toLocaleString()}` + '.-', maxCols) + '\n');
+            encoder.text(formatTwoCols('ส่วนลด', `-${discount.toLocaleString()}.-`, maxCols) + '\n');
         }
         if (vatVal > 0) {
-            encoder.text(formatTwoCols('ภาษีมูลค่าเพิ่ม (7%)', vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.-', maxCols) + '\n');
+            encoder.text(formatTwoCols('ภาษีมูลค่าเพิ่ม (7%)', vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols) + '\n');
         }
         encoder.line(divider)
                .bold(true)
                .size(0, 1)
-               .text(formatTwoCols('ยอดรวมสุทธิ', `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}.-`, maxCols) + '\n')
+               .text(formatTwoCols('ยอดรวมสุทธิ', `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, maxCols) + '\n')
                .size(0, 0)
                .bold(false)
                .line(doubleDivider);

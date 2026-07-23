@@ -25,6 +25,16 @@ export default function POSCustomerDisplay() {
     const [slideshowImages, setSlideshowImages] = useState([]);
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
+    // Helper to format image URL correctly whether full URL, path, or text_only
+    const getValidImageUrl = (urlStr) => {
+        if (!urlStr || urlStr === 'text_only') return null;
+        if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('data:')) {
+            return urlStr;
+        }
+        const cleanPath = urlStr.startsWith('/') ? urlStr.slice(1) : urlStr;
+        return `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/menu/${cleanPath}`;
+    };
+
     // Fetch menu showcase images for IDLE mode
     useEffect(() => {
         const fetchImages = async () => {
@@ -34,14 +44,16 @@ export default function POSCustomerDisplay() {
                     .select('image_url, name, price')
                     .not('image_url', 'is', null)
                     .neq('image_url', '')
-                    .limit(10);
+                    .limit(20);
                 
                 if (data && data.length > 0) {
-                    const validItems = data.map(item => ({
-                        url: `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/menu/${item.image_url}`,
-                        name: item.name,
-                        price: item.price
-                    }));
+                    const validItems = data
+                        .map(item => ({
+                            url: getValidImageUrl(item.image_url),
+                            name: item.name,
+                            price: item.price
+                        }))
+                        .filter(item => Boolean(item.url));
                     setSlideshowImages(validItems);
                 }
             } catch (err) {
@@ -53,12 +65,12 @@ export default function POSCustomerDisplay() {
 
     // Slideshow transition interval
     useEffect(() => {
-        if (slideshowImages.length === 0) return;
+        if (!slideshowImages || slideshowImages.length === 0) return;
         const interval = setInterval(() => {
             setCurrentSlideIndex(prev => (prev + 1) % slideshowImages.length);
         }, 6000);
         return () => clearInterval(interval);
-    }, [slideshowImages]);
+    }, [slideshowImages.length]);
 
     // Dual Broadcast Channel (Local Tab + Supabase Realtime + LocalStorage Fallback)
     useEffect(() => {
@@ -196,7 +208,7 @@ export default function POSCustomerDisplay() {
             {/* Right Column: Hero Menu Slideshow */}
             <div className="w-1/2 h-full relative overflow-hidden bg-black">
                 <AnimatePresence mode="wait">
-                    {slideshowImages.length > 0 ? (
+                    {slideshowImages.length > 0 && slideshowImages[currentSlideIndex] ? (
                         <motion.div
                             key={currentSlideIndex}
                             initial={{ opacity: 0, scale: 1.05 }}
@@ -209,6 +221,10 @@ export default function POSCustomerDisplay() {
                                 src={slideshowImages[currentSlideIndex].url}
                                 alt={slideshowImages[currentSlideIndex].name}
                                 className="w-full h-full object-cover opacity-80 grayscale-[15%]"
+                                onError={() => {
+                                    setSlideshowImages(prev => prev.filter((_, idx) => idx !== currentSlideIndex));
+                                    setCurrentSlideIndex(0);
+                                }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-[oklch(18%_0.012_28)] via-transparent to-black/30" />
                             
