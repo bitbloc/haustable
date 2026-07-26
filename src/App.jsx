@@ -16,6 +16,7 @@ import BookingPage from './BookingPage'
 import PickupPage from './PickupPage'
 import AdsLandingPage from './AdsLandingPage' // NEW
 import AdminDashboard from './AdminDashboard'
+import AdminFinancialDashboard from './components/admin/AdminFinancialDashboard' // NEW: Financial Dashboard
 import AdminSettings from './AdminSettings'
 import AdminTableEditor from './AdminTableEditor'
 import AdminMenu from './admin/AdminMenuPage'
@@ -183,6 +184,7 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="financial" element={<AdminFinancialDashboard />} />
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="members" element={<AdminMembers />} />
               <Route path="menu" element={<AdminMenu />} />

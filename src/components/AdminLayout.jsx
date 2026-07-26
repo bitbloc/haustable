@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutDashboard, Utensils, Settings, Move, LogOut, Users, Calendar, Tag, LayoutGrid, ChefHat, Calculator, FlaskConical, BookOpen, Music, Menu, X, Trophy, Gift } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Utensils, Settings, Move, LogOut, Users, Calendar, Tag, LayoutGrid, ChefHat, Calculator, FlaskConical, BookOpen, Music, Menu, X, Trophy, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BookingMonitor from './admin/BookingMonitor';
 import { toast } from 'sonner';
@@ -66,6 +66,7 @@ export default function AdminLayout({ children }) {
 
     const menuItems = [
         { path: '/admin', icon: LayoutDashboard, label: 'Overview' },
+        { path: '/admin/financial', icon: TrendingUp, label: 'Financial' }, // NEW: Financial Analytics
         { path: '/admin/bookings', icon: Calendar, label: 'Bookings' },
         { path: '/admin/members', icon: Users, label: 'Members' },
         { path: '/admin/menu', icon: Utensils, label: 'Menu' },

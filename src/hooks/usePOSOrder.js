@@ -19,7 +19,7 @@ export function usePOSOrder() {
             const today = new Date().toISOString().split('T')[0];
             const { data, error } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .gte('booking_time', `${today}T00:00:00`)
@@ -45,29 +45,32 @@ export function usePOSOrder() {
         }
     }, []);
 
-    const createWalkIn = async (table) => {
+    const createWalkIn = async (table = null) => {
+        const tableId = table ? table.id : null;
+        const capacity = table ? (table.capacity || 2) : 2;
+
         if (!isOnline()) {
             console.log('[Offline Mode] Creating offline walk-in session');
             const tempId = `local_${Date.now()}`;
             const mockBooking = {
                 id: tempId,
-                table_id: table.id,
+                table_id: tableId,
                 status: 'seated',
                 booking_type: 'walk_in',
                 booking_time: new Date().toISOString(),
-                pax: table.capacity || 2,
+                pax: capacity,
                 staff_remark: 'Walk-in Guest (Offline)',
-                tables_layout: table
+                tables_layout: table || null
             };
 
             // Save to active bookings cache
-            const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
+            const bookings = posCache.getBookings().filter(b => tableId ? b.table_id !== tableId : true);
             bookings.push(mockBooking);
             posCache.setBookings(bookings);
 
             // Queue sync action
             addToOfflineQueue('create_walkin', {
-                tableId: table.id,
+                tableId: tableId,
                 tempBookingId: tempId,
                 pax: mockBooking.pax,
                 status: 'seated',
@@ -83,11 +86,11 @@ export function usePOSOrder() {
             const { data, error } = await supabase
                 .from('bookings')
                 .insert({
-                    table_id: table.id,
+                    table_id: tableId,
                     status: 'seated',
                     booking_type: 'walk_in',
                     booking_time: new Date().toISOString(),
-                    pax: table.capacity || 2,
+                    pax: capacity,
                     staff_remark: 'Walk-in Guest'
                 })
                 .select('*, tables_layout(*)')
@@ -96,7 +99,7 @@ export function usePOSOrder() {
             if (error) throw error;
             
             // Cache locally
-            const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
+            const bookings = posCache.getBookings().filter(b => tableId ? b.table_id !== tableId : true);
             bookings.push(data);
             posCache.setBookings(bookings);
 
@@ -106,21 +109,21 @@ export function usePOSOrder() {
             const tempId = `local_${Date.now()}`;
             const mockBooking = {
                 id: tempId,
-                table_id: table.id,
+                table_id: tableId,
                 status: 'seated',
                 booking_type: 'walk_in',
                 booking_time: new Date().toISOString(),
-                pax: table.capacity || 2,
+                pax: capacity,
                 staff_remark: 'Walk-in Guest (Offline Fallback)',
-                tables_layout: table
+                tables_layout: table || null
             };
 
-            const bookings = posCache.getBookings().filter(b => b.table_id !== table.id);
+            const bookings = posCache.getBookings().filter(b => tableId ? b.table_id !== tableId : true);
             bookings.push(mockBooking);
             posCache.setBookings(bookings);
 
             addToOfflineQueue('create_walkin', {
-                tableId: table.id,
+                tableId: tableId,
                 tempBookingId: tempId,
                 pax: mockBooking.pax,
                 status: 'seated',

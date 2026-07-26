@@ -9,6 +9,7 @@ import { usePOSOrder } from '../hooks/usePOSOrder';
 import { Toaster, toast } from 'sonner';
 import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
+import POSOpenBillsGrid from './POSOpenBillsGrid';
 import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
 import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction } from '../utils/shiftHelper';
@@ -795,17 +796,36 @@ export default function POSDashboard() {
         }
 
         // 3. Reload the booking to get updated order_items and references
-        const updatedBooking = await getActiveBooking(selectedTable.id);
+        let updatedBooking = null;
+        if (selectedTable?.id) {
+            updatedBooking = await getActiveBooking(selectedTable.id);
+        }
+
+        if (!updatedBooking && bookingId) {
+            if (isOnline()) {
+                const { data } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                    .eq('id', bookingId)
+                    .maybeSingle();
+                updatedBooking = data;
+            } else {
+                const cached = posCache.getBookings();
+                updatedBooking = cached.find(b => b.id === bookingId);
+            }
+        }
+
         if (updatedBooking) {
             setActiveBooking(updatedBooking);
             // Update currentOrder item db_ids so they don't get re-submitted
-            const updatedItems = updatedBooking.order_items.map(oi => ({
+            const updatedItems = (updatedBooking.order_items || []).map(oi => ({
                 id: oi.menu_item_id,
                 name: oi.menu_items?.name || oi.name || 'Item',
                 price: oi.price_at_time,
                 quantity: oi.quantity,
                 db_id: oi.id,
-                selected_options: oi.selected_options
+                selected_options: oi.selected_options,
+                category_id: oi.menu_items?.category_id || oi.category_id
             }));
             setCurrentOrder(prev => ({
                 ...prev,
@@ -818,6 +838,49 @@ export default function POSDashboard() {
         } else {
             setActiveSlipBooking(currentBooking);
             setActiveSlipType(type);
+        }
+    };
+
+    const handleSelectOpenBill = async (booking) => {
+        if (!booking) return;
+
+        if (booking.table_id && booking.tables_layout) {
+            handleSelectTable(booking.tables_layout);
+        } else if (booking.table_id) {
+            try {
+                const { data: tableData } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .eq('id', booking.table_id)
+                    .maybeSingle();
+                if (tableData) {
+                    handleSelectTable(tableData);
+                } else {
+                    handleSelectPickupOrder(booking);
+                }
+            } catch (e) {
+                handleSelectPickupOrder(booking);
+            }
+        } else if (booking.booking_type === 'pickup') {
+            handleSelectPickupOrder(booking);
+        } else {
+            setActiveBooking(booking);
+            setSelectedTable(null);
+            const existingItems = (booking.order_items || []).map(oi => ({
+                id: oi.menu_item_id,
+                name: oi.menu_items?.name || oi.name || 'Item',
+                price: oi.price_at_time,
+                quantity: oi.quantity,
+                db_id: oi.id,
+                selected_options: oi.selected_options,
+                category_id: oi.menu_items?.category_id || oi.category_id
+            }));
+            setCurrentOrder({
+                items: existingItems,
+                customer: booking.customer_name || booking.profiles?.display_name || 'Walk-in Guest',
+                table: null
+            });
+            setView('menu');
         }
     };
 
@@ -1390,6 +1453,16 @@ export default function POSDashboard() {
                         </div>
 
                         {/* Less frequent panels mounted conditionally */}
+                        {view === 'open_bills' && (
+                            <POSOpenBillsGrid 
+                                onSelectOrder={handleSelectOpenBill} 
+                                onOpenSlip={(booking, slipType) => {
+                                    setActiveSlipBooking(booking);
+                                    setActiveSlipType(slipType);
+                                }} 
+                                refreshKey={refreshKey} 
+                            />
+                        )}
                         {view === 'pickup' && (
                             <POSPickupGrid onSelectOrder={handleSelectPickupOrder} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
                         )}
@@ -1402,7 +1475,7 @@ export default function POSDashboard() {
                     </div>
 
                     {/* Order Panel Sidebar */}
-                    {view !== 'reports' && view !== 'crm' && (
+                    {view !== 'reports' && view !== 'crm' && view !== 'open_bills' && (
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
@@ -1419,7 +1492,7 @@ export default function POSDashboard() {
                                         if (selectedTable) {
                                             updatedBooking = await getActiveBooking(selectedTable.id);
                                         } else {
-                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))').eq('id', activeBooking.id).single();
+                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))').eq('id', activeBooking.id).single();
                                             updatedBooking = data;
                                         }
                                         
@@ -1457,7 +1530,7 @@ export default function POSDashboard() {
                                             const updatedBooking = await getActiveBooking(selectedTable.id);
                                             setActiveBooking(updatedBooking);
                                         } else {
-                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))').eq('id', activeBooking.id).single();
+                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))').eq('id', activeBooking.id).single();
                                             if (data) setActiveBooking(data);
                                         }
                                     }
@@ -1469,7 +1542,7 @@ export default function POSDashboard() {
                                         const updatedBooking = await getActiveBooking(selectedTable.id);
                                         setActiveBooking(updatedBooking);
                                     } else {
-                                        const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))').eq('id', activeBooking.id).single();
+                                        const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))').eq('id', activeBooking.id).single();
                                         if (data) setActiveBooking(data);
                                     }
                                 }
