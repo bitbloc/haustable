@@ -506,9 +506,20 @@ export default function CustomerOrderLanding() {
         setSubmitting(true);
 
         try {
-            let currentBooking = activeBooking;
+            // 1. Fetch latest active table session to prevent session duplication when 10 guests order concurrently
+            const today = new Date().toISOString().split('T')[0];
+            const { data: latestTableSession } = await supabase
+                .from('bookings')
+                .select('*')
+                .eq('table_id', parseInt(tableId))
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .gte('booking_time', `${today}T00:00:00`)
+                .order('booking_time', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            // 1. If there is no active booking, create a new walk-in session!
+            let currentBooking = latestTableSession || activeBooking;
+
             let remarkStr = 'QR Walk-in Guest';
             if (tableRemarkInput.trim()) {
                 remarkStr += ` [NOTE: ${tableRemarkInput.trim()}]`;
@@ -536,42 +547,6 @@ export default function CustomerOrderLanding() {
 
                 if (createError) throw createError;
                 currentBooking = newBooking;
-            } else {
-                // Re-verify existing table status before inserting
-                const { data: latestBooking } = await supabase
-                    .from('bookings')
-                    .select('*')
-                    .eq('id', currentBooking.id)
-                    .single();
-
-                if (!latestBooking || ['completed', 'cancelled', 'void'].includes(latestBooking.status)) {
-                    toast.error('This table session has already been closed. Please consult staff.');
-                    setSubmitting(false);
-                    return;
-                }
-
-                // Update Booking status back to pending to alert staff and trigger print modal!
-                const newTotalAmount = (currentBooking.total_amount || 0) + cartSubtotal;
-                let updatedRemark = latestBooking.staff_remark || 'QR Walk-in Guest';
-                if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
-                    updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
-                }
-
-                const updateData = {
-                    status: 'pending', // Triggers audio alert & dashboard flash
-                    total_amount: newTotalAmount,
-                    staff_remark: updatedRemark
-                };
-                if (memberProfile?.id && !latestBooking.user_id) {
-                    updateData.user_id = memberProfile.id;
-                }
-                const { error: bookingUpdateError } = await supabase
-                    .from('bookings')
-                    .update(updateData)
-                    .eq('id', currentBooking.id);
-
-                if (bookingUpdateError) throw bookingUpdateError;
-                currentBooking.tracking_token = latestBooking.tracking_token;
             }
 
             // 2. Insert new items into order_items
@@ -590,6 +565,36 @@ export default function CustomerOrderLanding() {
                 .insert(itemsToInsert);
 
             if (itemsError) throw itemsError;
+
+            // 3. ATOMIC RECALCULATION of total_amount from database items
+            // This prevents race conditions when 10 guests at the same table order concurrently!
+            const { data: allItems } = await supabase
+                .from('order_items')
+                .select('price_at_time, quantity')
+                .eq('booking_id', currentBooking.id);
+
+            const recalculatedTotal = (allItems || []).reduce((sum, i) => sum + (Number(i.price_at_time) * Number(i.quantity)), 0);
+
+            let updatedRemark = currentBooking.staff_remark || 'QR Walk-in Guest';
+            if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
+                updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
+            }
+
+            const updateData = {
+                status: 'pending', // Triggers audio alert & dashboard flash for kitchen
+                total_amount: recalculatedTotal,
+                staff_remark: updatedRemark
+            };
+            if (memberProfile?.id && !currentBooking.user_id) {
+                updateData.user_id = memberProfile.id;
+            }
+
+            const { error: bookingUpdateError } = await supabase
+                .from('bookings')
+                .update(updateData)
+                .eq('id', currentBooking.id);
+
+            if (bookingUpdateError) throw bookingUpdateError;
 
             toast.success('ออเดอร์ถูกส่งไปยังพนักงานแล้ว!');
             setCart([]);

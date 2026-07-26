@@ -149,7 +149,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     const getItemCatId = (item) => item.menu_items?.category_id || item.category_id || item.category || '';
 
-    if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
+    itemsToRender = booking.order_items || [];
+
+    if (activeTab === 'kitchen_all') {
+        // Render all items for kitchen pass on 1 single combined slip!
+        itemsToRender = booking.order_items || [];
+    } else if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
         // Fallback default categorization if config is not set up
         const DEFAULT_BAR_CATEGORIES = [
             '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -251,7 +256,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             encoder.line(`TAX ID: ${shopVat}`);
         }
         encoder.line(doubleDivider);
-    } else if (activeTab === 'kitchen') {
+    } else if (activeTab === 'kitchen' || activeTab === 'kitchen_all') {
         encoder.align('center')
                .line(doubleDivider)
                .bold(true)
@@ -284,14 +289,14 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const tableName = (booking.tables_layout?.table_name || 'PICKUP').toUpperCase();
     
     // For kitchen/bar: Make Table Name and Queue ID even bigger and print order time prominently
-    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+    if (activeTab === 'kitchen' || activeTab === 'kitchen_all' || activeTab === 'bar' || activeTab === 'other') {
         let serviceType = 'กินที่ร้าน (DINE-IN)';
         const remark = (booking.staff_remark || '').toLowerCase();
         const note = (booking.customer_note || '').toLowerCase();
         if (remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man')) {
             serviceType = 'LINE MAN DELIVERY';
-        } else if (booking.booking_type === 'pickup') {
-            serviceType = 'กลับบ้าน (TAKEAWAY)';
+        } else if (booking.booking_type === 'pickup' || remark.includes('pickup') || remark.includes('takeaway') || remark.includes('รับกลับ') || remark.includes('กลับบ้าน') || !booking.tables_layout) {
+            serviceType = 'รับกลับ (TAKEAWAY / PICKUP)';
         }
 
         const totalItemsCount = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);

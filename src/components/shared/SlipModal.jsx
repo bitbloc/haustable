@@ -54,14 +54,29 @@ export default function SlipModal({ booking, type, onClose }) {
     const [printerConfig, setPrinterConfig] = useState({ kitchen_categories: [], bar_categories: [] });
 
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem('onhaus_printer_config');
-            if (stored) {
-                setPrinterConfig(JSON.parse(stored));
-            }
-        } catch (e) {
-            // ignore
-        }
+        const loadOnlineConfig = async () => {
+            try {
+                const stored = localStorage.getItem('onhaus_printer_config');
+                if (stored) {
+                    setPrinterConfig(JSON.parse(stored));
+                }
+            } catch (e) {}
+
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'printer_config')
+                    .maybeSingle();
+
+                if (data && data.value) {
+                    const onlineConfig = JSON.parse(data.value);
+                    setPrinterConfig(onlineConfig);
+                    localStorage.setItem('onhaus_printer_config', JSON.stringify(onlineConfig));
+                }
+            } catch (e) {}
+        };
+        loadOnlineConfig();
     }, []);
 
     // Determine initial payment method:
@@ -679,20 +694,33 @@ export default function SlipModal({ booking, type, onClose }) {
 
                 if (activeTab === 'kitchen') {
                     let printedAny = false;
-                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (kitchenBytes) {
-                        await printToSunmiBuiltIn(kitchenBytes);
-                        printedAny = true;
-                    }
-                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (barBytes) {
-                        await printToSunmiBuiltIn(barBytes);
-                        printedAny = true;
-                    }
-                    const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (otherBytes) {
-                        await printToSunmiBuiltIn(otherBytes);
-                        printedAny = true;
+                    let isSeparateBarPrinterEnabled = false;
+                    try {
+                        const stored = localStorage.getItem('onhaus_printer_config');
+                        if (stored) {
+                            const config = JSON.parse(stored);
+                            isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+                        }
+                    } catch (e) {}
+
+                    if (isSeparateBarPrinterEnabled) {
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (kitchenBytes) {
+                            await printToSunmiBuiltIn(kitchenBytes);
+                            printedAny = true;
+                        }
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (barBytes) {
+                            await printToSunmiBuiltIn(barBytes);
+                            printedAny = true;
+                        }
+                    } else {
+                        // Print SINGLE combined kitchen ticket (1 slip only!)
+                        const combinedBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (combinedBytes) {
+                            await printToSunmiBuiltIn(combinedBytes);
+                            printedAny = true;
+                        }
                     }
                     if (!printedAny) {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");

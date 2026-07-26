@@ -69,12 +69,20 @@ body {
 }
 
 /* Touch and selection improvements for Tablet/POS */
-button, a, select, input, [role="button"] {
+button, a, select, input, textarea, [role="button"] {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .overflow-y-auto, .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* GPU Hardware Layer Promotion for APK Performance */
+.gpu-accelerated, .fixed, .drawer-slide {
+  transform: translateZ(0);
+  will-change: transform, opacity;
 }
 
 /* Custom Scrollbar */

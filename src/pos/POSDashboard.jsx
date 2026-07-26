@@ -1189,14 +1189,20 @@ export default function POSDashboard() {
         );
         if (success) {
             localStorage.removeItem('pos_active_table_id');
-            const updatedBooking = await getActiveBooking(selectedTable.id);
-            if (updatedBooking) {
-                setActiveSlipBooking(updatedBooking);
-                setActiveSlipType('receipt');
-            } else {
-                setActiveSlipBooking(currentBooking);
-                setActiveSlipType('receipt');
+            let completedBooking = null;
+            try {
+                const { data } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                    .eq('id', bookingId)
+                    .single();
+                completedBooking = data;
+            } catch (err) {
+                console.error("Error fetching completed booking for receipt:", err);
             }
+
+            setActiveSlipBooking(completedBooking || currentBooking);
+            setActiveSlipType('receipt');
         }
     };
 

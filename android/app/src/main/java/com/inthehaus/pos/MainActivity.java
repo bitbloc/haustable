@@ -21,8 +21,14 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
+                webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
                 WebSettings settings = webView.getSettings();
                 settings.setMediaPlaybackRequiresUserGesture(false);
+                settings.setJavaScriptEnabled(true);
+                settings.setDomStorageEnabled(true);
+                settings.setDatabaseEnabled(true);
+                settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+                settings.setEnableSmoothTransition(true);
             }
         } catch (Exception e) {
             e.printStackTrace();

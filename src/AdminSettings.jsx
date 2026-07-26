@@ -218,19 +218,52 @@ export default function AdminSettings() {
     };
 
     useEffect(() => {
-        const stored = localStorage.getItem('onhaus_printer_config');
-        if (stored) {
-            try {
-                setPrinterConfig(JSON.parse(stored));
-            } catch (err) {
-                console.error("Error reading stored printer settings:", err);
+        const loadPrinterConfig = async () => {
+            // 1. Try reading local storage first
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                try {
+                    setPrinterConfig(JSON.parse(stored));
+                } catch (err) {
+                    console.error("Error reading stored printer settings:", err);
+                }
             }
-        }
+
+            // 2. Fetch online settings from Supabase app_settings
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'printer_config')
+                    .maybeSingle();
+
+                if (data && data.value) {
+                    const onlineConfig = JSON.parse(data.value);
+                    setPrinterConfig(onlineConfig);
+                    localStorage.setItem('onhaus_printer_config', JSON.stringify(onlineConfig));
+                }
+            } catch (err) {
+                console.error("Failed to load printer config online:", err);
+            }
+        };
+
+        loadPrinterConfig();
     }, []);
 
-    const handleSavePrinter = (updatedConfig) => {
+    const handleSavePrinter = async (updatedConfig) => {
         setPrinterConfig(updatedConfig);
         localStorage.setItem('onhaus_printer_config', JSON.stringify(updatedConfig));
+
+        try {
+            await supabase.from('app_settings').upsert({
+                key: 'printer_config',
+                value: JSON.stringify(updatedConfig),
+                updated_at: new Date().toISOString()
+            });
+            toast.success("บันทึกการตั้งค่าหมวดหมู่และเครื่องพิมพ์ออนไลน์สำเร็จ");
+        } catch (err) {
+            console.error("Failed to sync printer config online:", err);
+        }
     };
 
     const handleTestPrint = async (type) => {
@@ -1563,6 +1596,99 @@ export default function AdminSettings() {
                                 >
                                     Test Kitchen Order Print
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* Secondary Bar Printer Card */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-4 rounded-xl shadow-sm flex flex-col justify-between col-span-1 sm:col-span-2">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-3">
+                                    <div>
+                                        <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
+                                            <span>🍷</span> Secondary Bar Printer (เครื่องพิมพ์เสริมแยกบาร์/เครื่องดื่ม)
+                                        </h2>
+                                        <p className="text-[10px] text-[#767673] mt-0.5">เปิดใช้งานหากต้องการแยกพิมพ์สลิปบาร์/เครื่องดื่มไปยังเครื่องพิมพ์เครื่องที่ 2 ในอนาคต</p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={!!printerConfig.separate_bar_printer} 
+                                            onChange={(e) => handleSavePrinter({ ...printerConfig, separate_bar_printer: e.target.checked })} 
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-9 h-5 bg-[#D1D1CD] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff0000]"></div>
+                                    </label>
+                                </div>
+
+                                {printerConfig.separate_bar_printer && (
+                                    <div className="space-y-3 animate-fade-in pt-1">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Secondary Connection Type (การเชื่อมต่อเครื่องที่ 2)</label>
+                                                <select 
+                                                    value={printerConfig.bar_printer_type || 'lan'} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, bar_printer_type: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#ff0000] cursor-pointer"
+                                                >
+                                                    <option value="lan">Direct LAN / Network IP Printer (TCP Socket 9100)</option>
+                                                    <option value="bluetooth">Direct Bluetooth Printer (BT-SPP)</option>
+                                                    <option value="sunmi">SUNMI Secondary Printer</option>
+                                                    <option value="rawbt">RawBT Server Printer</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Paper Width (ความกว้างกระดาษเครื่องที่ 2)</label>
+                                                <select 
+                                                    value={printerConfig.bar_paper_size || '80mm'} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, bar_paper_size: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#ff0000] cursor-pointer"
+                                                >
+                                                    <option value="80mm">80mm Thermal Paper (Recommended)</option>
+                                                    <option value="58mm">58mm Thermal Paper</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {printerConfig.bar_printer_type === 'lan' && (
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="col-span-2">
+                                                    <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Bar Printer IP Address</label>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="e.g. 192.168.1.201" 
+                                                        value={printerConfig.bar_printer_ip || ''} 
+                                                        onChange={(e) => handleSavePrinter({ ...printerConfig, bar_printer_ip: e.target.value })} 
+                                                        className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Port</label>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="9100" 
+                                                        value={printerConfig.bar_printer_port || '9100'} 
+                                                        onChange={(e) => handleSavePrinter({ ...printerConfig, bar_printer_port: e.target.value })} 
+                                                        className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {printerConfig.bar_printer_type === 'bluetooth' && (
+                                            <div className="space-y-1">
+                                                <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">Bar Bluetooth Device Name / MAC</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="e.g. BAR-PRINTER-58" 
+                                                    value={printerConfig.bar_printer_bt_name || ''} 
+                                                    onChange={(e) => handleSavePrinter({ ...printerConfig, bar_printer_bt_name: e.target.value })} 
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-mono text-[#1A1A1A]" 
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
