@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function OptionSelectionModal({ item, onClose, onConfirm }) {
     const [quantity, setQuantity] = useState(1)
     const [selectedOptions, setSelectedOptions] = useState({})
+    const [itemNote, setItemNote] = useState('')
     // Structure: { [groupId]: [choiceId1, choiceId2] }
 
     // Calculate Total Price
@@ -101,11 +102,20 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                 })
             }
 
+            if (itemNote.trim()) {
+                optionsSummary.push({
+                    group_name: 'หมายเหตุ',
+                    name: itemNote.trim(),
+                    price: 0
+                })
+            }
+
             onConfirm({
                 ...item,
                 qty: quantity,
                 selectedOptions: selectedOptions, // Raw IDs for logic
                 optionsSummary: optionsSummary, // readable text for UI
+                itemNote: itemNote.trim(),
                 totalPricePerUnit: calculateTotal() / quantity // calculated unit price
             })
         }
@@ -183,6 +193,21 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                             </div>
                         )
                     })}
+
+                    {/* Special Note / Kitchen Instructions */}
+                    <div className="space-y-1.5 pt-3 border-t border-gray-100">
+                        <label className="block font-bold text-sm text-zinc-900 flex items-center justify-between">
+                            <span>📝 หมายเหตุเพิ่มเติมถึงครัว (Special Note)</span>
+                            <span className="text-xs text-zinc-400 font-normal">ไม่บังคับ</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="เช่น เผ็ดน้อย, แยกน้ำซุป, ไม่ใส่ผักชี"
+                            value={itemNote}
+                            onChange={(e) => setItemNote(e.target.value)}
+                            className="w-full bg-zinc-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black focus:bg-white transition-all font-medium"
+                        />
+                    </div>
                 </div>
 
                 {/* Footer Controls */}

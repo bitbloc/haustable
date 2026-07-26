@@ -260,13 +260,30 @@ export default function SlipModal({ booking, type, onClose }) {
             if (item.selected_options) {
                 let optionsList = []
                 if (Array.isArray(item.selected_options)) {
-                     optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
+                     optionsList = item.selected_options.map(opt => {
+                         if (typeof opt === 'object' && opt !== null) {
+                             if (opt.group_name && opt.name) {
+                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                 return `${opt.group_name}: ${opt.name}${priceStr}`;
+                             }
+                             if (opt.name) {
+                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                 return `${opt.name}${priceStr}`;
+                             }
+                             return JSON.stringify(opt);
+                         }
+                         return getOptionName(opt);
+                     });
                 } else if (typeof item.selected_options === 'object') {
-                    const ids = Object.values(item.selected_options).flat()
-                    optionsList = ids.map(id => getOptionName(id))
+                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                        if (Array.isArray(val)) {
+                            return val.map(id => getOptionName(id));
+                        }
+                        return [`${key}: ${val}`];
+                    });
                 }
                 if (optionsList.length > 0) {
-                    optsHtml = optionsList.map(opt => `<div class="opt">+ ${opt}</div>`).join('')
+                    optsHtml = optionsList.map(opt => `<div class="opt" style="font-weight: bold; padding-left: 12px;">▶ ${opt}</div>`).join('')
                 }
             }
 
@@ -337,10 +354,16 @@ export default function SlipModal({ booking, type, onClose }) {
             </div>
         ` : ''
 
-        const noteHtml = (booking.customer_note && (activeTab === 'kitchen' || activeTab === 'bar')) ? `
+        const combinedNotes = [];
+        if (booking.customer_note) combinedNotes.push(`<strong>ลูกค้า:</strong> ${booking.customer_note}`);
+        if (booking.staff_remark && (activeTab === 'kitchen' || activeTab === 'bar')) {
+            combinedNotes.push(`<strong>พนักงาน:</strong> ${booking.staff_remark}`);
+        }
+
+        const noteHtml = (combinedNotes.length > 0 && (activeTab === 'kitchen' || activeTab === 'bar')) ? `
             <div class="kitchen-note-box">
                 <div class="kitchen-note-label">หมายเหตุ / NOTE FOR STAFF</div>
-                ${booking.customer_note}
+                ${combinedNotes.map(n => `<div style="margin-top: 2px;">${n}</div>`).join('')}
             </div>
         ` : ''
 
@@ -475,7 +498,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         .qty { width: 25px; font-weight: bold; flex-shrink: 0; font-size: 11px; }
                         .name { flex-grow: 1; margin-right: 5px; font-weight: bold; text-transform: uppercase; }
                         .price { text-align: right; width: 60px; flex-shrink: 0; }
-                        .opts { margin-left: 25px; margin-top: 2px; color: #555; font-size: 9px; font-style: italic; }
+                        .opts { margin-left: 25px; margin-top: 2px; color: #000; font-size: 10px; font-weight: bold; font-style: normal; }
 
                         .totals { border-top: 2px solid black; padding-top: 8px; margin-bottom: 12px; }
                         .total-row { font-size: 14px; font-weight: bold; margin-top: 4px; }
@@ -983,9 +1006,27 @@ export default function SlipModal({ booking, type, onClose }) {
                             }).map((item, idx) => {
                                 let optionsList = []
                                 if (Array.isArray(item.selected_options)) {
-                                     optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt)
+                                     optionsList = item.selected_options.map(opt => {
+                                         if (typeof opt === 'object' && opt !== null) {
+                                             if (opt.group_name && opt.name) {
+                                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                                 return `${opt.group_name}: ${opt.name}${priceStr}`;
+                                             }
+                                             if (opt.name) {
+                                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                                 return `${opt.name}${priceStr}`;
+                                             }
+                                             return JSON.stringify(opt);
+                                         }
+                                         return getOptionName(opt);
+                                     });
                                 } else if (typeof item.selected_options === 'object') {
-                                    optionsList = Object.values(item.selected_options).flat().map(id => optionMap[id] || id)
+                                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                                        if (Array.isArray(val)) {
+                                            return val.map(id => getOptionName(id));
+                                        }
+                                        return [`${key}: ${val}`];
+                                    });
                                 }
                                 
                                 return (
@@ -998,8 +1039,8 @@ export default function SlipModal({ booking, type, onClose }) {
                                             )}
                                         </div>
                                         {optionsList.length > 0 && (
-                                            <div className="pl-6 space-y-0.5 text-[9px] text-gray-500 font-medium italic border-l border-gray-200 ml-1 pl-2">
-                                                {optionsList.map((opt, i) => <div key={i}>+ {opt}</div>)}
+                                            <div className="pl-6 space-y-0.5 text-[10px] text-black font-bold border-l-2 border-black ml-1 pl-2.5">
+                                                {optionsList.map((opt, i) => <div key={i}>▶ {opt}</div>)}
                                             </div>
                                         )}
                                     </div>
@@ -1050,11 +1091,12 @@ export default function SlipModal({ booking, type, onClose }) {
                             </div>
                         )}
 
-                        {/* Note for Kitchen (Always show if present, formatted beautifully) */}
-                        {booking.customer_note && (
+                        {/* Note for Kitchen & Staff (Always show if present) */}
+                        {(booking.customer_note || booking.staff_remark) && (
                             <div className="bg-black text-white p-3 font-mono text-[10px] relative mt-4">
-                                <div className="absolute -top-2 left-2 bg-black px-1 text-[8px] font-bold uppercase tracking-wider">Note for Kitchen</div>
-                                {booking.customer_note}
+                                <div className="absolute -top-2 left-2 bg-black px-1 text-[8px] font-bold uppercase tracking-wider">Note for Staff / Kitchen</div>
+                                {booking.customer_note && <div><strong>ลูกค้า:</strong> {booking.customer_note}</div>}
+                                {booking.staff_remark && <div><strong>พนักงาน:</strong> {booking.staff_remark}</div>}
                             </div>
                         )}
                         

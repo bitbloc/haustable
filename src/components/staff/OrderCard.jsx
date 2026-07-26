@@ -5,19 +5,29 @@ import { formatThaiTimeOnly, formatThaiDateLong } from '../../utils/timeUtils'
 const renderOptions = (item) => {
     if (!item.selected_options) return null
     
-    // Normalize options to array of strings or Key-Value pairs
     let opts = []
     if (Array.isArray(item.selected_options)) {
-        opts = item.selected_options.map(o => typeof o === 'object' ? `${o.name} (+${o.price})` : o)
+        opts = item.selected_options.map(o => {
+            if (typeof o === 'object' && o !== null) {
+                const groupPrefix = o.group_name ? `${o.group_name}: ` : ''
+                const priceStr = (o.price && Number(o.price) > 0) ? ` (+฿${o.price})` : ''
+                return `${groupPrefix}${o.name}${priceStr}`
+            }
+            return String(o)
+        })
     } else if (typeof item.selected_options === 'object') {
-        // Handle Key-Value objects (e.g. { Doneness: 'Medium' })
-        opts = Object.entries(item.selected_options).map(([key, value]) => `${key}: ${value}`)
+        opts = Object.entries(item.selected_options).flatMap(([key, value]) => {
+            if (Array.isArray(value)) {
+                return value.map(v => typeof v === 'object' ? `${v.name || v}` : `${key}: ${v}`)
+            }
+            return [`${key}: ${value}`]
+        })
     }
     
     if (opts.length === 0) return null
     return (
-        <div className="mt-1 text-xs text-gray-400 font-medium space-y-0.5 ml-4">
-            {opts.map((o, i) => <div key={i}>+ {o}</div>)}
+        <div className="mt-1 text-xs text-[#ff0000] font-bold space-y-0.5 ml-4">
+            {opts.map((o, i) => <div key={i}>▶ {o}</div>)}
         </div>
     )
 }

@@ -362,13 +362,31 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             if (item.selected_options) {
                 let optionsList = [];
                 if (Array.isArray(item.selected_options)) {
-                    optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt);
+                    optionsList = item.selected_options.map(opt => {
+                        if (typeof opt === 'object' && opt !== null) {
+                            if (opt.group_name && opt.name) {
+                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                return `${opt.group_name}: ${opt.name}${priceStr}`;
+                            }
+                            if (opt.name) {
+                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                return `${opt.name}${priceStr}`;
+                            }
+                            return JSON.stringify(opt);
+                        }
+                        return optionMap[opt] || String(opt);
+                    });
                 } else if (typeof item.selected_options === 'object') {
-                    optionsList = Object.values(item.selected_options).flat().map(id => optionMap[id] || id);
+                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                        if (Array.isArray(val)) {
+                            return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
+                        }
+                        return [`${key}: ${val}`];
+                    });
                 }
                 optionsList.forEach(opt => {
                     encoder.bold(true)
-                           .line(`    ▶ ${opt.toUpperCase()}`)
+                           .line(`    ▶ ${String(opt).toUpperCase()}`)
                            .bold(false);
                 });
             }
@@ -392,9 +410,27 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             if (item.selected_options) {
                 let optionsList = [];
                 if (Array.isArray(item.selected_options)) {
-                    optionsList = item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt);
+                    optionsList = item.selected_options.map(opt => {
+                        if (typeof opt === 'object' && opt !== null) {
+                            if (opt.group_name && opt.name) {
+                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                return `${opt.group_name}: ${opt.name}${priceStr}`;
+                            }
+                            if (opt.name) {
+                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                return `${opt.name}${priceStr}`;
+                            }
+                            return JSON.stringify(opt);
+                        }
+                        return optionMap[opt] || String(opt);
+                    });
                 } else if (typeof item.selected_options === 'object') {
-                    optionsList = Object.values(item.selected_options).flat().map(id => optionMap[id] || id);
+                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                        if (Array.isArray(val)) {
+                            return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
+                        }
+                        return [`${key}: ${val}`];
+                    });
                 }
                 optionsList.forEach(opt => {
                     encoder.line(`    + ${opt}`);
@@ -459,13 +495,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 8. Note
-    if (booking.customer_note) {
+    const combinedNotes = [];
+    if (booking.customer_note) combinedNotes.push(`ลูกค้า: ${booking.customer_note}`);
+    if (booking.staff_remark && activeTab !== 'receipt') {
+        combinedNotes.push(`พนักงาน: ${booking.staff_remark}`);
+    }
+
+    if (combinedNotes.length > 0) {
         encoder.align('left')
                .bold(true)
-               .line('หมายเหตุ:')
-               .bold(false)
-               .line(booking.customer_note)
-               .line(divider);
+               .line('หมายเหตุ / NOTES:')
+               .bold(false);
+        combinedNotes.forEach(noteLine => encoder.line(noteLine));
+        encoder.line(divider);
     }
 
     // 9. Footer

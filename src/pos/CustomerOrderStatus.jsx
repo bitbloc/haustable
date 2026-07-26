@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Clock, CheckCircle, Receipt, ArrowLeft, Upload, FileText, Smartphone, Users, Edit, Check, X } from 'lucide-react';
+import { Clock, CheckCircle, Receipt, ArrowLeft, Upload, FileText, Smartphone, Users, Edit, Check, X, Gamepad2, Crown, Sparkles, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 
@@ -20,6 +20,9 @@ export default function CustomerOrderStatus() {
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
 
     useEffect(() => {
+        if (tableId) {
+            localStorage.setItem('active_customer_table_id', tableId);
+        }
         fetchActiveOrder();
         
         // Setup realtime subscription
@@ -292,6 +295,40 @@ export default function CustomerOrderStatus() {
                     </div>
                 </section>
 
+                {/* Arcade Invitation Section (Dieter Rams Braun Dial & Terracotta Clay) */}
+                <section className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 shadow-sm relative overflow-hidden">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/20 flex items-center justify-center font-black">
+                                <Gamepad2 size={18} />
+                            </div>
+                            <div>
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                    HAUS ARCADE PLAYGROUND
+                                </h3>
+                                <p className="text-[9px] text-[oklch(42%_0.010_28)] font-mono uppercase tracking-widest mt-0.5">
+                                    PLAY WHILE WAITING FOR FOOD
+                                </p>
+                            </div>
+                        </div>
+                        <span className="bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            P2E REWARDS
+                        </span>
+                    </div>
+
+                    <p className="text-xs text-[oklch(18%_0.012_28)] leading-relaxed mb-4">
+                        ระหว่างรอห้องครัวจัดเตรียมอาหาร ชวนเล่นเกม <strong>Flappy Cat</strong> สะสมแต้ม 🪙 <strong>xhaus</strong> และรับสิทธิ์ลุ้นรางวัลพิเศษได้ทันที!
+                    </p>
+
+                    <button
+                        onClick={() => navigate(`/arcade?tableId=${tableId}`)}
+                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3 px-4 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-97 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                        <span>🎮 เข้าสู่ Arcade เล่นเกมรออาหาร</span>
+                        <ArrowRight size={14} />
+                    </button>
+                </section>
+
                 {/* Order Items Summary */}
                 <section className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
                     <h3 className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mb-4">รายการอาหารสุทธิ (ITEMS SUMMARY)</h3>
@@ -303,9 +340,21 @@ export default function CustomerOrderStatus() {
                                     <span className="font-bold text-[#ff0000]">{item.quantity}x</span>
                                     <div>
                                         <span className="font-bold text-[#1A1A1A] block leading-tight">{item.menu_items?.name}</span>
-                                        {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
-                                            <div className="text-[9px] text-[#767673] mt-0.5 italic font-medium">
-                                                {Object.values(item.selected_options).flat().join(', ')}
+                                        {item.selected_options && (
+                                            <div className="text-[9px] text-[#ff0000] mt-0.5 font-bold space-y-0.5">
+                                                {Array.isArray(item.selected_options) ? (
+                                                    item.selected_options.map((opt, i) => (
+                                                        <div key={i}>
+                                                            ▶ {typeof opt === 'object' ? `${opt.group_name ? `${opt.group_name}: ` : ''}${opt.name}` : opt}
+                                                        </div>
+                                                    ))
+                                                ) : typeof item.selected_options === 'object' ? (
+                                                    Object.entries(item.selected_options).map(([k, v], i) => (
+                                                        <div key={i}>
+                                                            ▶ {Array.isArray(v) ? `${k}: ${v.join(', ')}` : `${k}: ${v}`}
+                                                        </div>
+                                                    ))
+                                                ) : null}
                                             </div>
                                         )}
                                     </div>

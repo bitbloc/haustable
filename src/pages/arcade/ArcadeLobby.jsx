@@ -3,15 +3,21 @@
  * contrast: pass (APCA / WCAG compliant)
  */
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { getAppOrigin } from '../../utils/urlHelper';
 import FlappyCatGame from './FlappyCatGame';
-import { Gamepad2, Music, Tag, Trophy, Award, X, MapPin, CheckCircle, ShieldAlert, RefreshCw, LogIn, Gift, Copy } from 'lucide-react';
+import { Gamepad2, Music, Tag, Trophy, Award, X, MapPin, CheckCircle, ShieldAlert, RefreshCw, LogIn, Gift, Copy, ArrowLeft, Utensils } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 
 export default function ArcadeLobby() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const queryTableId = searchParams.get('tableId');
+  const [activeTableId, setActiveTableId] = useState(null);
+  const [activeTableName, setActiveTableName] = useState('');
+
   const [leaderboard, setLeaderboard] = useState([]);
   const [activeTab, setActiveTab] = useState('game'); // 'game' | 'music'
   const [loading, setLoading] = useState(true);
@@ -214,14 +220,41 @@ export default function ArcadeLobby() {
   useEffect(() => {
     fetchLeaderboard();
     fetchRewards();
-  }, []);
+
+    const effectiveTableId = queryTableId || localStorage.getItem('active_customer_table_id');
+    if (effectiveTableId) {
+      setActiveTableId(effectiveTableId);
+      localStorage.setItem('active_customer_table_id', effectiveTableId);
+
+      supabase
+        .from('tables_layout')
+        .select('table_name')
+        .eq('id', effectiveTableId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.table_name) {
+            setActiveTableName(data.table_name);
+          }
+        });
+    }
+  }, [queryTableId]);
 
   useEffect(() => {
     if (session?.user) {
       fetchUserProfile(session.user.id);
       fetchUserStats(session.user.id);
     } else {
-      setProfile(null);
+      const savedMemberStr = localStorage.getItem('customer_member_profile');
+      if (savedMemberStr) {
+        try {
+          const savedMember = JSON.parse(savedMemberStr);
+          setProfile(savedMember);
+        } catch (e) {
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
+      }
       setUserStats({
         weeklyTotal: 0,
         todayPipe20: false,
@@ -473,6 +506,25 @@ export default function ArcadeLobby() {
           border-radius: 1px;
         }
       `}</style>
+
+      {/* Return to Customer Table Navigation Bar */}
+      {activeTableId && (
+        <div className="w-full bg-[oklch(52%_0.16_28)] text-white py-2.5 px-6 flex items-center justify-between border-b border-[oklch(45%_0.16_28)] shadow-md sticky top-0 z-50">
+          <div className="flex items-center gap-2.5 font-mono text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="font-bold uppercase tracking-wider">
+              🎮 เล่นเกมรออาหาร โต๊ะ {activeTableName || `Table ${activeTableId}`}
+            </span>
+          </div>
+          <button
+            onClick={() => navigate(`/table/${activeTableId}/status`)}
+            className="btn-action px-3.5 py-1.5 rounded bg-white text-[oklch(18%_0.012_28)] hover:bg-[#F2F2EC] text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-[oklch(52%_0.16_28)]" />
+            <span>กลับไปที่โต๊ะ ({activeTableName || `Table ${activeTableId}`})</span>
+          </button>
+        </div>
+      )}
 
       {/* Dieter Rams Masthead / Tuning strip */}
       <header className="w-full border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] py-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">

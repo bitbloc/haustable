@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck, Check, Bell, Receipt, Smartphone, Upload, FileText, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck, Check, Bell, Receipt, Smartphone, Upload, FileText, CheckCircle, Clock, ArrowLeft, Crown, UserCheck, Phone, Gamepad2, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
@@ -48,6 +48,15 @@ export default function CustomerOrderLanding() {
     const [categories, setCategories] = useState([]);
     const [menuItems, setMenuItems] = useState([]);
     const [cart, setCart] = useState([]);
+
+    // Member Flow States
+    const [memberProfile, setMemberProfile] = useState(null);
+    const [showMemberModal, setShowMemberModal] = useState(false);
+    const [memberPhoneInput, setMemberPhoneInput] = useState('');
+    const [memberLookupLoading, setMemberLookupLoading] = useState(false);
+    const [isNewMemberForm, setIsNewMemberForm] = useState(false);
+    const [newMemberForm, setNewMemberForm] = useState({ display_name: '', phone_number: '' });
+    const [tableRemarkInput, setTableRemarkInput] = useState('');
 
     // Geofencing and Security States
     const [gpsChecking, setGpsChecking] = useState(true);
@@ -145,6 +154,23 @@ export default function CustomerOrderLanding() {
                 return;
             }
 
+            // Save tableId for arcade return navigation
+            if (tableId) {
+                localStorage.setItem('active_customer_table_id', tableId);
+            }
+
+            // Restore saved member profile from local storage if present
+            let loadedMember = null;
+            const savedMemberStr = localStorage.getItem('customer_member_profile');
+            if (savedMemberStr) {
+                try {
+                    loadedMember = JSON.parse(savedMemberStr);
+                    setMemberProfile(loadedMember);
+                } catch (e) {
+                    console.error('Error parsing member profile:', e);
+                }
+            }
+
             // 3. Fetch Active Table Session
             // Booking must be active today with status in 'pending', 'confirmed', 'seated', 'ready'
             const today = new Date().toISOString().split('T')[0];
@@ -161,12 +187,25 @@ export default function CustomerOrderLanding() {
             if (bookingData) {
                 // Auto-link member profile in background if customer is logged in on their device
                 const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user && !bookingData.user_id) {
+                let effectiveUserId = bookingData.user_id;
+
+                if (session?.user) {
+                    effectiveUserId = session.user.id;
+                    const { data: authProf } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+                    if (authProf) {
+                        setMemberProfile(authProf);
+                        localStorage.setItem('customer_member_profile', JSON.stringify(authProf));
+                    }
+                } else if (!effectiveUserId && loadedMember?.id) {
+                    effectiveUserId = loadedMember.id;
+                }
+
+                if (effectiveUserId && bookingData.user_id !== effectiveUserId) {
                     await supabase
                         .from('bookings')
-                        .update({ user_id: session.user.id })
+                        .update({ user_id: effectiveUserId })
                         .eq('id', bookingData.id);
-                    bookingData.user_id = session.user.id;
+                    bookingData.user_id = effectiveUserId;
                 }
                 setActiveBooking(bookingData);
                 if (bookingData.pax) setPaxCount(bookingData.pax);
@@ -223,6 +262,96 @@ export default function CustomerOrderLanding() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Member lookup & Registration Handlers
+    const handleMemberPhoneLookup = async (e) => {
+        if (e) e.preventDefault();
+        const cleanPhone = memberPhoneInput.replace(/\D/g, '');
+        if (cleanPhone.length < 9) {
+            toast.error('กรุณาระบุเบอร์โทรศัพท์อย่างน้อย 9-10 หลัก');
+            return;
+        }
+        setMemberLookupLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('phone_number', cleanPhone)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            if (data) {
+                setMemberProfile(data);
+                localStorage.setItem('customer_member_profile', JSON.stringify(data));
+                if (activeBooking) {
+                    await supabase.from('bookings').update({ user_id: data.id }).eq('id', activeBooking.id);
+                    setActiveBooking(prev => prev ? { ...prev, user_id: data.id } : null);
+                }
+                toast.success(`ยินดีต้อนรับสมาชิก คุณ${data.display_name || 'ลูกค้า'}`);
+                setShowMemberModal(false);
+                setIsNewMemberForm(false);
+            } else {
+                toast.info('ยังไม่พบสมาชิกเบอร์นี้ สามารถสมัครสมาชิกใหม่ได้ทันทีด้านล่างครับ');
+                setIsNewMemberForm(true);
+                setNewMemberForm({ display_name: '', phone_number: cleanPhone });
+            }
+        } catch (err) {
+            console.error('Member lookup error:', err);
+            toast.error('ค้นหาสมาชิกล้มเหลว: ' + err.message);
+        } finally {
+            setMemberLookupLoading(false);
+        }
+    };
+
+    const handleRegisterMember = async (e) => {
+        if (e) e.preventDefault();
+        if (!newMemberForm.display_name.trim()) {
+            toast.error('กรุณาระบุชื่อของคุณ');
+            return;
+        }
+        setMemberLookupLoading(true);
+        try {
+            const newId = crypto.randomUUID();
+            const newPayload = {
+                id: newId,
+                display_name: newMemberForm.display_name.trim(),
+                phone_number: newMemberForm.phone_number.trim(),
+                role: 'customer',
+                xhaus_balance: 0
+            };
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .insert(newPayload)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            const savedProfile = data || newPayload;
+            setMemberProfile(savedProfile);
+            localStorage.setItem('customer_member_profile', JSON.stringify(savedProfile));
+            if (activeBooking) {
+                await supabase.from('bookings').update({ user_id: savedProfile.id }).eq('id', activeBooking.id);
+                setActiveBooking(prev => prev ? { ...prev, user_id: savedProfile.id } : null);
+            }
+            toast.success(`สมัครสมาชิกสำเร็จ! ยินดีต้อนรับคุณ ${savedProfile.display_name}`);
+            setShowMemberModal(false);
+            setIsNewMemberForm(false);
+        } catch (err) {
+            console.error('Register member error:', err);
+            toast.error('สมัครสมาชิกไม่สำเร็จ: ' + err.message);
+        } finally {
+            setMemberLookupLoading(false);
+        }
+    };
+
+    const handleUnlinkMember = () => {
+        setMemberProfile(null);
+        localStorage.removeItem('customer_member_profile');
+        toast.info('ยกเลิกการเชื่อมต่อสมาชิกเรียบร้อยแล้ว');
     };
 
     const performGeofenceCheck = (loadedSettings) => {
@@ -380,6 +509,11 @@ export default function CustomerOrderLanding() {
             let currentBooking = activeBooking;
 
             // 1. If there is no active booking, create a new walk-in session!
+            let remarkStr = 'QR Walk-in Guest';
+            if (tableRemarkInput.trim()) {
+                remarkStr += ` [NOTE: ${tableRemarkInput.trim()}]`;
+            }
+
             if (!currentBooking) {
                 const trackingToken = crypto.randomUUID();
                 const newBookingPayload = {
@@ -388,9 +522,10 @@ export default function CustomerOrderLanding() {
                     booking_type: 'walk_in',
                     booking_time: new Date().toISOString(),
                     pax: paxCount || table?.capacity || 2,
-                    staff_remark: 'QR Walk-in Guest',
+                    staff_remark: remarkStr,
                     tracking_token: trackingToken,
-                    total_amount: cartSubtotal
+                    total_amount: cartSubtotal,
+                    user_id: memberProfile?.id || null
                 };
 
                 const { data: newBooking, error: createError } = await supabase
@@ -417,12 +552,22 @@ export default function CustomerOrderLanding() {
 
                 // Update Booking status back to pending to alert staff and trigger print modal!
                 const newTotalAmount = (currentBooking.total_amount || 0) + cartSubtotal;
+                let updatedRemark = latestBooking.staff_remark || 'QR Walk-in Guest';
+                if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
+                    updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
+                }
+
+                const updateData = {
+                    status: 'pending', // Triggers audio alert & dashboard flash
+                    total_amount: newTotalAmount,
+                    staff_remark: updatedRemark
+                };
+                if (memberProfile?.id && !latestBooking.user_id) {
+                    updateData.user_id = memberProfile.id;
+                }
                 const { error: bookingUpdateError } = await supabase
                     .from('bookings')
-                    .update({ 
-                        status: 'pending', // Triggers audio alert & dashboard flash
-                        total_amount: newTotalAmount 
-                    })
+                    .update(updateData)
                     .eq('id', currentBooking.id);
 
                 if (bookingUpdateError) throw bookingUpdateError;
@@ -435,7 +580,9 @@ export default function CustomerOrderLanding() {
                 menu_item_id: item.id,
                 quantity: item.qty,
                 price_at_time: item.totalPricePerUnit,
-                selected_options: item.selectedOptions || {}
+                selected_options: (item.optionsSummary && item.optionsSummary.length > 0) 
+                    ? item.optionsSummary 
+                    : item.selectedOptions || {}
             }));
 
             const { error: itemsError } = await supabase
@@ -618,6 +765,50 @@ export default function CustomerOrderLanding() {
                 >
                     <span>👥 {paxCount} คน</span>
                     <span className="text-[10px] text-[#ff0000] font-bold">แก้ไข</span>
+                </button>
+            </div>
+
+            {/* Seamless Member Bar */}
+            <div className="px-5 py-3 bg-[#F5F5F2] border-b border-[#D1D1CD] flex items-center justify-between shadow-inner">
+                {memberProfile ? (
+                    <div className="flex items-center gap-2.5 text-xs">
+                        <div className="w-8 h-8 rounded-full bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 flex items-center justify-center font-bold shrink-0">
+                            <Crown size={16} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5 font-bold text-[#1A1A1A]">
+                                <span>คุณ {memberProfile.display_name || 'สมาชิก'}</span>
+                                <span className="text-[10px] text-[#767673] font-mono">({memberProfile.phone_number || 'Member'})</span>
+                            </div>
+                            <div className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)]">
+                                🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} xhaus
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2.5 text-xs">
+                        <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
+                            <Crown size={16} />
+                        </div>
+                        <div>
+                            <span className="font-bold text-[#1A1A1A] block text-xs">สมาชิกสะสมแต้ม</span>
+                            <span className="text-[10px] text-[#767673]">ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus</span>
+                        </div>
+                    </div>
+                )}
+
+                <button
+                    onClick={() => setShowMemberModal(true)}
+                    className="bg-white hover:bg-[#EAEAE6] border border-[#D1D1CD] text-[#1A1A1A] px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 shrink-0"
+                >
+                    {memberProfile ? (
+                        <span>สลับสมาชิก</span>
+                    ) : (
+                        <>
+                            <UserPlus size={13} className="text-[oklch(52%_0.16_28)]" />
+                            <span>เข้าสู่ระบบ / สมัคร</span>
+                        </>
+                    )}
                 </button>
             </div>
 
@@ -851,8 +1042,22 @@ export default function CustomerOrderLanding() {
                                 ))}
                             </div>
 
+                            {/* Table Kitchen Remark Input */}
+                            <div className="pt-2 border-t border-[#D1D1CD]/60 shrink-0">
+                                <label className="block text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider mb-1">
+                                    📝 หมายเหตุเพิ่มเติมถึงครัว (Kitchen Remark)
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="เช่น ขอช้อนส้อมผู้ใหญ่เพิ่ม, เสิร์ฟพร้อมกันหมด"
+                                    value={tableRemarkInput}
+                                    onChange={(e) => setTableRemarkInput(e.target.value)}
+                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl py-2 px-3 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] transition-colors"
+                                />
+                            </div>
+
                             {/* Drawer Footer */}
-                            <div className="border-t border-[#D1D1CD] pt-4 space-y-4 shrink-0">
+                            <div className="border-t border-[#D1D1CD] pt-3 space-y-3 shrink-0">
                                 <div className="flex justify-between items-baseline">
                                     <span className="text-[#767673] text-[10px] uppercase font-mono font-bold tracking-wider">ยอดรวมสุทธิ (Subtotal)</span>
                                     <span className="text-xl font-black text-[#ff0000] font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
@@ -980,9 +1185,21 @@ export default function CustomerOrderLanding() {
                                                         <span className="font-bold text-[#ff0000]">{item.quantity}x</span>
                                                         <div>
                                                             <span className="font-bold text-[#1A1A1A] block leading-tight">{item.menu_items?.name}</span>
-                                                            {item.selected_options && typeof item.selected_options === 'object' && !Array.isArray(item.selected_options) && (
-                                                                <div className="text-[9px] text-[#767673] mt-0.5 italic font-medium">
-                                                                    {Object.values(item.selected_options).flat().join(', ')}
+                                                            {item.selected_options && (
+                                                                <div className="text-[9px] text-[#ff0000] mt-0.5 font-bold space-y-0.5">
+                                                                    {Array.isArray(item.selected_options) ? (
+                                                                        item.selected_options.map((opt, i) => (
+                                                                            <div key={i}>
+                                                                                ▶ {typeof opt === 'object' ? `${opt.group_name ? `${opt.group_name}: ` : ''}${opt.name}` : opt}
+                                                                            </div>
+                                                                        ))
+                                                                    ) : typeof item.selected_options === 'object' ? (
+                                                                        Object.entries(item.selected_options).map(([k, v], i) => (
+                                                                            <div key={i}>
+                                                                                ▶ {Array.isArray(v) ? `${k}: ${v.join(', ')}` : `${k}: ${v}`}
+                                                                            </div>
+                                                                        ))
+                                                                    ) : null}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1122,6 +1339,98 @@ export default function CustomerOrderLanding() {
                             >
                                 <Check size={16} /> ยืนยันจำนวนคน (Confirm) *
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Member Identification Modal */}
+            {showMemberModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl font-sans text-[#1A1A1A]">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
+                            <div className="flex items-center gap-2">
+                                <Crown className="text-[oklch(52%_0.16_28)]" size={18} />
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ระบบสมาชิก HAUS MEMBER</h3>
+                            </div>
+                            <button onClick={() => setShowMemberModal(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg text-[#767673]">
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            {memberProfile && (
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                                    <div>
+                                        <span className="text-[10px] text-emerald-700 font-mono font-bold uppercase block">สมาชิกที่เชื่อมต่ออยู่</span>
+                                        <span className="font-bold text-emerald-900">{memberProfile.display_name} ({memberProfile.phone_number || 'Member'})</span>
+                                    </div>
+                                    <button
+                                        onClick={handleUnlinkMember}
+                                        className="text-[10px] text-red-600 font-mono font-bold underline cursor-pointer"
+                                    >
+                                        เลิกเชื่อมต่อ
+                                    </button>
+                                </div>
+                            )}
+
+                            {!isNewMemberForm ? (
+                                <form onSubmit={handleMemberPhoneLookup} className="space-y-3">
+                                    <label className="block text-xs font-bold text-[#1A1A1A]">
+                                        ระบุเบอร์โทรศัพท์เพื่อค้นหาสมาชิก
+                                    </label>
+                                    <div className="relative">
+                                        <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" />
+                                        <input
+                                            type="tel"
+                                            placeholder="08X-XXX-XXXX"
+                                            value={memberPhoneInput}
+                                            onChange={(e) => setMemberPhoneInput(e.target.value)}
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl py-2.5 pl-10 pr-4 text-sm font-mono font-bold text-[#1A1A1A] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={memberLookupLoading}
+                                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-2.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-97 cursor-pointer"
+                                    >
+                                        {memberLookupLoading ? 'กำลังค้นหา...' : 'ค้นหาสมาชิก'}
+                                    </button>
+                                </form>
+                            ) : (
+                                <form onSubmit={handleRegisterMember} className="space-y-3">
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
+                                        ✨ ไม่พบสมาชิกเบอร์ <strong>{newMemberForm.phone_number}</strong> สามารถระบุชื่อเพื่อสมัครสมาชิกทันที!
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-[#1A1A1A] mb-1">
+                                            ชื่อ-นามสกุล หรือ ชื่อเล่น
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="เช่น คุณปอนด์"
+                                            value={newMemberForm.display_name}
+                                            onChange={(e) => setNewMemberForm(prev => ({ ...prev, display_name: e.target.value }))}
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl py-2.5 px-3 text-sm font-bold text-[#1A1A1A] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={memberLookupLoading}
+                                        className="w-full bg-[#00CC44] hover:bg-[#00b33c] text-white py-2.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-97 cursor-pointer flex items-center justify-center gap-1.5"
+                                    >
+                                        <Check size={16} />
+                                        {memberLookupLoading ? 'กำลังบันทึก...' : 'ยืนยันสมัครสมาชิก & เชื่อมต่อ'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsNewMemberForm(false)}
+                                        className="w-full text-center text-xs text-[#767673] underline font-mono cursor-pointer"
+                                    >
+                                        ย้อนกลับไปค้นหาใหม่
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     </div>
                 </div>

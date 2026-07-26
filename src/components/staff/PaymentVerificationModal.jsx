@@ -18,9 +18,21 @@ export default function PaymentVerificationModal({ order, onClose, onVerify }) {
         return order.order_items?.map((item, idx) => {
             let opts = []
             if (Array.isArray(item.selected_options)) {
-                opts = item.selected_options.map(o => typeof o === 'object' ? `${o.name} (+${o.price})` : o)
+                opts = item.selected_options.map(o => {
+                    if (typeof o === 'object' && o !== null) {
+                        const groupPrefix = o.group_name ? `${o.group_name}: ` : ''
+                        const priceStr = (o.price && Number(o.price) > 0) ? ` (+฿${o.price})` : ''
+                        return `${groupPrefix}${o.name}${priceStr}`
+                    }
+                    return String(o)
+                })
             } else if (typeof item.selected_options === 'object') {
-                opts = Object.entries(item.selected_options).map(([key, value]) => `${key}: ${value}`)
+                opts = Object.entries(item.selected_options).flatMap(([key, value]) => {
+                    if (Array.isArray(value)) {
+                        return value.map(v => typeof v === 'object' ? `${v.name || v}` : `${key}: ${v}`)
+                    }
+                    return [`${key}: ${value}`]
+                })
             }
 
             return (
