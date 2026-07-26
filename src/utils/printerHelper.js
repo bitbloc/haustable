@@ -539,7 +539,7 @@ function sliceThai(str, maxVisualWidth) {
     return result;
 }
 
-// Thai-width-aware item line formatting
+// Thai-width-aware item line formatting (with multi-line wrapping so no text is lost)
 function formatItemLine(qty, name, priceStr, maxCols) {
     const qtyColWidth = maxCols === 48 ? 5 : 4;
     const priceColWidth = maxCols === 48 ? 12 : 9;
@@ -548,41 +548,93 @@ function formatItemLine(qty, name, priceStr, maxCols) {
     const qtyStr = padEndThai(qty, qtyColWidth);
     const rightPriceStr = priceStr.padStart(priceColWidth);
     
-    let displayName = name;
-    if (getThaiVisualWidth(name) > nameColWidth) {
-        displayName = sliceThai(name, nameColWidth - 3) + '...';
+    if (getThaiVisualWidth(name) <= nameColWidth) {
+        const paddedName = padEndThai(name, nameColWidth);
+        return qtyStr + paddedName + rightPriceStr + '\n';
     }
-    
-    const paddedName = padEndThai(displayName, nameColWidth);
-    return qtyStr + paddedName + rightPriceStr + '\n';
+
+    const lines = [];
+    let remaining = name;
+    while (remaining.length > 0) {
+        const chunk = sliceThai(remaining, nameColWidth);
+        lines.push(chunk);
+        remaining = remaining.slice(chunk.length);
+        if (chunk.length === 0) break;
+    }
+
+    let result = '';
+    lines.forEach((l, idx) => {
+        if (idx === 0) {
+            result += qtyStr + padEndThai(l, nameColWidth) + rightPriceStr + '\n';
+        } else {
+            result += ' '.repeat(qtyColWidth) + padEndThai(l, nameColWidth) + ' '.repeat(priceColWidth) + '\n';
+        }
+    });
+    return result;
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
     const rightCol = 12;
     const midCol = 5;
-    // two spaces separation
     const leftCol = maxCols - rightCol - midCol - 3;
     
+    const midRightStr = '  ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
     let leftStr = String(left);
-    if (getThaiVisualWidth(leftStr) > leftCol) {
-        leftStr = sliceThai(leftStr, leftCol - 3) + '...';
-    }
     
-    const paddedLeft = padEndThai(leftStr, leftCol);
-    return paddedLeft + '  ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
+    if (getThaiVisualWidth(leftStr) <= leftCol) {
+        const paddedLeft = padEndThai(leftStr, leftCol);
+        return paddedLeft + midRightStr;
+    }
+
+    const lines = [];
+    let remaining = leftStr;
+    while (remaining.length > 0) {
+        const chunk = sliceThai(remaining, leftCol);
+        lines.push(chunk);
+        remaining = remaining.slice(chunk.length);
+        if (chunk.length === 0) break;
+    }
+
+    let result = '';
+    lines.forEach((l, idx) => {
+        if (idx === lines.length - 1) {
+            result += padEndThai(l, leftCol) + midRightStr;
+        } else {
+            result += padEndThai(l, leftCol) + ' '.repeat(midRightStr.length) + '\n';
+        }
+    });
+    return result;
 }
 
 function formatTwoCols(left, right, maxCols) {
     const rightCol = 12;
     const leftCol = maxCols - rightCol - 1; // one space separation
+    const rightStr = String(right).padStart(rightCol, ' ');
     
     let leftStr = String(left);
-    if (getThaiVisualWidth(leftStr) > leftCol) {
-        leftStr = sliceThai(leftStr, leftCol - 3) + '...';
+    if (getThaiVisualWidth(leftStr) <= leftCol) {
+        const paddedLeft = padEndThai(leftStr, leftCol);
+        return paddedLeft + ' ' + rightStr;
     }
-    
-    const paddedLeft = padEndThai(leftStr, leftCol);
-    return paddedLeft + ' ' + String(right).padStart(rightCol, ' ');
+
+    const lines = [];
+    let remaining = leftStr;
+    while (remaining.length > 0) {
+        const chunk = sliceThai(remaining, leftCol);
+        lines.push(chunk);
+        remaining = remaining.slice(chunk.length);
+        if (chunk.length === 0) break;
+    }
+
+    let result = '';
+    lines.forEach((l, idx) => {
+        if (idx === lines.length - 1) {
+            result += padEndThai(l, leftCol) + ' ' + rightStr;
+        } else {
+            result += padEndThai(l, leftCol) + ' ' + ' '.repeat(rightCol) + '\n';
+        }
+    });
+    return result;
 }
 
 // Compile raw bookings into rich structured shift report details

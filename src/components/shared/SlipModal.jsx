@@ -947,7 +947,7 @@ export default function SlipModal({ booking, type, onClose }) {
                             <div className="text-right">{dateStr}</div>
                             
                             <div className="text-gray-500">GUEST</div>
-                            <div className="text-right truncate">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</div>
+                            <div className="text-right break-words">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</div>
 
                             {(booking.profiles?.phone_number || booking.pickup_contact_phone) && (
                                 <>

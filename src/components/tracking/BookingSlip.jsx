@@ -94,9 +94,9 @@ export default function BookingSlip({ data, qrCodeUrl, canSave, isCancelled, isF
 
                             return (
                                 <div key={idx} className="text-sm">
-                                    <div className="flex justify-between items-baseline font-bold text-gray-900">
-                                        <span><span className="mr-2 text-gray-400 text-xs font-normal">{item.quantity}x</span>{item.menu_items?.name || item.name}</span>
-                                        <span>{(item.price * item.quantity).toLocaleString()}</span>
+                                    <div className="flex justify-between items-baseline font-bold text-gray-900 gap-2">
+                                        <span className="grow break-words"><span className="mr-2 text-gray-400 text-xs font-normal">{item.quantity}x</span>{item.menu_items?.name || item.name}</span>
+                                        <span className="shrink-0 font-mono font-bold">{(item.price * item.quantity).toLocaleString()}</span>
                                     </div>
                                     {optionsList.length > 0 && (
                                         <div className="pl-6 mt-1 text-xs text-gray-500 font-medium space-y-0.5">
