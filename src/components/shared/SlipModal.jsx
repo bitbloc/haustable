@@ -634,6 +634,20 @@ export default function SlipModal({ booking, type, onClose }) {
 
                     ${noteHtml}
 
+                    ${(() => {
+                        let asciiHtml = '';
+                        try {
+                            const stored = localStorage.getItem('onhaus_printer_config');
+                            if (stored) {
+                                const cfg = JSON.parse(stored);
+                                if (cfg.footer_ascii_art) {
+                                    asciiHtml = `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${cfg.footer_ascii_art}</pre>`;
+                                }
+                            }
+                        } catch(e) {}
+                        return asciiHtml;
+                    })()}
+
                     <div class="footer">
                         ${receiptShopFooter || 'THANK YOU FOR YOUR VISIT'}
                     </div>

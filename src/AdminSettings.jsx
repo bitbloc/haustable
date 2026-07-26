@@ -3,7 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy } from 'lucide-react'
 import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
-import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn } from './utils/printerHelper'
+import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from './utils/printerHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
@@ -39,10 +39,47 @@ const InstallPWA = () => {
         onClick={handleInstall}
         className="flex items-center gap-2 bg-zinc-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-zinc-700 transition-colors border border-zinc-700"
     >
-        <Download size={16} /> Install App
     </button>
-  )
-}
+  );
+};
+
+const ASCII_ART_PRESETS = [
+    {
+        id: 'stars_sparkle',
+        name: '★ ดาวและดนตรี (Stars & Music)',
+        art: `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`
+    },
+    {
+        id: 'cat',
+        name: '🐱 น้องแมวน่ารัก (Cute Cat)',
+        art: `  /\\_/\\  \n ( o.o ) \n  > ^ <  `
+    },
+    {
+        id: 'haus_beer',
+        name: '🍺 Haus & Beer (แก้วเบียร์)',
+        art: ` (🍺 HAUS POS 🍺) \n  .---.  .---.\n  |   |__|   |\n  |   |  |   |\n  '---'  '---'`
+    },
+    {
+        id: 'coffee_cup',
+        name: '☕ ถ้วยกาแฟร้อน (Hot Coffee)',
+        art: `   (  )  (  )\n    )  (  )\n   ..........\n   |  HAUS  |]\n   \\________/`
+    },
+    {
+        id: 'classic_banner',
+        name: '═ แบนเนอร์เรียบหรู (Classic Banner)',
+        art: `═══════════════════════════\n   THANK YOU FOR VISITING\n═══════════════════════════`
+    },
+    {
+        id: 'welcome_home',
+        name: '🏡 ต้อนรับกลับบ้าน (Welcome Home)',
+        art: `      /\\\n     /  \\   IN THE HAUS\n    /____\\  ~~~~~~~~~~~\n    | [] |  WELCOME HOME`
+    },
+    {
+        id: 'heart_smile',
+        name: '💖 หัวใจและรอยยิ้ม (Heart & Smile)',
+        art: ` (^_^)v  THANK YOU VERY MUCH  (^_^)v\n      ♥ HAVE A NICE DAY ♥`
+    }
+];
 
 export default function AdminSettings() {
     const [settings, setSettings] = useState({
@@ -118,8 +155,12 @@ export default function AdminSettings() {
         kitchen_printer_ip: '192.168.1.200',
         kitchen_printer_port: '9100',
         kitchen_printer_bt_name: 'KitchenPrinter',
-        kitchen_paper_size: '80mm'
+        kitchen_paper_size: '80mm',
+        footer_ascii_art: `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`,
+        shop_footer_text: 'THANK YOU FOR YOUR VISIT'
     });
+    const [previewTab, setPreviewTab] = useState('billing'); // 'billing' | 'kitchen' | 'bar'
+    const [selectedAsciiPreset, setSelectedAsciiPreset] = useState('stars_sparkle');
     const [isScanning, setIsScanning] = useState(false);
     const [allCategories, setAllCategories] = useState([]);
     const [draggedOverColumn, setDraggedOverColumn] = useState(null);
@@ -1849,6 +1890,317 @@ export default function AdminSettings() {
                                     {(printerConfig.bar_categories || []).length === 0 && (
                                         <div className="text-[10px] text-[#767673] font-mono text-center py-8">กดปุ่มหรือลากหมวดหมู่มาวางที่นี่ เพื่อส่งเข้าเครื่องพิมพ์บาร์</div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card: Live Thermal Receipt Preview & ASCII Art Footer Editor */}
+                        <div className="col-span-2 bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm space-y-6 mt-4 font-sans text-[#1A1A1A]">
+                            <div className="border-b border-[#D1D1CD] pb-3 flex flex-wrap justify-between items-center gap-3">
+                                <div>
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
+                                        <span>🎨</span> ตัวอย่างการจัดหน้าพิมพ์ & ASCII Art Footer (Receipt Live Layout & Footer Editor)
+                                    </h2>
+                                    <p className="text-[10px] text-[#767673] mt-1 font-sans">
+                                        ดูตัวอย่างการแสดงผลสลิปแบบเรียลไทม์ (ความกว้าง 80mm / 58mm) พร้อมเลือกและปรับแต่งข้อความ ASCII Art ปิดท้ายสลิปให้สวยงามตรงตามต้องการ
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-[#D1D1CD] shadow-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewTab('billing')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'billing' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                    >
+                                        🧾 บิลคิดเงิน (Receipt)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewTab('kitchen')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'kitchen' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                    >
+                                        🍳 สั่งอาหาร (Kitchen)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewTab('bar')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'bar' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                    >
+                                        🍹 สั่งเครื่องดื่ม (Bar)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {/* Left Column: ASCII Art Footer Controls (7 cols) */}
+                                {/* Left Column: Layout Controls & ASCII Art (7 cols) */}
+                                <div className="lg:col-span-7 space-y-4">
+                                    {/* Divider Line Pattern Selector Card */}
+                                    <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl space-y-3 shadow-sm">
+                                        <h3 className="text-xs font-mono font-bold uppercase text-[#1A1A1A] flex items-center justify-between border-b border-[#F0F0EC] pb-2">
+                                            <span>📏 เลือกลวดลายเส้นคั่นสลิป (Divider Line Pattern)</span>
+                                            <span className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded font-mono font-bold">DIVIDER PATTERN</span>
+                                        </h3>
+
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {[
+                                                { id: 'dashed', name: '- - - เส้นประมาตรฐาน', pattern: '- - - - - - - - - - - -' },
+                                                { id: 'dotted', name: '. . . เส้นจุดเรียบหรู', pattern: '. . . . . . . . . . . .' },
+                                                { id: 'solid', name: '───── เส้นทึบเดี่ยว', pattern: '────────────────────────' },
+                                                { id: 'double', name: '═════ เส้นทึบคู่', pattern: '════════════════════════' },
+                                                { id: 'star', name: '★ ★ ★ เส้นดาว', pattern: '★ * ★ * ★ * ★ * ★ * ★ *' },
+                                                { id: 'wave', name: '~ ~ ~ เส้นคลื่น', pattern: '~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~' }
+                                            ].map(style => (
+                                                <button
+                                                    key={style.id}
+                                                    type="button"
+                                                    onClick={() => handleSavePrinter({ ...printerConfig, divider_style: style.id })}
+                                                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${ (printerConfig.divider_style || 'dashed') === style.id ? 'bg-orange-50/20 border-[#ff0000] ring-2 ring-[#ff0000]/15 shadow-xs' : 'bg-[#F9F9F8] border-[#D1D1CD] hover:bg-white'}`}
+                                                >
+                                                    <span className="text-[11px] font-bold text-[#1A1A1A]">{style.name}</span>
+                                                    <span className="font-mono text-[10px] text-[#767673] mt-1.5 overflow-hidden whitespace-nowrap block">
+                                                        {style.pattern}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ASCII Art Footer Controls Card */}
+                                    <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl space-y-4 shadow-sm">
+                                        <h3 className="text-xs font-mono font-bold uppercase text-[#1A1A1A] flex items-center justify-between border-b border-[#F0F0EC] pb-2">
+                                            <span>✨ เลือกคลัง ASCII Art Footer สำเร็จรูป</span>
+                                            <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded font-mono font-bold">ASCII PRESETS</span>
+                                        </h3>
+
+                                        {/* Presets Grid */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {ASCII_ART_PRESETS.map(preset => (
+                                                <button
+                                                    key={preset.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedAsciiPreset(preset.id);
+                                                        handleSavePrinter({ ...printerConfig, footer_ascii_art: preset.art });
+                                                    }}
+                                                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${printerConfig.footer_ascii_art === preset.art ? 'bg-orange-50/20 border-[#ff0000] ring-2 ring-[#ff0000]/15 shadow-xs' : 'bg-[#F9F9F8] border-[#D1D1CD] hover:bg-white hover:border-[#767673]'}`}
+                                                >
+                                                    <span className="text-xs font-bold text-[#1A1A1A]">{preset.name}</span>
+                                                    <pre className="font-mono text-[9px] text-[#767673] mt-2 whitespace-pre leading-tight overflow-x-auto bg-white p-2 rounded border border-[#EBEBE8]">
+                                                        {preset.art}
+                                                    </pre>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Custom ASCII Art Textarea Input */}
+                                        <div className="space-y-1.5 pt-2">
+                                            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">
+                                                ข้อความ ASCII Art Footer ที่ใช้งานอยู่ (ปรับแต่งได้ตามต้องการ)
+                                            </label>
+                                            <textarea
+                                                rows={4}
+                                                value={printerConfig.footer_ascii_art || ''}
+                                                onChange={(e) => handleSavePrinter({ ...printerConfig, footer_ascii_art: e.target.value })}
+                                                placeholder="พิมพ์ข้อความ ASCII Art หรือสัญลักษณ์พิเศษตรงนี้..."
+                                                className="w-full p-3 bg-[#F9F9F8] border border-[#D1D1CD] rounded-xl text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 leading-tight resize-y shadow-inner"
+                                            />
+                                            <p className="text-[9px] text-[#767673]">💡 เคล็ดลับ: สามารถใส่ข้อความหลายบรรทัด หรือคัดลอกสัญลักษณ์พิเศษมาวางได้ทันที</p>
+                                        </div>
+
+                                        {/* Shop Footer Line */}
+                                        <div className="space-y-1.5 pt-2 border-t border-[#F0F0EC]">
+                                            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">
+                                                ข้อความท้ายสลิปหลัก (Shop Footer Text)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={printerConfig.shop_footer_text || settings.receipt_shop_footer || 'THANK YOU FOR YOUR VISIT'}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    handleSavePrinter({ ...printerConfig, shop_footer_text: val });
+                                                    handleSave('receipt_shop_footer', val);
+                                                }}
+                                                className="w-full px-3 py-2.5 bg-[#F9F9F8] border border-[#D1D1CD] rounded-xl text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#ff0000] shadow-inner"
+                                                placeholder="เช่น ขอบคุณที่อุดหนุน แล้วพบกันใหม่ครับ!"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Thermal Paper Live Preview Mockup (5 cols) */}
+                                <div className="lg:col-span-5 flex flex-col items-center">
+                                    <div className="text-[10px] font-mono font-bold uppercase text-[#767673] mb-2 flex items-center gap-1.5">
+                                        <span>📄 ตัวอย่างใบเสร็จจริง (LIVE RECEIPT MOCKUP)</span>
+                                        <span className="bg-[#1A1A1A] text-white px-2 py-0.5 rounded text-[8px]">
+                                            {printerConfig.cashier_paper_size || '80mm'}
+                                        </span>
+                                    </div>
+
+                                    {/* Simulated Physical Thermal Paper Card with Jagged Tear Edges */}
+                                    <div className="w-full max-w-[320px] bg-white border border-[#D1D1CD] shadow-2xl p-5 text-[#1A1A1A] font-mono text-[11px] leading-snug rounded-t-xl relative overflow-hidden select-none">
+                                        {/* Paper Header */}
+                                        <div className="text-center pb-2 mb-2">
+                                            <div className="font-bold text-lg tracking-tight uppercase">
+                                                {settings.receipt_shop_name || 'IN THE HAUS'}
+                                            </div>
+                                            {settings.receipt_shop_address && (
+                                                <div className="text-[9px] text-[#555] mt-0.5">{settings.receipt_shop_address}</div>
+                                            )}
+                                            {settings.receipt_shop_phone && (
+                                                <div className="text-[9px] text-[#555]">TEL: {settings.receipt_shop_phone}</div>
+                                            )}
+                                            {settings.receipt_shop_vat && (
+                                                <div className="text-[9px] text-[#555]">TAX ID: {settings.receipt_shop_vat}</div>
+                                            )}
+                                        </div>
+
+                                        {/* Dynamic Divider Line */}
+                                        <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
+                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                        </div>
+
+                                        {/* Ticket Title */}
+                                        <div className="text-center font-bold text-xs uppercase my-2">
+                                            {previewTab === 'kitchen' && (
+                                                <div>
+                                                    <div className="text-sm font-black">KITCHEN ORDER</div>
+                                                    <div className="text-[9px]">(ใบออเดอร์ครัว)</div>
+                                                </div>
+                                            )}
+                                            {previewTab === 'bar' && (
+                                                <div>
+                                                    <div className="text-sm font-black">BAR ORDER</div>
+                                                    <div className="text-[9px]">(ใบออเดอร์บาร์)</div>
+                                                </div>
+                                            )}
+                                            {previewTab === 'billing' && (
+                                                <div>
+                                                    <div className="text-sm font-black">RECEIPT / ใบเสร็จรับเงิน</div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Dynamic Divider Line */}
+                                        <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
+                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                        </div>
+
+                                        {/* Queue & Table Box */}
+                                        <div className="border border-[#1A1A1A] p-2 text-center my-3">
+                                            <div className="text-sm font-black uppercase">โต๊ะ 04 (TABLE 04)</div>
+                                            <div className="text-xs font-bold text-[#ff0000]">คิว: #HAUS-102</div>
+                                        </div>
+
+                                        {/* Customer & Staff Metadata */}
+                                        {previewTab === 'billing' && (
+                                            <div className="my-2 text-[10px] space-y-0.5">
+                                                <div>วันที่-เวลา: {new Date().toLocaleString('th-TH')}</div>
+                                                <div>ลูกค้า: ลูกค้าทั่วไป (Walk-in)</div>
+                                                <div>พนักงาน: แคชเชียร์ A (CASHIER A)</div>
+                                            </div>
+                                        )}
+
+                                        {/* Dynamic Divider Line */}
+                                        <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
+                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                        </div>
+
+                                        {/* Items List */}
+                                        <div className="my-2">
+                                            <div className="font-bold text-[10px] pb-1 mb-2 uppercase">
+                                                {previewTab === 'kitchen' ? 'รายการอาหาร (ครัว)' : previewTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : 'รายการสินค้า'}
+                                            </div>
+
+                                            {previewTab === 'billing' && (
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-bold w-6 shrink-0">1x</span>
+                                                        <span className="font-bold flex-1 pr-1 truncate">ข้าวผัดกระเพราเนื้อสับไข่ดาว</span>
+                                                        <span className="font-bold shrink-0">145.-</span>
+                                                    </div>
+                                                    <div className="text-[9px] text-[#555] pl-6">+ ไข่ดาวสุกพิเศษ</div>
+
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-bold w-6 shrink-0">2x</span>
+                                                        <span className="font-bold flex-1 pr-1 truncate">MATCHA LATTE ICE LARGE</span>
+                                                        <span className="font-bold shrink-0">240.-</span>
+                                                    </div>
+                                                    <div className="text-[9px] text-[#555] pl-6">(2 x ฿120.-)</div>
+                                                    <div className="text-[9px] text-[#555] pl-6">+ หวานน้อย 50%</div>
+                                                </div>
+                                            )}
+
+                                            {previewTab === 'kitchen' && (
+                                                <div className="space-y-3">
+                                                    <div className="font-black text-sm">
+                                                        <div>1x ข้าวผัดกระเพราเนื้อสับ</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ + ไข่ดาวสุกพิเศษ</div>
+                                                    </div>
+                                                    <div className="font-black text-sm">
+                                                        <div>2x ต้มยำกุ้งน้ำข้น (หม้อไฟ)</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ ขอเผ็ดน้อย</div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {previewTab === 'bar' && (
+                                                <div className="space-y-3">
+                                                    <div className="font-black text-sm">
+                                                        <div>2x MATCHA LATTE ICE</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ หวานน้อย 50%</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ เพิ่มแก้วน้ำแข็ง 2</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Dynamic Divider Line */}
+                                        <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
+                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                        </div>
+
+                                        {/* Subtotal & Totals (Only for Billing) */}
+                                        {previewTab === 'billing' && (
+                                            <div className="space-y-1 text-[10px] my-2">
+                                                <div className="flex justify-between">
+                                                    <span>จำนวนชิ้น</span>
+                                                    <span>3 ชิ้น</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>ยอดรวมก่อนหัก</span>
+                                                    <span>385.-</span>
+                                                </div>
+                                                <div className="flex justify-between font-bold text-sm pt-1.5 mt-1 border-t border-dashed border-[#1A1A1A]">
+                                                    <span>ยอดรวมสุทธิ</span>
+                                                    <span>฿385.00</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Human Notes (If Any) */}
+                                        <div className="text-[10px] my-2">
+                                            <div className="font-bold">หมายเหตุ:</div>
+                                            <div>ลูกค้า: ขอจานแบ่งเพิ่ม 2 ใบ</div>
+                                        </div>
+
+                                        {/* Dynamic Divider Line */}
+                                        <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
+                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                        </div>
+
+                                        {/* Live ASCII Art Footer Display */}
+                                        <div className="text-center my-3 whitespace-pre font-mono text-[9px] font-bold text-[#1A1A1A] leading-tight bg-[#F9F9F8] p-2 rounded border border-dashed border-[#CCCCCC]">
+                                            {printerConfig.footer_ascii_art || `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`}
+                                        </div>
+
+                                        {/* Shop Footer Text */}
+                                        <div className="text-center font-bold text-[9px] uppercase tracking-wider">
+                                            {printerConfig.shop_footer_text || settings.receipt_shop_footer || 'THANK YOU FOR YOUR VISIT'}
+                                        </div>
+
+                                        {/* Physical Paper Sawtooth/Zigzag Cut Effect */}
+                                        <div className="w-full h-3 mt-4 bg-[radial-gradient(circle,_transparent_4px,_#ffffff_4px)] bg-[length:10px_10px] bg-repeat-x -mb-5"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

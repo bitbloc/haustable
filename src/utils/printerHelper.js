@@ -149,6 +149,29 @@ export function getCleanStaffRemark(remark) {
     return cleaned;
 }
 
+// Generate customizable divider lines (dashed, dotted, solid, double, star, wave)
+export function generateDivider(style = 'dashed', maxCols = 48) {
+    if (style === 'dotted') {
+        const p = '. ';
+        return p.repeat(Math.ceil(maxCols / 2)).slice(0, maxCols);
+    }
+    if (style === 'solid') {
+        return '-'.repeat(maxCols);
+    }
+    if (style === 'double') {
+        return '='.repeat(maxCols);
+    }
+    if (style === 'star') {
+        const p = '★ ';
+        return p.repeat(Math.ceil(maxCols / 2)).slice(0, maxCols);
+    }
+    if (style === 'wave') {
+        const p = '~ ';
+        return p.repeat(Math.ceil(maxCols / 2)).slice(0, maxCols);
+    }
+    return '-'.repeat(maxCols);
+}
+
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '80mm', receiptConfig = {}, printerType = 'universal') {
     // Filter items based on activeTab (Kitchen vs Bar vs Others) using printer configuration
@@ -242,8 +265,21 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
 
     const maxCols = paperSize === '80mm' ? 48 : 30; // 80mm standard paper supports 48 cols. 58mm supports 30 cols.
-    const divider = '-'.repeat(maxCols);
-    const doubleDivider = '='.repeat(maxCols);
+
+    let selectedDividerStyle = receiptConfig.divider_style;
+    if (!selectedDividerStyle) {
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                const cfg = JSON.parse(stored);
+                selectedDividerStyle = cfg.divider_style || 'dashed';
+            }
+        } catch(e) {}
+    }
+    selectedDividerStyle = selectedDividerStyle || 'dashed';
+
+    const divider = generateDivider(selectedDividerStyle, maxCols);
+    const doubleDivider = generateDivider(selectedDividerStyle === 'double' ? 'double' : (selectedDividerStyle === 'star' ? 'star' : 'dashed'), maxCols);
 
     // Load receipt configuration details
     const shopName = (receiptConfig.shopName || 'IN THE HAUS').toUpperCase();
@@ -552,8 +588,24 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 9. Footer
     if (!isKitchenTab) {
-        encoder.align('center')
-               .line(shopFooter)
+        let asciiArt = receiptConfig.footer_ascii_art || '';
+        if (!asciiArt) {
+            try {
+                const stored = localStorage.getItem('onhaus_printer_config');
+                if (stored) {
+                    const cfg = JSON.parse(stored);
+                    asciiArt = cfg.footer_ascii_art || '';
+                }
+            } catch(e) {}
+        }
+
+        encoder.align('center');
+        if (asciiArt) {
+            asciiArt.split('\n').forEach(aLine => {
+                encoder.line(aLine);
+            });
+        }
+        encoder.line(shopFooter)
                .feed(2)
                .cut();
     } else {
