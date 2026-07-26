@@ -24,13 +24,25 @@ export function getOfflineQueue() {
 }
 
 export function saveOfflineQueue(queue) {
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    try {
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {
+        console.error('[Offline Storage Error] Failed to save offline queue:', e);
+        // Quota safety: if localStorage is full, attempt to save last 50 actions
+        if (Array.isArray(queue) && queue.length > 50) {
+            try {
+                localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue.slice(-50)));
+            } catch (retryErr) {
+                console.error('[Offline Storage Error] Hard failure saving pruned queue:', retryErr);
+            }
+        }
+    }
 }
 
 export function addToOfflineQueue(actionType, payload) {
     const queue = getOfflineQueue();
     const newAction = {
-        id: crypto.randomUUID(),
+        id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `queue_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         type: actionType,
         payload,
         timestamp: new Date().toISOString()
@@ -46,14 +58,20 @@ export function addToOfflineQueue(actionType, payload) {
 // 2. Cache Helpers
 export function cacheData(key, data) {
     if (data) {
-        localStorage.setItem(key, JSON.stringify(data));
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (err) {
+            console.warn(`[Offline Cache] Quota or storage write error for key ${key}:`, err);
+        }
     }
 }
 
 export function getCachedData(key) {
     try {
-        return JSON.parse(localStorage.getItem(key)) || null;
-    } catch {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+    } catch (err) {
+        console.warn(`[Offline Cache] Error parsing key ${key}:`, err);
         return null;
     }
 }

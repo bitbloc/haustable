@@ -10,6 +10,20 @@ export default function POSMenuGrid({ onAddItem }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Stale-While-Revalidate: Read local cache immediately for sub-100ms standalone startup
+        try {
+            const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
+            const cachedItems = JSON.parse(localStorage.getItem('pos_cache_menu_items')) || [];
+            if (cachedCats.length > 0 || cachedItems.length > 0) {
+                setCategories(cachedCats);
+                setMenuItems(cachedItems);
+                setActiveCategory(cachedCats[0]?.id || 'all');
+                setLoading(false);
+            }
+        } catch (e) {
+            console.warn('Failed to parse local menu cache:', e);
+        }
+
         fetchData();
     }, []);
 
@@ -30,18 +44,9 @@ export default function POSMenuGrid({ onAddItem }) {
             localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
             localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
 
-            if (cats[0]) setActiveCategory(cats[0].id);
+            setActiveCategory(prev => prev || cats[0]?.id || 'all');
         } catch (err) {
-            console.warn('[Offline Mode] Failed to fetch menu items online, loading cache:', err);
-            try {
-                const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
-                const cachedItems = JSON.parse(localStorage.getItem('pos_cache_menu_items')) || [];
-                setCategories(cachedCats);
-                setMenuItems(cachedItems);
-                if (cachedCats[0]) setActiveCategory(cachedCats[0].id);
-            } catch (cacheErr) {
-                console.error('Failed to load menu cache:', cacheErr);
-            }
+            console.warn('[Offline Mode] Failed to fetch menu items online, keeping existing cache state:', err);
         } finally {
             setLoading(false);
         }

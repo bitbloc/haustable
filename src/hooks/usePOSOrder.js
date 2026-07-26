@@ -188,9 +188,33 @@ export function usePOSOrder() {
 
             return data;
         } catch (err) {
-            console.error('Failed to create walk-in pickup online:', err);
-            toast.error('Failed to open pickup bill');
-            return null;
+            console.error('Failed to create walk-in pickup online, falling back to offline queue:', err);
+            const tempId = `local_pickup_${Date.now()}`;
+            const mockBooking = {
+                id: tempId,
+                table_id: null,
+                status: 'pending',
+                booking_type: 'pickup',
+                booking_time: new Date().toISOString(),
+                pax: 1,
+                customer_note: note,
+                pickup_contact_name: note,
+                staff_remark: 'Walk-in Pick-up (Offline Fallback)'
+            };
+
+            const bookings = posCache.getBookings();
+            bookings.push(mockBooking);
+            posCache.setBookings(bookings);
+
+            addToOfflineQueue('create_pickup', {
+                tempBookingId: tempId,
+                customerNote: note,
+                status: 'pending',
+                bookingTime: mockBooking.booking_time
+            });
+
+            toast.warning('⚠️ บันทึกการเปิดบิลรับกลับบ้านเข้าคิวออฟไลน์');
+            return mockBooking;
         }
     };
 

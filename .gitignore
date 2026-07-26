@@ -28,3 +28,17 @@ dist-ssr
 .env
 
 .vercel
+
+# Crash & Debug Logs
+hs_err_*.log
+replay_*.log
+
+# Mobile / Desktop Build Artifacts
+*.apk
+*.aab
+
+# Temp & Scraped JSON/JS Outputs
+temp_*
+microlink_*.json
+notte_api.json
+

@@ -24,6 +24,26 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'free', 'occupied', 'pending'
 
     useEffect(() => {
+        // Immediate local cache render for sub-100ms UI responsiveness
+        try {
+            const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
+            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            if (cachedTables.length > 0) {
+                const merged = cachedTables.map(t => {
+                    const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed');
+                    return {
+                        ...t,
+                        status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
+                        booking: booking
+                    };
+                });
+                setTables(merged);
+                setLoading(false);
+            }
+        } catch (e) {
+            console.warn('Failed to parse local tables cache:', e);
+        }
+
         fetchTables();
         fetchFloorplan();
 
