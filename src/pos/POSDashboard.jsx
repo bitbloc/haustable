@@ -134,56 +134,17 @@ export default function POSDashboard() {
                 .in('role', ['staff', 'admin']);
             
             if (!error && data && data.length > 0) {
-                const updatedData = [...data];
-                for (let i = 0; i < updatedData.length; i++) {
-                    const profile = updatedData[i];
-                    if (!profile.pin) {
-                        const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
-                        const { error: updateErr } = await supabase
-                            .from('profiles')
-                            .update({ pin: randomPin })
-                            .eq('id', profile.id);
-                        
-                        if (!updateErr) {
-                            updatedData[i] = { ...profile, pin: randomPin };
-                        } else {
-                            const localPins = JSON.parse(localStorage.getItem('pos_staff_pins')) || {};
-                            localPins[profile.id] = randomPin;
-                            localStorage.setItem('pos_staff_pins', JSON.stringify(localPins));
-                            updatedData[i] = { ...profile, pin: randomPin };
-                        }
-                    }
-                }
-                setStaffList(updatedData);
+                setStaffList(data);
             } else {
-                const { data: fallbackData, error: fallbackError } = await supabase
-                    .from('profiles')
-                    .select('id, display_name, role')
-                    .in('role', ['staff', 'admin']);
-                
-                if (!fallbackError && fallbackData && fallbackData.length > 0) {
-                    const localPins = JSON.parse(localStorage.getItem('pos_staff_pins')) || {};
-                    const mapped = fallbackData.map(p => {
-                        let pin = localPins[p.id];
-                        if (!pin) {
-                            pin = Math.floor(1000 + Math.random() * 9000).toString();
-                            localPins[p.id] = pin;
-                        }
-                        return { ...p, pin };
-                    });
-                    localStorage.setItem('pos_staff_pins', JSON.stringify(localPins));
-                    setStaffList(mapped);
-                } else {
-                    const DEFAULT_STAFF = [
-                        { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
-                        { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
-                        { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin', pin: '9999' }
-                    ];
-                    setStaffList(DEFAULT_STAFF);
-                }
+                const DEFAULT_STAFF = [
+                    { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
+                    { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
+                    { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin', pin: '9999' }
+                ];
+                setStaffList(DEFAULT_STAFF);
             }
         } catch (err) {
-            console.error("Failed to load staff profiles, loading mock defaults:", err);
+            console.error("Failed to load staff profiles:", err);
             const DEFAULT_STAFF = [
                 { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
                 { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
@@ -1723,13 +1684,7 @@ export default function POSDashboard() {
                                     </button>
                                 </div>
                                 
-                                {/* Debug Dev PIN Help (Manager view for easy testing) */}
-                                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight mt-4 mx-auto w-[260px]">
-                                    <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
-                                    {staffList.map(s => (
-                                        <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
-                                    ))}
-                                </div>
+
                             </div>
                         ) : (
                             /* Step 3: Enter Cash Float to Open Shift */
@@ -2193,13 +2148,7 @@ export default function POSDashboard() {
                                 </button>
                             </div>
                             
-                            {/* Debug Dev PIN Help (Manager view for easy testing) */}
-                            <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-lg p-2.5 text-[9px] text-amber-800/80 font-mono flex flex-col gap-0.5 shadow-sm leading-tight mt-4 mx-auto w-[260px]">
-                                <span className="font-bold uppercase tracking-wider block text-amber-900/90">Staff PIN Directory (Testing):</span>
-                                {staffList.map(s => (
-                                    <span key={s.id}>• {s.display_name}: PIN {s.pin}</span>
-                                ))}
-                            </div>
+
                         </div>
                         
                     </div>

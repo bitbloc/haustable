@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Shield, User, Phone, Edit2, X, Clock, Trash2, ChevronRight } from 'lucide-react'
+import { Search, Shield, User, Phone, Edit2, X, Clock, Trash2, ChevronRight, Key, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 export default function AdminMembers() {
     const [members, setMembers] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
+    const [roleTab, setRoleTab] = useState('all') // 'all', 'staff', 'customer'
+    const [visiblePins, setVisiblePins] = useState({})
 
     // History Modal State
     const [selectedMember, setSelectedMember] = useState(null)
@@ -128,6 +131,28 @@ export default function AdminMembers() {
         }
     }
 
+    // Reset PIN for Employee
+    const handleResetPin = async (member) => {
+        const randomPin = Math.floor(1000 + Math.random() * 9000).toString()
+        if (!window.confirm(`ต้องการรีเซ็ตรหัส PIN ของ "${member.display_name}" เป็น "${randomPin}" ใช่หรือไม่?`)) return
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ pin: randomPin })
+                .eq('id', member.id)
+
+            if (error) throw error
+
+            setMembers(prev => prev.map(m => m.id === member.id ? { ...m, pin: randomPin } : m))
+            setVisiblePins(prev => ({ ...prev, [member.id]: true }))
+            toast.success(`รีเซ็ตรหัส PIN ของ ${member.display_name} เป็น ${randomPin} เรียบร้อย`)
+        } catch (err) {
+            console.error(err)
+            toast.error('ไม่สามารถรีเซ็ตรหัส PIN ได้: ' + err.message)
+        }
+    }
+
     // Edit Member State
     const [editingMember, setEditingMember] = useState(null)
     const [editForm, setEditForm] = useState({
@@ -138,7 +163,8 @@ export default function AdminMembers() {
         admin_notes: '',
         birth_day: '',
         birth_month: '',
-        gender: ''
+        gender: '',
+        pin: ''
     })
 
     const openEditModal = (member) => {
@@ -151,7 +177,8 @@ export default function AdminMembers() {
             admin_notes: member.admin_notes || '',
             birth_day: member.birth_day || '',
             birth_month: member.birth_month || '',
-            gender: member.gender || ''
+            gender: member.gender || '',
+            pin: member.pin || ''
         })
     }
 
@@ -160,6 +187,7 @@ export default function AdminMembers() {
         if (!editingMember) return
 
         try {
+            const cleanPin = editForm.pin ? editForm.pin.trim() : null;
             const { error } = await supabase
                 .from('profiles')
                 .update({
@@ -170,47 +198,92 @@ export default function AdminMembers() {
                     admin_notes: editForm.admin_notes,
                     birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null,
                     birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null,
-                    gender: editForm.gender || null
+                    gender: editForm.gender || null,
+                    pin: cleanPin
                 })
                 .eq('id', editingMember.id)
 
             if (error) throw error
 
             // Update UI
-            setMembers(prev => prev.map(m => m.id === editingMember.id ? { ...m, ...editForm, birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null, birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null } : m))
+            setMembers(prev => prev.map(m => m.id === editingMember.id ? { 
+                ...m, 
+                ...editForm, 
+                pin: cleanPin,
+                birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null, 
+                birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null 
+            } : m))
             setEditingMember(null)
-            alert('Member updated successfully!')
+            toast.success('อัปเดตข้อมูลพนักงาน/สมาชิกเรียบร้อยแล้ว')
         } catch (err) {
             console.error(err)
-            alert('Failed to update member: ' + err.message)
+            toast.error('ไม่สามารถอัปเดตข้อมูลได้: ' + err.message)
         }
     }
 
-    const filteredMembers = members.filter(m =>
-        (m.display_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (m.phone_number || '').includes(searchTerm)
-    )
+    const filteredMembers = members.filter(m => {
+        const matchesSearch = (m.display_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (m.phone_number || '').includes(searchTerm) ||
+            (m.pin || '').includes(searchTerm);
+        
+        if (!matchesSearch) return false;
+
+        if (roleTab === 'staff') {
+            return m.role === 'staff' || m.role === 'admin';
+        }
+        if (roleTab === 'customer') {
+            return m.role !== 'staff' && m.role !== 'admin';
+        }
+        return true;
+    });
+
+    const staffCount = members.filter(m => m.role === 'staff' || m.role === 'admin').length;
+    const customerCount = members.filter(m => m.role !== 'staff' && m.role !== 'admin').length;
 
     return (
         <div className="space-y-8 pb-20">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-ink tracking-tight">
-                        Members ({members.length})
+                        Members & Staff ({members.length})
                     </h1>
-                    <p className="text-subInk text-sm mt-1">Manage users, view stats, and assign roles.</p>
+                    <p className="text-subInk text-sm mt-1">จัดการพนักงาน, รหัส PIN POS, บทบาท และข้อมูลสมาชิก</p>
                 </div>
 
-                <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-subInk w-4 h-4" />
-                    <input
-                        type="text"
-                        placeholder="Search name, phone..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full bg-paper border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all shadow-sm"
-                    />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                    {/* Role Filter Tabs */}
+                    <div className="flex bg-canvas p-1 rounded-xl border border-gray-200 text-xs font-bold">
+                        <button
+                            onClick={() => setRoleTab('all')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${roleTab === 'all' ? 'bg-paper text-ink shadow-sm' : 'text-subInk hover:text-ink'}`}
+                        >
+                            ทั้งหมด ({members.length})
+                        </button>
+                        <button
+                            onClick={() => setRoleTab('staff')}
+                            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${roleTab === 'staff' ? 'bg-brand text-ink shadow-sm' : 'text-subInk hover:text-ink'}`}
+                        >
+                            <Shield size={12} /> พนักงาน/แอดมิน ({staffCount})
+                        </button>
+                        <button
+                            onClick={() => setRoleTab('customer')}
+                            className={`px-3 py-1.5 rounded-lg transition-all ${roleTab === 'customer' ? 'bg-paper text-ink shadow-sm' : 'text-subInk hover:text-ink'}`}
+                        >
+                            สมาชิก ({customerCount})
+                        </button>
+                    </div>
+
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-subInk w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="ค้นชื่อ, เบอร์, PIN..."
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            className="w-full bg-paper border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all shadow-sm"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -238,18 +311,48 @@ export default function AdminMembers() {
                                     <h3 className="font-bold text-lg text-ink truncate">{member.display_name || 'Unknown User'}</h3>
                                     {member.nickname && <span className="bg-canvas text-subInk text-[10px] px-2 py-0.5 rounded-full border border-gray-100 uppercase tracking-wide">({member.nickname})</span>}
                                 </div>
-                                <div className="flex flex-col md:flex-row gap-2 md:gap-4 text-xs text-subInk mt-1.5 justify-center md:justify-start">
+                                <div className="flex flex-col md:flex-row gap-2 md:gap-4 text-xs text-subInk mt-1.5 justify-center md:justify-start items-center md:items-start">
                                     {member.phone_number && (
-                                        <span className="flex items-center gap-1 justify-center md:justify-start font-medium"><Phone size={12} /> {member.phone_number}</span>
+                                        <span className="flex items-center gap-1 font-medium"><Phone size={12} /> {member.phone_number}</span>
                                     )}
-                                    <span className="flex items-center gap-1 justify-center md:justify-start font-mono text-gray-400">LINE: {member.line_user_id || '-'}</span>
+                                    <span className="flex items-center gap-1 font-mono text-gray-400">LINE: {member.line_user_id || '-'}</span>
                                 </div>
+
+                                {/* PIN Management Pill */}
+                                <div className="mt-2.5 flex items-center justify-center md:justify-start gap-2">
+                                    <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/70 rounded-lg px-2.5 py-1 text-xs">
+                                        <Key size={13} className="text-amber-700 shrink-0" />
+                                        <span className="text-subInk font-medium text-[11px]">PIN POS:</span>
+                                        <span className="font-mono font-bold text-ink tracking-wider">
+                                            {member.pin ? (visiblePins[member.id] ? member.pin : '••••') : <span className="text-amber-700/70 italic text-[11px] font-normal">ยังไม่ตั้ง</span>}
+                                        </span>
+                                        {member.pin && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setVisiblePins(prev => ({ ...prev, [member.id]: !prev[member.id] }))}
+                                                className="text-subInk hover:text-ink ml-1 p-0.5"
+                                                title={visiblePins[member.id] ? "ซ่อน PIN" : "แสดง PIN"}
+                                            >
+                                                {visiblePins[member.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleResetPin(member)}
+                                        className="text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-100/80 hover:bg-amber-200/90 border border-amber-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                                        title="สุ่มรีเซ็ตรหัส PIN ใหม่"
+                                    >
+                                        <RefreshCw size={10} /> รีเซ็ต PIN
+                                    </button>
+                                </div>
+
                                 <div className="mt-3 flex gap-3 justify-center md:justify-start">
                                     <button
                                         onClick={() => openEditModal(member)}
                                         className="text-xs flex items-center gap-1 text-subInk hover:text-ink hover:underline transition-colors"
                                     >
-                                        <Edit2 size={12} /> Edit Info
+                                        <Edit2 size={12} /> Edit Info & PIN
                                     </button>
                                     <button
                                         onClick={() => handleViewHistory(member)}
@@ -382,6 +485,31 @@ export default function AdminMembers() {
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center justify-between">
+                                        <span className="flex items-center gap-1.5"><Key size={13} className="text-amber-600" /> POS Staff PIN Code (รหัส PIN พนักงาน)</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newPin = Math.floor(1000 + Math.random() * 9000).toString();
+                                                setEditForm({ ...editForm, pin: newPin });
+                                            }}
+                                            className="text-[11px] text-amber-700 hover:text-amber-900 flex items-center gap-1 font-mono font-medium hover:underline"
+                                        >
+                                            <RefreshCw size={11} /> สุ่ม PIN ใหม่
+                                        </button>
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        maxLength={6}
+                                        placeholder="ตัวเลข 4 หลัก เช่น 1234"
+                                        value={editForm.pin || ''} 
+                                        onChange={e => setEditForm({...editForm, pin: e.target.value.replace(/\D/g, '')})}
+                                        className="w-full bg-amber-50/40 border border-amber-200 rounded-lg p-3 text-ink focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none font-mono text-base font-bold tracking-widest transition-all"
+                                    />
+                                    <p className="text-[10px] text-subInk mt-1">ใช้ยืนยันตัวตนสำหรับกะเปิดร้านและปลดล็อกหน้าจอ POS</p>
                                 </div>
 
                                 <div>
