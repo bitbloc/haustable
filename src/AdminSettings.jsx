@@ -45,39 +45,36 @@ const InstallPWA = () => {
 
 const ASCII_ART_PRESETS = [
     {
-        id: 'stars_sparkle',
-        name: '★ ดาวและดนตรี (Stars & Music)',
-        art: `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`
+        id: 'thank_you_spaced',
+        name: 'THANK YOU (Spaced Text)',
+        art: `T H A N K   Y O U
+  S E E   Y O U   A G A I N`
     },
     {
-        id: 'cat',
-        name: '🐱 น้องแมวน่ารัก (Cute Cat)',
-        art: `  /\\_/\\  \n ( o.o ) \n  > ^ <  `
-    },
-    {
-        id: 'haus_beer',
-        name: '🍺 Haus & Beer (แก้วเบียร์)',
-        art: ` (🍺 HAUS POS 🍺) \n  .---.  .---.\n  |   |__|   |\n  |   |  |   |\n  '---'  '---'`
-    },
-    {
-        id: 'coffee_cup',
-        name: '☕ ถ้วยกาแฟร้อน (Hot Coffee)',
-        art: `   (  )  (  )\n    )  (  )\n   ..........\n   |  HAUS  |]\n   \\________/`
+        id: 'in_the_haus',
+        name: 'IN THE HAUS (Clean Text)',
+        art: `--- IN THE HAUS ---
+  TASTE YOUR SCENT`
     },
     {
         id: 'classic_banner',
-        name: '═ แบนเนอร์เรียบหรู (Classic Banner)',
-        art: `═══════════════════════════\n   THANK YOU FOR VISITING\n═══════════════════════════`
+        name: 'THANK YOU (Clean Banner)',
+        art: `===========================
+   THANK YOU FOR VISITING
+===========================`
+    },
+    {
+        id: 'have_a_nice_day',
+        name: 'HAVE A NICE DAY (Spaced)',
+        art: `H A V E   A   N I C E   D A Y
+   THANK YOU VERY MUCH`
     },
     {
         id: 'welcome_home',
-        name: '🏡 ต้อนรับกลับบ้าน (Welcome Home)',
-        art: `      /\\\n     /  \\   IN THE HAUS\n    /____\\  ~~~~~~~~~~~\n    | [] |  WELCOME HOME`
-    },
-    {
-        id: 'heart_smile',
-        name: '💖 หัวใจและรอยยิ้ม (Heart & Smile)',
-        art: ` (^_^)v  THANK YOU VERY MUCH  (^_^)v\n      ♥ HAVE A NICE DAY ♥`
+        name: 'WELCOME HOME (Spaced Banner)',
+        art: `+-------------------------+
+      WELCOME HOME
++-------------------------+`
     }
 ];
 
@@ -156,11 +153,11 @@ export default function AdminSettings() {
         kitchen_printer_port: '9100',
         kitchen_printer_bt_name: 'KitchenPrinter',
         kitchen_paper_size: '80mm',
-        footer_ascii_art: `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`,
+        footer_ascii_art: `T H A N K   Y O U\n  S E E   Y O U   A G A I N`,
         shop_footer_text: 'THANK YOU FOR YOUR VISIT'
     });
     const [previewTab, setPreviewTab] = useState('billing'); // 'billing' | 'kitchen' | 'bar'
-    const [selectedAsciiPreset, setSelectedAsciiPreset] = useState('stars_sparkle');
+    const [selectedAsciiPreset, setSelectedAsciiPreset] = useState('thank_you_spaced');
     const [isScanning, setIsScanning] = useState(false);
     const [allCategories, setAllCategories] = useState([]);
     const [draggedOverColumn, setDraggedOverColumn] = useState(null);
@@ -1895,48 +1892,61 @@ export default function AdminSettings() {
 
                         {/* Card: Live Thermal Receipt Preview & ASCII Art Footer Editor */}
                         <div className="col-span-2 bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-xl shadow-sm space-y-6 mt-4 font-sans text-[#1A1A1A]">
-                            <div className="border-b border-[#D1D1CD] pb-3 flex flex-wrap justify-between items-center gap-3">
+                            <div className="border-b border-[#D1D1CD] pb-4 flex flex-wrap justify-between items-center gap-3">
                                 <div>
-                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
-                                        <span>🎨</span> ตัวอย่างการจัดหน้าพิมพ์ & ASCII Art Footer (Receipt Live Layout & Footer Editor)
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        ตัวอย่างการจัดหน้าพิมพ์ & ASCII Art Footer (Receipt Live Layout & Footer Editor)
                                     </h2>
                                     <p className="text-[10px] text-[#767673] mt-1 font-sans">
-                                        ดูตัวอย่างการแสดงผลสลิปแบบเรียลไทม์ (ความกว้าง 80mm / 58mm) พร้อมเลือกและปรับแต่งข้อความ ASCII Art ปิดท้ายสลิปให้สวยงามตรงตามต้องการ
+                                        ดูตัวอย่างการแสดงผลสลิปแบบเรียลไทม์ (ความกว้าง 80mm / 58mm) พร้อมเลือกและปรับแต่งข้อความตัวอักษร ASCII Art ปิดท้ายสลิป
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-[#D1D1CD] shadow-xs">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-[#D1D1CD] shadow-xs">
+                                        <button
+                                            type="button"
+                                            onClick={() => setPreviewTab('billing')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'billing' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                        >
+                                            บิลคิดเงิน (Receipt)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPreviewTab('kitchen')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'kitchen' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                        >
+                                            สั่งอาหาร (Kitchen)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPreviewTab('bar')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'bar' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                        >
+                                            สั่งเครื่องดื่ม (Bar)
+                                        </button>
+                                    </div>
+
+                                    {/* Explicit Save Button */}
                                     <button
                                         type="button"
-                                        onClick={() => setPreviewTab('billing')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'billing' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                        onClick={() => {
+                                            handleSavePrinter(printerConfig);
+                                            alert("บันทึกการตั้งค่าจัดหน้าสลิปและเครื่องพิมพ์เรียบร้อยแล้ว!");
+                                        }}
+                                        className="flex items-center gap-1.5 bg-[#ff0000] hover:bg-[#cc0000] text-white font-mono text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
                                     >
-                                        🧾 บิลคิดเงิน (Receipt)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreviewTab('kitchen')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'kitchen' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                                    >
-                                        🍳 สั่งอาหาร (Kitchen)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreviewTab('bar')}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${previewTab === 'bar' ? 'bg-[#ff0000] text-white shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                                    >
-                                        🍹 สั่งเครื่องดื่ม (Bar)
+                                        <Save size={15} /> บันทึกการตั้งค่า (Save Settings)
                                     </button>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                {/* Left Column: ASCII Art Footer Controls (7 cols) */}
                                 {/* Left Column: Layout Controls & ASCII Art (7 cols) */}
                                 <div className="lg:col-span-7 space-y-4">
                                     {/* Shop Header & Logo Uploader Card */}
                                     <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl space-y-4 shadow-sm">
                                         <h3 className="text-xs font-mono font-bold uppercase text-[#1A1A1A] flex items-center justify-between border-b border-[#F0F0EC] pb-2">
-                                            <span>🏪 ข้อมูลหัวใบเสร็จ & โลโก้ร้าน (Shop Header & Logo)</span>
+                                            <span>ข้อมูลหัวใบเสร็จ & โลโก้ร้าน (Shop Header & Logo)</span>
                                             <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-mono font-bold">HEADER & LOGO</span>
                                         </h3>
 
@@ -1957,7 +1967,7 @@ export default function AdminSettings() {
                                                 <label className="block cursor-pointer group">
                                                     <div className="bg-white border border-dashed border-[#D1D1CD] rounded-lg px-3 py-2 text-center group-hover:border-[#ff0000] transition-colors shadow-2xs">
                                                         <span className="text-xs font-bold text-[#1A1A1A]">
-                                                            {uploadingLogo ? 'กำลังอัปโหลด...' : '📸 อัปโหลดโลโก้ร้าน (Shop Logo)'}
+                                                            {uploadingLogo ? 'กำลังอัปโหลด...' : 'อัปโหลดโลโก้ร้าน (Shop Logo)'}
                                                         </span>
                                                     </div>
                                                     <input 
@@ -2031,7 +2041,7 @@ export default function AdminSettings() {
                                     {/* Divider Line Pattern Selector Card */}
                                     <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl space-y-3 shadow-sm">
                                         <h3 className="text-xs font-mono font-bold uppercase text-[#1A1A1A] flex items-center justify-between border-b border-[#F0F0EC] pb-2">
-                                            <span>📏 เลือกลวดลายเส้นคั่นสลิป (Divider Line Pattern)</span>
+                                            <span>เลือกลวดลายเส้นคั่นสลิป (Divider Line Pattern)</span>
                                             <span className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded font-mono font-bold">DIVIDER PATTERN</span>
                                         </h3>
 
@@ -2062,8 +2072,8 @@ export default function AdminSettings() {
                                     {/* ASCII Art Footer Controls Card */}
                                     <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl space-y-4 shadow-sm">
                                         <h3 className="text-xs font-mono font-bold uppercase text-[#1A1A1A] flex items-center justify-between border-b border-[#F0F0EC] pb-2">
-                                            <span>✨ เลือกคลัง ASCII Art Footer สำเร็จรูป</span>
-                                            <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded font-mono font-bold">ASCII PRESETS</span>
+                                            <span>เลือกข้อความ ASCII Art Font สำเร็จรูป</span>
+                                            <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded font-mono font-bold">ASCII FONT</span>
                                         </h3>
 
                                         {/* Presets Grid */}
@@ -2089,16 +2099,16 @@ export default function AdminSettings() {
                                         {/* Custom ASCII Art Textarea Input */}
                                         <div className="space-y-1.5 pt-2">
                                             <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">
-                                                ข้อความ ASCII Art Footer ที่ใช้งานอยู่ (ปรับแต่งได้ตามต้องการ)
+                                                ข้อความ ASCII Art Footer ที่ใช้งานอยู่ (ปรับแต่งตัวอักษรได้ตามต้องการ)
                                             </label>
                                             <textarea
                                                 rows={4}
                                                 value={printerConfig.footer_ascii_art || ''}
                                                 onChange={(e) => handleSavePrinter({ ...printerConfig, footer_ascii_art: e.target.value })}
-                                                placeholder="พิมพ์ข้อความ ASCII Art หรือสัญลักษณ์พิเศษตรงนี้..."
+                                                placeholder="พิมพ์ข้อความตัวอักษร ASCII Art ตรงนี้..."
                                                 className="w-full p-3 bg-[#F9F9F8] border border-[#D1D1CD] rounded-xl text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 leading-tight resize-y shadow-inner"
                                             />
-                                            <p className="text-[9px] text-[#767673]">💡 เคล็ดลับ: สามารถใส่ข้อความหลายบรรทัด หรือคัดลอกสัญลักษณ์พิเศษมาวางได้ทันที</p>
+                                            <p className="text-[9px] text-[#767673]">สามารถพิมพ์ข้อความตัวอักษรหลายบรรทัด หรือคัดลอกข้อความมาวางได้ทันที</p>
                                         </div>
 
                                         {/* Shop Footer Line */}
@@ -2119,12 +2129,26 @@ export default function AdminSettings() {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Bottom Explicit Save Button */}
+                                    <div className="pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handleSavePrinter(printerConfig);
+                                                alert("บันทึกการตั้งค่าจัดหน้าสลิปและเครื่องพิมพ์เรียบร้อยแล้ว!");
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 bg-[#ff0000] hover:bg-[#cc0000] text-white font-mono text-xs font-bold py-3 rounded-xl transition-all cursor-pointer shadow-md active:scale-98"
+                                        >
+                                            <Save size={16} /> บันทึกการตั้งค่าการจัดหน้า & เครื่องพิมพ์ (Save All Settings)
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Right Column: Thermal Paper Live Preview Mockup (5 cols) */}
                                 <div className="lg:col-span-5 flex flex-col items-center">
                                     <div className="text-[10px] font-mono font-bold uppercase text-[#767673] mb-2 flex items-center gap-1.5">
-                                        <span>📄 ตัวอย่างใบเสร็จจริง (LIVE RECEIPT MOCKUP)</span>
+                                        <span>ตัวอย่างใบเสร็จจริง (LIVE RECEIPT MOCKUP)</span>
                                         <span className="bg-[#1A1A1A] text-white px-2 py-0.5 rounded text-[8px]">
                                             {printerConfig.cashier_paper_size || '80mm'}
                                         </span>
@@ -2162,7 +2186,7 @@ export default function AdminSettings() {
                                             /* Clean Header for Kitchen & Bar Order Slips (No Logo, No Address/VAT) */
                                             <div className="text-center pb-1 mb-1">
                                                 <div className="text-base font-black uppercase tracking-wide text-[#1A1A1A]">
-                                                    {previewTab === 'kitchen' ? '🍳 KITCHEN ORDER (ใบสั่งครัว)' : '🍹 BAR ORDER (ใบสั่งบาร์)'}
+                                                    {previewTab === 'kitchen' ? 'KITCHEN ORDER (ใบสั่งครัว)' : 'BAR ORDER (ใบสั่งบาร์)'}
                                                 </div>
                                             </div>
                                         )}
@@ -2221,11 +2245,11 @@ export default function AdminSettings() {
                                                 <div className="space-y-3">
                                                     <div className="font-black text-sm">
                                                         <div>1x ข้าวผัดกระเพราเนื้อสับ</div>
-                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ + ไข่ดาวสุกพิเศษ</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">- ไข่ดาวสุกพิเศษ</div>
                                                     </div>
                                                     <div className="font-black text-sm">
                                                         <div>2x ต้มยำกุ้งน้ำข้น (หม้อไฟ)</div>
-                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ ขอเผ็ดน้อย</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">- ขอเผ็ดน้อย</div>
                                                     </div>
                                                 </div>
                                             )}
@@ -2234,8 +2258,8 @@ export default function AdminSettings() {
                                                 <div className="space-y-3">
                                                     <div className="font-black text-sm">
                                                         <div>2x MATCHA LATTE ICE</div>
-                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ หวานน้อย 50%</div>
-                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">▶ เพิ่มแก้วน้ำแข็ง 2</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">- หวานน้อย 50%</div>
+                                                        <div className="text-[10px] font-bold text-[#ff0000] pl-3">- เพิ่มแก้วน้ำแข็ง 2</div>
                                                     </div>
                                                 </div>
                                             )}
@@ -2279,7 +2303,7 @@ export default function AdminSettings() {
                                         {previewTab === 'billing' && (
                                             <>
                                                 <div className="text-center my-3 whitespace-pre font-mono text-[9px] font-bold text-[#1A1A1A] leading-tight bg-[#F9F9F8] p-2 rounded border border-dashed border-[#CCCCCC]">
-                                                    {printerConfig.footer_ascii_art || `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`}
+                                                    {printerConfig.footer_ascii_art || `T H A N K   Y O U\n  S E E   Y O U   A G A I N`}
                                                 </div>
 
                                                 <div className="text-center font-bold text-[9px] uppercase tracking-wider">
