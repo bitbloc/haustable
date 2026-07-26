@@ -11,15 +11,11 @@ export default function FinancialHeatmap({ data }) {
         '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'
     ]
 
-    const heatmapMatrix = data?.heatmapMatrix || [
-        [2, 5, 4, 2, 1, 1, 4, 6, 7, 5, 3, 2], // Mon
-        [2, 6, 4, 2, 1, 2, 4, 7, 8, 6, 4, 2], // Tue
-        [3, 7, 5, 3, 2, 2, 5, 8, 9, 7, 5, 3], // Wed
-        [3, 7, 5, 3, 2, 2, 6, 8, 9, 8, 6, 4], // Thu
-        [4, 8, 6, 3, 2, 3, 7, 10, 10, 9, 8, 6], // Fri
-        [5, 9, 7, 4, 3, 4, 8, 10, 10, 9, 9, 7], // Sat
-        [4, 8, 6, 4, 3, 3, 7, 9, 8, 7, 5, 3], // Sun
-    ]
+    // Defensive fallback: ensure 7 days x 12 hours matrix is ALWAYS valid array
+    const rawMatrix = data?.heatmapMatrix
+    const heatmapMatrix = (rawMatrix && Array.isArray(rawMatrix) && rawMatrix.length === 7)
+        ? rawMatrix
+        : Array(7).fill(0).map(() => Array(12).fill(0))
 
     const shiftWindows = [
         {
@@ -128,25 +124,30 @@ export default function FinancialHeatmap({ data }) {
                         </div>
 
                         {/* Day Rows */}
-                        {days.map((day, dayIdx) => (
-                            <div key={dayIdx} className="grid grid-cols-13 gap-1 my-1 items-center font-mono text-xs">
-                                <div className="font-black text-[oklch(18%_0.012_28)] text-left">{day}</div>
-                                {heatmapMatrix[dayIdx].map((val, timeIdx) => (
-                                    <div
-                                        key={timeIdx}
-                                        className={`h-9 rounded-lg flex items-center justify-center text-xs transition-transform active:scale-95 cursor-pointer ${getHeatColor(val)}`}
-                                        title={`${day} ${timeSlots[timeIdx]}: Level ${val}/10`}
-                                    >
-                                        {val > 0 ? val : '-'}
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
+                        {days.map((day, dayIdx) => {
+                            const row = (heatmapMatrix && Array.isArray(heatmapMatrix[dayIdx])) 
+                                ? heatmapMatrix[dayIdx] 
+                                : Array(12).fill(0)
+                            return (
+                                <div key={dayIdx} className="grid grid-cols-13 gap-1 my-1 items-center font-mono text-xs">
+                                    <div className="font-black text-[oklch(18%_0.012_28)] text-left">{day}</div>
+                                    {row.map((val, timeIdx) => (
+                                        <div
+                                            key={timeIdx}
+                                            className={`h-9 rounded-lg flex items-center justify-center text-xs transition-transform active:scale-95 cursor-pointer ${getHeatColor(val)}`}
+                                            title={`${day} ${timeSlots[timeIdx]}: Level ${val}/10`}
+                                        >
+                                            {val > 0 ? val : '-'}
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
             </div>
 
-            {/* Time-Slot Behavior Infographic Cards - Stack cleanly on mobile */}
+            {/* Time-Slot Behavior Infographic Cards */}
             <div className="space-y-3">
                 <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
                     TIME-SLOT BEHAVIOR COMPARISON

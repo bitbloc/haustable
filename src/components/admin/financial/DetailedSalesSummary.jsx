@@ -1,41 +1,33 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React from 'react'
-import { CreditCard, QrCode, Banknote, Wallet, UtensilsCrossed, ShoppingBag, Truck, ArrowUpRight, Percent, Receipt, ShieldCheck } from 'lucide-react'
+import { CreditCard, QrCode, Banknote, Wallet, UtensilsCrossed, ShoppingBag, ArrowUpRight, Percent, Receipt, ShieldCheck } from 'lucide-react'
 
 export default function DetailedSalesSummary({ data, timeRangeLabel }) {
     const paymentMethods = data?.paymentMethods || [
-        { name: 'PromptPay QR', amount: 184500, percent: 54.5, count: 248, icon: QrCode, color: 'text-emerald-800 bg-emerald-100 border-emerald-300' },
-        { name: 'Credit / Debit Card', amount: 98200, percent: 29.0, count: 112, icon: CreditCard, color: 'text-indigo-800 bg-indigo-100 border-indigo-300' },
-        { name: 'Cash (เงินสด)', amount: 37800, percent: 11.2, count: 86, icon: Banknote, color: 'text-amber-800 bg-amber-100 border-amber-300' },
-        { name: 'Member Wallet', amount: 18000, percent: 5.3, count: 34, icon: Wallet, color: 'text-rose-800 bg-rose-100 border-rose-300' },
+        { name: 'PromptPay QR', amount: 0, percent: 0, count: 0, icon: QrCode, color: 'text-emerald-800 bg-emerald-100 border-emerald-300' },
+        { name: 'Credit / Debit Card', amount: 0, percent: 0, count: 0, icon: CreditCard, color: 'text-indigo-800 bg-indigo-100 border-indigo-300' },
+        { name: 'Cash (เงินสด)', amount: 0, percent: 0, count: 0, icon: Banknote, color: 'text-amber-800 bg-amber-100 border-amber-300' },
+        { name: 'Member Wallet', amount: 0, percent: 0, count: 0, icon: Wallet, color: 'text-rose-800 bg-rose-100 border-rose-300' },
     ]
 
+    // Only 2 channels: Dine-in / Table Booking & Takeaway / Pickup
     const diningChannels = data?.diningChannels || [
-        { name: 'Dine-In (ทานที่ร้าน)', amount: 254200, percent: 75.1, tables: 184, avgPerTable: 1381, icon: UtensilsCrossed },
-        { name: 'Takeaway / Pickup', amount: 56300, percent: 16.6, orders: 94, avgPerOrder: 598, icon: ShoppingBag },
-        { name: 'Online Delivery', amount: 28000, percent: 8.3, orders: 48, avgPerOrder: 583, icon: Truck },
+        { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: 0, percent: 0, tables: 0, avgPerTable: 0, icon: UtensilsCrossed },
+        { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: 0, percent: 0, orders: 0, avgPerOrder: 0, icon: ShoppingBag },
     ]
 
     const auditReconciliation = data?.auditReconciliation || {
-        grossSales: 374444,
-        totalDiscounts: -35944,
-        discountCount: 42,
-        taxableSubtotal: 338500,
-        serviceCharge10: 33850,
-        vat7: 23695,
-        netPayable: 338500,
-        avgTicket: 705,
+        grossSales: 0,
+        totalDiscounts: 0,
+        discountCount: 0,
+        taxableSubtotal: 0,
+        serviceCharge10: 0,
+        vat7: 0,
+        netPayable: 0,
+        avgTicket: 0,
     }
 
-    const hourlyVelocity = data?.hourlyVelocity || [
-        { hour: '11:00 - 12:00', gross: 24500, bills: 28, avgBill: 875, peakItem: 'Katsu Curry Set' },
-        { hour: '12:00 - 13:00', gross: 68200, bills: 64, avgBill: 1065, peakItem: 'Wagyu Don & Beer' },
-        { hour: '13:00 - 14:00', gross: 41000, bills: 42, avgBill: 976, peakItem: 'Salmon Sashimi' },
-        { hour: '14:00 - 17:00', gross: 32500, bills: 38, avgBill: 855, peakItem: 'Matcha & Dessert' },
-        { hour: '17:00 - 19:00', gross: 89400, bills: 76, avgBill: 1176, peakItem: 'Sharing Platter' },
-        { hour: '19:00 - 21:00', gross: 104800, bills: 82, avgBill: 1278, peakItem: 'Draft Beer & Yakitori' },
-        { hour: '21:00 - 23:00', gross: 38500, bills: 34, avgBill: 1132, peakItem: 'Highball & Fries' },
-    ]
+    const hourlyVelocity = data?.hourlyVelocity || []
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -49,7 +41,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                         </h3>
                     </div>
                     <p className="text-xs font-semibold text-[oklch(42%_0.010_28)] mt-0.5">
-                        ช่องทางชำระเงิน ช่องทางขาย และตารางกระทบยอด ({timeRangeLabel})
+                        ช่องทางชำระเงิน ช่องทางขาย (ทานที่ร้าน & Pickup) และตารางกระทบยอด ({timeRangeLabel})
                     </p>
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs text-[oklch(18%_0.012_28)] font-bold self-start sm:self-auto">
@@ -94,7 +86,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
 
                                     <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(42%_0.010_28)] font-bold">
                                         <span>{pm.count} รายการ</span>
-                                        <span>เฉลี่ย ฿{Math.round(pm.amount/pm.count)}</span>
+                                        <span>เฉลี่ย ฿{pm.count > 0 ? Math.round(pm.amount/pm.count) : 0}</span>
                                     </div>
 
                                     {/* Visual Bar */}
@@ -107,25 +99,25 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                     </div>
                 </div>
 
-                {/* Dining Channels (5 cols) */}
+                {/* Dining Channels - Strictly 2 Channels (5 cols) */}
                 <div className="lg:col-span-5 bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3">
                     <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
-                        DINING CHANNEL SHARE
+                        DINING CHANNEL SHARE (2 CHANNELS)
                     </h4>
 
                     <div className="space-y-2.5">
                         {diningChannels.map((ch, idx) => {
                             const Icon = ch.icon
                             return (
-                                <div key={idx} className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl flex items-center justify-between shadow-sm">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="p-2 rounded-lg bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] shrink-0">
-                                            <Icon size={18} />
+                                <div key={idx} className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl flex items-center justify-between shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 rounded-xl bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] shrink-0">
+                                            <Icon size={20} />
                                         </div>
                                         <div>
                                             <div className="text-xs font-black text-[oklch(18%_0.012_28)]">{ch.name}</div>
                                             <div className="text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                                                เฉลี่ย ฿{ch.avgPerTable || ch.avgPerOrder}/ออเดอร์
+                                                เฉลี่ย ฿{ch.avgPerTable || ch.avgPerOrder || 0}/ออเดอร์
                                             </div>
                                         </div>
                                     </div>
@@ -213,21 +205,29 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]">
-                                {hourlyVelocity.map((hv, idx) => (
-                                    <tr key={idx} className="hover:bg-white transition-colors">
-                                        <td className="py-2.5 px-2 font-black text-[oklch(18%_0.012_28)]">{hv.hour}</td>
-                                        <td className="py-2.5 px-2 text-right font-black text-[oklch(52%_0.16_28)] text-sm">
-                                            ฿{hv.gross.toLocaleString()}
-                                        </td>
-                                        <td className="py-2.5 px-2 text-right font-bold">{hv.bills}</td>
-                                        <td className="py-2.5 px-2 text-right text-[oklch(42%_0.010_28)] font-bold">฿{hv.avgBill}</td>
-                                        <td className="py-2.5 px-2 font-sans truncate max-w-[140px]">
-                                            <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[11px]">
-                                                {hv.peakItem}
-                                            </span>
+                                {hourlyVelocity.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="py-6 text-center text-[oklch(42%_0.010_28)] font-bold">
+                                            ไม่มีสถิติรายชั่วโมงในช่วงเวลาที่เลือก
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    hourlyVelocity.map((hv, idx) => (
+                                        <tr key={idx} className="hover:bg-white transition-colors">
+                                            <td className="py-2.5 px-2 font-black text-[oklch(18%_0.012_28)]">{hv.hour}</td>
+                                            <td className="py-2.5 px-2 text-right font-black text-[oklch(52%_0.16_28)] text-sm">
+                                                ฿{hv.gross.toLocaleString()}
+                                            </td>
+                                            <td className="py-2.5 px-2 text-right font-bold">{hv.bills}</td>
+                                            <td className="py-2.5 px-2 text-right text-[oklch(42%_0.010_28)] font-bold">฿{hv.avgBill}</td>
+                                            <td className="py-2.5 px-2 font-sans truncate max-w-[140px]">
+                                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[11px]">
+                                                    {hv.peakItem}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

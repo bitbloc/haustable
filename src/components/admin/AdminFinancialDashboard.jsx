@@ -130,7 +130,7 @@ export default function AdminFinancialDashboard() {
                 setDiningChannelsData([])
                 setHourlyVelocityData([])
                 setTopMenuData([])
-                setHeatmapMatrixData([])
+                setHeatmapMatrixData(Array(7).fill(0).map(() => Array(12).fill(0)))
                 setCategoryRatioData(null)
                 setAuditReconciliationData(null)
                 return
@@ -143,8 +143,8 @@ export default function AdminFinancialDashboard() {
             let totalGuests = 0
             let promptpayAmt = 0, creditAmt = 0, cashAmt = 0, walletAmt = 0
             let promptpayCount = 0, creditCount = 0, cashCount = 0, walletCount = 0
-            let dineInAmt = 0, takeawayAmt = 0, deliveryAmt = 0
-            let dineInTables = 0, takeawayOrders = 0, deliveryOrders = 0
+            let dineInAmt = 0, takeawayAmt = 0
+            let dineInTables = 0, takeawayOrders = 0
 
             const itemAgg = {}
             const categoryAgg = {}
@@ -173,12 +173,10 @@ export default function AdminFinancialDashboard() {
                     cashAmt += amount; cashCount++
                 }
 
-                // Dining Channel detection
+                // Dining Channel detection (Strictly 2 channels: Dine-In & Pickup)
                 const bType = (b.booking_type || 'dine_in').toLowerCase()
                 if (bType.includes('pickup') || bType.includes('takeaway')) {
                     takeawayAmt += amount; takeawayOrders++
-                } else if (bType.includes('delivery')) {
-                    deliveryAmt += amount; deliveryOrders++
                 } else {
                     dineInAmt += amount; dineInTables++
                 }
@@ -248,11 +246,10 @@ export default function AdminFinancialDashboard() {
                 { name: 'Member Wallet', amount: walletAmt, percent: Math.round((walletAmt / totalPay) * 100), count: walletCount, color: 'text-rose-800 bg-rose-100 border-rose-300' },
             ])
 
-            // Format Dining Channels
+            // Format Dining Channels (Strictly 2 channels)
             setDiningChannelsData([
-                { name: 'Dine-In (ทานที่ร้าน)', amount: dineInAmt, percent: Math.round((dineInAmt / (totalGross || 1)) * 100), tables: dineInTables, avgPerTable: dineInTables > 0 ? Math.round(dineInAmt / dineInTables) : 0 },
-                { name: 'Takeaway / Pickup', amount: takeawayAmt, percent: Math.round((takeawayAmt / (totalGross || 1)) * 100), orders: takeawayOrders, avgPerOrder: takeawayOrders > 0 ? Math.round(takeawayAmt / takeawayOrders) : 0 },
-                { name: 'Online Delivery', amount: deliveryAmt, percent: Math.round((deliveryAmt / (totalGross || 1)) * 100), orders: deliveryOrders, avgPerOrder: deliveryOrders > 0 ? Math.round(deliveryAmt / deliveryOrders) : 0 },
+                { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: dineInAmt, percent: Math.round((dineInAmt / (totalGross || 1)) * 100), tables: dineInTables, avgPerTable: dineInTables > 0 ? Math.round(dineInAmt / dineInTables) : 0 },
+                { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: takeawayAmt, percent: Math.round((takeawayAmt / (totalGross || 1)) * 100), orders: takeawayOrders, avgPerOrder: takeawayOrders > 0 ? Math.round(takeawayAmt / takeawayOrders) : 0 },
             ])
 
             // Format Top Selling Items from POS

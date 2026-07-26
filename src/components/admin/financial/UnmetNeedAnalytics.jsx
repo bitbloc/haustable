@@ -19,10 +19,10 @@ export default function UnmetNeedAnalytics({ data }) {
 
     const weatherPredictor = data?.weatherPredictor || {
         currentWeather: 'ฝนตกหนักช่วงเย็น (Rainy Surge)',
-        dineInImpact: '-18% Dine-in volume',
-        deliveryImpact: '+42% Delivery & Takeaway surge',
+        dineInImpact: '-18% Dine-in / จองโต๊ะ',
+        pickupImpact: '+35% Pickup / สั่งกลับบ้าน',
         netRevenueImpact: '+8.5% Net Basket Size',
-        paydaySurgeBonus: '+28% Revenueช่วง 28-3 ของเดือน',
+        paydaySurgeBonus: '+28% Revenue ช่วง 28-3 ของเดือน',
     }
 
     return (
@@ -149,8 +149,8 @@ export default function UnmetNeedAnalytics({ data }) {
                     </div>
 
                     <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
-                        <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">ผลกระทบเดลิเวอรี่ (Delivery)</div>
-                        <div className="font-black text-base text-emerald-800">{weatherPredictor.deliveryImpact}</div>
+                        <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">ผลกระทบรับกลับบ้าน (Pickup)</div>
+                        <div className="font-black text-base text-emerald-800">{weatherPredictor.pickupImpact}</div>
                     </div>
 
                     <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
