@@ -251,6 +251,7 @@ input[type="range"]::-moz-range-thumb {
   outline-offset: 2px;
 }
 
+
 /* Hallmark Redesign - Dieter Rams & Thai Modern Scoped Variables for SOP */
 .sop-rams-page {
   --color-hallmark-paper: oklch(96% 0.008 70);      /* Braun light-grey casing with teak warm tint */
@@ -268,4 +269,49 @@ input[type="range"]::-moz-range-thumb {
   --color-accent-red: oklch(62% 0.16 35);
   --color-accent-green: oklch(62% 0.16 35);
   --color-accent-blue: oklch(62% 0.16 35);
+}
+
+/* ==========================================================================
+   POS & Customer Display Optimization (15.6" 1920x1080 & 10.1" 1024x600)
+   ========================================================================== */
+
+/* Sonner Toasts Styling for 1920x1080 POS */
+[data-sonner-toaster] {
+  font-family: 'IBM Plex Sans Thai', 'Inter', sans-serif !important;
+  z-index: 99999 !important;
+}
+
+[data-sonner-toast] {
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 12px 18px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid oklch(85% 0.012 28) !important;
+}
+
+/* 15.6 Inch Full HD (1920x1080) POS Touch Enhancements */
+@media (min-width: 1920px) {
+  .pos-container {
+    font-size: 15px;
+  }
+
+  .pos-touch-btn {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* 10.1 Inch HD (1024x600) Customer Display Height Guard */
+@media (max-height: 650px) {
+  .cfd-container {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  
+  .cfd-scrollable {
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+  }
 }
