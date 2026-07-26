@@ -43,6 +43,8 @@ export default function CustomerOrderLanding() {
     // Business Data
     const [table, setTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
+    const [paxCount, setPaxCount] = useState(2);
+    const [showPaxModal, setShowPaxModal] = useState(false);
     const [categories, setCategories] = useState([]);
     const [menuItems, setMenuItems] = useState([]);
     const [cart, setCart] = useState([]);
@@ -166,9 +168,14 @@ export default function CustomerOrderLanding() {
                         .eq('id', bookingData.id);
                     bookingData.user_id = session.user.id;
                 }
+                setActiveBooking(bookingData);
+                if (bookingData.pax) setPaxCount(bookingData.pax);
+            } else {
+                setActiveBooking(null);
+                if (tableData?.capacity) setPaxCount(tableData.capacity);
+                // Prompt customer to specify guest count if no active session
+                setShowPaxModal(true);
             }
-
-            setActiveBooking(bookingData || null);
 
             // 3.5. Fetch payment QR Code
             const { data: qrData } = await supabase
@@ -380,7 +387,7 @@ export default function CustomerOrderLanding() {
                     status: 'pending', // Starts as pending to alert staff
                     booking_type: 'walk_in',
                     booking_time: new Date().toISOString(),
-                    pax: table?.capacity || 2,
+                    pax: paxCount || table?.capacity || 2,
                     staff_remark: 'QR Walk-in Guest',
                     tracking_token: trackingToken,
                     total_amount: cartSubtotal
@@ -596,13 +603,22 @@ export default function CustomerOrderLanding() {
             </header>
 
             {/* Welcome banner */}
-            <div className="p-5 bg-white border-b border-[#D1D1CD]">
-                <h2 className="text-sm font-bold text-[#1A1A1A] mb-1">
-                    ยินดีต้อนรับสู่โต๊ะ {table?.table_name}
-                </h2>
-                <p className="text-[11px] text-[#767673] leading-relaxed">
-                    เลือกรายการอาหารด้านล่างและยืนยันออเดอร์เพื่อส่งตรงไปยังห้องครัว
-                </p>
+            <div className="p-5 bg-white border-b border-[#D1D1CD] flex items-center justify-between">
+                <div>
+                    <h2 className="text-sm font-bold text-[#1A1A1A] mb-0.5">
+                        ยินดีต้อนรับสู่โต๊ะ {table?.table_name}
+                    </h2>
+                    <p className="text-[11px] text-[#767673] leading-relaxed">
+                        เลือกรายการอาหารด้านล่างและยืนยันออเดอร์เพื่อส่งตรงไปยังห้องครัว
+                    </p>
+                </div>
+                <button
+                    onClick={() => setShowPaxModal(true)}
+                    className="shrink-0 ml-3 bg-[#F5F5F2] hover:bg-[#EAEAE6] border border-[#D1D1CD] text-[#1A1A1A] px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer"
+                >
+                    <span>👥 {paxCount} คน</span>
+                    <span className="text-[10px] text-[#ff0000] font-bold">แก้ไข</span>
+                </button>
             </div>
 
             {/* Menu search and category filters */}
@@ -1033,6 +1049,83 @@ export default function CustomerOrderLanding() {
                     );
                 })()}
             </AnimatePresence>
+
+            {/* Guest Count Modal */}
+            {showPaxModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl font-sans text-[#1A1A1A] animate-in fade-in zoom-in-95 duration-150">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                            <div>
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ระบุจำนวนลูกค้า (Party Size)</h3>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5">โต๊ะ {table?.table_name}</p>
+                            </div>
+                            {activeBooking && (
+                                <button onClick={() => setShowPaxModal(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg text-[#767673]">
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+                        
+                        <div className="p-6 flex flex-col items-center gap-4 text-center">
+                            <div className="text-xs font-bold text-[#1A1A1A]">
+                                กรุณาระบุจำนวนลูกค้าสำหรับโต๊ะนี้ *
+                            </div>
+                            <p className="text-[10px] text-[#767673]">เพื่อความสะดวกในการบริการและจัดเตรียมอุปกรณ์</p>
+
+                            {/* Stepper */}
+                            <div className="flex items-center gap-4 my-1">
+                                <button 
+                                    onClick={() => setPaxCount(prev => Math.max(1, prev - 1))}
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                >
+                                    -
+                                </button>
+                                <div className="w-20 h-12 bg-white border-2 border-[#ff0000] rounded-xl flex items-center justify-center text-2xl font-mono font-black text-[#1A1A1A] shadow-inner">
+                                    {paxCount}
+                                </div>
+                                <button 
+                                    onClick={() => setPaxCount(prev => prev + 1)}
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            {/* Quick Presets */}
+                            <div className="grid grid-cols-5 gap-2 w-full mt-2">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                    <button
+                                        key={num}
+                                        onClick={() => setPaxCount(num)}
+                                        className={`py-2 rounded-xl font-mono font-bold text-xs transition-all cursor-pointer ${paxCount === num ? 'bg-[#ff0000] text-white shadow-md scale-[1.03]' : 'bg-white border border-[#D1D1CD] text-[#1A1A1A]'}`}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
+                            <button
+                                onClick={async () => {
+                                    if (!paxCount || paxCount <= 0) {
+                                        toast.error('กรุณาระบุจำนวนคน');
+                                        return;
+                                    }
+                                    if (activeBooking?.id) {
+                                        await supabase.from('bookings').update({ pax: paxCount }).eq('id', activeBooking.id);
+                                        toast.success(`อัปเดตจำนวนลูกค้าเป็น ${paxCount} คนแล้ว`);
+                                    }
+                                    setShowPaxModal(false);
+                                }}
+                                className="w-full bg-[#ff0000] hover:bg-[#d00000] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                            >
+                                <Check size={16} /> ยืนยันจำนวนคน (Confirm) *
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

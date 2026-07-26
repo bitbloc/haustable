@@ -577,6 +577,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div class="row"><span class="label">หมายเลขคิว / QUEUE NO</span> <span class="val">#${queueNo}</span></div>
                         <div class="row"><span class="label">วันที่-เวลา / DATE</span> <span class="val">${dateStr}</span></div>
                         <div class="row"><span class="label">ลูกค้า / GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}</span></div>
+                        <div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || 1} คน</span></div>
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">เบอร์โทร / PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
                         <!-- Cashier shift staff info if customer receipt -->
                         ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">พนักงาน / STAFF</span> <span class="val">${staffName}</span></div>` : ''}
@@ -948,6 +949,9 @@ export default function SlipModal({ booking, type, onClose }) {
                             
                             <div className="text-gray-500">GUEST</div>
                             <div className="text-right break-words">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</div>
+
+                            <div className="text-gray-500">PAX / จำนวนคน</div>
+                            <div className="text-right font-bold">{booking.pax || 1} คน</div>
 
                             {(booking.profiles?.phone_number || booking.pickup_contact_phone) && (
                                 <>

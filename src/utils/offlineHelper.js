@@ -180,6 +180,21 @@ export async function syncOfflineQueue() {
                 console.log(`[Offline Sync] Mapped pickup local ID ${tempBookingId} -> remote ID ${data.id}`);
             }
 
+            else if (action.type === 'update_pax') {
+                let { bookingId, pax } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
+                }
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ pax })
+                    .eq('id', bookingId);
+                if (error) throw error;
+            }
+
             else if (action.type === 'attach_customer') {
                 let { bookingId, userId } = action.payload;
                 if (idMapping[bookingId]) {

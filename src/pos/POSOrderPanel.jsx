@@ -20,8 +20,11 @@ export default function POSOrderPanel({
     onOpenSplitPayment,
     onMoveTable,
     onMergeBill,
-    onUpdateCustomerProfile
+    onUpdateCustomerProfile,
+    onUpdateGuestCount
 }) {
+    const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
+    const [editPaxInput, setEditPaxInput] = React.useState('1');
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
     const [cashReceivedInput, setCashReceivedInput] = React.useState('');
@@ -386,9 +389,24 @@ export default function POSOrderPanel({
             <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between shrink-0">
                 <div>
                     <h3 className="font-mono font-bold text-xs tracking-wider uppercase">Order Details</h3>
-                    <p className="text-[10px] text-[#767673] font-bold font-mono mt-0.5 uppercase tracking-tight">
-                        {order.table ? `TABLE: ${order.table.table_name}` : (booking?.booking_type === 'pickup' ? 'PICK-UP ORDER' : 'WALK-IN ORDER')}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-[10px] text-[#767673] font-bold font-mono uppercase tracking-tight">
+                            {order.table ? `TABLE: ${order.table.table_name}` : (booking?.booking_type === 'pickup' ? 'PICK-UP ORDER' : 'WALK-IN ORDER')}
+                        </p>
+                        {booking && (
+                            <button
+                                onClick={() => {
+                                    setEditPaxInput(String(booking.pax || 1));
+                                    setShowEditPaxModal(true);
+                                }}
+                                className="text-[9px] font-bold bg-[#EAEAE6] hover:bg-[#D1D1CD] text-[#1A1A1A] border border-[#D1D1CD] px-1.5 py-0.5 rounded cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+                                title="คลิกเพื่อแก้ไขจำนวนคน"
+                            >
+                                👥 {booking.pax || 1} คน
+                                <Edit size={9} className="text-[#767673]" />
+                            </button>
+                        )}
+                    </div>
                     {booking && (
                         <div className="flex gap-1.5 mt-1.5">
                             <button 
@@ -1481,6 +1499,87 @@ export default function POSOrderPanel({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Edit Guest Count (Pax) Modal */}
+            {showEditPaxModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl font-sans text-[#1A1A1A]">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                            <div>
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ปรับจำนวนลูกค้า (Guest Count)</h3>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5">{order.table ? `โต๊ะ ${order.table.table_name}` : 'Walk-in'}</p>
+                            </div>
+                            <button onClick={() => setShowEditPaxModal(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg cursor-pointer text-[#767673]"><X size={16} /></button>
+                        </div>
+                        
+                        <div className="p-5 flex flex-col items-center gap-4">
+                            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">ระบุจำนวนลูกค้า (คน) *</div>
+                            
+                            {/* Stepper Input */}
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => setEditPaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
+                                    className="w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
+                                >
+                                    -
+                                </button>
+                                <input 
+                                    type="number"
+                                    min="1"
+                                    max="99"
+                                    value={editPaxInput}
+                                    onChange={(e) => setEditPaxInput(e.target.value)}
+                                    className="w-20 h-10 bg-white border border-[#D1D1CD] rounded-xl text-center text-xl font-mono font-bold text-[#1A1A1A] focus:outline-none focus:border-[#52281C]"
+                                />
+                                <button 
+                                    onClick={() => setEditPaxInput(prev => String((parseInt(prev) || 1) + 1))}
+                                    className="w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            {/* Preset Quick Buttons */}
+                            <div className="grid grid-cols-5 gap-2 w-full mt-1">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                    <button
+                                        key={num}
+                                        onClick={() => setEditPaxInput(String(num))}
+                                        className={`py-2 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer ${parseInt(editPaxInput) === num ? 'bg-[#3C3D40] text-white shadow-sm' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-2">
+                            <button
+                                onClick={() => setShowEditPaxModal(false)}
+                                className="flex-1 bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                            >
+                                ยกเลิก (Cancel)
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const num = parseInt(editPaxInput);
+                                    if (!num || num <= 0) {
+                                        toast.error("กรุณาระบุจำนวนลูกค้าให้ถูกต้อง");
+                                        return;
+                                    }
+                                    if (booking?.id && onUpdateGuestCount) {
+                                        await onUpdateGuestCount(booking.id, num);
+                                    }
+                                    setShowEditPaxModal(false);
+                                }}
+                                className="flex-1 bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer"
+                            >
+                                บันทึก (Save)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </aside>
     );
 }

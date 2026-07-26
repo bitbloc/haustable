@@ -4,38 +4,20 @@ import { Users, Crown, HeartHandshake, Sparkles, Repeat, Award, ArrowUpRight, Us
 
 export default function CRMFinancialSummary({ data }) {
     const memberShare = data?.memberShare || {
-        memberSales: 247800,
-        nonMemberSales: 90700,
-        memberPercent: 73.2,
-        nonMemberPercent: 26.8,
-        totalMembersCount: 1240,
-        activeThisMonth: 412,
-        repeatCustomerRate: 64.5,
-        avgSpendMember: 820,
-        avgSpendNonMember: 540,
+        memberSales: 0,
+        nonMemberSales: 0,
+        memberPercent: 0,
+        nonMemberPercent: 0,
+        totalMembersCount: 0,
+        activeThisMonth: 0,
+        repeatCustomerRate: 0,
+        avgSpendMember: 0,
+        avgSpendNonMember: 0,
     }
 
-    const memberTiers = data?.memberTiers || [
-        { name: 'VIP Platinum', members: 48, totalSales: 98500, avgPerVisit: 1450, color: 'border-purple-300 bg-purple-50 text-purple-900', icon: Crown },
-        { name: 'Gold Tier', members: 164, totalSales: 86400, avgPerVisit: 980, color: 'border-amber-300 bg-amber-50 text-amber-900', icon: Award },
-        { name: 'Silver Tier', members: 450, totalSales: 45400, avgPerVisit: 680, color: 'border-slate-300 bg-slate-50 text-slate-900', icon: UserCheck },
-        { name: 'General Member', members: 578, totalSales: 17500, avgPerVisit: 520, color: 'border-gray-300 bg-gray-50 text-gray-900', icon: Users },
-    ]
-
-    const rfmSegments = data?.rfmSegments || [
-        { title: 'Champions (ลูกค้าขาประจำตัวจริง)', count: 84, sharePct: 32.5, desc: 'มาบ่อยสุด ยอดต่อบิล > ฿1,200', action: 'ส่งคูปอง Exclusive Tasting Menu' },
-        { title: 'Loyal Customers (ลูกค้าประจำ)', count: 210, sharePct: 41.0, desc: 'มาทาน 2-3 ครั้ง/เดือน ยอดคงที่', action: 'แถมแต้มสะสม x2 เมื่อมาวันธรรมดา' },
-        { title: 'At-Risk (เสี่ยงเลิกมา)', count: 56, sharePct: 14.5, desc: 'ไม่ได้มาทานเกิน 45 วันแล้ว', action: 'ส่งข้อความ LINE แจ้งส่วนลด 15%' },
-        { title: 'New Members (สมาชิกใหม่)', count: 62, sharePct: 12.0, desc: 'เพิ่งสมัครและทานครั้งแรกเดือนนี้', action: 'ส่ง Welcoming Gift ในครั้งถัดไป' },
-    ]
-
-    const topSpenders = data?.topSpenders || [
-        { rank: 1, name: 'คุณธนกฤต ชัยพัฒนา', tier: 'VIP Platinum', totalLtv: 48200, visits: 24, avgTicket: 2008, lastVisit: 'เมื่อวานนี้' },
-        { rank: 2, name: 'คุณพิมลพรรณ วงศ์สว่าง', tier: 'VIP Platinum', totalLtv: 39500, visits: 18, avgTicket: 2194, lastVisit: '3 วันที่แล้ว' },
-        { rank: 3, name: 'คุณณัฐพล เอกชัย', tier: 'Gold Tier', totalLtv: 27800, visits: 21, avgTicket: 1323, lastVisit: '5 วันที่แล้ว' },
-        { rank: 4, name: 'คุณภัทรพร ศิริกุล', tier: 'Gold Tier', totalLtv: 22400, visits: 16, avgTicket: 1400, lastVisit: 'วันนี้' },
-        { rank: 5, name: 'คุณวิศรุต สุขุมวิท', tier: 'Gold Tier', totalLtv: 19800, visits: 14, avgTicket: 1414, lastVisit: '1 สัปดาห์ที่แล้ว' },
-    ]
+    const memberTiers = data?.memberTiers || []
+    const rfmSegments = data?.rfmSegments || []
+    const topSpenders = data?.topSpenders || []
 
     return (
         <div className="space-y-4 md:space-y-6">

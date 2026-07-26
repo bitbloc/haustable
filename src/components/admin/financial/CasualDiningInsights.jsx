@@ -4,24 +4,24 @@ import { Utensils, GlassWater, Beer, Users, RefreshCw, Zap, PieChart, Layers } f
 
 export default function CasualDiningInsights({ data }) {
     const categoryRatio = data?.categoryRatio || {
-        food: { percent: 62.5, revenue: 211500, margin: '58% Margin' },
-        beverage: { percent: 18.5, revenue: 62600, margin: '82% Margin' },
-        alcohol: { percent: 14.0, revenue: 47450, margin: '76% Margin' },
-        dessertCombo: { percent: 5.0, revenue: 16950, margin: '68% Margin' }
+        food: { percent: 0, revenue: 0, margin: '0%' },
+        beverage: { percent: 0, revenue: 0, margin: '0%' },
+        alcohol: { percent: 0, revenue: 0, margin: '0%' },
+        dessertCombo: { percent: 0, revenue: 0, margin: '0%' }
     }
 
     const partySizeBreakdown = data?.partySizeBreakdown || [
-        { size: 'Solo Diners (1 ท่าน)', share: 12.0, count: 48, avgSpend: 380, turnTime: 28, tip: 'มักสั่งเมนูจานเดียวด่วน' },
-        { size: 'Couples (2 ท่าน)', share: 38.5, count: 124, avgSpend: 840, turnTime: 42, tip: 'มักสั่ง 2 อาหาร + 2 เครื่องดื่ม' },
-        { size: 'Medium Groups (3-4 ท่าน)', share: 36.0, count: 86, avgSpend: 1680, turnTime: 58, tip: 'เน้นสั่งชุดเซตต้อนรับและเมนูแชร์' },
-        { size: 'Large Parties (5+ ท่าน)', share: 13.5, count: 22, avgSpend: 3450, turnTime: 85, tip: 'ช่วงยอดต่อบิลสูงสุด ต้องจองล่วงหน้า' },
+        { size: 'Solo Diners (1 ท่าน)', share: 0, count: 0, avgSpend: 0, turnTime: 0, tip: 'มักสั่งเมนูจานเดียวด่วน' },
+        { size: 'Couples (2 ท่าน)', share: 0, count: 0, avgSpend: 0, turnTime: 0, tip: 'มักสั่ง 2 อาหาร + 2 เครื่องดื่ม' },
+        { size: 'Medium Groups (3-4 ท่าน)', share: 0, count: 0, avgSpend: 0, turnTime: 0, tip: 'เน้นสั่งชุดเซตและเมนูแชร์' },
+        { size: 'Large Parties (5+ ท่าน)', share: 0, count: 0, avgSpend: 0, turnTime: 0, tip: 'ช่วงยอดต่อบิลสูง' },
     ]
 
     const casualMetrics = data?.casualMetrics || {
-        avgDwellTimeMins: 48,
-        tableTurnsPerDay: 4.2,
-        sharingSetPenetration: 34.5,
-        bevAttachRate: 84.0,
+        avgDwellTimeMins: 0,
+        tableTurnsPerDay: 0,
+        sharingSetPenetration: 0,
+        bevAttachRate: 0,
     }
 
     return (

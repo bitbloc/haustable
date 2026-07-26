@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Clock, CheckCircle, Receipt, ArrowLeft, Upload, FileText, Smartphone } from 'lucide-react';
+import { Clock, CheckCircle, Receipt, ArrowLeft, Upload, FileText, Smartphone, Users, Edit, Check, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 
@@ -10,6 +10,8 @@ export default function CustomerOrderStatus() {
     const navigate = useNavigate();
 
     // UI States
+    const [showPaxModal, setShowPaxModal] = useState(false);
+    const [editPaxInput, setEditPaxInput] = useState('1');
     const [loading, setLoading] = useState(true);
     const [uploadingSlip, setUploadingSlip] = useState(false);
     const [requestingBill, setRequestingBill] = useState(false);
@@ -207,19 +209,31 @@ export default function CustomerOrderStatus() {
             <Toaster position="top-center" richColors />
 
             {/* Header */}
-            <header className="sticky top-0 bg-[#F5F5F2]/95 backdrop-blur-md border-b border-[#D1D1CD] z-40 p-4 flex items-center gap-4 shadow-sm">
-                <button 
-                    onClick={() => navigate(`/table/${tableId}`)}
-                    className="p-2 bg-white border border-[#D1D1CD] hover:bg-[#E0E0DC] rounded-full text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
-                >
-                    <ArrowLeft size={16} />
-                </button>
-                <div>
-                    <h1 className="font-bold text-sm text-[#1A1A1A]">ติดตามสถานะออเดอร์</h1>
-                    <p className="text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold mt-0.5">
-                        Table {booking.tables_layout?.table_name} · Queue #{booking.tracking_token ? booking.tracking_token.slice(0, 4) : String(booking.id).slice(0, 4)}
-                    </p>
+            <header className="sticky top-0 bg-[#F5F5F2]/95 backdrop-blur-md border-b border-[#D1D1CD] z-40 p-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => navigate(`/table/${tableId}`)}
+                        className="p-2 bg-white border border-[#D1D1CD] hover:bg-[#E0E0DC] rounded-full text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                    >
+                        <ArrowLeft size={16} />
+                    </button>
+                    <div>
+                        <h1 className="font-bold text-sm text-[#1A1A1A]">ติดตามสถานะออเดอร์</h1>
+                        <p className="text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold mt-0.5">
+                            Table {booking.tables_layout?.table_name} · Queue #{booking.tracking_token ? booking.tracking_token.slice(0, 4) : String(booking.id).slice(0, 4)}
+                        </p>
+                    </div>
                 </div>
+                <button
+                    onClick={() => {
+                        setEditPaxInput(String(booking.pax || 1));
+                        setShowPaxModal(true);
+                    }}
+                    className="bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A] px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                >
+                    <span>👥 {booking.pax || 1} คน</span>
+                    <Edit size={10} className="text-[#ff0000]" />
+                </button>
             </header>
 
             {/* Order More Section */}
@@ -355,6 +369,93 @@ export default function CustomerOrderStatus() {
                     )}
                 </section>
             </div>
+
+            {/* Edit Pax Modal */}
+            {showPaxModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl font-sans text-[#1A1A1A]">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                            <div>
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ปรับจำนวนลูกค้า (Party Size)</h3>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5">โต๊ะ {booking.tables_layout?.table_name}</p>
+                            </div>
+                            <button onClick={() => setShowPaxModal(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg text-[#767673]">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 flex flex-col items-center gap-4 text-center">
+                            <div className="text-xs font-bold text-[#1A1A1A]">
+                                ระบุจำนวนลูกค้าล่าสุดสำหรับโต๊ะนี้
+                            </div>
+
+                            {/* Stepper */}
+                            <div className="flex items-center gap-4 my-1">
+                                <button 
+                                    onClick={() => setEditPaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                >
+                                    -
+                                </button>
+                                <input 
+                                    type="number"
+                                    min="1"
+                                    max="99"
+                                    value={editPaxInput}
+                                    onChange={(e) => setEditPaxInput(e.target.value)}
+                                    className="w-24 h-12 bg-white border-2 border-[#ff0000] rounded-xl text-center text-2xl font-mono font-black text-[#1A1A1A] focus:outline-none focus:border-[#d00000] shadow-inner"
+                                />
+                                <button 
+                                    onClick={() => setEditPaxInput(prev => String((parseInt(prev) || 1) + 1))}
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            {/* Quick Presets */}
+                            <div className="grid grid-cols-5 gap-2 w-full mt-2">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                    <button
+                                        key={num}
+                                        onClick={() => setEditPaxInput(String(num))}
+                                        className={`py-2 rounded-xl font-mono font-bold text-xs transition-all cursor-pointer ${parseInt(editPaxInput) === num ? 'bg-[#ff0000] text-white shadow-md scale-[1.03]' : 'bg-white border border-[#D1D1CD] text-[#1A1A1A]'}`}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
+                            <button
+                                onClick={async () => {
+                                    const num = parseInt(editPaxInput);
+                                    if (!num || num <= 0) {
+                                        toast.error('กรุณาระบุจำนวนคนให้ถูกต้อง');
+                                        return;
+                                    }
+                                    const { error } = await supabase
+                                        .from('bookings')
+                                        .update({ pax: num })
+                                        .eq('id', booking.id);
+
+                                    if (error) {
+                                        toast.error('ล้มเหลว: ' + error.message);
+                                    } else {
+                                        toast.success(`อัปเดตจำนวนลูกค้าเป็น ${num} คนแล้ว`);
+                                        fetchActiveOrder(true);
+                                        setShowPaxModal(false);
+                                    }
+                                }}
+                                className="w-full bg-[#ff0000] hover:bg-[#d00000] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                            >
+                                <Check size={16} /> บันทึกจำนวนคน (Save)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

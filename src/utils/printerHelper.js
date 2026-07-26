@@ -308,6 +308,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(`บริการ: ${serviceType}`)
                .line(`พนักงานสั่ง: ${staffName.toUpperCase() || 'SYSTEM'}`)
                .line(`เวลาสั่ง: ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
+               .line(`จำนวนคน: ${booking.pax || 1} คน`)
                .line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
                .bold(false)
                .line(divider);

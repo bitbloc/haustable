@@ -45,9 +45,9 @@ export function usePOSOrder() {
         }
     }, []);
 
-    const createWalkIn = async (table = null) => {
+    const createWalkIn = async (table = null, customPax = null) => {
         const tableId = table ? table.id : null;
-        const capacity = table ? (table.capacity || 2) : 2;
+        const capacity = customPax ? parseInt(customPax) : (table ? (table.capacity || 2) : 2);
 
         if (!isOnline()) {
             console.log('[Offline Mode] Creating offline walk-in session');
@@ -133,6 +133,43 @@ export function usePOSOrder() {
 
             toast.warning('⚠️ บันทึกข้อมูลเข้าคิวออฟไลน์');
             return mockBooking;
+        }
+    };
+
+    const updateGuestCount = async (bookingId, newPax) => {
+        const paxNum = parseInt(newPax) || 1;
+        if (!isOnline()) {
+            const bookings = posCache.getBookings();
+            const idx = bookings.findIndex(b => b.id === bookingId);
+            if (idx !== -1) {
+                bookings[idx].pax = paxNum;
+                posCache.setBookings(bookings);
+            }
+            addToOfflineQueue('update_pax', { bookingId, pax: paxNum });
+            toast.success(`อัปเดตจำนวนลูกค้าเป็น ${paxNum} คนเรียบร้อย (ออฟไลน์)`);
+            return true;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .update({ pax: paxNum })
+                .eq('id', bookingId);
+                
+            if (error) throw error;
+            
+            const bookings = posCache.getBookings();
+            const idx = bookings.findIndex(b => b.id === bookingId);
+            if (idx !== -1) {
+                bookings[idx].pax = paxNum;
+                posCache.setBookings(bookings);
+            }
+            toast.success(`อัปเดตจำนวนลูกค้าเป็น ${paxNum} คนเรียบร้อย`);
+            return true;
+        } catch (err) {
+            console.error('Failed to update pax online:', err);
+            toast.error('ไม่สามารถอัปเดตจำนวนคนได้: ' + err.message);
+            return false;
         }
     };
 
@@ -551,6 +588,7 @@ export function usePOSOrder() {
         completeCheckout,
         acceptOrder,
         uploadPaymentSlip,
-        attachCustomerToBooking
+        attachCustomerToBooking,
+        updateGuestCount
     };
 }

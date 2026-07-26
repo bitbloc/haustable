@@ -397,9 +397,9 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                                 {table.table_name}
                                                             </span>
                                                             
-                                                            {/* Capacity */}
+                                                            {/* Capacity / Guest count */}
                                                             <span className="text-[8px] font-mono font-bold tracking-tight opacity-60 mt-0.5 uppercase">
-                                                                {table.capacity}p
+                                                                {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
                                                             </span>
                                                             
                                                             {/* Booking / Seated time */}
@@ -494,7 +494,7 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                             
                                             {/* Bottom row: Capacity / Timing */}
                                             <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
-                                                <span>CAPACITY: {table.capacity}P</span>
+                                                 <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAPACITY: ${table.capacity}P`}</span>
                                                 {(isOccupied || isPending) && (
                                                     <div className="flex items-center gap-1 text-[#1A1A1A] dark:text-inherit">
                                                         <Clock size={10} />

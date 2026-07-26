@@ -4,25 +4,20 @@ import { Sparkles, AlertTriangle, Grid, CloudRain, Lightbulb, TrendingUp, Dollar
 
 export default function UnmetNeedAnalytics({ data }) {
     const yieldLeakage = data?.yieldLeakage || {
-        estimatedLostRevenue: 4200,
-        soloInFourTopPct: 32.5,
-        deadSeatCount: 28,
-        recommendation: 'ในรอบ Peak Dinner (18:00-20:00) แนะนำจัดสรรโต๊ะ 2 ท็อปแยกโซน หรือใช้ตัวแบ่งโต๊ะเพื่อเพิ่มความจุที่นั่งได้อีก +24%',
+        estimatedLostRevenue: 0,
+        soloInFourTopPct: 0,
+        deadSeatCount: 0,
+        recommendation: 'ระบบวิเคราะห์ข้อมูลจากออเดอร์ POS ตามเวลาจริง',
     }
 
-    const menuMatrix = data?.menuMatrix || [
-        { quadrant: 'Stars (ดาวเด่น)', items: ['ข้าวหน้าเนื้อวากิว', 'Yuzu Highball'], desc: 'กำไรสูง + ขายดีมาก', action: 'คงคุณภาพ & โฆษณาหลัก', bg: 'bg-emerald-50 border-2 border-emerald-300 text-emerald-950' },
-        { quadrant: 'Plowhorses (ตัวทำเงิน)', items: ['ข้าวแกงกะหรี่คัตสึ', 'ชาเขียวเย็น'], desc: 'ขายดีมาก แต่กำไรต่อจานต่ำ', action: 'ปรับเพิ่มราคา ฿10-15 หรือคุมต้นทุน', bg: 'bg-blue-50 border-2 border-blue-300 text-blue-950' },
-        { quadrant: 'Puzzles (ปริศนากำไรสูง)', items: ['สเต๊กริบอายออสเตรเลีย', 'เซตครอบครัว B'], desc: 'กำไรสูงมาก แต่ยอดขายยังน้อย', action: 'จัดโปรโมชั่นดันให้เป็นดาวเด่น', bg: 'bg-purple-50 border-2 border-purple-300 text-purple-950' },
-        { quadrant: 'Dogs (ภาระต้นทุน)', items: ['สลัดเต้าหู้ทอด', 'ซุปมิโซะพิเศษ'], desc: 'กำไรต่ำ + ขายได้น้อย', action: 'พิจารณาถอดออกจากเมนูหลัก', bg: 'bg-rose-50 border-2 border-rose-300 text-rose-950' },
-    ]
+    const menuMatrix = data?.menuMatrix || []
 
     const weatherPredictor = data?.weatherPredictor || {
-        currentWeather: 'ฝนตกหนักช่วงเย็น (Rainy Surge)',
-        dineInImpact: '-18% Dine-in / จองโต๊ะ',
-        pickupImpact: '+35% Pickup / สั่งกลับบ้าน',
-        netRevenueImpact: '+8.5% Net Basket Size',
-        paydaySurgeBonus: '+28% Revenue ช่วง 28-3 ของเดือน',
+        currentWeather: 'สภาพอากาศปกติ',
+        dineInImpact: '0%',
+        pickupImpact: '0%',
+        netRevenueImpact: '0%',
+        paydaySurgeBonus: '0%',
     }
 
     return (

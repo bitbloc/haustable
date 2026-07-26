@@ -884,7 +884,10 @@ export default function POSDashboard() {
         }
     };
 
-    const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking } = usePOSOrder();
+    const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking, updateGuestCount } = usePOSOrder();
+
+    const [openTableModalData, setOpenTableModalData] = useState(null);
+    const [openTablePaxInput, setOpenTablePaxInput] = useState('2');
 
     const handleSelectTable = async (table) => {
         setSelectedTable(table);
@@ -911,16 +914,43 @@ export default function POSDashboard() {
                 customer: booking.customer_name || 'Customer',
                 table: table
             });
+            setView('menu');
         } else {
+            // Table is empty -> Show Open Table Modal to mandate entering guest count!
             setActiveBooking(null);
             setCurrentOrder({
                 items: [],
                 customer: 'Walk-in Guest',
                 table: table
             });
+            setOpenTablePaxInput(String(table.capacity || 2));
+            setOpenTableModalData({ table });
         }
-        
-        setView('menu');
+    };
+
+    const handleConfirmOpenTable = async () => {
+        if (!openTableModalData?.table) return;
+        const paxNum = parseInt(openTablePaxInput);
+        if (!paxNum || paxNum <= 0) {
+            toast.error('กรุณาระบุจำนวนลูกค้าให้ถูกต้อง');
+            return;
+        }
+
+        const toastId = toast.loading(`กำลังเปิดโต๊ะ ${openTableModalData.table.table_name}...`);
+        try {
+            const newBooking = await createWalkIn(openTableModalData.table, paxNum);
+            if (newBooking) {
+                setActiveBooking(newBooking);
+                toast.success(`เปิดโต๊ะ ${openTableModalData.table.table_name} (${paxNum} คน) สำเร็จ!`, { id: toastId });
+                setOpenTableModalData(null);
+                setView('menu');
+            } else {
+                toast.error('ไม่สามารถเปิดโต๊ะได้', { id: toastId });
+            }
+        } catch (err) {
+            console.error('Failed to open table:', err);
+            toast.error('เกิดข้อผิดพลาดในการเปิดโต๊ะ', { id: toastId });
+        }
     };
 
     const handleSelectPickupOrder = async (booking) => {
@@ -1570,6 +1600,97 @@ export default function POSDashboard() {
                 isOpen={showOfflineQueueDrawer}
                 onClose={() => setShowOfflineQueueDrawer(false)}
             />
+
+            {/* Open Table Modal */}
+            {openTableModalData && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none font-sans">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[#1A1A1A]">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-[#3C3D40] text-white flex items-center justify-center font-mono font-bold text-sm shadow-sm">
+                                    {openTableModalData.table.table_name}
+                                </div>
+                                <div>
+                                    <h3 className="font-mono font-bold text-xs uppercase tracking-wider">เปิดโต๊ะ (Open Table)</h3>
+                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5">
+                                        ความจุแนะนำ: {openTableModalData.table.capacity || 2} คน
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setOpenTableModalData(null);
+                                }} 
+                                className="p-1.5 hover:bg-[#EAEAE6] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 flex flex-col items-center gap-4">
+                            <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5">
+                                <Users size={16} className="text-[#3C3D40]" />
+                                <span>ระบุจำนวนลูกค้า (คน) *</span>
+                            </div>
+                            
+                            {/* Large Stepper Control */}
+                            <div className="flex items-center gap-4 my-2">
+                                <button 
+                                    onClick={() => setOpenTablePaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                >
+                                    -
+                                </button>
+                                <input 
+                                    type="number"
+                                    min="1"
+                                    max="99"
+                                    value={openTablePaxInput}
+                                    onChange={(e) => setOpenTablePaxInput(e.target.value)}
+                                    className="w-24 h-12 bg-white border-2 border-[#3C3D40] rounded-xl text-center text-2xl font-mono font-black text-[#1A1A1A] focus:outline-none focus:border-[#52281C] shadow-inner"
+                                    autoFocus
+                                />
+                                <button 
+                                    onClick={() => setOpenTablePaxInput(prev => String((parseInt(prev) || 1) + 1))}
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                >
+                                    +
+                                </button>
+                            </div>
+
+                            {/* Preset Quick Buttons */}
+                            <div className="grid grid-cols-5 gap-2 w-full mt-2">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                    <button
+                                        key={num}
+                                        onClick={() => setOpenTablePaxInput(String(num))}
+                                        className={`py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer ${parseInt(openTablePaxInput) === num ? 'bg-[#3C3D40] text-white shadow-md scale-[1.03]' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setOpenTableModalData(null);
+                                }}
+                                className="flex-1 bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                            >
+                                ยกเลิก (Cancel)
+                            </button>
+                            <button
+                                onClick={handleConfirmOpenTable}
+                                className="flex-1 bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                            >
+                                <Check size={16} /> เปิดโต๊ะ (Open Table) *
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showMoveModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
