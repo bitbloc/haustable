@@ -29,7 +29,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
             return;
         }
         setIsSyncing(true);
-        await syncOfflineQueue();
+        await syncOfflineQueue(true);
         refreshQueue();
         setIsSyncing(false);
     };

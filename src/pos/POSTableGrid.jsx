@@ -49,11 +49,19 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
 
         const bookingsSub = supabase.channel('pos-tables-bookings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTables)
-            .subscribe();
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Realtime POS Bookings] Channel status: ${status}`, err || '');
+                }
+            });
             
         const tablesSub = supabase.channel('pos-tables-layout')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, fetchTables)
-            .subscribe();
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Realtime POS Layout] Channel status: ${status}`, err || '');
+                }
+            });
 
         // 5-second polling fallback to keep grid fresh if realtime fails
         const pollInterval = setInterval(() => {

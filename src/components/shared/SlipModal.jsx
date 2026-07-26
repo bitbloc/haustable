@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -181,19 +181,19 @@ export default function SlipModal({ booking, type, onClose }) {
                     } catch (e) {}
 
                     if (activeTab === 'kitchen') {
-                        // Print Kitchen slip
+                        // Print Kitchen slip (KITCHEN ORDER / ใบออเดอร์ครัว)
                         const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (kitchenBytes) {
                             await printToSunmiBuiltIn(kitchenBytes);
                         }
                         
-                        // Print Bar slip
+                        // Print Bar slip (BAR ORDER / ใบออเดอร์บาร์)
                         const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
                         }
 
-                        // Print Other slip
+                        // Print Other slip (OTHER ORDER / ใบออเดอร์ทั่วไป)
                         const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (otherBytes) {
                             await printToSunmiBuiltIn(otherBytes);
@@ -255,8 +255,10 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         }
 
+        const isKitchen = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
+
         // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
-        if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+        if (isKitchen) {
             filteredItems = [...filteredItems].sort((a, b) => {
                 const catA = a.menu_items?.category_id || '';
                 const catB = b.menu_items?.category_id || '';
@@ -305,7 +307,7 @@ export default function SlipModal({ booking, type, onClose }) {
             const price = (item.price_at_time * item.quantity).toLocaleString()
 
             // If kitchen or bar, format with bold boxed quantity, large font, and no price
-            if (activeTab === 'kitchen' || activeTab === 'bar') {
+            if (isKitchen) {
                 return `
                     <div class="item kitchen-item" style="border-bottom: 1px dashed black; padding-bottom: 6px; margin-bottom: 6px;">
                         <div class="row" style="font-size: 15px; font-weight: bold; display: flex; align-items: center;">
@@ -335,7 +337,7 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }).join('') || '<div class="empty">ไม่มีรายการสินค้า</div>'
 
-        const discountHtml = (activeTab !== 'kitchen' && activeTab !== 'bar' && booking.discount_amount > 0) ? `
+        const discountHtml = (!isKitchen && booking.discount_amount > 0) ? `
             <div class="row meta-row">
                 <span>ส่วนลด (${booking.promotion_codes?.code || 'โปรโมชั่น'})</span>
                 <span>-${booking.discount_amount.toLocaleString()}</span>
@@ -356,7 +358,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
         const totalQty = booking.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
-        const totalsHtml = (activeTab !== 'kitchen' && activeTab !== 'bar') ? `
+        const totalsHtml = (!isKitchen) ? `
             <div class="totals">
                 <div class="row"><span>จำนวนชิ้น (QTY)</span> <span>${totalQty}</span></div>
                 <div class="row"><span>ยอดรวมก่อนหัก</span> <span>${subtotal.toLocaleString()}</span></div>
@@ -369,15 +371,14 @@ export default function SlipModal({ booking, type, onClose }) {
             </div>
         ` : ''
 
+        const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
         const combinedNotes = [];
-        if (booking.customer_note) combinedNotes.push(`<strong>ลูกค้า:</strong> ${booking.customer_note}`);
-        if (booking.staff_remark && (activeTab === 'kitchen' || activeTab === 'bar')) {
-            combinedNotes.push(`<strong>พนักงาน:</strong> ${booking.staff_remark}`);
-        }
+        if (booking.customer_note?.trim()) combinedNotes.push(`<strong>ลูกค้า:</strong> ${booking.customer_note.trim()}`);
+        if (cleanStaffNote) combinedNotes.push(`<strong>พนักงาน:</strong> ${cleanStaffNote}`);
 
-        const noteHtml = (combinedNotes.length > 0 && (activeTab === 'kitchen' || activeTab === 'bar')) ? `
+        const noteHtml = (combinedNotes.length > 0) ? `
             <div class="kitchen-note-box">
-                <div class="kitchen-note-label">หมายเหตุ / NOTE FOR STAFF</div>
+                <div class="kitchen-note-label">หมายเหตุ / NOTES</div>
                 ${combinedNotes.map(n => `<div style="margin-top: 2px;">${n}</div>`).join('')}
             </div>
         ` : ''
@@ -385,7 +386,7 @@ export default function SlipModal({ booking, type, onClose }) {
         // Dynamic title based on activeTab
         let docTitle = 'TICKET'
         let docHeader = receiptShopName || 'IN THE HAUS'
-        if (activeTab === 'kitchen') {
+        if (activeTab === 'kitchen' || activeTab === 'kitchen_all') {
             docTitle = 'KITCHEN ORDER / ใบสั่งอาหาร'
         } else if (activeTab === 'bar') {
             docTitle = 'BAR ORDER / ใบสั่งเครื่องดื่ม'
@@ -504,15 +505,15 @@ export default function SlipModal({ booking, type, onClose }) {
                             line-height: 1;
                         }
                         .meta { border-top: 2px dashed black; border-bottom: 2px dashed black; padding: 8px 0; margin-bottom: 12px; }
-                        .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+                        .row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px; }
                         .label { color: #000; font-weight: bold; text-transform: uppercase; }
                         .val { font-weight: normal; text-align: right; }
                         
                         .items { margin-bottom: 12px; }
                         .item { margin-bottom: 8px; }
-                        .qty { width: 25px; font-weight: bold; flex-shrink: 0; font-size: 11px; }
-                        .name { flex-grow: 1; margin-right: 5px; font-weight: bold; text-transform: uppercase; }
-                        .price { text-align: right; width: 60px; flex-shrink: 0; }
+                        .qty { width: 25px; font-weight: bold; flex-shrink: 0; font-size: 11px; white-space: nowrap; }
+                        .name { flex-grow: 1; min-width: 0; margin-right: 5px; font-weight: bold; text-transform: uppercase; word-break: break-word; overflow-wrap: break-word; }
+                        .price { text-align: right; width: 65px; flex-shrink: 0; white-space: nowrap; font-weight: bold; }
                         .opts { margin-left: 25px; margin-top: 2px; color: #000; font-size: 10px; font-weight: bold; font-style: normal; }
 
                         .totals { border-top: 2px solid black; padding-top: 8px; margin-bottom: 12px; }
@@ -703,24 +704,20 @@ export default function SlipModal({ booking, type, onClose }) {
                         }
                     } catch (e) {}
 
-                    if (isSeparateBarPrinterEnabled) {
-                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                        if (kitchenBytes) {
-                            await printToSunmiBuiltIn(kitchenBytes);
-                            printedAny = true;
-                        }
-                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                        if (barBytes) {
-                            await printToSunmiBuiltIn(barBytes);
-                            printedAny = true;
-                        }
-                    } else {
-                        // Print SINGLE combined kitchen ticket (1 slip only!)
-                        const combinedBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                        if (combinedBytes) {
-                            await printToSunmiBuiltIn(combinedBytes);
-                            printedAny = true;
-                        }
+                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (kitchenBytes) {
+                        await printToSunmiBuiltIn(kitchenBytes);
+                        printedAny = true;
+                    }
+                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (barBytes) {
+                        await printToSunmiBuiltIn(barBytes);
+                        printedAny = true;
+                    }
+                    const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                    if (otherBytes) {
+                        await printToSunmiBuiltIn(otherBytes);
+                        printedAny = true;
                     }
                     if (!printedAny) {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
@@ -728,7 +725,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 } else {
                     const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                     if (rawBytes) {
-                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar') ? receiptConfig.shopLogoUrl : null;
+                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? receiptConfig.shopLogoUrl : null;
                         const qrToPrint = (activeTab === 'billing') ? qrCodeUrl : null;
                         await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     } else {

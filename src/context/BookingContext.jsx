@@ -13,18 +13,19 @@ export function BookingProvider({ children }) {
 
     // Initial Data Load
     useEffect(() => {
-        // LIFF Init
+        // LIFF Init with tracking prevention & storage access fallback
         const initLiff = async () => {
             try {
                 if (window.liff) {
-                    await window.liff.init({ liffId: "2008674756-hTEWodVj" })
-                    setIsLiffReady(true)
+                    await window.liff.init({ liffId: "2008674756-hTEWodVj", withLoginOnExternalBrowser: false });
+                    setIsLiffReady(true);
                 }
             } catch (e) {
-                console.error("LIFF Init Error:", e)
+                console.warn("LIFF Init warning (tracking/storage blocked):", e);
+                setIsLiffReady(false);
             }
-        }
-        initLiff()
+        };
+        initLiff();
 
         const loadData = async () => {
             try {

@@ -42,7 +42,11 @@ export default function CustomerOrderStatus() {
             }, () => {
                 fetchActiveOrder(true);
             })
-            .subscribe();
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Realtime Status] Channel status: ${status}`, err || '');
+                }
+            });
 
         return () => {
             supabase.removeChannel(sub);

@@ -109,7 +109,6 @@ export default function POSLayout({ children, activeView, onViewChange, selected
 
                 <div className="flex flex-col gap-2 w-full px-2 items-center">
                     <NavIcon icon={LayoutGrid} onClick={() => window.location.href = '/staff'} label="Staff DB" />
-                    <NavIcon icon={Clock} onClick={() => window.location.href = '/staff/orders'} label="Live Orders" />
                     <NavIcon icon={Settings} onClick={() => window.location.href = '/admin/settings'} label="Settings" />
                     
                     {/* Subtle Side Branding */}
@@ -150,23 +149,23 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                 className="flex items-center gap-1.5 bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm animate-pulse cursor-pointer transition-all active:scale-95"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                <span>OFFLINE MODE ({queueLength} PENDING)</span>
+                                <span>🔴 ออฟไลน์ (ค้าง {queueLength} รายการ)</span>
                             </button>
                         ) : queueLength > 0 ? (
                             <button
                                 onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
-                                className="flex items-center gap-1.5 bg-amber-100 border border-amber-200 text-amber-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full hover:bg-amber-200 cursor-pointer active:scale-95 transition-all shadow-sm"
+                                className="flex items-center gap-1.5 bg-amber-100 border border-amber-200 text-amber-800 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full hover:bg-amber-200 cursor-pointer active:scale-95 transition-all shadow-sm"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                <span>SYNC PENDING ({queueLength})</span>
+                                <span>🟠 รอซิงค์ออนไลน์ ({queueLength} รายการ)</span>
                             </button>
                         ) : (
                             <button
                                 onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
-                                className="flex items-center gap-1.5 bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 text-emerald-700 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm cursor-pointer transition-all active:scale-95"
+                                className="flex items-center gap-1.5 bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 text-emerald-800 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-sm cursor-pointer transition-all active:scale-95"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                <span>ONLINE (QUEUE: 0)</span>
+                                <span>🟢 อัปเดตออนไลน์ครบแล้ว (0 รายการ)</span>
                             </button>
                         )}
 

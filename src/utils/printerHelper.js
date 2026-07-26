@@ -124,11 +124,38 @@ function encodeUTF8(str) {
     return bytes;
 }
 
+// Clean auto-generated system remarks (e.g. 'Walk-in Guest', '[CALL_STAFF]')
+export function getCleanStaffRemark(remark) {
+    if (!remark) return '';
+    const r = String(remark).trim();
+    if (!r) return '';
+    const lower = r.toLowerCase();
+    
+    if (
+        lower === 'walk-in guest' ||
+        lower === 'qr walk-in guest' ||
+        lower === 'offline walk-in' ||
+        lower.includes('walk-in guest (offline') ||
+        lower === 'walk-in pick-up (offline sync)' ||
+        lower === '[call_staff]' ||
+        lower === '[call_bill]' ||
+        lower.startsWith('merged into table') ||
+        lower.startsWith('split paid by')
+    ) {
+        return '';
+    }
+
+    const cleaned = r.replace('[CALL_STAFF]', '').replace('[CALL_BILL]', '').trim();
+    return cleaned;
+}
+
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '80mm', receiptConfig = {}, printerType = 'universal') {
     // Filter items based on activeTab (Kitchen vs Bar vs Others) using printer configuration
     let itemsToRender = booking.order_items || [];
     
+    const isKitchenTab = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
+
     let kitchenCatIds = [];
     let barCatIds = [];
     try {
@@ -138,7 +165,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             kitchenCatIds = config.kitchen_categories || [];
             barCatIds = config.bar_categories || [];
             if (!paperSize || paperSize === '58mm') {
-                paperSize = (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other')
+                paperSize = isKitchenTab
                     ? (config.kitchen_paper_size || config.paper_width || '80mm')
                     : (config.cashier_paper_size || config.paper_width || '80mm');
             }
@@ -185,12 +212,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // Return null if there are no items to print for this specific tab
-    if ((activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') && itemsToRender.length === 0) {
+    if (isKitchenTab && itemsToRender.length === 0) {
         return null;
     }
 
     // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
-    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+    if (isKitchenTab) {
         itemsToRender = [...itemsToRender].sort((a, b) => {
             const catA = getItemCatId(a);
             const catB = getItemCatId(b);
@@ -237,7 +264,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 1. Header (Omit for kitchen and bar)
-    if (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other') {
+    if (!isKitchenTab) {
         encoder.align('center')
                .line(doubleDivider)
                .size(1, 1)
@@ -263,6 +290,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .size(1, 1) // Double size header for kitchen!
                .line('KITCHEN ORDER')
                .size(0, 0)
+               .bold(true)
+               .line('(ใบออเดอร์ครัว)')
                .bold(false)
                .line(doubleDivider);
     } else if (activeTab === 'bar') {
@@ -272,6 +301,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .size(1, 1) // Double size header for bar!
                .line('BAR ORDER')
                .size(0, 0)
+               .bold(true)
+               .line('(ใบออเดอร์บาร์)')
                .bold(false)
                .line(doubleDivider);
     } else if (activeTab === 'other') {
@@ -281,6 +312,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .size(1, 1) // Double size header for other!
                .line('OTHER ORDER')
                .size(0, 0)
+               .bold(true)
+               .line('(ใบออเดอร์ทั่วไป)')
                .bold(false)
                .line(doubleDivider);
     }
@@ -289,7 +322,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const tableName = (booking.tables_layout?.table_name || 'PICKUP').toUpperCase();
     
     // For kitchen/bar: Make Table Name and Queue ID even bigger and print order time prominently
-    if (activeTab === 'kitchen' || activeTab === 'kitchen_all' || activeTab === 'bar' || activeTab === 'other') {
+    if (isKitchenTab) {
         let serviceType = 'กินที่ร้าน (DINE-IN)';
         const remark = (booking.staff_remark || '').toLowerCase();
         const note = (booking.customer_note || '').toLowerCase();
@@ -329,7 +362,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 3. Meta info
-    if (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other') {
+    if (!isKitchenTab) {
         encoder.align('left')
                .line(`วันที่-เวลา: ${dateStr}`)
                .line(`ลูกค้า: ${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}`);
@@ -346,12 +379,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 4. Items Header
     encoder.bold(true)
-           .line(activeTab === 'kitchen' ? 'รายการอาหาร (ครัว)' : activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : activeTab === 'other' ? 'รายการอื่นๆ (ทั่วไป)' : 'รายการอาหารและเครื่องดื่ม')
+           .line(activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : activeTab === 'other' ? 'รายการอื่นๆ (ทั่วไป)' : (activeTab === 'kitchen' || activeTab === 'kitchen_all') ? 'รายการอาหาร (ครัว)' : 'รายการอาหารและเครื่องดื่ม')
            .bold(false)
            .line(divider);
 
     // 5. Items List
-    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+    if (isKitchenTab) {
         itemsToRender.forEach((item, index) => {
             const qtyStr = `${item.quantity}x`;
             const name = (item.menu_items?.name || 'Item').toUpperCase();
@@ -446,7 +479,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 6. Totals
-    if (activeTab !== 'kitchen' && activeTab !== 'bar') {
+    if (!isKitchenTab) {
         const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
         const discount = booking.discount_amount || 0;
         const netAfterDiscount = subtotal - discount;
@@ -499,24 +532,26 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(doubleDivider);
     }
 
-    // 8. Note
+// 8. Note
+    const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
     const combinedNotes = [];
-    if (booking.customer_note) combinedNotes.push(`ลูกค้า: ${booking.customer_note}`);
-    if (booking.staff_remark && activeTab !== 'receipt') {
-        combinedNotes.push(`พนักงาน: ${booking.staff_remark}`);
-    }
+    if (booking.customer_note?.trim()) combinedNotes.push(`ลูกค้า: ${booking.customer_note.trim()}`);
+    if (cleanStaffNote) combinedNotes.push(`พนักงาน: ${cleanStaffNote}`);
 
     if (combinedNotes.length > 0) {
         encoder.align('left')
                .bold(true)
-               .line('หมายเหตุ / NOTES:')
+               .line('หมายเหตุ:')
                .bold(false);
-        combinedNotes.forEach(noteLine => encoder.line(noteLine));
+        combinedNotes.forEach(noteLine => {
+            const lines = wrapTextByWords(noteLine, maxCols - 2);
+            lines.forEach(l => encoder.line(l));
+        });
         encoder.line(divider);
     }
 
     // 9. Footer
-    if (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other') {
+    if (!isKitchenTab) {
         encoder.align('center')
                .line(shopFooter)
                .feed(2)
@@ -587,35 +622,80 @@ function sliceThai(str, maxVisualWidth) {
     return result;
 }
 
-// Thai-width-aware item line formatting (with multi-line wrapping so no text is lost)
+// Word/phrase-aware text wrapping (never breaks words mid-character)
+export function wrapTextByWords(str, maxColWidth) {
+    if (!str) return [];
+    if (getThaiVisualWidth(str) <= maxColWidth) return [str];
+
+    const words = str.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (!word) continue;
+
+        if (!currentLine) {
+            if (getThaiVisualWidth(word) <= maxColWidth) {
+                currentLine = word;
+            } else {
+                let rem = word;
+                while (rem.length > 0) {
+                    const chunk = sliceThai(rem, maxColWidth);
+                    lines.push(chunk);
+                    rem = rem.slice(chunk.length);
+                    if (chunk.length === 0) break;
+                }
+            }
+        } else {
+            const testLine = currentLine + ' ' + word;
+            if (getThaiVisualWidth(testLine) <= maxColWidth) {
+                currentLine = testLine;
+            } else {
+                lines.push(currentLine);
+                if (getThaiVisualWidth(word) <= maxColWidth) {
+                    currentLine = word;
+                } else {
+                    let rem = word;
+                    currentLine = '';
+                    while (rem.length > 0) {
+                        const chunk = sliceThai(rem, maxColWidth);
+                        lines.push(chunk);
+                        rem = rem.slice(chunk.length);
+                        if (chunk.length === 0) break;
+                    }
+                }
+            }
+        }
+    }
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+    return lines;
+}
+
+// Thai-width-aware item line formatting (price stays fixed on top-right, words wrap cleanly)
 function formatItemLine(qty, name, priceStr, maxCols) {
     const qtyColWidth = maxCols === 48 ? 5 : 4;
-    const priceColWidth = maxCols === 48 ? 12 : 9;
-    const nameColWidth = maxCols - qtyColWidth - priceColWidth;
+    const priceColWidth = maxCols === 48 ? 11 : 8;
+    const nameColWidth = maxCols - qtyColWidth - priceColWidth - 1;
 
     const qtyStr = padEndThai(qty, qtyColWidth);
     const rightPriceStr = priceStr.padStart(priceColWidth);
     
     if (getThaiVisualWidth(name) <= nameColWidth) {
         const paddedName = padEndThai(name, nameColWidth);
-        return qtyStr + paddedName + rightPriceStr + '\n';
+        return qtyStr + paddedName + ' ' + rightPriceStr + '\n';
     }
 
-    const lines = [];
-    let remaining = name;
-    while (remaining.length > 0) {
-        const chunk = sliceThai(remaining, nameColWidth);
-        lines.push(chunk);
-        remaining = remaining.slice(chunk.length);
-        if (chunk.length === 0) break;
-    }
+    const lines = wrapTextByWords(name, nameColWidth);
 
     let result = '';
     lines.forEach((l, idx) => {
         if (idx === 0) {
-            result += qtyStr + padEndThai(l, nameColWidth) + rightPriceStr + '\n';
+            result += qtyStr + padEndThai(l, nameColWidth) + ' ' + rightPriceStr + '\n';
         } else {
-            result += ' '.repeat(qtyColWidth) + padEndThai(l, nameColWidth) + ' '.repeat(priceColWidth) + '\n';
+            result += ' '.repeat(qtyColWidth) + padEndThai(l, nameColWidth) + ' '.repeat(priceColWidth + 1) + '\n';
         }
     });
     return result;
@@ -634,14 +714,7 @@ function formatThreeCols(left, mid, right, maxCols) {
         return paddedLeft + midRightStr;
     }
 
-    const lines = [];
-    let remaining = leftStr;
-    while (remaining.length > 0) {
-        const chunk = sliceThai(remaining, leftCol);
-        lines.push(chunk);
-        remaining = remaining.slice(chunk.length);
-        if (chunk.length === 0) break;
-    }
+    const lines = wrapTextByWords(leftStr, leftCol);
 
     let result = '';
     lines.forEach((l, idx) => {
@@ -655,8 +728,9 @@ function formatThreeCols(left, mid, right, maxCols) {
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const rightCol = 12;
-    const leftCol = maxCols - rightCol - 1; // one space separation
+    const rightWidth = getThaiVisualWidth(String(right));
+    const rightCol = Math.max(rightWidth, maxCols === 48 ? 11 : 8);
+    const leftCol = maxCols - rightCol - 1;
     const rightStr = String(right).padStart(rightCol, ' ');
     
     let leftStr = String(left);
@@ -665,21 +739,14 @@ function formatTwoCols(left, right, maxCols) {
         return paddedLeft + ' ' + rightStr;
     }
 
-    const lines = [];
-    let remaining = leftStr;
-    while (remaining.length > 0) {
-        const chunk = sliceThai(remaining, leftCol);
-        lines.push(chunk);
-        remaining = remaining.slice(chunk.length);
-        if (chunk.length === 0) break;
-    }
+    const lines = wrapTextByWords(leftStr, leftCol);
 
     let result = '';
     lines.forEach((l, idx) => {
-        if (idx === lines.length - 1) {
-            result += padEndThai(l, leftCol) + ' ' + rightStr;
+        if (idx === 0) {
+            result += padEndThai(l, leftCol) + ' ' + rightStr + '\n';
         } else {
-            result += padEndThai(l, leftCol) + ' ' + ' '.repeat(rightCol) + '\n';
+            result += padEndThai(l, leftCol) + ' '.repeat(rightCol + 1) + '\n';
         }
     });
     return result;

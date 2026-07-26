@@ -357,12 +357,6 @@ export default function StaffDashboard() {
             <div className="sd-section-label">Functions</div>
             <nav className="sd-functions" role="navigation" aria-label="Staff functions">
                 <FunctionButton 
-                    title="Live Orders" 
-                    desc="Kitchen \u0026 Bar" 
-                    icon={ClipboardList} 
-                    onClick={() => navigate('/staff/orders')}
-                />
-                <FunctionButton 
                     title="Inventory" 
                     desc="Stock Levels" 
                     icon={Package} 

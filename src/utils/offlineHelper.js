@@ -106,7 +106,7 @@ export async function verifyConnection() {
     }
 }
 
-export async function syncOfflineQueue() {
+export async function syncOfflineQueue(isManual = false) {
     if (isSyncing) return;
     if (!isOnline()) return;
     
@@ -124,7 +124,9 @@ export async function syncOfflineQueue() {
     }
     
     console.log(`[Offline Sync] Starting sync for ${queue.length} actions...`);
-    toast.info(`🔄 ตรวจพบข้อมูลค้างในเครื่อง ${queue.length} รายการ กำลังเชื่อมโยงข้อมูลกับเซิร์ฟเวอร์...`);
+    if (isManual) {
+        toast.info(`🔄 ตรวจพบข้อมูลค้างในเครื่อง ${queue.length} รายการ กำลังเชื่อมโยงข้อมูลกับเซิร์ฟเวอร์...`);
+    }
 
     const idMapping = {}; // Maps local temp IDs to database real IDs
     const remainingQueue = [];
@@ -369,19 +371,25 @@ export async function syncOfflineQueue() {
             }
             
         } catch (err) {
-            console.error(`[Offline Sync] Failed to sync action:`, action, err);
-            // Save failed action back to queue so we can retry later
-            remainingQueue.push(action);
+            console.error(`[Offline Sync] Failed to sync action (${action.type}):`, action, err);
+            action.retryCount = (action.retryCount || 0) + 1;
+            if (action.retryCount < 3) {
+                remainingQueue.push(action);
+            } else {
+                console.warn(`[Offline Sync] Discarding unrecoverable offline action (${action.type}) after 3 retries:`, action);
+            }
         }
     }
 
     saveOfflineQueue(remainingQueue);
     isSyncing = false;
     
-    if (remainingQueue.length === 0) {
-        toast.success(`✅ เชื่อมโยงข้อมูลออฟไลน์เรียบร้อยแล้ว!`);
-    } else {
-        toast.error(`⚠️ การเชื่อมต่อไม่สมบูรณ์: เหลือ ${remainingQueue.length} รายการที่กำลังลองใหม่`);
+    if (isManual) {
+        if (remainingQueue.length === 0) {
+            toast.success(`✅ เชื่อมโยงข้อมูลออฟไลน์เรียบร้อยแล้ว!`);
+        } else {
+            toast.error(`⚠️ การเชื่อมต่อไม่สมบูรณ์: เหลือ ${remainingQueue.length} รายการที่กำลังลองใหม่`);
+        }
     }
     
     window.dispatchEvent(new Event('offline-queue-changed'));

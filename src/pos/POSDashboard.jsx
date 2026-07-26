@@ -12,7 +12,7 @@ import POSCRMPanel from './POSCRMPanel';
 import POSOpenBillsGrid from './POSOpenBillsGrid';
 import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
 import SlipModal from '../components/shared/SlipModal';
-import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins } from 'lucide-react';
@@ -23,9 +23,26 @@ export default function POSDashboard() {
     const [activeBooking, setActiveBooking] = useState(null);
     const [currentOrder, setCurrentOrder] = useState({
         items: [],
-        customer: null,
-        table: null
+        note: ''
     });
+
+    const handlePinLogin = async (staff) => {
+        setSelectedStaffForLogin(staff);
+        const existingShift = await checkAndRestoreActiveShift();
+        if (existingShift) {
+            let updatedShift = existingShift;
+            if (existingShift.staffName !== staff.display_name) {
+                updatedShift = { ...existingShift, staffName: staff.display_name };
+                localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
+                syncShiftToCloud(updatedShift);
+            }
+            setActiveShift(updatedShift);
+            toast.success(`ยินดีต้อนรับ: ${staff.display_name} (เข้าสู่กะปัจจุบัน)`);
+            setPinInput('');
+        } else {
+            setShowOpeningFloatModal(true);
+        }
+    };
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
     const [activeSlipType, setActiveSlipType] = useState('billing');
     const [refreshKey, setRefreshKey] = useState(0);
@@ -1835,8 +1852,7 @@ export default function POSDashboard() {
                                                     if (newPin.length === 4) {
                                                         const staff = staffList.find(s => s.pin === newPin);
                                                         if (staff) {
-                                                            setSelectedStaffForLogin(staff);
-                                                            setShowOpeningFloatModal(true);
+                                                            handlePinLogin(staff);
                                                         } else {
                                                             toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
                                                             setPinInput('');
@@ -1863,8 +1879,7 @@ export default function POSDashboard() {
                                                 if (newPin.length === 4) {
                                                     const staff = staffList.find(s => s.pin === newPin);
                                                     if (staff) {
-                                                        setSelectedStaffForLogin(staff);
-                                                        setShowOpeningFloatModal(true);
+                                                        handlePinLogin(staff);
                                                     } else {
                                                         toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
                                                         setPinInput('');

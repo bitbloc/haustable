@@ -57,34 +57,34 @@ export async function checkAndRestoreActiveShift() {
         const localShift = getCurrentShift();
         if (localShift) return localShift;
 
-        // Query Supabase for any active open shift
+        // Query Supabase for any active open shift (using limit(1) array check to avoid maybeSingle errors)
         const { data, error } = await supabase
             .from('pos_shifts')
             .select('*')
             .eq('status', 'open')
             .order('opened_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .limit(1);
 
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
+            const shiftData = data[0];
             const restoredShift = {
-                id: data.id,
-                staffName: data.staff_name,
-                openedAt: data.opened_at,
-                closedAt: data.closed_at,
-                openingFloat: parseFloat(data.opening_float) || 0,
-                transactions: data.transactions || [],
-                adjustments: data.adjustments || [],
-                status: data.status,
-                closedCash: parseFloat(data.closed_cash) || 0,
-                expectedCash: parseFloat(data.expected_cash) || 0,
-                difference: parseFloat(data.difference) || 0,
-                cashSales: parseFloat(data.cash_sales) || 0,
-                qrSales: parseFloat(data.qr_sales) || 0,
-                creditSales: parseFloat(data.credit_sales) || 0,
-                totalSales: parseFloat(data.total_sales) || 0,
-                totalIn: parseFloat(data.total_in) || 0,
-                totalOut: parseFloat(data.total_out) || 0
+                id: shiftData.id,
+                staffName: shiftData.staff_name,
+                openedAt: shiftData.opened_at,
+                closedAt: shiftData.closed_at,
+                openingFloat: parseFloat(shiftData.opening_float) || 0,
+                transactions: shiftData.transactions || [],
+                adjustments: shiftData.adjustments || [],
+                status: shiftData.status,
+                closedCash: parseFloat(shiftData.closed_cash) || 0,
+                expectedCash: parseFloat(shiftData.expected_cash) || 0,
+                difference: parseFloat(shiftData.difference) || 0,
+                cashSales: parseFloat(shiftData.cash_sales) || 0,
+                qrSales: parseFloat(shiftData.qr_sales) || 0,
+                creditSales: parseFloat(shiftData.credit_sales) || 0,
+                totalSales: parseFloat(shiftData.total_sales) || 0,
+                totalIn: parseFloat(shiftData.total_in) || 0,
+                totalOut: parseFloat(shiftData.total_out) || 0
             };
             localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(restoredShift));
             window.dispatchEvent(new Event('pos-shift-changed'));
@@ -95,6 +95,25 @@ export async function checkAndRestoreActiveShift() {
         console.error('[Shift Sync] Failed to check/restore active shift:', err);
     }
     return null;
+}
+
+// Clean up all active open shifts in cloud and local storage
+export async function cleanUpAllShifts() {
+    try {
+        await supabase
+            .from('pos_shifts')
+            .update({ status: 'closed', closed_at: new Date().toISOString() })
+            .eq('status', 'open');
+
+        localStorage.removeItem(CURRENT_SHIFT_KEY);
+        localStorage.removeItem(SHIFT_HISTORY_KEY);
+        window.dispatchEvent(new Event('pos-shift-changed'));
+        console.log('[Shift Management] All active shifts cleaned up successfully.');
+        return true;
+    } catch (err) {
+        console.error('[Shift Management] Failed to clean up shifts:', err);
+        return false;
+    }
 }
 
 // Sync completed shift history list from Supabase cloud
