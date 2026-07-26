@@ -221,7 +221,18 @@ export default function CustomerOrderStatus() {
                         <ArrowLeft size={16} />
                     </button>
                     <div>
-                        <h1 className="font-bold text-sm text-[#1A1A1A]">ติดตามสถานะออเดอร์</h1>
+                        <h1 className="font-bold text-sm text-[#1A1A1A] flex items-center gap-2">
+                            <span>ติดตามสถานะออเดอร์</span>
+                            {booking.booking_time && (() => {
+                                const startMins = Math.max(0, Math.floor((Date.now() - new Date(booking.booking_time).getTime()) / 60000));
+                                const formatted = startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`;
+                                return (
+                                    <span className="bg-white border border-[#D1D1CD] text-[#1A1A1A] px-2 py-0.5 rounded-full font-mono text-[9px] font-bold">
+                                        ⏱️ {formatted}
+                                    </span>
+                                );
+                            })()}
+                        </h1>
                         <p className="text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold mt-0.5">
                             Table {booking.tables_layout?.table_name} · Queue #{booking.tracking_token ? booking.tracking_token.slice(0, 4) : String(booking.id).slice(0, 4)}
                         </p>

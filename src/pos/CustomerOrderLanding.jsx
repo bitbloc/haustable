@@ -73,13 +73,11 @@ export default function CustomerOrderLanding() {
 
     const refreshActiveBooking = async () => {
         try {
-            const today = new Date().toISOString().split('T')[0];
             const { data: bookingData } = await supabase
                 .from('bookings')
                 .select('*, order_items(*, menu_items(*))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`)
                 .order('booking_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -171,15 +169,12 @@ export default function CustomerOrderLanding() {
                 }
             }
 
-            // 3. Fetch Active Table Session
-            // Booking must be active today with status in 'pending', 'confirmed', 'seated', 'ready'
-            const today = new Date().toISOString().split('T')[0];
+            // 3. Fetch Active Table Session (Active until explicitly completed/closed)
             const { data: bookingData } = await supabase
                 .from('bookings')
                 .select('*, order_items(*, menu_items(*))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`)
                 .order('booking_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -507,13 +502,11 @@ export default function CustomerOrderLanding() {
 
         try {
             // 1. Fetch latest active table session to prevent session duplication when 10 guests order concurrently
-            const today = new Date().toISOString().split('T')[0];
             const { data: latestTableSession } = await supabase
                 .from('bookings')
                 .select('*')
                 .eq('table_id', parseInt(tableId))
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`)
                 .order('booking_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -757,8 +750,17 @@ export default function CustomerOrderLanding() {
             {/* Welcome banner */}
             <div className="p-5 bg-white border-b border-[#D1D1CD] flex items-center justify-between">
                 <div>
-                    <h2 className="text-sm font-bold text-[#1A1A1A] mb-0.5">
-                        ยินดีต้อนรับสู่โต๊ะ {table?.table_name}
+                    <h2 className="text-sm font-bold text-[#1A1A1A] mb-0.5 flex items-center gap-2">
+                        <span>ยินดีต้อนรับสู่โต๊ะ {table?.table_name}</span>
+                        {activeBooking?.booking_time && (() => {
+                            const startMins = Math.max(0, Math.floor((Date.now() - new Date(activeBooking.booking_time).getTime()) / 60000));
+                            const formatted = startMins < 60 ? `${startMins} นาที` : `${Math.floor(startMins / 60)} ชม. ${startMins % 60} นาที`;
+                            return (
+                                <span className="bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold flex items-center gap-1">
+                                    ⏱️ {formatted}
+                                </span>
+                            );
+                        })()}
                     </h2>
                     <p className="text-[11px] text-[#767673] leading-relaxed">
                         เลือกรายการอาหารด้านล่างและยืนยันออเดอร์เพื่อส่งตรงไปยังห้องครัว

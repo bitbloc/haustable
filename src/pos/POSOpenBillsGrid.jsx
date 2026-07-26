@@ -23,7 +23,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [channelFilter, setChannelFilter] = useState('all'); // 'all', 'table', 'pickup', 'walk_in'
-    const [statusMode, setStatusMode] = useState('active'); // 'active', 'void', 'all'
+    const [statusMode, setStatusMode] = useState('active'); // 'active', 'stale', 'void', 'all'
     const [unsentOnly, setUnsentOnly] = useState(false);
 
     const fetchOpenBills = async () => {
@@ -36,12 +36,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                 return;
             }
 
-            const today = new Date().toISOString().split('T')[0];
             const { data, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'void', 'cancelled'])
-                .gte('booking_time', `${today}T00:00:00`)
                 .order('booking_time', { ascending: false });
 
             if (error) throw error;
@@ -62,9 +60,13 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         fetchOpenBills();
     }, [refreshKey]);
 
-    // Active bills
+    // Active & Stale (>48h) bills
     const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'void' && o.status !== 'cancelled');
     const voidOrders = orders.filter(o => o.status === 'void' || o.status === 'cancelled');
+    const staleOrders = activeOrders.filter(o => {
+        const startMins = Math.max(0, Math.floor((Date.now() - new Date(o.booking_time).getTime()) / 60000));
+        return startMins >= 2880; // >48h (2 days)
+    });
 
     // Calculate metrics
     const totalOpenBills = activeOrders.length;
@@ -80,16 +82,18 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     }, 0);
 
     const unsentKitchenCount = activeOrders.filter(order => {
-        const hasUnsent = (order.order_items || []).some(item => !item.db_id || item.status === 'pending');
-        return hasUnsent;
+        return (order.order_items || []).some(item => !item.db_id || item.status === 'pending');
     }).length;
 
     const filteredOrders = orders.filter(order => {
         const isVoid = order.status === 'void' || order.status === 'cancelled';
+        const startMins = Math.max(0, Math.floor((Date.now() - new Date(order.booking_time).getTime()) / 60000));
+        const isStale = startMins >= 2880;
         
         // Status mode filter
         if (statusMode === 'active' && isVoid) return false;
         if (statusMode === 'void' && !isVoid) return false;
+        if (statusMode === 'stale' && (!isStale || isVoid)) return false;
 
         // Channel filter
         if (channelFilter === 'table' && !order.table_id) return false;
@@ -183,7 +187,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
                     {/* Status & Channel Filters */}
                     <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto font-mono text-[10px] font-bold uppercase tracking-wider scrollbar-none">
-                        {/* Status Toggle (ACTIVE / VOID / ALL) */}
+                        {/* Status Toggle (ACTIVE / STALE / VOID / ALL) */}
                         <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD]">
                             <button 
                                 type="button"
@@ -191,6 +195,13 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                 className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer ${statusMode === 'active' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                             >
                                 ACTIVE ({activeOrders.length})
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setStatusMode('stale')}
+                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 ${statusMode === 'stale' ? 'bg-amber-600 text-white shadow-xs font-extrabold' : 'text-amber-800 hover:text-amber-950 font-bold'}`}
+                            >
+                                ⚠️ ค้าง (&gt;2วัน) ({staleOrders.length})
                             </button>
                             <button 
                                 type="button"

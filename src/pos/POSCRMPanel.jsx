@@ -271,9 +271,23 @@ export default function POSCRMPanel() {
                                                         {h.status}
                                                     </span>
                                                 </div>
-                                                <p className="text-[#767673] font-mono flex items-center gap-1">
-                                                    <Clock size={10} /> {new Date(h.booking_time).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}
-                                                </p>
+                                                <div className="text-[#767673] font-mono flex items-center justify-between gap-1 text-[9px]">
+                                                    <span className="flex items-center gap-1"><Clock size={10} /> {new Date(h.booking_time).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                    {(() => {
+                                                        const startMins = Math.max(0, Math.floor(((h.updated_at ? new Date(h.updated_at).getTime() : Date.now()) - new Date(h.booking_time).getTime()) / 60000));
+                                                        let tag = { label: '⚡ กินแล้วไป', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+                                                        if (startMins > 120) {
+                                                            tag = { label: '🔥 นั่งแช่ยยาว (>2ชม.)', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+                                                        } else if (startMins > 45) {
+                                                            tag = { label: '☕ นั่งชิล (45-120ม.)', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+                                                        }
+                                                        return (
+                                                            <span className={`px-1 py-0.5 rounded text-[8px] font-bold border ${tag.color}`}>
+                                                                {tag.label}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
                                                 <div className="border-t border-[#ECECE9] pt-1.5 mt-1.5 text-[#1A1A1A]">
                                                     <p className="font-bold text-[9px] text-[#767673] uppercase mb-1">ORDER ITEMS</p>
                                                     {h.order_items?.map((item, idx) => (

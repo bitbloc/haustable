@@ -100,12 +100,10 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
                 // Simplified status check for POC
-                const today = new Date().toISOString().split('T')[0];
                 const { data: activeBookings } = await supabase
                     .from('bookings')
                     .select('*')
-                    .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                    .gte('booking_time', `${today}T00:00:00`);
+                    .in('status', ['pending', 'confirmed', 'seated', 'ready']);
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
@@ -402,15 +400,33 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                                 {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
                                                             </span>
                                                             
-                                                            {/* Booking / Seated time */}
-                                                            {table.booking?.booking_time && (isOccupied || isPending) && (
-                                                                <div className="flex items-center gap-0.5 text-[8px] font-mono font-bold mt-1 opacity-80">
-                                                                    <Clock size={8} />
-                                                                    <span>
-                                                                        {new Date(table.booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                    </span>
-                                                                </div>
-                                                            )}
+                                                            {/* Booking / Seated time & Dwell Counter */}
+                                                            {table.booking?.booking_time && (isOccupied || isPending) && (() => {
+                                                                const startMins = Math.max(0, Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000));
+                                                                const isStale = startMins >= 2880; // >48h (2 days)
+                                                                const isLongDwell = startMins >= 120; // >2h
+                                                                return (
+                                                                    <div className="flex flex-col items-center mt-0.5">
+                                                                        <div className="flex items-center gap-0.5 text-[8px] font-mono font-bold opacity-80">
+                                                                            <Clock size={8} />
+                                                                            <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                        </div>
+                                                                        {isStale ? (
+                                                                            <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                                                                                ⚠️ บิลค้าง &gt;2วัน
+                                                                            </span>
+                                                                        ) : isLongDwell ? (
+                                                                            <span className="mt-0.5 bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                                                                                🔥 นั่งแช่ {Math.floor(startMins / 60)}h{startMins % 60}m
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="mt-0.5 text-[7px] font-mono opacity-70">
+                                                                                ⏱️ {startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     </button>
                                                 );

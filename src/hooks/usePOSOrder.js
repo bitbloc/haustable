@@ -16,16 +16,14 @@ export function usePOSOrder() {
         }
 
         try {
-            const today = new Date().toISOString().split('T')[0];
             const { data, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`)
                 .order('booking_time', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching active booking:', error);
