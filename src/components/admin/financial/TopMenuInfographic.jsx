@@ -1,6 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react'
-import { Trophy, Utensils, GlassWater, Beer, Flame, Layers, Award, Sparkles, ArrowRight } from 'lucide-react'
+import { Trophy, Utensils, GlassWater, Beer, Flame, Layers, Award, Sparkles, Inbox } from 'lucide-react'
 
 export default function TopMenuInfographic({ data }) {
     const [activeCategory, setActiveCategory] = useState('all')
@@ -14,28 +14,13 @@ export default function TopMenuInfographic({ data }) {
         { id: 'combo', label: 'ชุดเซต (Combos)', icon: Layers },
     ]
 
-    const allTopItems = data?.topMenuData || [
-        { rank: 1, name: 'ข้าวหน้าเนื้อวากิวไข่ดอง (Wagyu Don)', category: 'main', categoryLabel: 'อาหารหลัก', units: 342, revenue: 119700, marginTier: 'High Margin (68%)', peakTime: 'Dinner Rush (18-20น.)', trend: '+14%', isBestSeller: true },
-        { rank: 2, name: 'สเต๊กเนื้อออสเตรเลีย 250g (AU Ribeye)', category: 'main', categoryLabel: 'อาหารหลัก', units: 218, revenue: 106820, marginTier: 'High Margin (62%)', peakTime: 'Dinner Rush (19-21น.)', trend: '+8%' },
-        { rank: 3, name: 'ข้าวแกงกะหรี่หมูทอดคัตสึ (Katsu Curry)', category: 'main', categoryLabel: 'อาหารหลัก', units: 285, revenue: 62700, marginTier: 'Volume Driver (54%)', peakTime: 'Lunch Rush (12-13.30น.)', trend: '+5%' },
-        
-        { rank: 4, name: 'Casual Sharing Set A (วากิว+เบียร์ 2 แก้ว)', category: 'combo', categoryLabel: 'ชุดเซต', units: 145, revenue: 85550, marginTier: 'Star Profit (72%)', peakTime: 'Prime Dinner (19น.)', trend: '+22%', isBestSeller: true },
-        { rank: 5, name: 'Family Platter Set B (เซต 4 ท่าน)', category: 'combo', categoryLabel: 'ชุดเซต', units: 88, revenue: 69520, marginTier: 'High Ticket (65%)', peakTime: 'Weekend Dinner', trend: '+12%' },
-
-        { rank: 6, name: 'Yuzu Highball / Craft Cocktail', category: 'alcohol', categoryLabel: 'แอลกอฮอล์', units: 412, revenue: 78280, marginTier: 'Ultra Margin (82%)', peakTime: 'Late Night (21น.+)', trend: '+18%', isBestSeller: true },
-        { rank: 7, name: 'Suntory Premium Draft Beer (Pint)', category: 'alcohol', categoryLabel: 'แอลกอฮอล์', units: 480, revenue: 67200, marginTier: 'Volume Driver (75%)', peakTime: 'Happy Hour & Dinner', trend: '+10%' },
-
-        { rank: 8, name: 'ซาชิมิแซลมอนนอร์เวย์ (Norwegian Salmon)', category: 'appetizer', categoryLabel: 'ทานเล่น', units: 260, revenue: 65000, marginTier: 'Balanced (58%)', peakTime: 'All Day Peak', trend: '+4%', isBestSeller: true },
-        { rank: 9, name: 'ไก่ทอดซอสส้มยูซุ (Yuzu Karaage)', category: 'appetizer', categoryLabel: 'ทานเล่น', units: 310, revenue: 49600, marginTier: 'High Margin (74%)', peakTime: 'Lunch & Dinner', trend: '+15%' },
-
-        { rank: 10, name: 'Matcha Citrus Sparkler (ชาเขียวส้มยูซุ)', category: 'drink', categoryLabel: 'เครื่องดื่ม', units: 390, revenue: 42900, marginTier: 'High Margin (85%)', peakTime: 'Afternoon & Lunch', trend: '+11%', isBestSeller: true },
-    ]
+    const allTopItems = data?.topMenuData || []
 
     const filteredItems = activeCategory === 'all' 
         ? allTopItems 
         : allTopItems.filter(item => item.category === activeCategory)
 
-    const maxRevenue = Math.max(...allTopItems.map(i => i.revenue))
+    const maxRevenue = allTopItems.length > 0 ? Math.max(...allTopItems.map(i => i.revenue || 0), 1) : 1
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -48,8 +33,8 @@ export default function TopMenuInfographic({ data }) {
                             อันดับเมนูขายดี Infographic (Top Menu Breakdown)
                         </h3>
                     </div>
-                    <p className="text-xs font-semibold text-[oklch(42%_0.010_28)] mt-0.5">
-                        จัดอันดับแยกหมวดหมู่ พร้อมจำนวนจาน ยอดขาย และอัตรากำไร
+                    <p className="text-xs font-bold text-[oklch(42%_0.010_28)] mt-0.5">
+                        จัดอันดับเมนูขายดีจากข้อมูลออเดอร์ POS จริง
                     </p>
                 </div>
 
@@ -80,6 +65,15 @@ export default function TopMenuInfographic({ data }) {
                     )
                 })}
             </div>
+
+            {/* Zero State Alert when no menu items found */}
+            {filteredItems.length === 0 && (
+                <div className="p-8 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl text-center space-y-2">
+                    <Inbox size={36} className="mx-auto text-[oklch(55%_0.010_28)] opacity-60" />
+                    <h4 className="font-black text-sm text-[oklch(18%_0.012_28)]">ไม่มีข้อมูลการขายเมนูในหมวดนี้</h4>
+                    <p className="text-xs text-[oklch(42%_0.010_28)] font-bold">ข้อมูลจะอัปเดตอัตโนมัติเมื่อมีการสั่งอาหารและชำระเงินผ่านระบบ POS</p>
+                </div>
+            )}
 
             {/* Top Menu Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-4">
@@ -112,24 +106,23 @@ export default function TopMenuInfographic({ data }) {
                                             <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)]">
                                                 {item.categoryLabel}
                                             </span>
-                                            <span className="font-mono text-[11px] text-emerald-700 font-black">{item.trend} MoM</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Key Stats Bar - Bold Values */}
-                            <div className="grid grid-cols-3 gap-2 pt-2 border-t-2 border-[oklch(85%_0.012_28)] text-xs font-mono">
+                            {/* Key Stats Bar */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t-2 border-[oklch(85%_0.012_28)] text-xs font-mono">
                                 <div>
                                     <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ยอดขายรวม</div>
                                     <div className="font-black text-base md:text-lg text-[oklch(52%_0.16_28)]">฿{item.revenue.toLocaleString()}</div>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">จำนวนจาน</div>
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold font-sans">จำนวนที่ขายได้</div>
                                     <div className="font-black text-base md:text-lg text-[oklch(18%_0.012_28)]">{item.units} จาน</div>
                                 </div>
-                                <div>
-                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">อัตรากำไร</div>
+                                <div className="col-span-2 sm:col-span-1">
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ที่มาจาก POS</div>
                                     <div className="font-extrabold text-[11px] text-[oklch(45%_0.08_140)] pt-1">{item.marginTier}</div>
                                 </div>
                             </div>
@@ -137,8 +130,8 @@ export default function TopMenuInfographic({ data }) {
                             {/* Relative Progress Bar */}
                             <div className="space-y-1 pt-1">
                                 <div className="flex justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
-                                    <span>ความนิยมสัมพัทธ์</span>
-                                    <span>ขายดีช่วง: <strong className="text-[oklch(18%_0.012_28)] font-black">{item.peakTime}</strong></span>
+                                    <span>สัดส่วนความนิยมในหมวด</span>
+                                    <span className="font-black text-[oklch(52%_0.16_28)]">{Math.round(pctOfMax)}%</span>
                                 </div>
                                 <div className="w-full bg-[oklch(94%_0.010_28)] h-2.5 rounded-full overflow-hidden">
                                     <div 
