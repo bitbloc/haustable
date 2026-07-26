@@ -2133,56 +2133,39 @@ export default function AdminSettings() {
                                     {/* Simulated Physical Thermal Paper Card with Jagged Tear Edges */}
                                     <div className="w-full max-w-[320px] bg-white border border-[#D1D1CD] shadow-2xl p-5 text-[#1A1A1A] font-mono text-[11px] leading-snug rounded-t-xl relative overflow-hidden select-none">
                                         {/* Paper Header */}
-                                        <div className="text-center pb-2 mb-2">
-                                            {/* Render Uploaded Shop Logo if Available */}
-                                            {previewTab === 'billing' && settings.receipt_shop_logo_url && (
-                                                <div className="flex justify-center mb-2">
-                                                    <img 
-                                                        src={`${settings.receipt_shop_logo_url}?t=${timestamp}`} 
-                                                        alt="Shop Logo" 
-                                                        className="max-h-16 max-w-[140px] object-contain p-1"
-                                                    />
+                                        {previewTab === 'billing' ? (
+                                            <div className="text-center pb-2 mb-2">
+                                                {/* Render Uploaded Shop Logo if Available */}
+                                                {settings.receipt_shop_logo_url && (
+                                                    <div className="flex justify-center mb-2">
+                                                        <img 
+                                                            src={`${settings.receipt_shop_logo_url}?t=${timestamp}`} 
+                                                            alt="Shop Logo" 
+                                                            className="max-h-16 max-w-[140px] object-contain p-1"
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="font-bold text-lg tracking-tight uppercase">
+                                                    {settings.receipt_shop_name || 'IN THE HAUS'}
                                                 </div>
-                                            )}
-                                            <div className="font-bold text-lg tracking-tight uppercase">
-                                                {settings.receipt_shop_name || 'IN THE HAUS'}
+                                                {settings.receipt_shop_address && (
+                                                    <div className="text-[9px] text-[#555] mt-0.5">{settings.receipt_shop_address}</div>
+                                                )}
+                                                {settings.receipt_shop_phone && (
+                                                    <div className="text-[9px] text-[#555]">TEL: {settings.receipt_shop_phone}</div>
+                                                )}
+                                                {settings.receipt_shop_vat && (
+                                                    <div className="text-[9px] text-[#555]">TAX ID: {settings.receipt_shop_vat}</div>
+                                                )}
                                             </div>
-                                            {settings.receipt_shop_address && (
-                                                <div className="text-[9px] text-[#555] mt-0.5">{settings.receipt_shop_address}</div>
-                                            )}
-                                            {settings.receipt_shop_phone && (
-                                                <div className="text-[9px] text-[#555]">TEL: {settings.receipt_shop_phone}</div>
-                                            )}
-                                            {settings.receipt_shop_vat && (
-                                                <div className="text-[9px] text-[#555]">TAX ID: {settings.receipt_shop_vat}</div>
-                                            )}
-                                        </div>
-
-                                        {/* Dynamic Divider Line */}
-                                        <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
-                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
-                                        </div>
-
-                                        {/* Ticket Title */}
-                                        <div className="text-center font-bold text-xs uppercase my-2">
-                                            {previewTab === 'kitchen' && (
-                                                <div>
-                                                    <div className="text-sm font-black">KITCHEN ORDER</div>
-                                                    <div className="text-[9px]">(ใบออเดอร์ครัว)</div>
+                                        ) : (
+                                            /* Clean Header for Kitchen & Bar Order Slips (No Logo, No Address/VAT) */
+                                            <div className="text-center pb-1 mb-1">
+                                                <div className="text-base font-black uppercase tracking-wide text-[#1A1A1A]">
+                                                    {previewTab === 'kitchen' ? '🍳 KITCHEN ORDER (ใบสั่งครัว)' : '🍹 BAR ORDER (ใบสั่งบาร์)'}
                                                 </div>
-                                            )}
-                                            {previewTab === 'bar' && (
-                                                <div>
-                                                    <div className="text-sm font-black">BAR ORDER</div>
-                                                    <div className="text-[9px]">(ใบออเดอร์บาร์)</div>
-                                                </div>
-                                            )}
-                                            {previewTab === 'billing' && (
-                                                <div>
-                                                    <div className="text-sm font-black">RECEIPT / ใบเสร็จรับเงิน</div>
-                                                </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
 
                                         {/* Dynamic Divider Line */}
                                         <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
@@ -2190,12 +2173,12 @@ export default function AdminSettings() {
                                         </div>
 
                                         {/* Queue & Table Box */}
-                                        <div className="border border-[#1A1A1A] p-2 text-center my-3">
-                                            <div className="text-sm font-black uppercase">โต๊ะ 04 (TABLE 04)</div>
-                                            <div className="text-xs font-bold text-[#ff0000]">คิว: #HAUS-102</div>
+                                        <div className="border-2 border-[#1A1A1A] p-2 text-center my-3 bg-[#F9F9F8]">
+                                            <div className="text-base font-black uppercase tracking-tight">โต๊ะ 04 (TABLE 04)</div>
+                                            <div className="text-xs font-black text-[#ff0000] mt-0.5">คิว: #HAUS-102</div>
                                         </div>
 
-                                        {/* Customer & Staff Metadata */}
+                                        {/* Customer & Staff Metadata (Only for Billing) */}
                                         {previewTab === 'billing' && (
                                             <div className="my-2 text-[10px] space-y-0.5">
                                                 <div>วันที่-เวลา: {new Date().toLocaleString('th-TH')}</div>
@@ -2292,15 +2275,18 @@ export default function AdminSettings() {
                                             {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                                         </div>
 
-                                        {/* Live ASCII Art Footer Display */}
-                                        <div className="text-center my-3 whitespace-pre font-mono text-[9px] font-bold text-[#1A1A1A] leading-tight bg-[#F9F9F8] p-2 rounded border border-dashed border-[#CCCCCC]">
-                                            {printerConfig.footer_ascii_art || `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`}
-                                        </div>
+                                        {/* Live ASCII Art Footer Display & Shop Footer (Only for Billing) */}
+                                        {previewTab === 'billing' && (
+                                            <>
+                                                <div className="text-center my-3 whitespace-pre font-mono text-[9px] font-bold text-[#1A1A1A] leading-tight bg-[#F9F9F8] p-2 rounded border border-dashed border-[#CCCCCC]">
+                                                    {printerConfig.footer_ascii_art || `★*¨*•.¸¸♪ THANK YOU ♪¸¸•*¨*★\n  ( ✿◡‿◡ ) ♡ SEE YOU AGAIN ♡`}
+                                                </div>
 
-                                        {/* Shop Footer Text */}
-                                        <div className="text-center font-bold text-[9px] uppercase tracking-wider">
-                                            {printerConfig.shop_footer_text || settings.receipt_shop_footer || 'THANK YOU FOR YOUR VISIT'}
-                                        </div>
+                                                <div className="text-center font-bold text-[9px] uppercase tracking-wider">
+                                                    {printerConfig.shop_footer_text || settings.receipt_shop_footer || 'THANK YOU FOR YOUR VISIT'}
+                                                </div>
+                                            </>
+                                        )}
 
                                         {/* Physical Paper Sawtooth/Zigzag Cut Effect */}
                                         <div className="w-full h-3 mt-4 bg-[radial-gradient(circle,_transparent_4px,_#ffffff_4px)] bg-[length:10px_10px] bg-repeat-x -mb-5"></div>
