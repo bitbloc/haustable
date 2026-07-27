@@ -109,13 +109,13 @@ export default function POSDashboard() {
         try {
             let query = supabase
                 .from('profiles')
-                .select('id, display_name, phone_number, phone, email, avatar_url, role, xhaus_balance, lifetime_spending')
+                .select('id, display_name, phone_number, email, avatar_url, role, xhaus_balance')
                 .order('display_name', { ascending: true })
                 .limit(50);
 
             if (searchQuery.trim()) {
                 const q = `%${searchQuery.trim()}%`;
-                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},phone.ilike.${q},email.ilike.${q}`);
+                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},email.ilike.${q}`);
             }
 
             const { data, error } = await query;

@@ -36,7 +36,7 @@ export default function POSCRMPanel() {
         try {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('id, display_name, phone_number, phone, email, avatar_url, role, xhaus_balance, lifetime_spending, created_at')
+                .select('id, display_name, phone_number, email, avatar_url, role, xhaus_balance, created_at')
                 .order('created_at', { ascending: false })
                 .limit(100);
 

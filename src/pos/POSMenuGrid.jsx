@@ -12,11 +12,12 @@ export default function POSMenuGrid({ onAddItem }) {
     const [selectedItemForModal, setSelectedItemForModal] = useState(null);
 
     useEffect(() => {
-        // Stale-While-Revalidate: Read local cache immediately for sub-100ms standalone startup
+        // Stale-While-Revalidate: Read local cache immediately if valid
         try {
             const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
             const cachedItems = JSON.parse(localStorage.getItem('pos_cache_menu_items')) || [];
-            if (cachedCats.length > 0 || cachedItems.length > 0) {
+            // Validate that cached items have menu_item_options property
+            if (cachedItems.length > 0 && Array.isArray(cachedItems[0]?.menu_item_options)) {
                 setCategories(cachedCats);
                 setMenuItems(cachedItems);
                 setActiveCategory(cachedCats[0]?.id || 'all');
@@ -54,9 +55,28 @@ export default function POSMenuGrid({ onAddItem }) {
         }
     };
 
-    const handleItemClick = (item) => {
-        if (item.menu_item_options && item.menu_item_options.length > 0) {
-            setSelectedItemForModal(item);
+    const handleItemClick = async (item) => {
+        let opts = item.menu_item_options;
+
+        // If options are missing or empty in state, attempt an on-demand direct query
+        if (!opts || !Array.isArray(opts) || opts.length === 0) {
+            try {
+                const { data } = await supabase
+                    .from('menu_item_options')
+                    .select('*, option_groups(*, option_choices(*)))')
+                    .eq('menu_item_id', item.id);
+                if (data && data.length > 0) {
+                    opts = data;
+                    // Update state and cache for future clicks
+                    setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, menu_item_options: opts } : i));
+                }
+            } catch (e) {
+                console.warn('On-demand options fetch failed:', e);
+            }
+        }
+
+        if (opts && opts.length > 0) {
+            setSelectedItemForModal({ ...item, menu_item_options: opts });
         } else {
             onAddItem(item);
         }
