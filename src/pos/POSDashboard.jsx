@@ -1117,16 +1117,35 @@ export default function POSDashboard() {
 
     const handleAddToOrder = (item) => {
         setCurrentOrder(prev => {
-            const existing = prev.items.find(i => i.id === item.id);
-            if (existing) {
-                return {
-                    ...prev,
-                    items: prev.items.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)
+            const addQty = item.quantity || item.qty || 1;
+            const itemOpts = item.selected_options || item.optionsSummary || [];
+            const itemNote = item.item_note || item.itemNote || '';
+            const optsStr = JSON.stringify(itemOpts);
+
+            const existingIndex = prev.items.findIndex(i => {
+                if (i.id !== item.id) return false;
+                const existingOptsStr = JSON.stringify(i.selected_options || i.optionsSummary || []);
+                const existingNote = i.item_note || i.itemNote || '';
+                return existingOptsStr === optsStr && existingNote === itemNote;
+            });
+
+            if (existingIndex !== -1) {
+                const updatedItems = [...prev.items];
+                updatedItems[existingIndex] = {
+                    ...updatedItems[existingIndex],
+                    quantity: updatedItems[existingIndex].quantity + addQty
                 };
+                return { ...prev, items: updatedItems };
             }
+
             return {
                 ...prev,
-                items: [...prev.items, { ...item, quantity: 1 }]
+                items: [...prev.items, {
+                    ...item,
+                    quantity: addQty,
+                    selected_options: itemOpts,
+                    item_note: itemNote
+                }]
             };
         });
     };

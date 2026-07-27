@@ -495,7 +495,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 kitchenItemLines.forEach(line => encoder.line(line));
                 encoder.size(0, 0).bold(false);
                 
-                if (item.selected_options) {
+                if (item.selected_options || item.item_note) {
                     let optionsList = [];
                     if (Array.isArray(item.selected_options)) {
                         optionsList = item.selected_options.map(opt => {
@@ -512,7 +512,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                             }
                             return optionMap[opt] || String(opt);
                         });
-                    } else if (typeof item.selected_options === 'object') {
+                    } else if (typeof item.selected_options === 'object' && item.selected_options !== null) {
                         optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
                             if (Array.isArray(val)) {
                                 return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
@@ -520,10 +520,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                             return [`${key}: ${val}`];
                         });
                     }
+
+                    if (item.item_note && !optionsList.some(o => String(o).includes(item.item_note))) {
+                        optionsList.push(`หมายเหตุ: ${item.item_note}`);
+                    }
+
                     optionsList.forEach(opt => {
-                        encoder.bold(true)
-                               .line(`    ▶ ${String(opt).toUpperCase()}`)
-                               .bold(false);
+                        const optLine = `▶ ${String(opt).toUpperCase()}`;
+                        wrapTextByWords(optLine, maxCols - 4).forEach(line => {
+                            encoder.bold(true)
+                                   .line(`    ${line}`)
+                                   .bold(false);
+                        });
                     });
                 }
                 encoder.line(divider);
@@ -535,13 +543,13 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const renderReceiptGroup = (groupItems) => {
             groupItems.forEach(item => {
                 const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
-                const unitPrice = formatReceiptMoney(item.price_at_time);
-                const priceStr = formatReceiptMoney(item.price_at_time * item.quantity);
+                const unitPrice = formatReceiptMoney(item.price_at_time || item.price || 0);
+                const priceStr = formatReceiptMoney((item.price_at_time || item.price || 0) * item.quantity);
                 const calculationText = `${item.quantity} x ${unitPrice}`;
 
                 encoder.text(formatItemLine(calculationText, name, priceStr, maxCols));
 
-                if (item.selected_options) {
+                if (item.selected_options || item.item_note) {
                     let optionsList = [];
                     if (Array.isArray(item.selected_options)) {
                         optionsList = item.selected_options.map(opt => {
@@ -558,7 +566,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                             }
                             return optionMap[opt] || String(opt);
                         });
-                    } else if (typeof item.selected_options === 'object') {
+                    } else if (typeof item.selected_options === 'object' && item.selected_options !== null) {
                         optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
                             if (Array.isArray(val)) {
                                 return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
@@ -566,6 +574,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                             return [`${key}: ${val}`];
                         });
                     }
+
+                    if (item.item_note && !optionsList.some(o => String(o).includes(item.item_note))) {
+                        optionsList.push(`หมายเหตุ: ${item.item_note}`);
+                    }
+
                     optionsList.forEach(opt => {
                         const optionText = `+ ${String(opt)}`;
                         wrapTextByWords(optionText, maxCols - 4)

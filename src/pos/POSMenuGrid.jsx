@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Layers } from 'lucide-react';
+import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 
 export default function POSMenuGrid({ onAddItem }) {
     const [categories, setCategories] = useState([]);
@@ -8,6 +9,7 @@ export default function POSMenuGrid({ onAddItem }) {
     const [menuItems, setMenuItems] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [selectedItemForModal, setSelectedItemForModal] = useState(null);
 
     useEffect(() => {
         // Stale-While-Revalidate: Read local cache immediately for sub-100ms standalone startup
@@ -31,7 +33,7 @@ export default function POSMenuGrid({ onAddItem }) {
         try {
             const [catRes, itemRes] = await Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order'),
-                supabase.from('menu_items').select('*').eq('is_available', true).order('name')
+                supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
             ]);
 
             const cats = catRes.data || [];
@@ -52,6 +54,14 @@ export default function POSMenuGrid({ onAddItem }) {
         }
     };
 
+    const handleItemClick = (item) => {
+        if (item.menu_item_options && item.menu_item_options.length > 0) {
+            setSelectedItemForModal(item);
+        } else {
+            onAddItem(item);
+        }
+    };
+
     const filteredItems = menuItems.filter(item => {
         const matchesCat = activeCategory === 'all' || item.category_id === activeCategory;
         const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
@@ -65,7 +75,7 @@ export default function POSMenuGrid({ onAddItem }) {
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none">
+        <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none relative">
             {/* Menu Header with Search and Categories */}
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] space-y-3 shadow-sm shrink-0">
                 <div className="relative">
@@ -99,38 +109,58 @@ export default function POSMenuGrid({ onAddItem }) {
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {filteredItems.map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => onAddItem(item)}
-                            className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.98] active:translate-y-[1px] hover:-translate-y-[1px] transition-all cursor-pointer shadow-sm duration-100"
-                        >
-                            <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
-                                {item.image_url ? (
-                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-300" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-xl uppercase">
-                                        {item.name.charAt(0)}
-                                    </div>
-                                )}
-                                <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-white border border-[#D1D1CD] flex items-center justify-center shadow-sm group-hover:bg-[#ff0000] group-hover:text-white group-hover:border-[#d00000] transition-all">
-                                    <Plus size={14} />
-                                </div>
-                            </div>
-                            
-                            <div className="flex flex-col flex-1 min-h-[60px]">
-                                <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
-                                <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-[10px] font-mono font-bold uppercase tracking-wider">
-                                    <span className="text-[#1A1A1A]">฿{item.price}</span>
-                                    {item.stock_quantity !== null && (
-                                        <span className="text-[#767673] tracking-normal font-medium">QTY: {item.stock_quantity}</span>
+                    {filteredItems.map(item => {
+                        const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => handleItemClick(item)}
+                                className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.98] active:translate-y-[1px] hover:-translate-y-[1px] transition-all cursor-pointer shadow-sm duration-100 relative"
+                            >
+                                <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
+                                    {item.image_url ? (
+                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-300" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-xl uppercase">
+                                            {item.name.charAt(0)}
+                                        </div>
                                     )}
+                                    {hasOptions && (
+                                        <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-xs text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                            <span>มีตัวเลือก</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-white border border-[#D1D1CD] flex items-center justify-center shadow-sm group-hover:bg-[#ff0000] group-hover:text-white group-hover:border-[#d00000] transition-all">
+                                        <Plus size={14} />
+                                    </div>
                                 </div>
-                            </div>
-                        </button>
-                    ))}
+                                
+                                <div className="flex flex-col flex-1 min-h-[60px]">
+                                    <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
+                                    <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-[10px] font-mono font-bold uppercase tracking-wider">
+                                        <span className="text-[#1A1A1A]">฿{item.price}{hasOptions ? '+' : ''}</span>
+                                        {item.stock_quantity !== null && (
+                                            <span className="text-[#767673] tracking-normal font-medium">QTY: {item.stock_quantity}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
+
+            {/* Modal for selecting option groups */}
+            {selectedItemForModal && (
+                <OptionSelectionModal 
+                    item={selectedItemForModal}
+                    onClose={() => setSelectedItemForModal(null)}
+                    onConfirm={(confirmedItem) => {
+                        onAddItem(confirmedItem);
+                        setSelectedItemForModal(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -1,31 +1,46 @@
 import { useState, useEffect } from 'react'
 import { X, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 
 export default function OptionSelectionModal({ item, onClose, onConfirm }) {
     const [quantity, setQuantity] = useState(1)
     const [selectedOptions, setSelectedOptions] = useState({})
     const [itemNote, setItemNote] = useState('')
-    // Structure: { [groupId]: [choiceId1, choiceId2] }
+
+    // Preselect single-choice options on load
+    useEffect(() => {
+        if (!item || !item.menu_item_options) return;
+        const defaults = {};
+        item.menu_item_options.forEach(rel => {
+            const group = rel?.option_groups;
+            if (group && group.is_required && group.selection_type === 'single' && group.option_choices && group.option_choices.length > 0) {
+                const sortedChoices = [...group.option_choices].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                defaults[group.id] = [sortedChoices[0].id];
+            }
+        });
+        setSelectedOptions(defaults);
+    }, [item]);
 
     // Calculate Total Price
     const calculateTotal = () => {
         let optionsTotal = 0
         if (item.menu_item_options) {
             item.menu_item_options.forEach(optGroupRel => {
-                const group = optGroupRel.option_groups
+                const group = optGroupRel?.option_groups
+                if (!group) return
                 const selections = selectedOptions[group.id] || []
 
                 if (group.option_choices) {
                     group.option_choices.forEach(choice => {
                         if (selections.includes(choice.id)) {
-                            optionsTotal += Number(choice.price_modifier)
+                            optionsTotal += Number(choice.price_modifier || 0)
                         }
                     })
                 }
             })
         }
-        return (item.price + optionsTotal) * quantity
+        return ((item.price || 0) + optionsTotal) * quantity
     }
 
     const currentTotal = calculateTotal()
@@ -34,12 +49,14 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
         const currentSelections = selectedOptions[group.id] || []
 
         if (group.selection_type === 'single') {
-            // Check if already selected - if so, deselect it (toggle off)
+            // Check if already selected - if so, deselect it unless it is required
             if (currentSelections.includes(choiceId)) {
-                setSelectedOptions({
-                    ...selectedOptions,
-                    [group.id]: []
-                })
+                if (!group.is_required) {
+                    setSelectedOptions({
+                        ...selectedOptions,
+                        [group.id]: []
+                    })
+                }
             } else {
                 setSelectedOptions({
                     ...selectedOptions,
@@ -56,7 +73,8 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
             } else {
                 // Check max selection
                 if (group.max_selection > 0 && currentSelections.length >= group.max_selection) {
-                    return // Max reached
+                    toast.error(`เลือกได้สูงสุด ${group.max_selection} รายการ`)
+                    return
                 }
                 setSelectedOptions({
                     ...selectedOptions,
@@ -70,11 +88,12 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
         if (!item.menu_item_options) return true
 
         for (const rel of item.menu_item_options) {
-            const group = rel.option_groups
+            const group = rel?.option_groups
+            if (!group) continue
             if (group.is_required) {
                 const selections = selectedOptions[group.id] || []
-                if (selections.length < group.min_selection) {
-                    alert(`Run: Please select at least ${group.min_selection} option(s) for ${group.name}`)
+                if (selections.length < (group.min_selection || 1)) {
+                    toast.error(`กรุณาเลือกตัวเลือกสำหรับ "${group.name}"`)
                     return false
                 }
             }
@@ -84,18 +103,21 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
 
     const handleConfirm = () => {
         if (validateSelections()) {
-            // Prepare options summary for cart
+            // Prepare options summary for cart and slips
             const optionsSummary = []
             if (item.menu_item_options) {
                 item.menu_item_options.forEach(rel => {
-                    const group = rel.option_groups
+                    const group = rel?.option_groups
+                    if (!group) return
                     const selections = selectedOptions[group.id] || []
                     group.option_choices?.forEach(choice => {
                         if (selections.includes(choice.id)) {
                             optionsSummary.push({
+                                group_id: group.id,
                                 group_name: group.name,
+                                choice_id: choice.id,
                                 name: choice.name,
-                                price: Number(choice.price_modifier)
+                                price: Number(choice.price_modifier || 0)
                             })
                         }
                     })
@@ -110,13 +132,19 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                 })
             }
 
+            const unitPrice = calculateTotal() / quantity;
+
             onConfirm({
                 ...item,
+                quantity: quantity,
                 qty: quantity,
+                price: unitPrice,
+                selected_options: optionsSummary,
                 selectedOptions: selectedOptions, // Raw IDs for logic
                 optionsSummary: optionsSummary, // readable text for UI
+                item_note: itemNote.trim(),
                 itemNote: itemNote.trim(),
-                totalPricePerUnit: calculateTotal() / quantity // calculated unit price
+                totalPricePerUnit: unitPrice
             })
         }
     }

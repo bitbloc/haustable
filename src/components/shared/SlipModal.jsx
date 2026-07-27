@@ -336,7 +336,7 @@ export default function SlipModal({ booking, type, onClose }) {
             const name = item.menu_items?.name || 'Item'
             let optsHtml = ''
             
-            if (item.selected_options) {
+            if (item.selected_options || item.item_note) {
                 let optionsList = []
                 if (Array.isArray(item.selected_options)) {
                      optionsList = item.selected_options.map(opt => {
@@ -353,7 +353,7 @@ export default function SlipModal({ booking, type, onClose }) {
                          }
                          return getOptionName(opt);
                      });
-                } else if (typeof item.selected_options === 'object') {
+                } else if (typeof item.selected_options === 'object' && item.selected_options !== null) {
                     optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
                         if (Array.isArray(val)) {
                             return val.map(id => getOptionName(id));
@@ -361,6 +361,11 @@ export default function SlipModal({ booking, type, onClose }) {
                         return [`${key}: ${val}`];
                     });
                 }
+
+                if (item.item_note && !optionsList.some(o => String(o).includes(item.item_note))) {
+                    optionsList.push(`หมายเหตุ: ${item.item_note}`);
+                }
+
                 if (optionsList.length > 0) {
                     optsHtml = optionsList.map(opt => `<div class="opt" style="font-weight: bold; padding-left: 12px;">▶ ${opt}</div>`).join('')
                 }
