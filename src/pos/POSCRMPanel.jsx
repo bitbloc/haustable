@@ -36,28 +36,12 @@ export default function POSCRMPanel() {
         try {
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .select('id, display_name, phone_number, phone, email, avatar_url, role, xhaus_balance, lifetime_spending, created_at')
+                .order('created_at', { ascending: false })
+                .limit(100);
 
             if (profileError) throw profileError;
-
-            const { data: bookings, error: bookingError } = await supabase
-                .from('bookings')
-                .select('user_id, status');
-
-            if (bookingError) throw bookingError;
-
-            const merged = (profiles || []).map(p => {
-                const userBookings = (bookings || []).filter(b => b.user_id === p.id);
-                const completed = userBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length;
-                return {
-                    ...p,
-                    total_bookings: userBookings.length,
-                    completed_bookings: completed
-                };
-            });
-
-            setMembers(merged);
+            setMembers(profiles || []);
         } catch (err) {
             console.error(err);
         } finally {

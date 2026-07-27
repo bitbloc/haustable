@@ -543,7 +543,16 @@ export default function POSReportsPanel() {
                 categoriesData || []
             );
 
-            const rawBytes = encodeShiftClosureReportData(compiledReport, '80mm', 'sunmi');
+            let reportPaperSize = '80mm';
+            try {
+                const storedCfg = localStorage.getItem('onhaus_printer_config');
+                if (storedCfg) {
+                    const cfg = JSON.parse(storedCfg);
+                    reportPaperSize = cfg.cashier_paper_size || cfg.paper_width || '80mm';
+                }
+            } catch (e) {}
+
+            const rawBytes = encodeShiftClosureReportData(compiledReport, reportPaperSize, 'sunmi');
             await printToSunmiBuiltIn(rawBytes);
             toast.dismiss(toastId);
             toast.success("พิมพ์รายงานประวัติรอบขายผ่าน SUNMI สำเร็จ");

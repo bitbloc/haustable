@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import POSLayout from './POSLayout';
 import POSTableGrid from './POSTableGrid';
@@ -15,7 +15,7 @@ import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
-import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins } from 'lucide-react';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check } from 'lucide-react';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
@@ -103,13 +103,21 @@ export default function POSDashboard() {
     const [crmMembers, setCrmMembers] = useState([]);
     const [crmLoading, setCrmLoading] = useState(false);
 
-    const loadCrmMembers = async () => {
+    const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('profiles')
-                .select('*')
-                .order('display_name', { ascending: true });
+                .select('id, display_name, phone_number, phone, email, avatar_url, role, xhaus_balance, lifetime_spending')
+                .order('display_name', { ascending: true })
+                .limit(50);
+
+            if (searchQuery.trim()) {
+                const q = `%${searchQuery.trim()}%`;
+                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},phone.ilike.${q},email.ilike.${q}`);
+            }
+
+            const { data, error } = await query;
             if (error) throw error;
             setCrmMembers(data || []);
         } catch (err) {
@@ -122,27 +130,65 @@ export default function POSDashboard() {
 
     useEffect(() => {
         if (showAttachCRMModal) {
-            loadCrmMembers();
-            setCrmSearchTerm('');
+            const timer = setTimeout(() => {
+                loadCrmMembers(crmSearchTerm);
+            }, 200);
+            return () => clearTimeout(timer);
         }
-    }, [showAttachCRMModal]);
+    }, [showAttachCRMModal, crmSearchTerm]);
 
     const handleSelectCrmCustomer = async (member) => {
-        if (!activeBooking) return;
-        const success = await attachCustomerToBooking(activeBooking.id, member.id);
+        if (!member?.id) return;
+        let bookingId = activeBooking?.id;
+
+        if (!bookingId) {
+            if (selectedTable) {
+                const newBooking = await createWalkIn(selectedTable);
+                if (newBooking) {
+                    bookingId = newBooking.id;
+                    setActiveBooking(newBooking);
+                }
+            } else {
+                const newBooking = await createWalkInPickup('Walk-in Customer');
+                if (newBooking) {
+                    bookingId = newBooking.id;
+                    setActiveBooking(newBooking);
+                }
+            }
+        }
+
+        if (!bookingId) return;
+
+        const success = await attachCustomerToBooking(bookingId, member.id);
         if (success) {
-            const updatedBooking = await getActiveBooking(selectedTable.id);
-            setActiveBooking(updatedBooking);
+            let updatedBooking = null;
+            if (selectedTable?.id) {
+                updatedBooking = await getActiveBooking(selectedTable.id);
+            } else {
+                const { data } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                    .eq('id', bookingId)
+                    .maybeSingle();
+                updatedBooking = data;
+            }
+            if (updatedBooking) {
+                setActiveBooking(updatedBooking);
+            }
             setShowAttachCRMModal(false);
         }
     };
 
-    const filteredCrmMembers = crmMembers.filter(m => {
-        const nameMatch = (m.display_name || '').toLowerCase().includes(crmSearchTerm.toLowerCase());
-        const phoneMatch = (m.phone || '').toLowerCase().includes(crmSearchTerm.toLowerCase());
-        const emailMatch = (m.email || '').toLowerCase().includes(crmSearchTerm.toLowerCase());
-        return nameMatch || phoneMatch || emailMatch;
-    });
+    const filteredCrmMembers = useMemo(() => {
+        if (!crmSearchTerm) return crmMembers.slice(0, 50);
+        const term = crmSearchTerm.toLowerCase();
+        return crmMembers.filter(m => {
+            const nameMatch = (m.display_name || '').toLowerCase().includes(term);
+            const phoneMatch = (m.phone_number || m.phone || '').toLowerCase().includes(term);
+            const emailMatch = (m.email || '').toLowerCase().includes(term);
+            return nameMatch || phoneMatch || emailMatch;
+        }).slice(0, 50);
+    }, [crmMembers, crmSearchTerm]);
 
     const loadStaff = async () => {
         try {
@@ -415,7 +461,16 @@ export default function POSDashboard() {
             );
             
             // 4. Print shift report to SUNMI
-            const rawBytes = encodeShiftClosureReportData(compiledReport, '80mm', 'sunmi');
+            let reportPaperSize = '80mm';
+            try {
+                const storedCfg = localStorage.getItem('onhaus_printer_config');
+                if (storedCfg) {
+                    const cfg = JSON.parse(storedCfg);
+                    reportPaperSize = cfg.cashier_paper_size || cfg.paper_width || '80mm';
+                }
+            } catch (e) {}
+
+            const rawBytes = encodeShiftClosureReportData(compiledReport, reportPaperSize, 'sunmi');
             const printRes = await printToSunmiBuiltIn(rawBytes);
             
             // 5. Close shift locally & cloud
@@ -1565,25 +1620,61 @@ export default function POSDashboard() {
                             onMoveTable={handleOpenMoveModal}
                             onMergeBill={handleOpenMergeModal}
                             onAttachCustomer={async (member) => {
-                                if (!activeBooking) {
-                                    toast.error("กรุณากดเปิดโต๊ะ (Seated Table) ก่อนผูกโปรไฟล์ลูกค้าครับ");
+                                if (!member?.id) return;
+                                let bookingId = activeBooking?.id;
+
+                                if (!bookingId) {
+                                    if (selectedTable) {
+                                        const newBooking = await createWalkIn(selectedTable);
+                                        if (newBooking) {
+                                            bookingId = newBooking.id;
+                                            setActiveBooking(newBooking);
+                                        }
+                                    } else {
+                                        const newBooking = await createWalkInPickup('Walk-in Customer');
+                                        if (newBooking) {
+                                            bookingId = newBooking.id;
+                                            setActiveBooking(newBooking);
+                                        }
+                                    }
+                                }
+
+                                if (!bookingId) {
+                                    toast.error("ไม่สามารถสร้างออเดอร์เพื่อผูกสมาชิกได้");
                                     return;
                                 }
-                                const success = await attachCustomerToBooking(activeBooking.id, member.id);
+
+                                const success = await attachCustomerToBooking(bookingId, member.id);
                                 if (success) {
-                                    const updatedBooking = await getActiveBooking(selectedTable.id);
-                                    setActiveBooking(updatedBooking);
+                                    let updatedBooking = null;
+                                    if (selectedTable?.id) {
+                                        updatedBooking = await getActiveBooking(selectedTable.id);
+                                    } else {
+                                        const { data } = await supabase
+                                            .from('bookings')
+                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                            .eq('id', bookingId)
+                                            .maybeSingle();
+                                        updatedBooking = data;
+                                    }
+                                    if (updatedBooking) {
+                                        setActiveBooking(updatedBooking);
+                                    }
                                 }
                             }}
                             onDetachCustomer={async () => {
                                 if (activeBooking) {
                                     const success = await attachCustomerToBooking(activeBooking.id, null);
                                     if (success) {
-                                        if (selectedTable) {
+                                        if (selectedTable?.id) {
                                             const updatedBooking = await getActiveBooking(selectedTable.id);
                                             setActiveBooking(updatedBooking);
                                         } else {
-                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))').eq('id', activeBooking.id).single();
+                                            const { data } = await supabase
+                                                .from('bookings')
+                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                                .eq('id', activeBooking.id)
+                                                .maybeSingle();
                                             if (data) setActiveBooking(data);
                                         }
                                     }
@@ -1591,11 +1682,15 @@ export default function POSDashboard() {
                             }}
                             onUpdateCustomerProfile={async () => {
                                 if (activeBooking) {
-                                    if (selectedTable) {
+                                    if (selectedTable?.id) {
                                         const updatedBooking = await getActiveBooking(selectedTable.id);
                                         setActiveBooking(updatedBooking);
                                     } else {
-                                        const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))').eq('id', activeBooking.id).single();
+                                        const { data } = await supabase
+                                            .from('bookings')
+                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                            .eq('id', activeBooking.id)
+                                            .maybeSingle();
                                         if (data) setActiveBooking(data);
                                     }
                                 }

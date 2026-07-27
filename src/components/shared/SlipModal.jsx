@@ -169,6 +169,12 @@ export default function SlipModal({ booking, type, onClose }) {
                     if (settingsMap.receipt_shop_logo_url) setReceiptShopLogoUrl(settingsMap.receipt_shop_logo_url);
                     if (settingsMap.receipt_shop_footer) setReceiptShopFooter(settingsMap.receipt_shop_footer);
 
+                    let currentPrinterConfig = {};
+                    try {
+                        const stored = localStorage.getItem('onhaus_printer_config');
+                        if (stored) currentPrinterConfig = JSON.parse(stored);
+                    } catch (e) {}
+
                     loadedConfig = {
                         shopName: settingsMap.receipt_shop_name,
                         shopAddress: settingsMap.receipt_shop_address,
@@ -177,7 +183,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         shopLogoUrl: settingsMap.receipt_shop_logo_url,
                         shopFooter: settingsMap.receipt_shop_footer,
                         paymentQrUrl: settingsMap.payment_qr_url,
-                        divider_style: printerConfig.divider_style || 'dashed'
+                        divider_style: currentPrinterConfig.divider_style || printerConfig.divider_style || 'dashed'
                     };
                 }
             } catch (err) {
@@ -223,22 +229,39 @@ export default function SlipModal({ booking, type, onClose }) {
                     } catch (e) {}
 
                     if (activeTab === 'kitchen') {
-                        // Print Kitchen slip (KITCHEN ORDER / ใบออเดอร์ครัว)
-                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
-                        if (kitchenBytes) {
-                            await printToSunmiBuiltIn(kitchenBytes);
-                        }
-                        
-                        // Print Bar slip (BAR ORDER / ใบออเดอร์บาร์)
-                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
-                        if (barBytes) {
-                            await printToSunmiBuiltIn(barBytes);
-                        }
+                        let isSeparateBarPrinterEnabled = false;
+                        try {
+                            const stored = localStorage.getItem('onhaus_printer_config');
+                            if (stored) {
+                                const config = JSON.parse(stored);
+                                isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+                            }
+                        } catch (e) {}
 
-                        // Print Other slip (OTHER ORDER / ใบออเดอร์ทั่วไป)
-                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
-                        if (otherBytes) {
-                            await printToSunmiBuiltIn(otherBytes);
+                        if (isSeparateBarPrinterEnabled) {
+                            // Print Kitchen slip (KITCHEN ORDER / ใบออเดอร์ครัว)
+                            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (kitchenBytes) {
+                                await printToSunmiBuiltIn(kitchenBytes);
+                            }
+                            
+                            // Print Bar slip (BAR ORDER / ใบออเดอร์บาร์)
+                            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (barBytes) {
+                                await printToSunmiBuiltIn(barBytes);
+                            }
+
+                            // Print Other slip (OTHER ORDER / ใบออเดอร์ทั่วไป)
+                            const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (otherBytes) {
+                                await printToSunmiBuiltIn(otherBytes);
+                            }
+                        } else {
+                            // Single printer mode (*เครื่องพิมพ์เดียวส่ง): Print 1 single combined slip for all items
+                            const combinedBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (combinedBytes) {
+                                await printToSunmiBuiltIn(combinedBytes);
+                            }
                         }
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
@@ -280,8 +303,19 @@ export default function SlipModal({ booking, type, onClose }) {
         const kitchenCatIds = printerConfig.kitchen_categories || [];
         const barCatIds = printerConfig.bar_categories || [];
         
+        let isSeparateBarPrinterEnabled = false;
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+            }
+        } catch (e) {}
+
         let filteredItems = booking.order_items || [];
-        if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
+        if (activeTab === 'kitchen_all' || (activeTab === 'kitchen' && !isSeparateBarPrinterEnabled)) {
+            filteredItems = booking.order_items || [];
+        } else if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
             if (activeTab === 'kitchen') {
                 filteredItems = filteredItems.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
             } else if (activeTab === 'bar') {
@@ -764,20 +798,29 @@ export default function SlipModal({ booking, type, onClose }) {
                         }
                     } catch (e) {}
 
-                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (kitchenBytes) {
-                        await printToSunmiBuiltIn(kitchenBytes);
-                        printedAny = true;
-                    }
-                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (barBytes) {
-                        await printToSunmiBuiltIn(barBytes);
-                        printedAny = true;
-                    }
-                    const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (otherBytes) {
-                        await printToSunmiBuiltIn(otherBytes);
-                        printedAny = true;
+                    if (isSeparateBarPrinterEnabled) {
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (kitchenBytes) {
+                            await printToSunmiBuiltIn(kitchenBytes);
+                            printedAny = true;
+                        }
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (barBytes) {
+                            await printToSunmiBuiltIn(barBytes);
+                            printedAny = true;
+                        }
+                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (otherBytes) {
+                            await printToSunmiBuiltIn(otherBytes);
+                            printedAny = true;
+                        }
+                    } else {
+                        // Single printer mode (*เครื่องพิมพ์เดียวส่ง): Print 1 combined slip for all items
+                        const combinedBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (combinedBytes) {
+                            await printToSunmiBuiltIn(combinedBytes);
+                            printedAny = true;
+                        }
                     }
                     if (!printedAny) {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
@@ -799,7 +842,21 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'rawbt') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
+                let targetTab = activeTab;
+                if (activeTab === 'kitchen') {
+                    let isSeparateBarPrinterEnabled = false;
+                    try {
+                        const stored = localStorage.getItem('onhaus_printer_config');
+                        if (stored) {
+                            const config = JSON.parse(stored);
+                            isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+                        }
+                    } catch (e) {}
+                    if (!isSeparateBarPrinterEnabled) {
+                        targetTab = 'kitchen_all';
+                    }
+                }
+                const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
                 await printToRawBTWebSocket(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
@@ -808,7 +865,21 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'bluetooth') {
             try {
-                const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
+                let targetTab = activeTab;
+                if (activeTab === 'kitchen') {
+                    let isSeparateBarPrinterEnabled = false;
+                    try {
+                        const stored = localStorage.getItem('onhaus_printer_config');
+                        if (stored) {
+                            const config = JSON.parse(stored);
+                            isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+                        }
+                    } catch (e) {}
+                    if (!isSeparateBarPrinterEnabled) {
+                        targetTab = 'kitchen_all';
+                    }
+                }
+                const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
                 await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {

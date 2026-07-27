@@ -100,13 +100,21 @@ export default function POSOrderPanel({
         }
     };
 
-    const loadCrmMembers = async () => {
+    const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('profiles')
-                .select('*')
-                .order('display_name', { ascending: true });
+                .select('id, display_name, phone_number, phone, email, avatar_url, role, xhaus_balance, lifetime_spending')
+                .order('display_name', { ascending: true })
+                .limit(50);
+
+            if (searchQuery.trim()) {
+                const q = `%${searchQuery.trim()}%`;
+                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},phone.ilike.${q},email.ilike.${q}`);
+            }
+
+            const { data, error } = await query;
             if (error) throw error;
             setCrmMembers(data || []);
         } catch (err) {
@@ -119,10 +127,23 @@ export default function POSOrderPanel({
 
     React.useEffect(() => {
         if (activeModal === 'crm' && !booking?.profiles) {
-            loadCrmMembers();
-            setCrmSearchTerm('');
+            const timer = setTimeout(() => {
+                loadCrmMembers(crmSearchTerm);
+            }, 200);
+            return () => clearTimeout(timer);
         }
-    }, [activeModal, booking?.profiles]);
+    }, [activeModal, booking?.profiles, crmSearchTerm]);
+
+    const filteredCrmMembers = React.useMemo(() => {
+        if (!crmSearchTerm) return crmMembers.slice(0, 50);
+        const term = crmSearchTerm.toLowerCase();
+        return crmMembers.filter(m => {
+            return (m.display_name || '').toLowerCase().includes(term) ||
+                   (m.phone_number || '').toLowerCase().includes(term) ||
+                   (m.phone || '').toLowerCase().includes(term) ||
+                   (m.email || '').toLowerCase().includes(term);
+        }).slice(0, 50);
+    }, [crmMembers, crmSearchTerm]);
 
     const [crmSettings, setCrmSettings] = React.useState({
         crm_redeem_rate_xhaus: 1.0,
@@ -791,7 +812,7 @@ export default function POSOrderPanel({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 font-sans"
+                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
                     >
                         <motion.div 
                             initial={{ scale: 0.97, y: 10 }}
@@ -1082,20 +1103,8 @@ export default function POSOrderPanel({
                                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1A1A1A] mb-2"></div>
                                                     <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#767673]">LOADING REGISTRY...</span>
                                                 </div>
-                                            ) : (crmMembers.filter(m => {
-                                                const term = crmSearchTerm.toLowerCase();
-                                                return (m.display_name || '').toLowerCase().includes(term) ||
-                                                       (m.phone_number || '').toLowerCase().includes(term) ||
-                                                       (m.phone || '').toLowerCase().includes(term) ||
-                                                       (m.email || '').toLowerCase().includes(term);
-                                            }).length > 0) ? (
-                                                crmMembers.filter(m => {
-                                                    const term = crmSearchTerm.toLowerCase();
-                                                    return (m.display_name || '').toLowerCase().includes(term) ||
-                                                           (m.phone_number || '').toLowerCase().includes(term) ||
-                                                           (m.phone || '').toLowerCase().includes(term) ||
-                                                           (m.email || '').toLowerCase().includes(term);
-                                                }).map(m => (
+                                            ) : filteredCrmMembers.length > 0 ? (
+                                                filteredCrmMembers.map(m => (
                                                     <button
                                                         key={m.id}
                                                         onClick={async () => {

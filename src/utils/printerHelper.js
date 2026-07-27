@@ -151,25 +151,31 @@ export function getCleanStaffRemark(remark) {
 
 // Generate customizable divider lines (dashed, dotted, solid, double, star, wave)
 export function generateDivider(style = 'dashed', maxCols = 48) {
+    const targetWidth = maxCols || 48;
     if (style === 'dotted') {
         const p = '. ';
-        return p.repeat(Math.ceil(maxCols / 2)).slice(0, maxCols);
+        return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
+    }
+    if (style === 'dashed') {
+        const p = '- ';
+        return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
     }
     if (style === 'solid') {
-        return '-'.repeat(maxCols);
+        return '-'.repeat(targetWidth);
     }
     if (style === 'double') {
-        return '='.repeat(maxCols);
+        return '='.repeat(targetWidth);
     }
     if (style === 'star') {
         const p = '★ ';
-        return p.repeat(Math.ceil(maxCols / 2)).slice(0, maxCols);
+        return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
     }
     if (style === 'wave') {
         const p = '~ ';
-        return p.repeat(Math.ceil(maxCols / 2)).slice(0, maxCols);
+        return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
     }
-    return '-'.repeat(maxCols);
+    const p = '- ';
+    return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
 }
 
 // Convert receipt/ticket details to ESC/POS binary format
@@ -181,10 +187,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     let kitchenCatIds = receiptConfig.kitchen_categories || [];
     let barCatIds = receiptConfig.bar_categories || [];
+    let isSeparateBarPrinter = false;
     try {
         const stored = localStorage.getItem('onhaus_printer_config');
         if (stored) {
             const config = JSON.parse(stored);
+            isSeparateBarPrinter = !!(config.separate_bar_printer || config.bar_printer_ip);
             if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
                 kitchenCatIds = config.kitchen_categories || [];
                 barCatIds = config.bar_categories || [];
@@ -203,8 +211,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     itemsToRender = booking.order_items || [];
 
-    if (activeTab === 'kitchen_all') {
-        // Render all items for kitchen pass on 1 single combined slip!
+    if (activeTab === 'kitchen_all' || (activeTab === 'kitchen' && !isSeparateBarPrinter)) {
+        // Render all items for single printer mode on 1 single combined slip!
         itemsToRender = booking.order_items || [];
     } else if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
         // Fallback default categorization if config is not set up
@@ -268,17 +276,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     const maxCols = paperSize === '80mm' ? 48 : 30; // 80mm standard paper supports 48 cols. 58mm supports 30 cols.
 
-    let selectedDividerStyle = receiptConfig.divider_style;
-    if (!selectedDividerStyle) {
-        try {
-            const stored = localStorage.getItem('onhaus_printer_config');
-            if (stored) {
-                const cfg = JSON.parse(stored);
-                selectedDividerStyle = cfg.divider_style || 'dashed';
+    let selectedDividerStyle = null;
+    try {
+        const stored = localStorage.getItem('onhaus_printer_config');
+        if (stored) {
+            const cfg = JSON.parse(stored);
+            if (cfg.divider_style) {
+                selectedDividerStyle = cfg.divider_style;
             }
-        } catch(e) {}
+        }
+    } catch (e) {}
+    if (!selectedDividerStyle) {
+        selectedDividerStyle = receiptConfig.divider_style || 'dashed';
     }
-    selectedDividerStyle = selectedDividerStyle || 'dashed';
 
     const divider = generateDivider(selectedDividerStyle, maxCols);
     const doubleDivider = generateDivider(selectedDividerStyle === 'double' ? 'double' : (selectedDividerStyle === 'star' ? 'star' : (selectedDividerStyle === 'wave' ? 'wave' : selectedDividerStyle)), maxCols);
@@ -422,97 +432,166 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
            .line(divider);
 
     // 5. Items List
+    // 5. Items List Grouped by Kitchen vs Bar
+    const DEFAULT_BAR_CATS = [
+        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+    ];
+
+    const isBarItem = (item) => {
+        const catId = getItemCatId(item);
+        if (barCatIds.length > 0) return barCatIds.includes(catId);
+        return DEFAULT_BAR_CATS.includes(catId);
+    };
+
+    const isKitchenItem = (item) => {
+        const catId = getItemCatId(item);
+        if (kitchenCatIds.length > 0) return kitchenCatIds.includes(catId);
+        return !DEFAULT_BAR_CATS.includes(catId);
+    };
+
     if (isKitchenTab) {
-        itemsToRender.forEach((item, index) => {
-            const qtyStr = `${item.quantity}x`;
-            const name = (item.menu_items?.name || 'Item').toUpperCase();
-            
-            // Print item line in double size (double width + double height) for maximum readability!
-            encoder.bold(true)
-                   .size(1, 1) // Double size
-                   .line(`${qtyStr} ${name}`)
-                   .size(0, 0)
-                   .bold(false);
-            
-            // Print options in normal bold
-            if (item.selected_options) {
-                let optionsList = [];
-                if (Array.isArray(item.selected_options)) {
-                    optionsList = item.selected_options.map(opt => {
-                        if (typeof opt === 'object' && opt !== null) {
-                            if (opt.group_name && opt.name) {
-                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                return `${opt.group_name}: ${opt.name}${priceStr}`;
+        const renderKitchenGroup = (groupItems) => {
+            groupItems.forEach((item) => {
+                const qtyStr = `${item.quantity}x`;
+                const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
+                
+                // Print item line in double size (double width + double height) for maximum readability!
+                encoder.bold(true)
+                       .size(1, 1)
+                       .line(`${qtyStr} ${name}`)
+                       .size(0, 0)
+                       .bold(false);
+                
+                if (item.selected_options) {
+                    let optionsList = [];
+                    if (Array.isArray(item.selected_options)) {
+                        optionsList = item.selected_options.map(opt => {
+                            if (typeof opt === 'object' && opt !== null) {
+                                if (opt.group_name && opt.name) {
+                                    const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                    return `${opt.group_name}: ${opt.name}${priceStr}`;
+                                }
+                                if (opt.name) {
+                                    const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                    return `${opt.name}${priceStr}`;
+                                }
+                                return JSON.stringify(opt);
                             }
-                            if (opt.name) {
-                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                return `${opt.name}${priceStr}`;
+                            return optionMap[opt] || String(opt);
+                        });
+                    } else if (typeof item.selected_options === 'object') {
+                        optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                            if (Array.isArray(val)) {
+                                return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
                             }
-                            return JSON.stringify(opt);
-                        }
-                        return optionMap[opt] || String(opt);
-                    });
-                } else if (typeof item.selected_options === 'object') {
-                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
-                        if (Array.isArray(val)) {
-                            return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
-                        }
-                        return [`${key}: ${val}`];
+                            return [`${key}: ${val}`];
+                        });
+                    }
+                    optionsList.forEach(opt => {
+                        encoder.bold(true)
+                               .line(`    ▶ ${String(opt).toUpperCase()}`)
+                               .bold(false);
                     });
                 }
-                optionsList.forEach(opt => {
-                    encoder.bold(true)
-                           .line(`    ▶ ${String(opt).toUpperCase()}`)
-                           .bold(false);
-                });
+                encoder.line(divider);
+            });
+        };
+
+        const kitchenGroup = itemsToRender.filter(isKitchenItem);
+        const barGroup = itemsToRender.filter(isBarItem);
+        const otherGroup = itemsToRender.filter(item => !isKitchenItem(item) && !isBarItem(item));
+
+        const hasMultipleGroups = (kitchenGroup.length > 0 && barGroup.length > 0) || (kitchenGroup.length > 0 && otherGroup.length > 0) || (barGroup.length > 0 && otherGroup.length > 0);
+
+        if (kitchenGroup.length > 0) {
+            if (hasMultipleGroups) {
+                encoder.bold(true).line('--- รายการอาหาร (KITCHEN) ---').bold(false).line(divider);
             }
-            // Add a clean dotted line separator between items
-            encoder.line('. '.repeat(Math.floor(maxCols / 2)));
-        });
+            renderKitchenGroup(kitchenGroup);
+        }
+
+        if (barGroup.length > 0) {
+            if (hasMultipleGroups) {
+                encoder.bold(true).line('--- รายการเครื่องดื่ม (BAR) ---').bold(false).line(divider);
+            }
+            renderKitchenGroup(barGroup);
+        }
+
+        if (otherGroup.length > 0) {
+            if (hasMultipleGroups) {
+                encoder.bold(true).line('--- รายการอื่นๆ (OTHER) ---').bold(false).line(divider);
+            }
+            renderKitchenGroup(otherGroup);
+        }
     } else {
-        itemsToRender.forEach(item => {
-            const qty = `${item.quantity}x`;
-            const name = (item.menu_items?.name || 'Item').toUpperCase();
-            const priceStr = (item.price_at_time * item.quantity).toLocaleString() + '.-';
-            
-            encoder.text(formatItemLine(qty, name, priceStr, maxCols));
+        const renderReceiptGroup = (groupItems) => {
+            groupItems.forEach(item => {
+                const qty = `${item.quantity}x`;
+                const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
+                const priceStr = (item.price_at_time * item.quantity).toLocaleString() + '.-';
+                
+                encoder.text(formatItemLine(qty, name, priceStr, maxCols));
 
-            // Print unit price details if quantity > 1
-            if (item.quantity > 1) {
-                encoder.line(`     (${item.quantity} x ฿${item.price_at_time.toLocaleString()}.-)`);
-            }
+                if (item.quantity > 1) {
+                    encoder.line(`     (${item.quantity} x ฿${item.price_at_time.toLocaleString()}.-)`);
+                }
 
-            // Render options (indented nicely)
-            if (item.selected_options) {
-                let optionsList = [];
-                if (Array.isArray(item.selected_options)) {
-                    optionsList = item.selected_options.map(opt => {
-                        if (typeof opt === 'object' && opt !== null) {
-                            if (opt.group_name && opt.name) {
-                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                return `${opt.group_name}: ${opt.name}${priceStr}`;
+                if (item.selected_options) {
+                    let optionsList = [];
+                    if (Array.isArray(item.selected_options)) {
+                        optionsList = item.selected_options.map(opt => {
+                            if (typeof opt === 'object' && opt !== null) {
+                                if (opt.group_name && opt.name) {
+                                    const pStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                    return `${opt.group_name}: ${opt.name}${pStr}`;
+                                }
+                                if (opt.name) {
+                                    const pStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                    return `${opt.name}${pStr}`;
+                                }
+                                return JSON.stringify(opt);
                             }
-                            if (opt.name) {
-                                const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                return `${opt.name}${priceStr}`;
+                            return optionMap[opt] || String(opt);
+                        });
+                    } else if (typeof item.selected_options === 'object') {
+                        optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                            if (Array.isArray(val)) {
+                                return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
                             }
-                            return JSON.stringify(opt);
-                        }
-                        return optionMap[opt] || String(opt);
-                    });
-                } else if (typeof item.selected_options === 'object') {
-                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
-                        if (Array.isArray(val)) {
-                            return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
-                        }
-                        return [`${key}: ${val}`];
+                            return [`${key}: ${val}`];
+                        });
+                    }
+                    optionsList.forEach(opt => {
+                        encoder.line(`    + ${opt}`);
                     });
                 }
-                optionsList.forEach(opt => {
-                    encoder.line(`    + ${opt}`);
-                });
+            });
+        };
+
+        const kitchenGroup = itemsToRender.filter(isKitchenItem);
+        const barGroup = itemsToRender.filter(isBarItem);
+        const otherGroup = itemsToRender.filter(item => !isKitchenItem(item) && !isBarItem(item));
+
+        if (kitchenGroup.length > 0 && barGroup.length > 0) {
+            encoder.bold(true).line('--- รายการอาหาร (Food) ---').bold(false);
+            renderReceiptGroup(kitchenGroup);
+            encoder.line(divider);
+            encoder.bold(true).line('--- รายการเครื่องดื่ม (Drinks) ---').bold(false);
+            renderReceiptGroup(barGroup);
+            if (otherGroup.length > 0) {
+                encoder.line(divider);
+                encoder.bold(true).line('--- รายการอื่นๆ (Others) ---').bold(false);
+                renderReceiptGroup(otherGroup);
             }
-        });
+        } else {
+            renderReceiptGroup(itemsToRender);
+        }
         encoder.line(divider);
     }
 
@@ -536,9 +615,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         }
         encoder.line(divider)
                .bold(true)
-               .size(0, 1)
-               .text(formatTwoCols('ยอดรวมสุทธิ', `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, maxCols) + '\n')
                .size(0, 0)
+               .text(formatTwoCols('ยอดรวมสุทธิ', `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, maxCols) + '\n')
                .bold(false)
                .line(doubleDivider);
     }
@@ -730,37 +808,37 @@ export function wrapTextByWords(str, maxColWidth) {
 
 // Thai-width-aware item line formatting (price stays fixed on top-right, words wrap cleanly)
 function formatItemLine(qty, name, priceStr, maxCols) {
-    const qtyColWidth = maxCols === 48 ? 5 : 4;
-    const priceColWidth = maxCols === 48 ? 11 : 8;
-    const nameColWidth = maxCols - qtyColWidth - priceColWidth - 1;
+    const totalWidth = maxCols || 32;
+    const isSmall = totalWidth <= 32;
+    const qtyColWidth = isSmall ? 3 : 4;
+    const priceColWidth = isSmall ? 8 : 11;
+    const nameColWidth = Math.max(1, totalWidth - qtyColWidth - priceColWidth);
 
     const qtyStr = padEndThai(qty, qtyColWidth);
-    const rightPriceStr = priceStr.padStart(priceColWidth);
-    
-    if (getThaiVisualWidth(name) <= nameColWidth) {
-        const paddedName = padEndThai(name, nameColWidth);
-        return qtyStr + paddedName + ' ' + rightPriceStr + '\n';
-    }
+    const rightPriceStr = String(priceStr).padStart(priceColWidth, ' ');
 
     const lines = wrapTextByWords(name, nameColWidth);
+    if (lines.length === 0) lines.push('');
 
     let result = '';
-    lines.forEach((l, idx) => {
-        if (idx === 0) {
-            result += qtyStr + padEndThai(l, nameColWidth) + ' ' + rightPriceStr + '\n';
-        } else {
-            result += ' '.repeat(qtyColWidth) + padEndThai(l, nameColWidth) + ' '.repeat(priceColWidth + 1) + '\n';
-        }
-    });
+    // Line 1: Qty + First chunk of Name (padded to nameColWidth) + Right-aligned Price
+    result += qtyStr + padEndThai(lines[0], nameColWidth) + rightPriceStr + '\n';
+
+    // Lines 2+: Indented wrapped name ONLY (No price on line 2!)
+    for (let i = 1; i < lines.length; i++) {
+        result += ' '.repeat(qtyColWidth) + lines[i] + '\n';
+    }
     return result;
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
-    const rightCol = 12;
-    const midCol = 5;
-    const leftCol = maxCols - rightCol - midCol - 3;
+    const totalWidth = maxCols || 32;
+    const isSmall = totalWidth <= 32;
+    const rightCol = isSmall ? 9 : 12;
+    const midCol = isSmall ? 4 : 5;
+    const leftCol = Math.max(1, totalWidth - rightCol - midCol - 2);
     
-    const midRightStr = '  ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
+    const midRightStr = ' ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
     let leftStr = String(left);
     
     if (getThaiVisualWidth(leftStr) <= leftCol) {
@@ -769,40 +847,43 @@ function formatThreeCols(left, mid, right, maxCols) {
     }
 
     const lines = wrapTextByWords(leftStr, leftCol);
+    if (lines.length === 0) lines.push('');
 
     let result = '';
-    lines.forEach((l, idx) => {
-        if (idx === lines.length - 1) {
-            result += padEndThai(l, leftCol) + midRightStr;
-        } else {
-            result += padEndThai(l, leftCol) + ' '.repeat(midRightStr.length) + '\n';
-        }
-    });
+    // Line 1: First line of Left + Mid + Right (right-aligned to maxCols)
+    result += padEndThai(lines[0], leftCol) + midRightStr + '\n';
+
+    // Lines 2+: Wrapped Left text ONLY (modular line 2)
+    for (let i = 1; i < lines.length; i++) {
+        result += ' ' + lines[i] + '\n';
+    }
     return result;
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const rightWidth = getThaiVisualWidth(String(right));
-    const rightCol = Math.max(rightWidth, maxCols === 48 ? 11 : 8);
-    const leftCol = maxCols - rightCol - 1;
-    const rightStr = String(right).padStart(rightCol, ' ');
+    const totalWidth = maxCols || 32;
+    const isSmall = totalWidth <= 32;
+    const rightStr = String(right);
+    const rightWidth = Math.max(getThaiVisualWidth(rightStr), isSmall ? 7 : 11);
+    const leftCol = Math.max(1, totalWidth - rightWidth - 1);
+    const rightPadded = rightStr.padStart(rightWidth, ' ');
     
     let leftStr = String(left);
     if (getThaiVisualWidth(leftStr) <= leftCol) {
-        const paddedLeft = padEndThai(leftStr, leftCol);
-        return paddedLeft + ' ' + rightStr;
+        return padEndThai(leftStr, leftCol) + ' ' + rightPadded;
     }
 
     const lines = wrapTextByWords(leftStr, leftCol);
+    if (lines.length === 0) lines.push('');
 
     let result = '';
-    lines.forEach((l, idx) => {
-        if (idx === 0) {
-            result += padEndThai(l, leftCol) + ' ' + rightStr + '\n';
-        } else {
-            result += padEndThai(l, leftCol) + ' '.repeat(rightCol + 1) + '\n';
-        }
-    });
+    // Line 1: First line of Left + Right (right-aligned to maxCols)
+    result += padEndThai(lines[0], leftCol) + ' ' + rightPadded + '\n';
+
+    // Lines 2+: Wrapped Left text ONLY (modular line 2)
+    for (let i = 1; i < lines.length; i++) {
+        result += ' ' + lines[i] + '\n';
+    }
     return result;
 }
 
@@ -817,8 +898,9 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     const voidBookings = bookingsData.filter(b => b.status === 'void');
     const cancelledBookings = bookingsData.filter(b => b.status === 'cancelled');
 
-    // 1. Category Sales
+    // 1. Category & Top Items Sales
     const categorySalesMap = {};
+    const itemSalesMap = {};
     let totalItemsCount = 0;
     let totalItemsAmount = 0;
 
@@ -826,6 +908,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
         b.order_items?.forEach(item => {
             const catId = item.menu_items?.category_id || 'other';
             const catName = categoryMap[catId] || 'อื่นๆ / Uncategorized';
+            const itemName = (item.menu_items?.name || item.name || 'Unknown Item').toUpperCase();
             const qty = item.quantity || 0;
             const price = item.price_at_time || 0;
             const amt = qty * price;
@@ -838,10 +921,19 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
             }
             categorySalesMap[catId].quantity += qty;
             categorySalesMap[catId].amount += amt;
+
+            if (!itemSalesMap[itemName]) {
+                itemSalesMap[itemName] = { name: itemName, quantity: 0, amount: 0 };
+            }
+            itemSalesMap[itemName].quantity += qty;
+            itemSalesMap[itemName].amount += amt;
         });
     });
 
     const categorySales = Object.values(categorySalesMap).sort((a, b) => b.amount - a.amount);
+    const topSellingItems = Object.values(itemSalesMap)
+        .sort((a, b) => b.quantity - a.quantity || b.amount - a.amount)
+        .slice(0, 3);
 
     // 2. Payments
     let cashCount = 0;
@@ -852,12 +944,17 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     let creditAmount = 0;
     let otherCount = 0;
     let otherAmount = 0;
+
+    let linemanCashCount = 0;
+    let linemanCashAmount = 0;
     
     const otherDetailsMap = {};
 
     completedBookings.forEach(b => {
         const remark = (b.staff_remark || '').toLowerCase();
+        const note = (b.customer_note || '').toLowerCase();
         const amt = b.total_amount || 0;
+        const isLineman = remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man');
         
         let isCash = true;
         let isCredit = false;
@@ -874,6 +971,10 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
         if (isCash) {
             cashCount++;
             cashAmount += amt;
+            if (isLineman) {
+                linemanCashCount++;
+                linemanCashAmount += amt;
+            }
         } else if (isCredit) {
             creditCount++;
             creditAmount += amt;
@@ -983,6 +1084,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
 
     const netSales = completedBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
     const avgSalesPerBill = completedBookings.length > 0 ? (netSales / completedBookings.length) : 0;
+    const avgSalesPerGuest = totalGuests > 0 ? (netSales / totalGuests) : 0;
 
     // Deduct adjustments
     const adjustments = shift.adjustments || [];
@@ -1009,11 +1111,12 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
         totalItemsCount,
         totalItemsAmount,
         categorySales,
+        topSellingItems,
         
         paymentSales: {
             cash: { count: cashCount, amount: cashAmount },
             qrPromptPay: { count: qrCount, amount: qrAmount },
-            linemanCash: { count: 0, amount: 0 },
+            linemanCash: { count: linemanCashCount, amount: linemanCashAmount },
             creditCard: { count: creditCount, amount: creditAmount },
             other: { count: otherCount, amount: otherAmount, subItems: otherDetails }
         },
@@ -1054,11 +1157,39 @@ export function encodeShiftReportData(reportData, paperSize = '58mm', printerTyp
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
 export function encodeShiftClosureReportData(reportData, paperSize = '80mm', printerType = 'universal') {
+    if (!paperSize) {
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) {
+                const cfg = JSON.parse(stored);
+                if (cfg.cashier_paper_size || cfg.paper_width) {
+                    paperSize = cfg.cashier_paper_size || cfg.paper_width;
+                }
+            }
+        } catch (e) {}
+    }
+    paperSize = paperSize || '80mm';
+
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
     const maxCols = paperSize === '80mm' ? 48 : 30;
-    const divider = '-'.repeat(maxCols);
+    
+    let selectedDividerStyle = null;
+    try {
+        const stored = localStorage.getItem('onhaus_printer_config');
+        if (stored) {
+            const cfg = JSON.parse(stored);
+            if (cfg.divider_style) {
+                selectedDividerStyle = cfg.divider_style;
+            }
+        }
+    } catch (e) {}
+    if (!selectedDividerStyle) {
+        selectedDividerStyle = reportData?.divider_style || 'dashed';
+    }
+
+    const divider = generateDivider(selectedDividerStyle, maxCols);
 
     // Header info
     const shopName = reportData.shopName || 'ร้านในบ้าน นครพนม';
@@ -1107,8 +1238,9 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         encoder.line(formatTwoCols('ปัดเศษ', '0.00', maxCols));
         encoder.line(formatTwoCols('ส่วนลดท้ายบิล', '0.00', maxCols));
         encoder.line(formatTwoCols('ยอดขายสุทธิ', netSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatTwoCols('จำนวนลูกค้า', (reportData.totalGuests || 0).toString(), maxCols));
+        encoder.line(formatTwoCols('จำนวนลูกค้า (Pax)', (reportData.totalGuests || 0).toString(), maxCols));
         encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อบิล', (reportData.averageSalesPerBill || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อหัว', (reportData.averageSalesPerGuest || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
     } else {
         // Fallback backward compatibility
         encoder.bold(true).line('SALES SUMMARY').bold(false);
@@ -1118,27 +1250,40 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         encoder.line(divider);
     }
 
+    // Section Top 3 Selling Items
+    if (reportData.topSellingItems && reportData.topSellingItems.length > 0) {
+        encoder.line(divider);
+        encoder.bold(true).line('★ เมนูขายดี 3 อันดับ (Top 3 Selling Items)').bold(false);
+        reportData.topSellingItems.forEach((item, index) => {
+            const rankLabel = `${index + 1}. ${item.name}`;
+            encoder.line(formatThreeCols(rankLabel, `${item.quantity} ชิ้น`, (item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        });
+    }
+
     // Section 2: ยอดขายตามการชำระเงิน
     if (reportData.paymentSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามการชำระเงิน').bold(false);
         
         const cash = reportData.paymentSales.cash || { count: 0, amount: 0 };
-        const linemanCash = reportData.paymentSales.linemanCash || { count: 0, amount: 0 };
         const credit = reportData.paymentSales.creditCard || { count: 0, amount: 0 };
         const qr = reportData.paymentSales.qrPromptPay || { count: 0, amount: 0 };
         const other = reportData.paymentSales.other || { count: 0, amount: 0, subItems: [] };
         
         encoder.line(formatThreeCols('เงินสด', cash.count, (cash.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatThreeCols('เงินสดจาก LINE MAN', linemanCash.count, (linemanCash.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatThreeCols('บัตรเครดิต', credit.count, (credit.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
         encoder.line(formatThreeCols('QR PromptPay', qr.count, (qr.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatThreeCols('การชำระเงินแบบอื่นๆ', other.count, (other.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        
-        if (other.subItems && other.subItems.length > 0) {
-            other.subItems.forEach(sub => {
-                encoder.line(formatThreeCols(`• ${sub.name}`, sub.count, (sub.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-            });
+
+        if (credit.count > 0 || credit.amount > 0) {
+            encoder.line(formatThreeCols('บัตรเครดิต', credit.count, (credit.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        }
+
+        if (other.count > 0 || other.amount > 0) {
+            encoder.line(formatThreeCols('การชำระเงินแบบอื่นๆ', other.count, (other.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            if (other.subItems && other.subItems.length > 0) {
+                other.subItems.forEach(sub => {
+                    encoder.line(formatThreeCols(`• ${sub.name}`, sub.count, (sub.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+                });
+            }
         }
         
         const netSales = reportData.totalSales - (reportData.totalDiscounts || 0);
