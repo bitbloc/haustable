@@ -428,7 +428,7 @@ export default function POSOrderPanel({
                             </button>
                         )}
                     </div>
-                    {booking && (
+                    {booking && order.table && (
                         <div className="flex gap-1.5 mt-1.5">
                             <button 
                                 onClick={() => onMoveTable?.()}

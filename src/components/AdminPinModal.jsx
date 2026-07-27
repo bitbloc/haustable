@@ -12,6 +12,28 @@ export default function AdminPinModal({ isOpen, onClose, onConfirm, title = "Sec
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+        if (e.key >= '0' && e.key <= '9') {
+            e.preventDefault();
+            handleNumberClick(e.key);
+        } else if (e.key === 'Backspace') {
+            e.preventDefault();
+            handleBackspace();
+        } else if (e.key === 'Enter' && pin.length >= 4) {
+            e.preventDefault();
+            onConfirm(pin);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            onClose();
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, pin, onClose, onConfirm]);
+
   const handleNumberClick = (num) => {
     if (pin.length < 6) {
         setPin(prev => prev + num)

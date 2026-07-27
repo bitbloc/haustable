@@ -209,14 +209,26 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     const getItemCatId = (item) => item.menu_items?.category_id || item.category_id || item.category || '';
 
-    itemsToRender = booking.order_items || [];
+    // Smart Bar item classification (Config -> Default UUIDs -> Category Name / Type Keywords)
+    const cachedCategories = (() => {
+        try {
+            return JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
+        } catch (e) {
+            return [];
+        }
+    })();
 
-    if (activeTab === 'kitchen_all' || (activeTab === 'kitchen' && !isSeparateBarPrinter)) {
-        // Render all items for single printer mode on 1 single combined slip!
-        itemsToRender = booking.order_items || [];
-    } else if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
-        // Fallback default categorization if config is not set up
-        const DEFAULT_BAR_CATEGORIES = [
+    const categoryMap = cachedCategories.reduce((acc, cat) => {
+        if (cat.id) acc[cat.id] = cat;
+        return acc;
+    }, {});
+
+    const isBarItem = (item) => {
+        const catId = getItemCatId(item);
+        if (barCatIds.length > 0 && barCatIds.includes(catId)) return true;
+        if (kitchenCatIds.length > 0 && kitchenCatIds.includes(catId)) return false;
+
+        const DEFAULT_BAR_CATS = [
             '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
             '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
             'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
@@ -225,23 +237,28 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
             '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
         ];
+        if (DEFAULT_BAR_CATS.includes(catId)) return true;
+
+        const catObj = categoryMap[catId];
+        const catName = (catObj?.name || item.menu_items?.categories?.name || item.menu_items?.menu_categories?.name || item.category_name || item.category || '').toLowerCase();
         
-        if (activeTab === 'kitchen') {
-            itemsToRender = itemsToRender.filter(item => !DEFAULT_BAR_CATEGORIES.includes(getItemCatId(item)));
-        } else if (activeTab === 'bar') {
-            itemsToRender = itemsToRender.filter(item => DEFAULT_BAR_CATEGORIES.includes(getItemCatId(item)));
-        } else if (activeTab === 'other') {
-            itemsToRender = []; // All items are assigned to either Kitchen or Bar in default fallback mode
-        }
-    } else {
-        // Dynamically routing categories
-        if (activeTab === 'kitchen') {
-            itemsToRender = itemsToRender.filter(item => kitchenCatIds.includes(getItemCatId(item)));
-        } else if (activeTab === 'bar') {
-            itemsToRender = itemsToRender.filter(item => barCatIds.includes(getItemCatId(item)));
-        } else if (activeTab === 'other') {
-            itemsToRender = itemsToRender.filter(item => !kitchenCatIds.includes(getItemCatId(item)) && !barCatIds.includes(getItemCatId(item)));
-        }
+        const BAR_KEYWORDS = [
+            'บาร์', 'บาร์น้ำ', 'เครื่องดื่ม', 'น้ำ', 'กาแฟ', 'ชา', 'เหล้า', 'เบียร์', 'ค็อกเทล', 
+            'ม็อกเทล', 'โซดา', 'ไวน์', 'ชง', 'ปั่น', 'ดริ้ง', 'น้ำอัดลม',
+            'bar', 'drink', 'beverage', 'coffee', 'tea', 'beer', 'wine', 'cocktail', 'mocktail', 'alcohol', 'soda', 'smoothie'
+        ];
+
+        return BAR_KEYWORDS.some(kw => catName.includes(kw));
+    };
+
+    if (activeTab === 'kitchen_all') {
+        itemsToRender = booking.order_items || [];
+    } else if (activeTab === 'kitchen') {
+        itemsToRender = (booking.order_items || []).filter(item => !isBarItem(item));
+    } else if (activeTab === 'bar') {
+        itemsToRender = (booking.order_items || []).filter(item => isBarItem(item));
+    } else if (activeTab === 'other') {
+        itemsToRender = [];
     }
 
     // Return null if there are no items to print for this specific tab
@@ -274,7 +291,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         : String(booking.id).slice(0, 4);
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
 
-    const maxCols = paperSize === '80mm' ? 48 : 30; // 80mm standard paper supports 48 cols. 58mm supports 30 cols.
+    const maxCols = paperSize === '80mm' ? 44 : 30; // 80mm standard thermal paper supports 44 cols with safe margins. 58mm supports 30 cols.
 
     let selectedDividerStyle = null;
     try {
@@ -433,27 +450,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // 5. Items List
     // 5. Items List Grouped by Kitchen vs Bar
-    const DEFAULT_BAR_CATS = [
-        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-    ];
-
-    const isBarItem = (item) => {
-        const catId = getItemCatId(item);
-        if (barCatIds.length > 0) return barCatIds.includes(catId);
-        return DEFAULT_BAR_CATS.includes(catId);
-    };
-
-    const isKitchenItem = (item) => {
-        const catId = getItemCatId(item);
-        if (kitchenCatIds.length > 0) return kitchenCatIds.includes(catId);
-        return !DEFAULT_BAR_CATS.includes(catId);
-    };
+    const isKitchenItem = (item) => !isBarItem(item);
 
     if (isKitchenTab) {
         const renderKitchenGroup = (groupItems) => {
@@ -1173,7 +1170,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = paperSize === '80mm' ? 48 : 30;
+    const maxCols = paperSize === '80mm' ? 44 : 30;
     
     let selectedDividerStyle = null;
     try {

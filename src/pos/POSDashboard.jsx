@@ -14,6 +14,7 @@ import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
 import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
+import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check } from 'lucide-react';
 
@@ -1921,80 +1922,19 @@ export default function POSDashboard() {
                                             </button>
                                         </div>
                                     )}
-                                    
-                                    {/* PIN Dot Indicators */}
-                                    <div className="flex justify-center gap-3.5 my-4">
-                                        {[1, 2, 3, 4].map(idx => (
-                                            <div 
-                                                key={idx} 
-                                                className={`w-3.5 h-3.5 rounded-full border border-[#D1D1CD] transition-all duration-100 ${
-                                                    pinInput.length >= idx ? 'bg-[#ff0000] border-[#ff0000] scale-110 shadow-sm' : 'bg-white'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
                                 </div>
 
-                                {/* Numeric PIN Grid */}
-                                <div className="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto w-full">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                        <button
-                                            key={num}
-                                            onClick={() => {
-                                                if (pinInput.length < 4) {
-                                                    const newPin = pinInput + num;
-                                                    setPinInput(newPin);
-                                                    if (newPin.length === 4) {
-                                                        const staff = staffList.find(s => s.pin === newPin);
-                                                        if (staff) {
-                                                            handlePinLogin(staff);
-                                                        } else {
-                                                            toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                                            setPinInput('');
-                                                        }
-                                                    }
-                                                }
-                                            }}
-                                            className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                        >
-                                            {num}
-                                        </button>
-                                    ))}
-                                    <button
-                                        onClick={() => setPinInput('')}
-                                        className="h-12 rounded-xl bg-[#FFF0F0] border border-[#FAD2D2] hover:bg-[#FCDCDC] active:scale-95 text-[10px] font-bold text-[#D32F2F] transition-all shadow-sm flex items-center justify-center cursor-pointer uppercase"
-                                    >
-                                        ล้าง (C)
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (pinInput.length < 4) {
-                                                const newPin = pinInput + '0';
-                                                setPinInput(newPin);
-                                                if (newPin.length === 4) {
-                                                    const staff = staffList.find(s => s.pin === newPin);
-                                                    if (staff) {
-                                                        handlePinLogin(staff);
-                                                    } else {
-                                                        toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                                        setPinInput('');
-                                                    }
-                                                }
-                                            }
-                                        }}
-                                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                    >
-                                        0
-                                    </button>
-                                    <button
-                                        onClick={() => setPinInput(prev => prev.slice(0, -1))}
-                                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                    >
-                                        ←
-                                    </button>
-                                </div>
-                                
-
+                                <POSPinPad 
+                                    onComplete={(enteredPin, onError) => {
+                                        const staff = staffList.find(s => s.pin === enteredPin);
+                                        if (staff) {
+                                            handlePinLogin(staff);
+                                        } else {
+                                            toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                            onError();
+                                        }
+                                    }}
+                                />
                             </div>
                         ) : (
                             /* Step 3: Enter Cash Float to Open Shift */
@@ -2356,111 +2296,34 @@ export default function POSDashboard() {
                                         </button>
                                     </div>
                                 )}
-                                
-                                {/* PIN Dot Indicators */}
-                                <div className="flex justify-center gap-3.5 my-4">
-                                    {[1, 2, 3, 4].map(idx => (
-                                        <div 
-                                            key={idx} 
-                                            className={`w-3.5 h-3.5 rounded-full border border-[#D1D1CD] transition-all duration-100 ${
-                                                lockPinInput.length >= idx ? 'bg-[#ff0000] border-[#ff0000] scale-110 shadow-sm' : 'bg-white'
-                                            }`}
-                                        />
-                                    ))}
-                                </div>
                             </div>
 
-                            {/* Numeric PIN Grid */}
-                            <div className="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto w-full">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                    <button
-                                        key={num}
-                                        onClick={() => {
-                                            if (lockPinInput.length < 4) {
-                                                const newPin = lockPinInput + num;
-                                                setLockPinInput(newPin);
-                                                if (newPin.length === 4) {
-                                                    const staff = staffList.find(s => s.pin === newPin);
-                                                    if (staff) {
-                                                        // Verify / Switch active shift staff name
-                                                        if (activeShift.staffName !== staff.display_name) {
-                                                            const updatedShift = {
-                                                                ...activeShift,
-                                                                staffName: staff.display_name
-                                                            };
-                                                            localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
-                                                            setActiveShift(updatedShift);
-                                                            syncShiftToCloud(updatedShift);
-                                                            window.dispatchEvent(new Event('pos-shift-changed'));
-                                                            toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name}`);
-                                                        } else {
-                                                            toast.success('ปลดล็อคหน้าจอสำเร็จ');
-                                                        }
-                                                        setIsLocked(false);
-                                                        setLockPinInput('');
-                                                    } else {
-                                                        toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                                        setLockPinInput('');
-                                                    }
-                                                }
-                                            }
-                                        }}
-                                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                    >
-                                        {num}
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setLockPinInput('')}
-                                    className="h-12 rounded-xl bg-[#FFF0F0] border border-[#FAD2D2] hover:bg-[#FCDCDC] active:scale-95 text-[10px] font-bold text-[#D32F2F] transition-all shadow-sm flex items-center justify-center cursor-pointer uppercase"
-                                >
-                                    ล้าง (C)
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (lockPinInput.length < 4) {
-                                            const newPin = lockPinInput + '0';
-                                            setLockPinInput(newPin);
-                                            if (newPin.length === 4) {
-                                                const staff = staffList.find(s => s.pin === newPin);
-                                                if (staff) {
-                                                    if (activeShift.staffName !== staff.display_name) {
-                                                        const updatedShift = {
-                                                            ...activeShift,
-                                                            staffName: staff.display_name
-                                                        };
-                                                        localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
-                                                        setActiveShift(updatedShift);
-                                                        syncShiftToCloud(updatedShift);
-                                                        window.dispatchEvent(new Event('pos-shift-changed'));
-                                                        toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name}`);
-                                                    } else {
-                                                        toast.success('ปลดล็อคหน้าจอสำเร็จ');
-                                                    }
-                                                    setIsLocked(false);
-                                                    setLockPinInput('');
-                                                } else {
-                                                    toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                                    setLockPinInput('');
-                                                }
-                                            }
+                            <POSPinPad 
+                                onComplete={(enteredPin, onError) => {
+                                    const staff = staffList.find(s => s.pin === enteredPin);
+                                    if (staff) {
+                                        if (activeShift?.staffName !== staff.display_name) {
+                                            const updatedShift = {
+                                                ...activeShift,
+                                                staffName: staff.display_name
+                                            };
+                                            localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
+                                            setActiveShift(updatedShift);
+                                            syncShiftToCloud(updatedShift);
+                                            window.dispatchEvent(new Event('pos-shift-changed'));
+                                            toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name}`);
+                                        } else {
+                                            toast.success('ปลดล็อคหน้าจอสำเร็จ');
                                         }
-                                    }}
-                                    className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                >
-                                    0
-                                </button>
-                                <button
-                                    onClick={() => setLockPinInput(prev => prev.slice(0, -1))}
-                                    className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#EAEAEA] active:scale-95 text-sm font-mono font-bold text-[#1A1A1A] transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                                >
-                                    ←
-                                </button>
-                            </div>
-                            
-
+                                        setIsLocked(false);
+                                    } else {
+                                        toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                        onError();
+                                    }
+                                }}
+                            />
                         </div>
-                        
+
                     </div>
                 </div>
             )}
