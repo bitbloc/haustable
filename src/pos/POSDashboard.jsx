@@ -15,7 +15,7 @@ import SlipModal from '../components/shared/SlipModal';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check } from 'lucide-react';
 
 export default function POSDashboard() {
@@ -109,7 +109,7 @@ export default function POSDashboard() {
         try {
             let query = supabase
                 .from('profiles')
-                .select('id, display_name, phone_number, email, avatar_url, role, xhaus_balance')
+                .select('*')
                 .order('display_name', { ascending: true })
                 .limit(50);
 
@@ -541,6 +541,9 @@ export default function POSDashboard() {
     };
 
     useEffect(() => {
+        // Init online printer & slip config sync (pulls online master config & listens for realtime updates)
+        const cleanupPrinterSync = initPrinterConfigSync();
+
         // Fetch sound setting once at mount
         const fetchSound = async () => {
             const { data } = await supabase
@@ -593,6 +596,7 @@ export default function POSDashboard() {
             clearInterval(pollInterval);
             window.removeEventListener('click', unlock);
             window.removeEventListener('touchstart', unlock);
+            if (cleanupPrinterSync) cleanupPrinterSync();
         };
     }, []);
 

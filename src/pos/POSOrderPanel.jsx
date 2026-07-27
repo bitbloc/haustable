@@ -105,7 +105,7 @@ export default function POSOrderPanel({
         try {
             let query = supabase
                 .from('profiles')
-                .select('id, display_name, phone_number, email, avatar_url, role, xhaus_balance')
+                .select('*')
                 .order('display_name', { ascending: true })
                 .limit(50);
 

@@ -132,7 +132,7 @@ export default function ArcadeLobby() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('xhaus_balance, nickname, display_name')
+        .select('*')
         .eq('id', userId)
         .single();
       if (!error && data) {

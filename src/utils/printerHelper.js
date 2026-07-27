@@ -1,4 +1,79 @@
 import { logger } from './logger';
+import { supabase } from '../lib/supabaseClient';
+
+let cachedPrinterConfig = null;
+let printerConfigChannel = null;
+
+export const getPrinterConfig = () => {
+    if (cachedPrinterConfig) return cachedPrinterConfig;
+    try {
+        const stored = localStorage.getItem('onhaus_printer_config');
+        if (stored) {
+            cachedPrinterConfig = JSON.parse(stored);
+            return cachedPrinterConfig;
+        }
+    } catch (e) {}
+    return {};
+};
+
+export const fetchPrinterConfigOnline = async () => {
+    try {
+        const { data } = await supabase
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'printer_config')
+            .maybeSingle();
+
+        if (data && data.value) {
+            const config = JSON.parse(data.value);
+            cachedPrinterConfig = config;
+            localStorage.setItem('onhaus_printer_config', data.value);
+            return config;
+        }
+    } catch (e) {
+        console.error("Failed to fetch printer config online:", e);
+    }
+    return getPrinterConfig();
+};
+
+export const initPrinterConfigSync = (onUpdate) => {
+    fetchPrinterConfigOnline().then(cfg => {
+        if (onUpdate && cfg) onUpdate(cfg);
+    });
+
+    if (printerConfigChannel) {
+        return () => {};
+    }
+
+    try {
+        printerConfigChannel = supabase
+            .channel('global_printer_config_sync')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'app_settings', filter: "key=eq.printer_config" },
+                (payload) => {
+                    if (payload.new && payload.new.value) {
+                        try {
+                            const updated = JSON.parse(payload.new.value);
+                            cachedPrinterConfig = updated;
+                            localStorage.setItem('onhaus_printer_config', payload.new.value);
+                            if (onUpdate) onUpdate(updated);
+                        } catch (e) {}
+                    }
+                }
+            )
+            .subscribe();
+    } catch (err) {
+        console.error("Failed to subscribe printer config sync:", err);
+    }
+
+    return () => {
+        if (printerConfigChannel) {
+            supabase.removeChannel(printerConfigChannel);
+            printerConfigChannel = null;
+        }
+    };
+};
 
 // ESC/POS Command Constants
 const ESC = 0x1B;
@@ -216,9 +291,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     let barCatIds = receiptConfig.bar_categories || [];
     let isSeparateBarPrinter = false;
     try {
-        const stored = localStorage.getItem('onhaus_printer_config');
-        if (stored) {
-            const config = JSON.parse(stored);
+        const config = getPrinterConfig();
+        if (config) {
             isSeparateBarPrinter = !!(config.separate_bar_printer || config.bar_printer_ip);
             if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
                 kitchenCatIds = config.kitchen_categories || [];
@@ -322,12 +396,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     let selectedDividerStyle = null;
     try {
-        const stored = localStorage.getItem('onhaus_printer_config');
-        if (stored) {
-            const cfg = JSON.parse(stored);
-            if (cfg.divider_style) {
-                selectedDividerStyle = cfg.divider_style;
-            }
+        const cfg = getPrinterConfig();
+        if (cfg && cfg.divider_style) {
+            selectedDividerStyle = cfg.divider_style;
         }
     } catch (e) {}
     if (!selectedDividerStyle) {
