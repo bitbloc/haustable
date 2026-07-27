@@ -426,7 +426,9 @@ export function usePOSOrder() {
                 p_xhaus_discount: xhausDiscount
             });
 
-            if (rpcErr) throw rpcErr;
+            if (rpcErr) {
+                console.warn('process_checkout_xhaus RPC notice/error:', rpcErr);
+            }
 
             setLoading(false);
             
