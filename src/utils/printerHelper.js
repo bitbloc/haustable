@@ -697,39 +697,24 @@ function getThaiVisualWidth(str) {
 }
 
 // Thai-width-aware padEnd helper
-function padEndThai(str, targetWidth, padChar = ' ') {
-    const visualWidth = getThaiVisualWidth(str);
-    const neededPadding = targetWidth - visualWidth;
+// Pad string to target width based on exact string character/byte length for ESC/POS printing
+function padEndBytes(str, targetWidth, padChar = ' ') {
+    const len = str ? str.length : 0;
+    const neededPadding = targetWidth - len;
     if (neededPadding <= 0) return str;
     return str + padChar.repeat(neededPadding);
 }
 
-// Thai-width-aware slice helper (ensures combining characters aren't orphaned)
-function sliceThai(str, maxVisualWidth) {
-    let currentWidth = 0;
-    let result = '';
-    for (let i = 0; i < str.length; i++) {
-        const char = str[i];
-        const code = str.charCodeAt(i);
-        const isCombining = (
-            (code >= 0x0E31 && code <= 0x0E3A) || 
-            (code >= 0x0E47 && code <= 0x0E4E)
-        );
-        if (!isCombining) {
-            if (currentWidth + 1 > maxVisualWidth) {
-                break;
-            }
-            currentWidth++;
-        }
-        result += char;
-    }
-    return result;
+// Slice string cleanly up to maxColWidth based on exact character/byte count
+function sliceBytes(str, maxColWidth) {
+    if (!str) return '';
+    return str.slice(0, maxColWidth);
 }
 
-// Word/phrase-aware text wrapping (never breaks words mid-character)
+// Word/phrase-aware text wrapping based on exact character/byte count
 export function wrapTextByWords(str, maxColWidth) {
     if (!str) return [];
-    if (getThaiVisualWidth(str) <= maxColWidth) return [str];
+    if (str.length <= maxColWidth) return [str];
 
     const words = str.split(' ');
     const lines = [];
@@ -740,12 +725,12 @@ export function wrapTextByWords(str, maxColWidth) {
         if (!word) continue;
 
         if (!currentLine) {
-            if (getThaiVisualWidth(word) <= maxColWidth) {
+            if (word.length <= maxColWidth) {
                 currentLine = word;
             } else {
                 let rem = word;
                 while (rem.length > 0) {
-                    const chunk = sliceThai(rem, maxColWidth);
+                    const chunk = rem.slice(0, maxColWidth);
                     lines.push(chunk);
                     rem = rem.slice(chunk.length);
                     if (chunk.length === 0) break;
@@ -753,17 +738,17 @@ export function wrapTextByWords(str, maxColWidth) {
             }
         } else {
             const testLine = currentLine + ' ' + word;
-            if (getThaiVisualWidth(testLine) <= maxColWidth) {
+            if (testLine.length <= maxColWidth) {
                 currentLine = testLine;
             } else {
                 lines.push(currentLine);
-                if (getThaiVisualWidth(word) <= maxColWidth) {
+                if (word.length <= maxColWidth) {
                     currentLine = word;
                 } else {
                     let rem = word;
                     currentLine = '';
                     while (rem.length > 0) {
-                        const chunk = sliceThai(rem, maxColWidth);
+                        const chunk = rem.slice(0, maxColWidth);
                         lines.push(chunk);
                         rem = rem.slice(chunk.length);
                         if (chunk.length === 0) break;
@@ -778,7 +763,7 @@ export function wrapTextByWords(str, maxColWidth) {
     return lines;
 }
 
-// Thai-width-aware item line formatting (price stays fixed on top-right, words wrap cleanly)
+// Thai-width-aware item line formatting (price stays fixed on top-right, words wrap cleanly without byte overflow)
 function formatItemLine(qty, name, priceStr, maxCols) {
     const totalWidth = maxCols || 36;
     const isSmall = totalWidth <= 28;
@@ -786,7 +771,7 @@ function formatItemLine(qty, name, priceStr, maxCols) {
     const priceColWidth = isSmall ? 8 : 9;
     const nameColWidth = Math.max(1, totalWidth - qtyColWidth - priceColWidth);
 
-    const qtyStr = padEndThai(qty, qtyColWidth);
+    const qtyStr = padEndBytes(qty, qtyColWidth);
     const rightPriceStr = String(priceStr).padStart(priceColWidth, ' ');
 
     const lines = wrapTextByWords(name, nameColWidth);
@@ -794,7 +779,7 @@ function formatItemLine(qty, name, priceStr, maxCols) {
 
     let result = '';
     // Line 1: Qty + First chunk of Name (padded to nameColWidth) + Right-aligned Price
-    result += qtyStr + padEndThai(lines[0], nameColWidth) + rightPriceStr + '\n';
+    result += qtyStr + padEndBytes(lines[0], nameColWidth) + rightPriceStr + '\n';
 
     // Lines 2+: Indented wrapped name ONLY (No price on line 2!)
     for (let i = 1; i < lines.length; i++) {
@@ -813,8 +798,8 @@ function formatThreeCols(left, mid, right, maxCols) {
     const midRightStr = ' ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
     let leftStr = String(left);
     
-    if (getThaiVisualWidth(leftStr) <= leftCol) {
-        const paddedLeft = padEndThai(leftStr, leftCol);
+    if (leftStr.length <= leftCol) {
+        const paddedLeft = padEndBytes(leftStr, leftCol);
         return paddedLeft + midRightStr;
     }
 
@@ -823,7 +808,7 @@ function formatThreeCols(left, mid, right, maxCols) {
 
     let result = '';
     // Line 1: First line of Left + Mid + Right (right-aligned to maxCols)
-    result += padEndThai(lines[0], leftCol) + midRightStr + '\n';
+    result += padEndBytes(lines[0], leftCol) + midRightStr + '\n';
 
     // Lines 2+: Wrapped Left text ONLY (modular line 2)
     for (let i = 1; i < lines.length; i++) {
@@ -836,13 +821,13 @@ function formatTwoCols(left, right, maxCols) {
     const totalWidth = maxCols || 36;
     const isSmall = totalWidth <= 28;
     const rightStr = String(right);
-    const rightWidth = Math.max(getThaiVisualWidth(rightStr), isSmall ? 7 : 10);
+    const rightWidth = Math.max(rightStr.length, isSmall ? 7 : 10);
     const leftCol = Math.max(1, totalWidth - rightWidth - 1);
     const rightPadded = rightStr.padStart(rightWidth, ' ');
     
     let leftStr = String(left);
-    if (getThaiVisualWidth(leftStr) <= leftCol) {
-        return padEndThai(leftStr, leftCol) + ' ' + rightPadded;
+    if (leftStr.length <= leftCol) {
+        return padEndBytes(leftStr, leftCol) + ' ' + rightPadded;
     }
 
     const lines = wrapTextByWords(leftStr, leftCol);
@@ -850,7 +835,7 @@ function formatTwoCols(left, right, maxCols) {
 
     let result = '';
     // Line 1: First line of Left + Right (right-aligned to maxCols)
-    result += padEndThai(lines[0], leftCol) + ' ' + rightPadded + '\n';
+    result += padEndBytes(lines[0], leftCol) + ' ' + rightPadded + '\n';
 
     // Lines 2+: Wrapped Left text ONLY (modular line 2)
     for (let i = 1; i < lines.length; i++) {
