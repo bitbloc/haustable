@@ -183,19 +183,25 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
 }
 
 // Resolve a conservative printable column width.
-// Standard 80 mm thermal printers have 48 columns (72mm printable width in 12x24 Font A).
-// 44 columns provides clean full-width text alignment while keeping tiny safe margins.
-// Standard 58 mm printers have 32 columns (48mm printable width). 30 columns is full width.
+// 80 mm printers are commonly 512/576 dots wide, but Thai glyph bytes and
+// driver margins vary. 32 columns keeps a reliable right safety margin for
+// both 80 mm rolls and drivers whose custom page size is named 80 x 80 mm.
+// Override with receiptConfig.maxCols after a real print test.
 function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
     const normalized = String(paperSize ?? '').toLowerCase().replace(/\s+/g, '');
-    const is80mm = normalized === '80mm' || normalized === '80' || Number(paperSize) === 80;
-    const fallback = is80mm ? 44 : 30;
+    const is80mm = (
+        normalized === '80mm' ||
+        normalized === '80' ||
+        Number(paperSize) === 80 ||
+        /^80(?:mm)?(?:x|\*|×)80(?:mm)?$/.test(normalized)
+    );
+    const fallback = is80mm ? 32 : 24;
     const configured = Number(configuredMaxCols);
 
     if (!Number.isFinite(configured)) return fallback;
 
-    const min = is80mm ? 36 : 24;
-    const max = is80mm ? 48 : 34;
+    const min = is80mm ? 28 : 20;
+    const max = is80mm ? 42 : 30;
     return Math.max(min, Math.min(max, Math.floor(configured)));
 }
 
@@ -528,17 +534,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     } else {
         const renderReceiptGroup = (groupItems) => {
             groupItems.forEach(item => {
-                const qty = `${item.quantity}x`;
                 const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
-                const priceStr = (item.price_at_time * item.quantity).toLocaleString() + '.-';
-                
-                encoder.text(formatItemLine(qty, name, priceStr, maxCols));
+                const unitPrice = formatReceiptMoney(item.price_at_time);
+                const priceStr = formatReceiptMoney(item.price_at_time * item.quantity);
+                const calculationText = `${item.quantity} x ${unitPrice}`;
 
-                if (item.quantity > 1) {
-                    const unitPriceLine = `(${item.quantity} x ฿${item.price_at_time.toLocaleString()}.-)`;
-                    wrapTextByWords(unitPriceLine, maxCols - 4)
-                        .forEach(line => encoder.line(`    ${line}`));
-                }
+                encoder.text(formatItemLine(calculationText, name, priceStr, maxCols));
 
                 if (item.selected_options) {
                     let optionsList = [];
@@ -607,17 +608,17 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const totalQty = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
         encoder.align('left').size(0, 0);
         encoder.text(formatTwoCols('จำนวนชิ้น', `${totalQty} ชิ้น`, maxCols) + '\n');
-        encoder.text(formatTwoCols('ยอดรวมก่อนหัก', `${subtotal.toLocaleString()}.-`, maxCols) + '\n');
+        encoder.text(formatTwoCols('ยอดรวมก่อนหัก', formatReceiptMoney(subtotal), maxCols) + '\n');
         if (discount > 0) {
-            encoder.text(formatTwoCols('ส่วนลด', `-${discount.toLocaleString()}.-`, maxCols) + '\n');
+            encoder.text(formatTwoCols('ส่วนลด', `-${formatReceiptMoney(discount)}`, maxCols) + '\n');
         }
         if (vatVal > 0) {
-            encoder.text(formatTwoCols('ภาษีมูลค่าเพิ่ม (7%)', vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols) + '\n');
+            encoder.text(formatTwoCols('ภาษีมูลค่าเพิ่ม (7%)', formatReceiptMoney(vatVal), maxCols) + '\n');
         }
         encoder.line(divider)
                .bold(true)
                .size(0, 0)
-               .text(formatTwoCols('ยอดรวมสุทธิ', `${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, maxCols) + '\n')
+               .text(formatTwoCols('ยอดรวมสุทธิ', formatReceiptMoney(booking.total_amount), maxCols) + '\n')
                .bold(false)
                .line(doubleDivider);
     }
@@ -633,11 +634,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             const storedRecv = localStorage.getItem('last_cash_received');
             const storedChange = localStorage.getItem('last_cash_change');
             if (storedRecv !== null) {
-                const cashRecvVal = parseFloat(storedRecv).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.-';
+                const cashRecvVal = formatReceiptMoney(parseFloat(storedRecv));
                 encoder.text(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols) + '\n');
             }
             if (storedChange !== null) {
-                const cashChangeVal = parseFloat(storedChange).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.-';
+                const cashChangeVal = formatReceiptMoney(parseFloat(storedChange));
                 encoder.text(formatTwoCols('เงินทอน', cashChangeVal, maxCols) + '\n');
             }
         }
@@ -710,12 +711,18 @@ function formatDateTime(dateStr) {
     return `${day}/${month}/${year} - ${hours}:${minutes}`;
 }
 
-// ESC/POS column width must follow the bytes actually sent to the printer.
-// The previous implementation ignored Thai vowels/tone marks while padding,
-// but TIS-620 still sends those bytes. That made a "36-column" row physically
-// longer than 36 printer cells and pushed the price past the right edge.
+// Measure visible printer cells, not encoded byte count.
+// Thai upper/lower vowels and tone marks are combining glyphs: the printer draws
+// them over the base consonant and normally does not advance a full text cell.
+// Counting those bytes as full cells makes the amount column move left/right
+// depending on the Thai spelling of each menu name.
 function getPrinterCellWidth(str) {
-    return encodeThaiTIS620(String(str ?? '')).length;
+    let width = 0;
+    for (const char of Array.from(String(str ?? ''))) {
+        const code = char.codePointAt(0);
+        if (!isThaiCombiningCode(code)) width += 1;
+    }
+    return width;
 }
 
 function isThaiCombiningCode(code) {
@@ -834,42 +841,45 @@ export function wrapTextByWords(str, maxColWidth) {
     return output;
 }
 
-// Receipt item row. Keep the familiar one-line POS look when it fits;
-// otherwise move only the price to a clean right-aligned second line.
-function formatItemLine(qty, name, priceStr, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 34);
-    const isSmall = totalWidth <= 28;
-    const qtyColWidth = isSmall ? 3 : 4;
-    const minNameWidth = isSmall ? 8 : 11;
-    const priceWidth = getPrinterCellWidth(priceStr);
+function formatReceiptMoney(value) {
+    const amount = Number(value || 0);
+    return amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
 
-    if (qtyColWidth + minNameWidth + priceWidth > totalWidth) {
-        const titleLines = wrapTextByWords(`${qty} ${name}`, totalWidth);
-        return `${titleLines.join('\n')}\n${padStartPrinter(priceStr, totalWidth)}\n`;
+// Receipt item row for Thai ESC/POS printers.
+// Keep Thai menu text on its own line(s), then print a numeric-only calculation
+// row. This guarantees every total ends at the exact same right edge regardless
+// of Thai combining marks or printer firmware.
+function formatItemLine(calculationText, name, priceStr, maxCols) {
+    const totalWidth = Math.max(20, Number(maxCols) || 32);
+    const nameLines = wrapTextByWords(String(name ?? ''), totalWidth);
+    if (nameLines.length === 0) nameLines.push('');
+
+    const left = String(calculationText ?? '');
+    const right = String(priceStr ?? '');
+    const priceColWidth = Math.max(totalWidth <= 28 ? 9 : 12, getPrinterCellWidth(right));
+    const leftWidth = Math.max(1, totalWidth - priceColWidth - 1);
+
+    let numericRow;
+    if (getPrinterCellWidth(left) <= leftWidth) {
+        numericRow = padEndPrinter(left, leftWidth) + ' ' + padStartPrinter(right, priceColWidth);
+    } else {
+        numericRow = padStartPrinter(right, totalWidth);
     }
 
-    const priceColWidth = Math.max(priceWidth, isSmall ? 7 : 9);
-    const gapWidth = 1;
-    const nameColWidth = Math.max(1, totalWidth - qtyColWidth - gapWidth - priceColWidth);
-    const qtyStr = padEndPrinter(qty, qtyColWidth);
-    const rightPriceStr = padStartPrinter(priceStr, priceColWidth);
-    const lines = wrapTextByWords(name, nameColWidth);
-    if (lines.length === 0) lines.push('');
-
-    const output = [qtyStr + padEndPrinter(lines[0], nameColWidth) + ' ' + rightPriceStr];
-    for (let i = 1; i < lines.length; i++) {
-        output.push(' '.repeat(qtyColWidth) + lines[i]);
-    }
-    return output.join('\n') + '\n';
+    return [...nameLines, numericRow].join('\n') + '\n';
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 34);
+    const totalWidth = Math.max(20, Number(maxCols) || 32);
     const isSmall = totalWidth <= 28;
     const midStr = String(mid ?? '');
     const rightStr = String(right ?? '');
     const midWidth = Math.max(getPrinterCellWidth(midStr), isSmall ? 3 : 4);
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 7 : 9);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 9 : 12);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (midWidth + rightWidth + 2 + minLeftWidth > totalWidth) {
@@ -895,11 +905,11 @@ function formatThreeCols(left, mid, right, maxCols) {
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 34);
+    const totalWidth = Math.max(20, Number(maxCols) || 32);
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
     const rightStr = String(right ?? '');
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 7 : 9);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 9 : 12);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (rightWidth + 1 + minLeftWidth > totalWidth) {
@@ -1269,7 +1279,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         encoder.line(formatTwoCols('ส่วนลด', discountVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
         encoder.line(formatTwoCols('ค่าบริการ', '0.00', maxCols));
         encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', preVatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatTwoCols('ภาษี (VAT)', vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ภาษี (VAT)', formatReceiptMoney(vatVal), maxCols));
         encoder.line(formatTwoCols('ปัดเศษ', '0.00', maxCols));
         encoder.line(formatTwoCols('ส่วนลดท้ายบิล', '0.00', maxCols));
         encoder.line(formatTwoCols('ยอดขายสุทธิ', netSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
