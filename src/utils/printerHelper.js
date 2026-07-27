@@ -195,13 +195,13 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         Number(paperSize) === 80 ||
         /^80(?:mm)?(?:x|\*|×)80(?:mm)?$/.test(normalized)
     );
-    const fallback = is80mm ? 32 : 24;
+    const fallback = is80mm ? 42 : 30;
     const configured = Number(configuredMaxCols);
 
     if (!Number.isFinite(configured)) return fallback;
 
-    const min = is80mm ? 28 : 20;
-    const max = is80mm ? 42 : 30;
+    const min = is80mm ? 32 : 20;
+    const max = is80mm ? 48 : 34;
     return Math.max(min, Math.min(max, Math.floor(configured)));
 }
 
@@ -854,7 +854,7 @@ function formatReceiptMoney(value) {
 // row. This guarantees every total ends at the exact same right edge regardless
 // of Thai combining marks or printer firmware.
 function formatItemLine(calculationText, name, priceStr, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 32);
+    const totalWidth = Math.max(20, Number(maxCols) || 42);
     const nameLines = wrapTextByWords(String(name ?? ''), totalWidth);
     if (nameLines.length === 0) nameLines.push('');
 
@@ -874,7 +874,7 @@ function formatItemLine(calculationText, name, priceStr, maxCols) {
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 32);
+    const totalWidth = Math.max(20, Number(maxCols) || 42);
     const isSmall = totalWidth <= 28;
     const midStr = String(mid ?? '');
     const rightStr = String(right ?? '');
@@ -905,7 +905,7 @@ function formatThreeCols(left, mid, right, maxCols) {
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 32);
+    const totalWidth = Math.max(20, Number(maxCols) || 42);
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
     const rightStr = String(right ?? '');
@@ -1266,32 +1266,32 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         reportData.categorySales.forEach(cat => {
             totalQty += cat.quantity || 0;
             totalAmt += cat.amount || 0;
-            encoder.line(formatThreeCols(cat.name, cat.quantity, (cat.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols(cat.name, cat.quantity, formatReceiptMoney(cat.amount), maxCols));
         });
         
-        encoder.line(formatThreeCols('รวม', totalQty, totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols));
         
         const discountVal = reportData.totalDiscounts || 0;
         const vatVal = reportData.totalVat || 0;
         const netSales = reportData.totalSales - discountVal;
         const preVatVal = netSales - vatVal;
 
-        encoder.line(formatTwoCols('ส่วนลด', discountVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ส่วนลด', formatReceiptMoney(discountVal), maxCols));
         encoder.line(formatTwoCols('ค่าบริการ', '0.00', maxCols));
-        encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', preVatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', formatReceiptMoney(preVatVal), maxCols));
         encoder.line(formatTwoCols('ภาษี (VAT)', formatReceiptMoney(vatVal), maxCols));
         encoder.line(formatTwoCols('ปัดเศษ', '0.00', maxCols));
         encoder.line(formatTwoCols('ส่วนลดท้ายบิล', '0.00', maxCols));
-        encoder.line(formatTwoCols('ยอดขายสุทธิ', netSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
         encoder.line(formatTwoCols('จำนวนลูกค้า (Pax)', (reportData.totalGuests || 0).toString(), maxCols));
-        encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อบิล', (reportData.averageSalesPerBill || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อหัว', (reportData.averageSalesPerGuest || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อบิล', formatReceiptMoney(reportData.averageSalesPerBill), maxCols));
+        encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อหัว', formatReceiptMoney(reportData.averageSalesPerGuest), maxCols));
     } else {
         // Fallback backward compatibility
         encoder.bold(true).line('SALES SUMMARY').bold(false);
-        encoder.text(`Total Bookings`.padEnd(maxCols - 12, ' ') + `${reportData.totalBookings || 0}`.padStart(12, ' ') + '\n');
-        encoder.text(`Gross Revenue`.padEnd(maxCols - 12, ' ') + `฿${(reportData.grossRevenue || reportData.totalSales || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
-        encoder.text(`Discounts`.padEnd(maxCols - 12, ' ') + `-฿${(reportData.discounts || reportData.totalDiscounts || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
+        encoder.line(formatTwoCols('Total Bookings', (reportData.totalBookings || 0).toString(), maxCols));
+        encoder.line(formatTwoCols('Gross Revenue', formatReceiptMoney(reportData.grossRevenue || reportData.totalSales), maxCols));
+        encoder.line(formatTwoCols('Discounts', formatReceiptMoney(reportData.discounts || reportData.totalDiscounts), maxCols));
         encoder.line(divider);
     }
 
@@ -1301,7 +1301,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         encoder.bold(true).line('★ เมนูขายดี 3 อันดับ (Top 3 Selling Items)').bold(false);
         reportData.topSellingItems.forEach((item, index) => {
             const rankLabel = `${index + 1}. ${item.name}`;
-            encoder.line(formatThreeCols(rankLabel, `${item.quantity} ชิ้น`, (item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols(rankLabel, `${item.quantity} ชิ้น`, formatReceiptMoney(item.amount), maxCols));
         });
     }
 
@@ -1315,29 +1315,29 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         const qr = reportData.paymentSales.qrPromptPay || { count: 0, amount: 0 };
         const other = reportData.paymentSales.other || { count: 0, amount: 0, subItems: [] };
         
-        encoder.line(formatThreeCols('เงินสด', cash.count, (cash.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-        encoder.line(formatThreeCols('QR PromptPay', qr.count, (qr.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatThreeCols('เงินสด', cash.count, formatReceiptMoney(cash.amount), maxCols));
+        encoder.line(formatThreeCols('QR PromptPay', qr.count, formatReceiptMoney(qr.amount), maxCols));
 
         if (credit.count > 0 || credit.amount > 0) {
-            encoder.line(formatThreeCols('บัตรเครดิต', credit.count, (credit.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols('บัตรเครดิต', credit.count, formatReceiptMoney(credit.amount), maxCols));
         }
 
         if (other.count > 0 || other.amount > 0) {
-            encoder.line(formatThreeCols('การชำระเงินแบบอื่นๆ', other.count, (other.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols('การชำระเงินแบบอื่นๆ', other.count, formatReceiptMoney(other.amount), maxCols));
             if (other.subItems && other.subItems.length > 0) {
                 other.subItems.forEach(sub => {
-                    encoder.line(formatThreeCols(`• ${sub.name}`, sub.count, (sub.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+                    encoder.line(formatThreeCols(`• ${sub.name}`, sub.count, formatReceiptMoney(sub.amount), maxCols));
                 });
             }
         }
         
         const netSales = reportData.totalSales - (reportData.totalDiscounts || 0);
-        encoder.line(formatTwoCols('ยอดขายสุทธิ', netSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+        encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
     } else {
         // Fallback
         encoder.bold(true).line('REVENUE BY METHOD').bold(false);
-        encoder.text(`Cash Payments`.padEnd(maxCols - 12, ' ') + `฿${(reportData.cashRevenue || reportData.cashSales || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
-        encoder.text(`QR Payments`.padEnd(maxCols - 12, ' ') + `฿${(reportData.qrRevenue || reportData.qrSales || 0).toLocaleString()}`.padStart(12, ' ') + '\n');
+        encoder.line(formatTwoCols('Cash Payments', formatReceiptMoney(reportData.cashRevenue || reportData.cashSales), maxCols));
+        encoder.line(formatTwoCols('QR Payments', formatReceiptMoney(reportData.qrRevenue || reportData.qrSales), maxCols));
     }
 
     // Section 3: ยอดขายตามประเภทออเดอร์
@@ -1349,10 +1349,10 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         const pickup = reportData.orderTypeSales.pickup || { count: 0, amount: 0 };
         
         if (dineIn.count > 0 || pickup.count === 0) {
-            encoder.line(formatThreeCols('กินที่ร้าน', dineIn.count, (dineIn.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols('กินที่ร้าน', dineIn.count, formatReceiptMoney(dineIn.amount), maxCols));
         }
         if (pickup.count > 0) {
-            encoder.line(formatThreeCols('กลับบ้าน / รับเอง', pickup.count, (pickup.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols('กลับบ้าน / รับเอง', pickup.count, formatReceiptMoney(pickup.amount), maxCols));
         }
     }
 
@@ -1365,23 +1365,23 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         const walkin = reportData.channelSales.walkin || { count: 0, amount: 0 };
         
         if (linemanDelivery.count > 0) {
-            encoder.line(formatThreeCols('LINE MAN Delivery', linemanDelivery.count, (linemanDelivery.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols('LINE MAN Delivery', linemanDelivery.count, formatReceiptMoney(linemanDelivery.amount), maxCols));
         }
         if (walkin.count > 0 || linemanDelivery.count === 0) {
-            encoder.line(formatThreeCols('หน้าร้าน / Direct', walkin.count, (walkin.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+            encoder.line(formatThreeCols('หน้าร้าน / Direct', walkin.count, formatReceiptMoney(walkin.amount), maxCols));
         }
     }
 
     // Section 5: รอบการขาย
     encoder.line(divider);
     encoder.bold(true).line('รอบการขาย').bold(false);
-    encoder.line(formatTwoCols('เงินสดเริ่มต้น', (reportData.openingFloat || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-    encoder.line(formatTwoCols('ยอดขายเงินสด', (reportData.cashSales || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('เงินสดเริ่มต้น', formatReceiptMoney(reportData.openingFloat), maxCols));
+    encoder.line(formatTwoCols('ยอดขายเงินสด', formatReceiptMoney(reportData.cashSales), maxCols));
     encoder.line(formatTwoCols('คืนเงิน', '0.00', maxCols));
-    encoder.line(formatTwoCols('เงินเข้า/เงินออก', ((reportData.totalIn || 0) - (reportData.totalOut || 0)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-    encoder.line(formatTwoCols('จำนวนเงินที่ควรมี', (reportData.expectedCash || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-    encoder.line(formatTwoCols('จำนวนจริงในลิ้นชัก', (reportData.actualCash || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-    encoder.line(formatTwoCols('ส่วนต่าง', (reportData.difference || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatTwoCols('เงินเข้า/เงินออก', formatReceiptMoney((reportData.totalIn || 0) - (reportData.totalOut || 0)), maxCols));
+    encoder.line(formatTwoCols('จำนวนเงินที่ควรมี', formatReceiptMoney(reportData.expectedCash), maxCols));
+    encoder.line(formatTwoCols('จำนวนจริงในลิ้นชัก', formatReceiptMoney(reportData.actualCash), maxCols));
+    encoder.line(formatTwoCols('ส่วนต่าง', formatReceiptMoney(reportData.difference), maxCols));
     encoder.line(formatTwoCols('บิลทั้งหมด', (reportData.totalBookings || 0).toString(), maxCols));
 
     // Detailed adjustments list on receipt
@@ -1390,7 +1390,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
             const prefix = adj.type === 'in' ? 'นำเข้า' : 'นำออก';
             const sign = adj.type === 'in' ? '+' : '-';
             const label = `  • [${prefix}] ${adj.note || ''}`;
-            const amountStr = `${sign}${adj.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            const amountStr = `${sign}${formatReceiptMoney(adj.amount)}`;
             encoder.line(formatTwoCols(label, amountStr, maxCols));
         });
     }
@@ -1399,16 +1399,16 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     const voidData = reportData.voidData || { wholeBill: { count: 0, amount: 0 }, itemLevel: { count: 0, amount: 0 }, paidBillVoidCount: 0 };
     encoder.line(divider);
     encoder.bold(true).line('ทำลายบิล (Void)').bold(false);
-    encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, (voidData.wholeBill.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-    encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, (voidData.itemLevel.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, formatReceiptMoney(voidData.wholeBill.amount), maxCols));
+    encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, formatReceiptMoney(voidData.itemLevel.amount), maxCols));
     encoder.line(formatTwoCols('ทำลายบิลที่ชำระเงินแล้ว', (voidData.paidBillVoidCount || 0).toString(), maxCols));
 
     // Section 7: ยกเลิกเมนู (Cancel)
     const cancelData = reportData.cancelData || { wholeBill: { count: 0, amount: 0 }, itemLevel: { count: 0, amount: 0 } };
     encoder.line(divider);
     encoder.bold(true).line('ยกเลิกเมนู (Cancel)').bold(false);
-    encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, (cancelData.wholeBill.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
-    encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, (cancelData.itemLevel.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
+    encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, formatReceiptMoney(cancelData.wholeBill.amount), maxCols));
+    encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, formatReceiptMoney(cancelData.itemLevel.amount), maxCols));
 
     encoder.line(divider)
            .feed(2)
