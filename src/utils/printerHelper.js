@@ -179,14 +179,16 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     
     const isKitchenTab = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
 
-    let kitchenCatIds = [];
-    let barCatIds = [];
+    let kitchenCatIds = receiptConfig.kitchen_categories || [];
+    let barCatIds = receiptConfig.bar_categories || [];
     try {
         const stored = localStorage.getItem('onhaus_printer_config');
         if (stored) {
             const config = JSON.parse(stored);
-            kitchenCatIds = config.kitchen_categories || [];
-            barCatIds = config.bar_categories || [];
+            if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
+                kitchenCatIds = config.kitchen_categories || [];
+                barCatIds = config.bar_categories || [];
+            }
             if (!paperSize || paperSize === '58mm') {
                 paperSize = isKitchenTab
                     ? (config.kitchen_paper_size || config.paper_width || '80mm')
@@ -279,7 +281,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     selectedDividerStyle = selectedDividerStyle || 'dashed';
 
     const divider = generateDivider(selectedDividerStyle, maxCols);
-    const doubleDivider = generateDivider(selectedDividerStyle === 'double' ? 'double' : (selectedDividerStyle === 'star' ? 'star' : 'dashed'), maxCols);
+    const doubleDivider = generateDivider(selectedDividerStyle === 'double' ? 'double' : (selectedDividerStyle === 'star' ? 'star' : (selectedDividerStyle === 'wave' ? 'wave' : selectedDividerStyle)), maxCols);
 
     // Load receipt configuration details
     const shopName = (receiptConfig.shopName || 'IN THE HAUS').toUpperCase();

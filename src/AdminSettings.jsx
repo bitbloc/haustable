@@ -2281,7 +2281,10 @@ export default function AdminSettings() {
                                                     <span>ยอดรวมก่อนหัก</span>
                                                     <span>385.-</span>
                                                 </div>
-                                                <div className="flex justify-between font-bold text-sm pt-1.5 mt-1 border-t border-dashed border-[#1A1A1A]">
+                                                <div className="text-center font-mono text-[10px] text-[#1A1A1A] overflow-hidden whitespace-nowrap my-1 font-bold">
+                                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                                </div>
+                                                <div className="flex justify-between font-bold text-sm pt-0.5">
                                                     <span>ยอดรวมสุทธิ</span>
                                                     <span>฿385.00</span>
                                                 </div>

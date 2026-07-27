@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -97,6 +97,47 @@ export default function SlipModal({ booking, type, onClose }) {
     const [receiptShopLogoUrl, setReceiptShopLogoUrl] = useState('');
     const [receiptShopFooter, setReceiptShopFooter] = useState('THANK YOU FOR YOUR VISIT');
 
+    // Real-time subscription to sync receipt settings and printer config instantly across all machines
+    useEffect(() => {
+        const channel = supabase
+            .channel('realtime_app_settings_slip')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'app_settings' },
+                async (payload) => {
+                    if (payload.new) {
+                        if (payload.new.key === 'printer_config' && payload.new.value) {
+                            try {
+                                const updated = JSON.parse(payload.new.value);
+                                setPrinterConfig(updated);
+                                localStorage.setItem('onhaus_printer_config', payload.new.value);
+                            } catch(e) {}
+                        } else if (payload.new.key === 'receipt_shop_name') {
+                            setReceiptShopName(payload.new.value || 'IN THE HAUS');
+                        } else if (payload.new.key === 'receipt_shop_address') {
+                            setReceiptShopAddress(payload.new.value || '');
+                        } else if (payload.new.key === 'receipt_shop_phone') {
+                            setReceiptShopPhone(payload.new.value || '');
+                        } else if (payload.new.key === 'receipt_shop_vat') {
+                            setReceiptShopVat(payload.new.value || '');
+                        } else if (payload.new.key === 'receipt_shop_logo_url') {
+                            setReceiptShopLogoUrl(payload.new.value || '');
+                        } else if (payload.new.key === 'receipt_shop_footer') {
+                            setReceiptShopFooter(payload.new.value || 'THANK YOU FOR YOUR VISIT');
+                        } else if (payload.new.key === 'payment_qr_url') {
+                            setQrCodeUrl(payload.new.value || '');
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+
     const hasAutoPrintedRef = useRef(false);
 
     // Fetch Options mapping, QR settings, and execute SUNMI Auto Print
@@ -135,7 +176,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         shopVat: settingsMap.receipt_shop_vat,
                         shopLogoUrl: settingsMap.receipt_shop_logo_url,
                         shopFooter: settingsMap.receipt_shop_footer,
-                        paymentQrUrl: settingsMap.payment_qr_url
+                        paymentQrUrl: settingsMap.payment_qr_url,
+                        divider_style: printerConfig.divider_style || 'dashed'
                     };
                 }
             } catch (err) {
@@ -364,7 +406,8 @@ export default function SlipModal({ booking, type, onClose }) {
                 <div class="row"><span>ยอดรวมก่อนหัก</span> <span>${subtotal.toLocaleString()}</span></div>
                 ${discountHtml}
                 ${vatHtml}
-                <div class="row total-row" style="font-size: 15px; border-top: 1px dashed black; padding-top: 5px;">
+                <div style="text-align: center; margin: 4px 0;">${generateDivider(printerConfig.divider_style || 'dashed', 32)}</div>
+                <div class="row total-row" style="font-size: 15px; padding-top: 2px;">
                     <span>ยอดรวมทั้งสิ้น (TOTAL)</span>
                     <span>${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
@@ -689,7 +732,10 @@ export default function SlipModal({ booking, type, onClose }) {
             shopPhone: receiptShopPhone,
             shopVat: receiptShopVat,
             shopLogoUrl: receiptShopLogoUrl,
-            shopFooter: receiptShopFooter
+            shopFooter: receiptShopFooter,
+            kitchen_categories: printerConfig.kitchen_categories || [],
+            bar_categories: printerConfig.bar_categories || [],
+            divider_style: printerConfig.divider_style || 'dashed'
         };
 
         if (printerType === 'sunmi') {
@@ -1100,7 +1146,10 @@ export default function SlipModal({ booking, type, onClose }) {
                                         <span>-{booking.discount_amount.toLocaleString()}</span>
                                     </div>
                                 )}
-                                <div className="flex justify-between items-end border-t border-dashed border-black/30 pt-2">
+                                <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
+                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                </div>
+                                <div className="flex justify-between items-end pt-1">
                                     <span className="font-black text-xs uppercase tracking-wider">TOTAL AMOUNT</span>
                                     <span className="font-black text-xl leading-none">{booking.total_amount?.toLocaleString()}</span>
                                 </div>
@@ -1109,25 +1158,35 @@ export default function SlipModal({ booking, type, onClose }) {
 
                         {/* Payment Details Section (Only for Receipt) */}
                         {activeTab === 'receipt' && (
-                            <div className="border-t-2 border-dashed border-black py-4 my-2 text-center flex flex-col items-center">
-                                <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                                    Payment Method: {paymentMethod === 'cash' ? 'CASH / เงินสด' : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')}
+                            <>
+                                <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
+                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                                 </div>
-                                <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
-                                    PAID / ชำระแล้ว
+                                <div className="py-2 my-1 text-center flex flex-col items-center">
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                                        Payment Method: {paymentMethod === 'cash' ? 'CASH / เงินสด' : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')}
+                                    </div>
+                                    <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
+                                        PAID / ชำระแล้ว
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
 
                         {/* PromptPay QR Code (For Billing tab only, never on paid receipt) */}
                         {activeTab === 'billing' && qrCodeUrl && (
-                            <div className="border-t border-dashed border-black/40 pt-4 mt-4 text-center flex flex-col items-center">
-                                <span className="text-[9px] font-black tracking-widest uppercase mb-2">
-                                    SCAN TO PAY / สแกนชำระเงิน
-                                </span>
-                                <img src={qrCodeUrl} alt="PromptPay QR" className="w-36 h-36 object-contain rounded-xl border border-gray-100 p-2 bg-white" />
-                                <span className="text-[8px] text-gray-400 font-mono mt-1">IN THE HAUS PROMPTPAY</span>
-                            </div>
+                            <>
+                                <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
+                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                </div>
+                                <div className="pt-2 mt-2 text-center flex flex-col items-center">
+                                    <span className="text-[9px] font-black tracking-widest uppercase mb-2">
+                                        SCAN TO PAY / สแกนชำระเงิน
+                                    </span>
+                                    <img src={qrCodeUrl} alt="PromptPay QR" className="w-36 h-36 object-contain rounded-xl border border-gray-100 p-2 bg-white" />
+                                    <span className="text-[8px] text-gray-400 font-mono mt-1">IN THE HAUS PROMPTPAY</span>
+                                </div>
+                            </>
                         )}
 
                         {/* Note for Kitchen & Staff (Always show if present) */}
