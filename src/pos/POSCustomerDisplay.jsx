@@ -24,6 +24,80 @@ export default function POSCustomerDisplay() {
     const [qrPayload, setQrPayload] = useState(null);
     const [slideshowImages, setSlideshowImages] = useState([]);
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const [shopLogoUrl, setShopLogoUrl] = useState(null);
+
+    // Fetch shop logo from app_settings with fallback to /assets/logo-script.webp
+    useEffect(() => {
+        const fetchShopLogo = async () => {
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', ['receipt_shop_logo_url', 'shop_logo_url']);
+                
+                if (data && data.length > 0) {
+                    const logoObj = data.find(i => (i.key === 'receipt_shop_logo_url' || i.key === 'shop_logo_url') && i.value);
+                    if (logoObj && logoObj.value) {
+                        setShopLogoUrl(logoObj.value);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching CFD shop logo:", err);
+            }
+        };
+
+        fetchShopLogo();
+
+        const logoSub = supabase
+            .channel('cfd_logo_updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                if (payload.new && (payload.new.key === 'receipt_shop_logo_url' || payload.new.key === 'shop_logo_url')) {
+                    if (payload.new.value) {
+                        setShopLogoUrl(payload.new.value);
+                    }
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(logoSub);
+        };
+    }, []);
+
+    // Reusable Venue Logo Component (In The Haus Shop Logo)
+    const VenueLogo = ({ className = "h-10 object-contain", alt = "IN THE HAUS" }) => {
+        const [imgSrc, setImgSrc] = useState(shopLogoUrl || '/assets/logo-script.webp');
+        const [errCount, setErrCount] = useState(0);
+
+        useEffect(() => {
+            if (shopLogoUrl) {
+                setImgSrc(shopLogoUrl);
+                setErrCount(0);
+            }
+        }, [shopLogoUrl]);
+
+        const handleError = () => {
+            if (errCount === 0) {
+                setImgSrc('/assets/logo-script.webp');
+                setErrCount(1);
+            } else if (errCount === 1) {
+                setImgSrc('/assets/logo-script.png');
+                setErrCount(2);
+            } else if (errCount === 2) {
+                setImgSrc('/logo.png');
+                setErrCount(3);
+            }
+        };
+
+        return (
+            <img
+                src={imgSrc}
+                alt={alt}
+                className={className}
+                onError={handleError}
+            />
+        );
+    };
 
     // Helper to format image URL correctly whether full URL, path, or text_only
     const getValidImageUrl = (urlStr) => {
@@ -161,22 +235,24 @@ export default function POSCustomerDisplay() {
         <div className="relative w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex overflow-hidden font-sans select-none">
             {/* Left Column: Brand Statement & Member QR */}
             <div className="w-1/2 h-full p-6 lg:p-8 flex flex-col justify-between z-10 bg-[oklch(18%_0.012_28)]/95 backdrop-blur-md border-r border-[oklch(42%_0.010_28)]/30">
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full border border-[oklch(52%_0.16_28)] flex items-center justify-center text-[oklch(52%_0.16_28)] shrink-0">
-                            <Sparkles size={16} />
-                        </div>
-                        <span className="font-mono text-[11px] font-bold tracking-[0.25em] uppercase text-[oklch(52%_0.16_28)]">
+                <div className="space-y-4">
+                    {/* Venue Logo & Title */}
+                    <div className="flex items-center gap-3 pb-3 border-b border-[oklch(42%_0.010_28)]/40">
+                        <VenueLogo className="h-12 lg:h-14 max-w-[200px] object-contain filter drop-shadow-md brightness-110" />
+                        <div className="h-8 w-px bg-[oklch(42%_0.010_28)]/50" />
+                        <span className="font-mono text-[10px] lg:text-[11px] font-bold tracking-[0.2em] uppercase text-[oklch(52%_0.16_28)]">
                             HAUS TABLE EXPERIENCE
                         </span>
                     </div>
 
-                    <h1 className="text-3xl lg:text-4xl font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)] leading-tight">
-                        IN THE HAUS
-                    </h1>
-                    <p className="text-xs font-sans text-[oklch(55%_0.010_28)] max-w-sm leading-relaxed">
-                        ยินดีต้อนรับสัมผัสรสชาติอันพิถีพิถัน สั่งอาหารและเครื่องดื่มผ่านแคชเชียร์ หรือสแกนเพื่อสมัครสมาชิก XHAUS รับสิทธิพิเศษทันที
-                    </p>
+                    <div className="space-y-1">
+                        <h1 className="text-2xl lg:text-3xl font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)] leading-tight">
+                            IN THE HAUS
+                        </h1>
+                        <p className="text-xs font-sans text-[oklch(55%_0.010_28)] max-w-sm leading-relaxed">
+                            ยินดีต้อนรับสัมผัสรสชาติอันพิถีพิถัน สั่งอาหารและเครื่องดื่มผ่านแคชเชียร์ หรือสแกนเพื่อสมัครสมาชิก XHAUS รับสิทธิพิเศษทันที
+                        </p>
+                    </div>
                 </div>
 
                 {/* Member Rewards Prompt Card */}
@@ -262,10 +338,9 @@ export default function POSCustomerDisplay() {
             {/* Left Pane: Customer Greeting & Active Promo Showcase */}
             <div className="w-5/12 h-full bg-[oklch(94%_0.010_28)] border-r border-[oklch(85%_0.012_28)] p-5 flex flex-col justify-between">
                 <div className="space-y-4">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-[oklch(52%_0.16_28)] text-white flex items-center justify-center text-xs font-mono font-bold shrink-0">
-                            HT
-                        </div>
+                    <div className="flex items-center gap-3">
+                        <VenueLogo className="h-9 max-w-[130px] object-contain" />
+                        <div className="h-4 w-px bg-[oklch(85%_0.012_28)]" />
                         <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] truncate">
                             {orderData.tableName ? `TABLE : ${orderData.tableName}` : 'DIRECT CHECKOUT'}
                         </span>
@@ -336,9 +411,7 @@ export default function POSCustomerDisplay() {
                         <Receipt size={16} className="text-[oklch(52%_0.16_28)]" />
                         YOUR ORDER SUMMARY
                     </h2>
-                    <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] uppercase">
-                        IN THE HAUS POS
-                    </span>
+                    <VenueLogo className="h-6 max-w-[100px] object-contain opacity-90" />
                 </div>
 
                 {/* Items List */}
@@ -414,9 +487,12 @@ export default function POSCustomerDisplay() {
             {/* Left Column: Order Bill Recap */}
             <div className="w-1/2 h-full bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] p-5 flex flex-col justify-between">
                 <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
-                        CHECKOUT PAYMENT
-                    </span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                            CHECKOUT PAYMENT
+                        </span>
+                        <VenueLogo className="h-6 max-w-[100px] object-contain" />
+                    </div>
                     <h2 className="text-xl font-bold uppercase tracking-tight mt-0.5 mb-3">
                         สรุปรายการชำระเงิน
                     </h2>
@@ -470,8 +546,9 @@ export default function POSCustomerDisplay() {
             {/* Right Column: PromptPay QR / Cash Status */}
             <div className="w-1/2 h-full flex flex-col items-center justify-center p-6 bg-[oklch(18%_0.012_28)] text-center">
                 <div className="bg-white text-[oklch(18%_0.012_28)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
+                    <VenueLogo className="h-8 max-w-[140px] object-contain mb-3" />
                     {/* PromptPay Header */}
-                    <div className="w-full bg-[#003D7A] text-white py-2 font-bold text-xs font-mono tracking-wider uppercase mb-4 flex items-center justify-center gap-1.5 rounded-md">
+                    <div className="w-full bg-[#003D7A] text-white py-2 font-bold text-xs font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
                         <QrCode size={16} />
                         <span>PROMPTPAY QR PAYMENT</span>
                     </div>
@@ -515,6 +592,7 @@ export default function POSCustomerDisplay() {
                 transition={{ type: 'spring', damping: 15 }}
                 className="flex flex-col items-center space-y-4 max-w-md"
             >
+                <VenueLogo className="h-12 max-w-[180px] object-contain brightness-200 filter drop-shadow-md mb-1" />
                 <div className="w-16 h-16 rounded-full bg-white/10 border border-white/30 flex items-center justify-center shadow-xl backdrop-blur-md">
                     <CheckCircle2 size={40} className="text-white" strokeWidth={1.5} />
                 </div>
