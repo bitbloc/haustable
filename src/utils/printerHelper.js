@@ -291,7 +291,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         : String(booking.id).slice(0, 4);
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
 
-    const maxCols = paperSize === '80mm' ? 44 : 30; // 80mm standard thermal paper supports 44 cols with safe margins. 58mm supports 30 cols.
+    const maxCols = paperSize === '80mm' ? 36 : 26; // 80mm printable area fits 36 chars with guaranteed zero right-edge wrapping on all thermal heads
 
     let selectedDividerStyle = null;
     try {
@@ -500,32 +500,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             });
         };
 
-        const kitchenGroup = itemsToRender.filter(isKitchenItem);
-        const barGroup = itemsToRender.filter(isBarItem);
-        const otherGroup = itemsToRender.filter(item => !isKitchenItem(item) && !isBarItem(item));
-
-        const hasMultipleGroups = (kitchenGroup.length > 0 && barGroup.length > 0) || (kitchenGroup.length > 0 && otherGroup.length > 0) || (barGroup.length > 0 && otherGroup.length > 0);
-
-        if (kitchenGroup.length > 0) {
-            if (hasMultipleGroups) {
-                encoder.bold(true).line('--- รายการอาหาร (KITCHEN) ---').bold(false).line(divider);
-            }
-            renderKitchenGroup(kitchenGroup);
-        }
-
-        if (barGroup.length > 0) {
-            if (hasMultipleGroups) {
-                encoder.bold(true).line('--- รายการเครื่องดื่ม (BAR) ---').bold(false).line(divider);
-            }
-            renderKitchenGroup(barGroup);
-        }
-
-        if (otherGroup.length > 0) {
-            if (hasMultipleGroups) {
-                encoder.bold(true).line('--- รายการอื่นๆ (OTHER) ---').bold(false).line(divider);
-            }
-            renderKitchenGroup(otherGroup);
-        }
+        renderKitchenGroup(itemsToRender);
     } else {
         const renderReceiptGroup = (groupItems) => {
             groupItems.forEach(item => {
@@ -805,10 +780,10 @@ export function wrapTextByWords(str, maxColWidth) {
 
 // Thai-width-aware item line formatting (price stays fixed on top-right, words wrap cleanly)
 function formatItemLine(qty, name, priceStr, maxCols) {
-    const totalWidth = maxCols || 32;
-    const isSmall = totalWidth <= 32;
+    const totalWidth = maxCols || 36;
+    const isSmall = totalWidth <= 28;
     const qtyColWidth = isSmall ? 3 : 4;
-    const priceColWidth = isSmall ? 8 : 11;
+    const priceColWidth = isSmall ? 8 : 9;
     const nameColWidth = Math.max(1, totalWidth - qtyColWidth - priceColWidth);
 
     const qtyStr = padEndThai(qty, qtyColWidth);
@@ -829,11 +804,11 @@ function formatItemLine(qty, name, priceStr, maxCols) {
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
-    const totalWidth = maxCols || 32;
-    const isSmall = totalWidth <= 32;
-    const rightCol = isSmall ? 9 : 12;
+    const totalWidth = maxCols || 36;
+    const isSmall = totalWidth <= 28;
+    const rightCol = isSmall ? 8 : 10;
     const midCol = isSmall ? 4 : 5;
-    const leftCol = Math.max(1, totalWidth - rightCol - midCol - 2);
+    const leftCol = Math.max(1, totalWidth - rightCol - midCol - 1);
     
     const midRightStr = ' ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
     let leftStr = String(left);
@@ -858,10 +833,10 @@ function formatThreeCols(left, mid, right, maxCols) {
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const totalWidth = maxCols || 32;
-    const isSmall = totalWidth <= 32;
+    const totalWidth = maxCols || 36;
+    const isSmall = totalWidth <= 28;
     const rightStr = String(right);
-    const rightWidth = Math.max(getThaiVisualWidth(rightStr), isSmall ? 7 : 11);
+    const rightWidth = Math.max(getThaiVisualWidth(rightStr), isSmall ? 7 : 10);
     const leftCol = Math.max(1, totalWidth - rightWidth - 1);
     const rightPadded = rightStr.padStart(rightWidth, ' ');
     
@@ -1170,7 +1145,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = paperSize === '80mm' ? 44 : 30;
+    const maxCols = paperSize === '80mm' ? 36 : 26;
     
     let selectedDividerStyle = null;
     try {
@@ -1580,50 +1555,12 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     logger.warn("SUNMI: bindService warning (non-fatal)", bindErr);
                 }
 
-                // Dynamically strip cut command from rawData if present
-                let cleanData = rawData;
-                let shouldManualCut = false;
-                if (rawData && rawData.length >= 4) {
-                    // Check if GS V (0x1D 0x56) cut sequence exists within the last 20 bytes
-                    const searchLength = Math.min(20, rawData.length);
-                    const tailBytes = rawData.slice(-searchLength);
-                    for (let i = 0; i < tailBytes.length - 1; i++) {
-                        if (tailBytes[i] === 0x1D && tailBytes[i+1] === 0x56) {
-                            shouldManualCut = true;
-                            break;
-                        }
-                    }
-                    if (shouldManualCut) {
-                        const cutIndex = rawData.lastIndexOf(0x1D);
-                        if (cutIndex !== -1 && cutIndex < rawData.length - 1 && rawData[cutIndex + 1] === 0x56) {
-                            cleanData = rawData.slice(0, cutIndex);
-                        }
-                    }
-                }
-
-                // If logo URL is provided, try to print it first (retrieved from cache if possible)
-                if (logoUrl) {
-                    try {
-                        logger.info("SUNMI: getting logo from cache or loading: " + logoUrl);
-                        const base64Image = await getCachedResizedImage(logoUrl, 200);
-                        if (base64Image) {
-                            logger.info("SUNMI: printing logo bitmap");
-                            await SunmiPrinter.setAlignment({ alignment: "center" });
-                            await SunmiPrinter.printBitmap({ bitmap: base64Image });
-                            await SunmiPrinter.lineWrap({ lines: 1 });
-                            await SunmiPrinter.setAlignment({ alignment: "left" });
-                        }
-                    } catch (logoErr) {
-                        console.warn("SUNMI print logo warning (non-fatal):", logoErr);
-                        logger.warn("SUNMI: print logo warning (non-fatal)", logoErr);
-                    }
-                }
-
+                // Convert raw ESC/POS byte array directly to base64 string
                 logger.info("SUNMI: converting rawData to base64 string");
                 let binary = '';
-                const len = cleanData.byteLength;
+                const len = rawData.byteLength;
                 for (let i = 0; i < len; i++) {
-                    binary += String.fromCharCode(cleanData[i]);
+                    binary += String.fromCharCode(rawData[i]);
                 }
                 const base64Data = window.btoa(binary);
 
@@ -1649,20 +1586,15 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     }
                 }
 
-                // If we stripped the cut command or explicitly need cutting, trigger it manually
-                if (shouldManualCut) {
-                    try {
-                        logger.info("SUNMI: executing lineWrap and cutPaper");
-                        await SunmiPrinter.lineWrap({ lines: 3 });
-                        await SunmiPrinter.cutPaper();
-                    } catch (cutErr) {
-                        console.warn("SUNMI cutPaper warning (non-fatal):", cutErr);
-                        logger.warn("SUNMI: cutPaper warning (non-fatal)", cutErr);
-                    }
+                // Trigger cutter for final paper cut
+                try {
+                    await SunmiPrinter.cutPaper();
+                } catch (cutErr) {
+                    // non-fatal if built-in printer has manual tear bar instead of auto cutter
                 }
 
-                // Add a small 150ms buffer delay for physical motor/paper feed sync
-                await new Promise(r => setTimeout(r, 150));
+                // Buffer delay (200ms) for physical motor, paper feed, and cutter completion
+                await new Promise(r => setTimeout(r, 200));
                 
                 logger.logNativeEnd('print_sunmi_built_in');
                 resolve(true);
