@@ -60,8 +60,12 @@ class EscPosEncoder {
         return this;
     }
 
-    cut() {
-        this.buffer.push(GS, 0x56, 66, 0); // Cut paper
+    cut(full = false) {
+        if (full) {
+            this.buffer.push(GS, 0x56, 0); // Full cut
+        } else {
+            this.buffer.push(GS, 0x56, 66, 0); // Feed and cut
+        }
         return this;
     }
 
@@ -178,6 +182,23 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
     return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
 }
 
+// Resolve a conservative printable column width.
+// 80 mm printers are commonly 512/576 dots wide, but Thai glyph bytes and
+// driver margins vary. 34 columns keeps a small right safety margin while
+// preserving the existing receipt proportions. Override with receiptConfig.maxCols.
+function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
+    const normalized = String(paperSize ?? '').toLowerCase().replace(/\s+/g, '');
+    const is80mm = normalized === '80mm' || normalized === '80' || Number(paperSize) === 80;
+    const fallback = is80mm ? 34 : 24;
+    const configured = Number(configuredMaxCols);
+
+    if (!Number.isFinite(configured)) return fallback;
+
+    const min = is80mm ? 28 : 20;
+    const max = is80mm ? 42 : 30;
+    return Math.max(min, Math.min(max, Math.floor(configured)));
+}
+
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '80mm', receiptConfig = {}, printerType = 'universal') {
     // Filter items based on activeTab (Kitchen vs Bar vs Others) using printer configuration
@@ -291,7 +312,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         : String(booking.id).slice(0, 4);
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
 
-    const maxCols = paperSize === '80mm' ? 36 : 26; // 80mm printable area fits 36 chars with guaranteed zero right-edge wrapping on all thermal heads
+    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols); // 34 cols by default on 80 mm: keeps a real right safety margin
 
     let selectedDividerStyle = null;
     try {
@@ -443,7 +464,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // 4. Items Header
-    encoder.bold(true)
+    // Always reset alignment/font size before fixed-width columns.
+    encoder.align('left')
+           .size(0, 0)
+           .bold(true)
            .line(activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : activeTab === 'other' ? 'รายการอื่นๆ (ทั่วไป)' : (activeTab === 'kitchen' || activeTab === 'kitchen_all') ? 'รายการอาหาร (ครัว)' : 'รายการอาหารและเครื่องดื่ม')
            .bold(false)
            .line(divider);
@@ -458,12 +482,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const qtyStr = `${item.quantity}x`;
                 const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
                 
-                // Print item line in double size (double width + double height) for maximum readability!
-                encoder.bold(true)
-                       .size(1, 1)
-                       .line(`${qtyStr} ${name}`)
-                       .size(0, 0)
-                       .bold(false);
+                // Double-width text has only about half the normal columns.
+                // Wrap first so long Thai menu names never run past the paper edge.
+                const kitchenItemLines = wrapTextByWords(`${qtyStr} ${name}`, Math.max(12, Math.floor(maxCols / 2)));
+                encoder.bold(true).size(1, 1);
+                kitchenItemLines.forEach(line => encoder.line(line));
+                encoder.size(0, 0).bold(false);
                 
                 if (item.selected_options) {
                     let optionsList = [];
@@ -511,7 +535,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 encoder.text(formatItemLine(qty, name, priceStr, maxCols));
 
                 if (item.quantity > 1) {
-                    encoder.line(`     (${item.quantity} x ฿${item.price_at_time.toLocaleString()}.-)`);
+                    const unitPriceLine = `(${item.quantity} x ฿${item.price_at_time.toLocaleString()}.-)`;
+                    wrapTextByWords(unitPriceLine, maxCols - 4)
+                        .forEach(line => encoder.line(`    ${line}`));
                 }
 
                 if (item.selected_options) {
@@ -540,7 +566,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                         });
                     }
                     optionsList.forEach(opt => {
-                        encoder.line(`    + ${opt}`);
+                        const optionText = `+ ${String(opt)}`;
+                        wrapTextByWords(optionText, maxCols - 4)
+                            .forEach(line => encoder.line(`    ${line}`));
                     });
                 }
             });
@@ -577,6 +605,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             : 0;
 
         const totalQty = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
+        encoder.align('left').size(0, 0);
         encoder.text(formatTwoCols('จำนวนชิ้น', `${totalQty} ชิ้น`, maxCols) + '\n');
         encoder.text(formatTwoCols('ยอดรวมก่อนหัก', `${subtotal.toLocaleString()}.-`, maxCols) + '\n');
         if (discount > 0) {
@@ -600,6 +629,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(`ช่องทางชำระเงิน: ${methodLabel}`);
                
         if (paymentMethod === 'cash') {
+            encoder.align('left').size(0, 0);
             const storedRecv = localStorage.getItem('last_cash_received');
             const storedChange = localStorage.getItem('last_cash_change');
             if (storedRecv !== null) {
@@ -620,7 +650,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(doubleDivider);
     }
 
-// 8. Note
+    // 8. Note
     const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
     const combinedNotes = [];
     if (booking.customer_note?.trim()) combinedNotes.push(`ลูกค้า: ${booking.customer_note.trim()}`);
@@ -680,168 +710,216 @@ function formatDateTime(dateStr) {
     return `${day}/${month}/${year} - ${hours}:${minutes}`;
 }
 
-// Calculate visual width of Thai text (ignoring zero-width combining vowels/tone marks)
-function getThaiVisualWidth(str) {
-    let width = 0;
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
-        const isCombining = (
-            (code >= 0x0E31 && code <= 0x0E3A) || 
-            (code >= 0x0E47 && code <= 0x0E4E)
-        );
-        if (!isCombining) {
-            width++;
+// ESC/POS column width must follow the bytes actually sent to the printer.
+// The previous implementation ignored Thai vowels/tone marks while padding,
+// but TIS-620 still sends those bytes. That made a "36-column" row physically
+// longer than 36 printer cells and pushed the price past the right edge.
+function getPrinterCellWidth(str) {
+    return encodeThaiTIS620(String(str ?? '')).length;
+}
+
+function isThaiCombiningCode(code) {
+    return (
+        (code >= 0x0E31 && code <= 0x0E3A) ||
+        (code >= 0x0E47 && code <= 0x0E4E)
+    );
+}
+
+// Keep a Thai base character together with its vowels/tone marks when slicing.
+function splitPrinterGraphemes(str) {
+    const clusters = [];
+    for (const char of Array.from(String(str ?? ''))) {
+        const code = char.codePointAt(0);
+        if (isThaiCombiningCode(code) && clusters.length > 0) {
+            clusters[clusters.length - 1] += char;
+        } else {
+            clusters.push(char);
         }
     }
-    return width;
+    return clusters;
 }
 
-// Thai-width-aware padEnd helper
-// Pad string to target width based on exact string character/byte length for ESC/POS printing
-function padEndBytes(str, targetWidth, padChar = ' ') {
-    const len = str ? str.length : 0;
-    const neededPadding = targetWidth - len;
-    if (neededPadding <= 0) return str;
-    return str + padChar.repeat(neededPadding);
+function padEndPrinter(str, targetWidth, padChar = ' ') {
+    const value = String(str ?? '');
+    const neededPadding = targetWidth - getPrinterCellWidth(value);
+    if (neededPadding <= 0) return value;
+    return value + padChar.repeat(neededPadding);
 }
 
-// Slice string cleanly up to maxColWidth based on exact character/byte count
-function sliceBytes(str, maxColWidth) {
-    if (!str) return '';
-    return str.slice(0, maxColWidth);
+function padStartPrinter(str, targetWidth, padChar = ' ') {
+    const value = String(str ?? '');
+    const neededPadding = targetWidth - getPrinterCellWidth(value);
+    if (neededPadding <= 0) return value;
+    return padChar.repeat(neededPadding) + value;
 }
 
-// Word/phrase-aware text wrapping based on exact character/byte count
+// Slice by printer-byte width without orphaning Thai combining marks.
+function sliceThai(str, maxPrinterWidth) {
+    const clusters = splitPrinterGraphemes(str);
+    let currentWidth = 0;
+    let result = '';
+
+    for (const cluster of clusters) {
+        const clusterWidth = getPrinterCellWidth(cluster);
+        if (result && currentWidth + clusterWidth > maxPrinterWidth) break;
+        if (!result && clusterWidth > maxPrinterWidth) return cluster;
+        result += cluster;
+        currentWidth += clusterWidth;
+    }
+
+    return result;
+}
+
+// Word/phrase-aware text wrapping using the actual TIS-620 byte width.
 export function wrapTextByWords(str, maxColWidth) {
     if (!str) return [];
-    if (str.length <= maxColWidth) return [str];
+    const width = Math.max(1, Number(maxColWidth) || 1);
+    const paragraphs = String(str).replace(/\r/g, '').split('\n');
+    const output = [];
 
-    const words = str.split(' ');
-    const lines = [];
-    let currentLine = '';
+    paragraphs.forEach((paragraph, paragraphIndex) => {
+        if (!paragraph) {
+            output.push('');
+            return;
+        }
+        if (getPrinterCellWidth(paragraph) <= width) {
+            output.push(paragraph);
+            return;
+        }
 
-    for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        if (!word) continue;
+        const words = paragraph.split(/\s+/).filter(Boolean);
+        let currentLine = '';
 
-        if (!currentLine) {
-            if (word.length <= maxColWidth) {
-                currentLine = word;
-            } else {
-                let rem = word;
-                while (rem.length > 0) {
-                    const chunk = rem.slice(0, maxColWidth);
-                    lines.push(chunk);
-                    rem = rem.slice(chunk.length);
-                    if (chunk.length === 0) break;
-                }
+        const flushLongWord = (word) => {
+            let remaining = word;
+            while (remaining.length > 0) {
+                const chunk = sliceThai(remaining, width);
+                if (!chunk) break;
+                output.push(chunk);
+                remaining = remaining.slice(chunk.length);
             }
-        } else {
-            const testLine = currentLine + ' ' + word;
-            if (testLine.length <= maxColWidth) {
-                currentLine = testLine;
-            } else {
-                lines.push(currentLine);
-                if (word.length <= maxColWidth) {
+        };
+
+        words.forEach(word => {
+            if (!currentLine) {
+                if (getPrinterCellWidth(word) <= width) {
                     currentLine = word;
                 } else {
-                    let rem = word;
-                    currentLine = '';
-                    while (rem.length > 0) {
-                        const chunk = rem.slice(0, maxColWidth);
-                        lines.push(chunk);
-                        rem = rem.slice(chunk.length);
-                        if (chunk.length === 0) break;
-                    }
+                    flushLongWord(word);
                 }
+                return;
             }
+
+            const candidate = `${currentLine} ${word}`;
+            if (getPrinterCellWidth(candidate) <= width) {
+                currentLine = candidate;
+                return;
+            }
+
+            output.push(currentLine);
+            currentLine = '';
+            if (getPrinterCellWidth(word) <= width) {
+                currentLine = word;
+            } else {
+                flushLongWord(word);
+            }
+        });
+
+        if (currentLine) output.push(currentLine);
+        if (paragraphIndex < paragraphs.length - 1 && output[output.length - 1] !== '') {
+            output.push('');
         }
-    }
-    if (currentLine) {
-        lines.push(currentLine);
-    }
-    return lines;
+    });
+
+    return output;
 }
 
-// Thai-width-aware item line formatting (price stays fixed on top-right, words wrap cleanly without byte overflow)
+// Receipt item row. Keep the familiar one-line POS look when it fits;
+// otherwise move only the price to a clean right-aligned second line.
 function formatItemLine(qty, name, priceStr, maxCols) {
-    const totalWidth = maxCols || 36;
+    const totalWidth = Math.max(20, Number(maxCols) || 34);
     const isSmall = totalWidth <= 28;
     const qtyColWidth = isSmall ? 3 : 4;
-    const priceColWidth = isSmall ? 8 : 9;
-    const nameColWidth = Math.max(1, totalWidth - qtyColWidth - priceColWidth);
+    const minNameWidth = isSmall ? 8 : 11;
+    const priceWidth = getPrinterCellWidth(priceStr);
 
-    const qtyStr = padEndBytes(qty, qtyColWidth);
-    const rightPriceStr = String(priceStr).padStart(priceColWidth, ' ');
+    if (qtyColWidth + minNameWidth + priceWidth > totalWidth) {
+        const titleLines = wrapTextByWords(`${qty} ${name}`, totalWidth);
+        return `${titleLines.join('\n')}\n${padStartPrinter(priceStr, totalWidth)}\n`;
+    }
 
+    const priceColWidth = Math.max(priceWidth, isSmall ? 7 : 9);
+    const gapWidth = 1;
+    const nameColWidth = Math.max(1, totalWidth - qtyColWidth - gapWidth - priceColWidth);
+    const qtyStr = padEndPrinter(qty, qtyColWidth);
+    const rightPriceStr = padStartPrinter(priceStr, priceColWidth);
     const lines = wrapTextByWords(name, nameColWidth);
     if (lines.length === 0) lines.push('');
 
-    let result = '';
-    // Line 1: Qty + First chunk of Name (padded to nameColWidth) + Right-aligned Price
-    result += qtyStr + padEndBytes(lines[0], nameColWidth) + rightPriceStr + '\n';
-
-    // Lines 2+: Indented wrapped name ONLY (No price on line 2!)
+    const output = [qtyStr + padEndPrinter(lines[0], nameColWidth) + ' ' + rightPriceStr];
     for (let i = 1; i < lines.length; i++) {
-        result += ' '.repeat(qtyColWidth) + lines[i] + '\n';
+        output.push(' '.repeat(qtyColWidth) + lines[i]);
     }
-    return result;
+    return output.join('\n') + '\n';
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
-    const totalWidth = maxCols || 36;
+    const totalWidth = Math.max(20, Number(maxCols) || 34);
     const isSmall = totalWidth <= 28;
-    const rightCol = isSmall ? 8 : 10;
-    const midCol = isSmall ? 4 : 5;
-    const leftCol = Math.max(1, totalWidth - rightCol - midCol - 1);
-    
-    const midRightStr = ' ' + String(mid).padStart(midCol, ' ') + ' ' + String(right).padStart(rightCol, ' ');
-    let leftStr = String(left);
-    
-    if (leftStr.length <= leftCol) {
-        const paddedLeft = padEndBytes(leftStr, leftCol);
-        return paddedLeft + midRightStr;
+    const midStr = String(mid ?? '');
+    const rightStr = String(right ?? '');
+    const midWidth = Math.max(getPrinterCellWidth(midStr), isSmall ? 3 : 4);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 7 : 9);
+    const minLeftWidth = isSmall ? 6 : 8;
+
+    if (midWidth + rightWidth + 2 + minLeftWidth > totalWidth) {
+        const leftLines = wrapTextByWords(String(left ?? ''), totalWidth);
+        const numericLine = formatTwoCols(midStr, rightStr, totalWidth);
+        return [...leftLines, numericLine].join('\n');
     }
 
-    const lines = wrapTextByWords(leftStr, leftCol);
-    if (lines.length === 0) lines.push('');
+    const leftWidth = totalWidth - midWidth - rightWidth - 2;
+    const leftLines = wrapTextByWords(String(left ?? ''), leftWidth);
+    if (leftLines.length === 0) leftLines.push('');
 
-    let result = '';
-    // Line 1: First line of Left + Mid + Right (right-aligned to maxCols)
-    result += padEndBytes(lines[0], leftCol) + midRightStr + '\n';
+    const output = [
+        padEndPrinter(leftLines[0], leftWidth) +
+        ' ' + padStartPrinter(midStr, midWidth) +
+        ' ' + padStartPrinter(rightStr, rightWidth)
+    ];
 
-    // Lines 2+: Wrapped Left text ONLY (modular line 2)
-    for (let i = 1; i < lines.length; i++) {
-        result += ' ' + lines[i] + '\n';
+    for (let i = 1; i < leftLines.length; i++) {
+        output.push(leftLines[i]);
     }
-    return result;
+    return output.join('\n');
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const totalWidth = maxCols || 36;
+    const totalWidth = Math.max(20, Number(maxCols) || 34);
     const isSmall = totalWidth <= 28;
-    const rightStr = String(right);
-    const rightWidth = Math.max(rightStr.length, isSmall ? 7 : 10);
-    const leftCol = Math.max(1, totalWidth - rightWidth - 1);
-    const rightPadded = rightStr.padStart(rightWidth, ' ');
-    
-    let leftStr = String(left);
-    if (leftStr.length <= leftCol) {
-        return padEndBytes(leftStr, leftCol) + ' ' + rightPadded;
+    const leftStr = String(left ?? '');
+    const rightStr = String(right ?? '');
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 7 : 9);
+    const minLeftWidth = isSmall ? 6 : 8;
+
+    if (rightWidth + 1 + minLeftWidth > totalWidth) {
+        const leftLines = wrapTextByWords(leftStr, totalWidth);
+        return [...leftLines, padStartPrinter(rightStr, totalWidth)].join('\n');
     }
 
-    const lines = wrapTextByWords(leftStr, leftCol);
-    if (lines.length === 0) lines.push('');
+    const leftWidth = totalWidth - rightWidth - 1;
+    const leftLines = wrapTextByWords(leftStr, leftWidth);
+    if (leftLines.length === 0) leftLines.push('');
 
-    let result = '';
-    // Line 1: First line of Left + Right (right-aligned to maxCols)
-    result += padEndBytes(lines[0], leftCol) + ' ' + rightPadded + '\n';
+    const output = [
+        padEndPrinter(leftLines[0], leftWidth) +
+        ' ' + padStartPrinter(rightStr, rightWidth)
+    ];
 
-    // Lines 2+: Wrapped Left text ONLY (modular line 2)
-    for (let i = 1; i < lines.length; i++) {
-        result += ' ' + lines[i] + '\n';
+    for (let i = 1; i < leftLines.length; i++) {
+        output.push(leftLines[i]);
     }
-    return result;
+    return output.join('\n');
 }
 
 // Compile raw bookings into rich structured shift report details
@@ -1130,7 +1208,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = paperSize === '80mm' ? 36 : 26;
+    const maxCols = resolveMaxCols(paperSize, reportData?.maxCols);
     
     let selectedDividerStyle = null;
     try {
@@ -1323,7 +1401,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, (cancelData.itemLevel.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}), maxCols));
 
     encoder.line(divider)
-           .feed(4)
+           .feed(2)
            .cut();
 
     return encoder.encode();
@@ -1597,4 +1675,3 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
         });
     });
 }
-
