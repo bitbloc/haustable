@@ -253,7 +253,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         if (rawBytes) {
                             // QR code ONLY for billing tab (PromptPay before payment). NEVER on receipt tab after payment!
                             const qrToPrint = (activeTab === 'billing') ? loadedConfig.paymentQrUrl : null;
-                            await printToSunmiBuiltIn(rawBytes, loadedConfig.shopLogoUrl, qrToPrint);
+                            const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
+                            await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                         }
                     }
                     onClose();
@@ -795,7 +796,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 } else {
                     const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                     if (rawBytes) {
-                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? receiptConfig.shopLogoUrl : null;
+                        const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (receiptConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
                         const qrToPrint = (activeTab === 'billing') ? qrCodeUrl : null;
                         await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     } else {
@@ -1059,7 +1060,16 @@ export default function SlipModal({ booking, type, onClose }) {
                         {activeTab !== 'kitchen' && activeTab !== 'bar' ? (
                             <div className="text-center mb-5 flex flex-col items-center">
                                 {/* Logo */}
-                                <img src="/receipt-logo.png" alt="Logo" className="w-24 h-auto mb-3 object-contain contrast-125" />
+                                <img 
+                                    src={receiptShopLogoUrl || '/receipt-logo.png'} 
+                                    alt="Logo" 
+                                    className="w-24 h-auto mb-3 object-contain contrast-125" 
+                                    onError={(e) => {
+                                        if (e.target.src !== `${window.location.origin}/receipt-logo.png`) {
+                                            e.target.src = '/receipt-logo.png';
+                                        }
+                                    }}
+                                />
                                 
                                 <p className="text-[9px] font-bold tracking-widest uppercase mb-4 border-b border-dashed border-black pb-3 w-full text-center">
                                     TASTE YOUR SCENT.

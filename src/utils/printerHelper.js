@@ -183,19 +183,19 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
 }
 
 // Resolve a conservative printable column width.
-// 80 mm printers are commonly 512/576 dots wide, but Thai glyph bytes and
-// driver margins vary. 34 columns keeps a small right safety margin while
-// preserving the existing receipt proportions. Override with receiptConfig.maxCols.
+// Standard 80 mm thermal printers have 48 columns (72mm printable width in 12x24 Font A).
+// 44 columns provides clean full-width text alignment while keeping tiny safe margins.
+// Standard 58 mm printers have 32 columns (48mm printable width). 30 columns is full width.
 function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
     const normalized = String(paperSize ?? '').toLowerCase().replace(/\s+/g, '');
     const is80mm = normalized === '80mm' || normalized === '80' || Number(paperSize) === 80;
-    const fallback = is80mm ? 34 : 24;
+    const fallback = is80mm ? 44 : 30;
     const configured = Number(configuredMaxCols);
 
     if (!Number.isFinite(configured)) return fallback;
 
-    const min = is80mm ? 28 : 20;
-    const max = is80mm ? 42 : 30;
+    const min = is80mm ? 36 : 24;
+    const max = is80mm ? 48 : 34;
     return Math.max(min, Math.min(max, Math.floor(configured)));
 }
 
@@ -1618,7 +1618,25 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     logger.warn("SUNMI: bindService warning (non-fatal)", bindErr);
                 }
 
-                // Convert raw ESC/POS byte array directly to base64 string
+                // 1. If logo URL is provided, print logo bitmap at the top of the receipt
+                if (logoUrl) {
+                    try {
+                        logger.info("SUNMI: getting Logo from cache or loading: " + logoUrl);
+                        const base64Logo = await getCachedResizedImage(logoUrl, 384); // 384px width for 80mm logo
+                        if (base64Logo) {
+                            logger.info("SUNMI: printing Logo bitmap");
+                            await SunmiPrinter.setAlignment({ alignment: "center" });
+                            await SunmiPrinter.printBitmap({ bitmap: base64Logo });
+                            await SunmiPrinter.lineWrap({ lines: 1 });
+                            await SunmiPrinter.setAlignment({ alignment: "left" });
+                        }
+                    } catch (logoErr) {
+                        console.warn("SUNMI print Logo warning (non-fatal):", logoErr);
+                        logger.warn("SUNMI: print Logo warning (non-fatal)", logoErr);
+                    }
+                }
+
+                // 2. Convert raw ESC/POS byte array directly to base64 string
                 logger.info("SUNMI: converting rawData to base64 string");
                 let binary = '';
                 const len = rawData.byteLength;
@@ -1631,7 +1649,8 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                 await SunmiPrinter.sendRAWBase64Data({ data: base64Data });
                 logger.info("SUNMI: sendRAWBase64Data completed successfully");
                 
-                // If QR URL is provided, print it at the bottom (enlarged to 360px for easy scanning, retrieved from cache if possible)
+                // 3. If QR URL is provided, print it at the bottom (enlarged to 360px for easy scanning)
+                let didPrintQr = false;
                 if (qrUrl) {
                     try {
                         logger.info("SUNMI: getting QR from cache or loading: " + qrUrl);
@@ -1642,6 +1661,7 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                             await SunmiPrinter.printBitmap({ bitmap: base64Qr });
                             await SunmiPrinter.lineWrap({ lines: 1 });
                             await SunmiPrinter.setAlignment({ alignment: "left" });
+                            didPrintQr = true;
                         }
                     } catch (qrErr) {
                         console.warn("SUNMI print QR warning (non-fatal):", qrErr);
@@ -1649,11 +1669,13 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     }
                 }
 
-                // Trigger cutter for final paper cut
-                try {
-                    await SunmiPrinter.cutPaper();
-                } catch (cutErr) {
-                    // non-fatal if built-in printer has manual tear bar instead of auto cutter
+                // 4. Trigger cutter ONLY if QR was printed after rawData (rawData already contains ESC/POS cut command)
+                if (didPrintQr) {
+                    try {
+                        await SunmiPrinter.cutPaper();
+                    } catch (cutErr) {
+                        // non-fatal if built-in printer has manual tear bar instead of auto cutter
+                    }
                 }
 
                 // Buffer delay (200ms) for physical motor, paper feed, and cutter completion
