@@ -704,14 +704,18 @@ export default function SlipModal({ booking, type, onClose }) {
 
                     ${(() => {
                         let asciiHtml = '';
+                        if (isKitchenTab) return '';
                         try {
                             const stored = localStorage.getItem('onhaus_printer_config');
-                            if (stored) {
+                            let art = printerConfig?.footer_ascii_art || '';
+                            if (!art && stored) {
                                 const cfg = JSON.parse(stored);
-                                if (cfg.footer_ascii_art) {
-                                    asciiHtml = `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${cfg.footer_ascii_art}</pre>`;
-                                }
+                                art = cfg.footer_ascii_art || '';
                             }
+                            if (!art) {
+                                art = `T H A N K   Y O U\n  S E E   Y O U   A G A I N`;
+                            }
+                            asciiHtml = `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>`;
                         } catch(e) {}
                         return asciiHtml;
                     })()}
@@ -1251,11 +1255,17 @@ export default function SlipModal({ booking, type, onClose }) {
                             </div>
                         )}
                         
-                        {/* Footer */}
-                        <div className="text-center mt-6 space-y-0.5">
-                            <div className="text-[9px] font-black tracking-[0.2em] uppercase">INTHEHAUS</div>
-                            <div className="text-[8px] font-mono text-gray-400">THANK YOU FOR YOUR VISIT</div>
-                        </div>
+                        {/* Footer & ASCII Art */}
+                        {!isKitchenTab && (
+                            <div className="text-center mt-5 space-y-1">
+                                <pre className="font-mono text-[9px] font-bold leading-tight text-center whitespace-pre overflow-x-auto text-black my-1.5">
+                                    {printerConfig.footer_ascii_art || `T H A N K   Y O U\n  S E E   Y O U   A G A I N`}
+                                </pre>
+                                <div className="text-[8px] font-mono text-gray-500 font-bold uppercase tracking-wider">
+                                    {receiptShopFooter || 'THANK YOU FOR YOUR VISIT'}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

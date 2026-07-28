@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
+import ViewSlipModal from '../components/shared/ViewSlipModal';
 
 export default function POSOrderPanel({ 
     order, 
@@ -28,6 +29,7 @@ export default function POSOrderPanel({
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
     const [cashReceivedInput, setCashReceivedInput] = React.useState('');
+    const [viewSlipModalUrl, setViewSlipModalUrl] = React.useState(null);
     
     // Points states
     const [xhausToRedeem, setXhausToRedeem] = React.useState(0);
@@ -540,7 +542,7 @@ export default function POSOrderPanel({
                         <span>Payment Slip Received</span>
                     </div>
                     <button 
-                        onClick={() => window.open(`https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${booking.payment_slip_url}`, '_blank')}
+                        onClick={() => setViewSlipModalUrl(booking.payment_slip_url)}
                         className="w-full bg-[#00CC44] hover:bg-[#00B33C] text-white py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                     >
                         <Receipt size={10} /> View Slip Image
@@ -1589,6 +1591,12 @@ export default function POSOrderPanel({
                     </div>
                 </div>
             )}
+
+            {/* View Slip Modal */}
+            <ViewSlipModal 
+                url={viewSlipModalUrl} 
+                onClose={() => setViewSlipModalUrl(null)} 
+            />
         </aside>
     );
 }

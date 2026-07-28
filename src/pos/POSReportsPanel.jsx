@@ -14,12 +14,16 @@ import {
     Clock,
     ChevronDown,
     ChevronUp,
-    X
+    X,
+    Image as ImageIcon,
+    Search,
+    Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
+import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData } from '../utils/printerHelper';
 import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction } from '../utils/shiftHelper';
 
@@ -35,10 +39,17 @@ export default function POSReportsPanel() {
     const [expandedShiftId, setExpandedShiftId] = useState(null);
     const [expandedShiftDetails, setExpandedShiftDetails] = useState({});
     const [payMethodFilter, setPayMethodFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [viewSlipUrl, setViewSlipUrl] = useState(null);
 
     // Filter Date (Defaults to Today in Asia/Bangkok)
     const getBangkokDate = () => {
         return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+    };
+    const getYesterdayBangkokDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
     };
     const [filterDate, setFilterDate] = useState(getBangkokDate());
 
@@ -301,10 +312,22 @@ export default function POSReportsPanel() {
         .filter(b => getBookingPaymentMethod(b) === 'credit')
         .reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
-    // Filter bookings for breakdown calculations based on payment method
+    // Filter bookings for breakdown calculations based on payment method & search query
     const filteredForBreakdown = completedBookings.filter(b => {
-        if (payMethodFilter === 'all') return true;
-        return getBookingPaymentMethod(b) === payMethodFilter;
+        if (payMethodFilter !== 'all' && getBookingPaymentMethod(b) !== payMethodFilter) return false;
+
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            const token = b.tracking_token ? b.tracking_token.toLowerCase() : '';
+            const idStr = String(b.id).toLowerCase();
+            const tableName = (b.tables_layout?.table_name || '').toLowerCase();
+            const guestName = (b.profiles?.display_name || b.pickup_contact_name || b.customer_name || '').toLowerCase();
+            const phone = (b.profiles?.phone_number || b.pickup_contact_phone || '').toLowerCase();
+            const remark = (b.staff_remark || '').toLowerCase();
+
+            return token.includes(q) || idStr.includes(q) || tableName.includes(q) || guestName.includes(q) || phone.includes(q) || remark.includes(q);
+        }
+        return true;
     });
 
     // Category sales compile
@@ -674,7 +697,21 @@ iframe.contentDocument.write(htmlContent);
                     <h3 className="font-mono font-bold text-sm tracking-wider uppercase">Daily Sales & Shift Report</h3>
                     <p className="text-[10px] text-[#767673] font-bold font-mono mt-0.5 uppercase tracking-tight">Verify collections, payments, and print shift reports</p>
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto font-mono text-[10px]">
+                <div className="flex items-center gap-2 w-full md:w-auto font-mono text-[10px] flex-wrap">
+                    <div className="flex items-center bg-white border border-[#D1D1CD] rounded-lg p-0.5 shadow-xs">
+                        <button
+                            onClick={() => setFilterDate(getBangkokDate())}
+                            className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${filterDate === getBangkokDate() ? 'bg-[#1A1A1A] text-white' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        >
+                            วันนี้
+                        </button>
+                        <button
+                            onClick={() => setFilterDate(getYesterdayBangkokDate())}
+                            className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${filterDate === getYesterdayBangkokDate() ? 'bg-[#1A1A1A] text-white' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        >
+                            เมื่อวาน
+                        </button>
+                    </div>
                     <input 
                         type="date"
                         value={filterDate}
@@ -883,12 +920,29 @@ iframe.contentDocument.write(htmlContent);
                         </div>
                     )}
 
-                    {/* Filter Bar for Bottom Layout */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm select-none">
-                        <div className="text-xs font-mono font-bold text-[#1A1A1A] uppercase tracking-wider">
-                            ตัวกรองสถิติและรายการบิล (Breakdown Filter)
+                    {/* Filter & Search Bar for Completed Bills */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm select-none">
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-72">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767673]" />
+                                <input
+                                    type="text"
+                                    placeholder="ค้นหาเลขบิล / โต๊ะ / ชื่อลูกค้า / หมายเหตุ..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-[#F5F5F2] border border-[#D1D1CD] focus:border-[#ff0000] pl-9 pr-3 py-1.5 rounded-lg text-xs font-sans font-bold text-[#1A1A1A] outline-none placeholder:text-[#767673]"
+                                />
+                                {searchQuery && (
+                                    <button 
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#767673] hover:text-[#1A1A1A] text-xs font-mono font-bold"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1 bg-[#F5F5F2] border border-[#D1D1CD] p-1 rounded-lg">
+                        <div className="flex items-center gap-1 bg-[#F5F5F2] border border-[#D1D1CD] p-1 rounded-lg w-full md:w-auto overflow-x-auto">
                             {[
                                 { id: 'all', label: 'ทั้งหมด (All)' },
                                 { id: 'cash', label: 'เงินสด (Cash)' },
@@ -898,7 +952,7 @@ iframe.contentDocument.write(htmlContent);
                                 <button
                                     key={btn.id}
                                     onClick={() => setPayMethodFilter(btn.id)}
-                                    className={`px-3 py-1.5 rounded-md font-mono text-[9px] font-bold uppercase transition-all cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-md font-mono text-[9px] font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
                                         payMethodFilter === btn.id
                                             ? 'bg-white text-[#1A1A1A] shadow-sm border border-[#D1D1CD]'
                                             : 'text-[#767673] hover:text-[#1A1A1A] border border-transparent'
@@ -1000,6 +1054,15 @@ iframe.contentDocument.write(htmlContent);
                                                         ฿{b.total_amount?.toLocaleString()}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right flex justify-end gap-1">
+                                                        {b.payment_slip_url && (
+                                                            <button 
+                                                                onClick={() => setViewSlipUrl(b.payment_slip_url)}
+                                                                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-700 hover:text-emerald-900 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                                title="ดูรูปสลิปหลักฐานโอนเงิน"
+                                                            >
+                                                                <ImageIcon size={10} />
+                                                            </button>
+                                                        )}
                                                         <button 
                                                             onClick={() => setActiveReprintBooking(b)}
                                                             className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
@@ -1220,6 +1283,12 @@ iframe.contentDocument.write(htmlContent);
                     onClose={() => setActiveReprintBooking(null)}
                 />
             )}
+
+            {/* View Payment Slip Image Modal */}
+            <ViewSlipModal 
+                url={viewSlipUrl}
+                onClose={() => setViewSlipUrl(null)}
+            />
         </div>
     );
 }
