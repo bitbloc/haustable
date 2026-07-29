@@ -1057,7 +1057,36 @@ export default function AdminSettings() {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1">รอบเวลาให้บริการ (Comma separated)</label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-bold text-gray-700">รอบเวลาให้บริการ (Comma separated)</label>
+                                <span className="text-[10px] text-gray-400 font-medium">💡 แนะนำ: รอบละ 1 ชม. ลดการชนคิวหน้าร้าน</span>
+                            </div>
+                            
+                            {/* Preset Buttons */}
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setSettings(prev => ({ ...prev, booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00, 21:00' }))}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-bold transition-all cursor-pointer"
+                                >
+                                    ⚡ ทุก 1 ชั่วโมง (แนะนำสำหรับร้านอาหาร)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSettings(prev => ({ ...prev, booking_time_slots: '11:00, 11:30, 12:00, 12:30, 13:00, 13:30, 14:00, 14:30, 15:00, 15:30, 16:00, 16:30, 17:00, 17:30, 18:00, 18:30, 19:00, 19:30, 20:00, 20:30, 21:00' }))}
+                                    className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 text-[11px] font-bold transition-all cursor-pointer"
+                                >
+                                    ⏱ ทุก 30 นาที (สำหรับหมุนเร็ว/คาเฟ่)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSettings(prev => ({ ...prev, booking_time_slots: '11:00, 12:30, 14:00, 17:00, 18:30, 20:00' }))}
+                                    className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 text-[11px] font-bold transition-all cursor-pointer"
+                                >
+                                    🍷 ทุก 1.5 ชั่วโมง (สำหรับมื้อยาว)
+                                </button>
+                            </div>
+
                             <input
                                 type="text"
                                 value={settings.booking_time_slots || ''}
