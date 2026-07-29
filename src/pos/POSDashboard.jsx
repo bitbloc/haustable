@@ -17,7 +17,7 @@ import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRe
 import { isOnline } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync } from '../utils/printerHelper';
-import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check } from 'lucide-react';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
