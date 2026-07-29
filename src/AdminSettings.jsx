@@ -701,51 +701,69 @@ export default function AdminSettings() {
                 <InstallPWA />
             </div>
 
-            {/* Tabs Control */}
-            <div className="flex flex-wrap border-b border-gray-200 mb-4 gap-2 md:gap-3">
+            {/* Tabs Control - Google Workspace Style Seamless Nav */}
+            <div className="bg-white p-2 rounded-2xl border border-gray-200/80 shadow-sm mb-6 flex flex-wrap gap-1">
                 {[
-                    { id: 'booking', label: '🍽 ตั้งค่าระบบหลัก & การจอง', desc: 'Core Settings & Booking' },
-                    { id: 'link', label: '🔗 หน้า Landing Page (/link)', desc: 'Link Page Manager' },
-                    { id: 'checkins', label: '📸 จัดการรูปเช็กอิน / รีวิว', desc: 'Manage Check-in Stream' },
-                    { id: 'integrations', label: '⚙️ ระบบภายนอก & API', desc: 'Spotify & QR Ordering APIs' },
-                    { id: 'printers', label: '🖨 ตั้งค่าเครื่องพิมพ์ & หน้าใบเสร็จ', desc: 'Hardware, Shop Header, Logo, Layout & Preview' },
-                    { id: 'crm', label: '🪙 ระบบ CRM & สะสมเหรียญ xhaus', desc: 'Manage Tiers & Coins Settings' },
-                    { id: 'debug', label: '🔧 บั๊ก & รายงานความผิดพลาด', desc: 'Crash Reporting & Debug Logs' }
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setActiveSettingsTab(tab.id)}
-                        className={`pb-2 pt-1.5 px-3 text-left rounded-t-xl font-bold transition-all relative flex flex-col cursor-pointer border border-b-0 ${
-                            activeSettingsTab === tab.id
-                                ? 'bg-white border-gray-200 text-brandDark font-extrabold shadow-sm -mb-px z-10'
-                                : 'bg-gray-50 border-transparent text-subInk hover:text-ink hover:bg-gray-100'
-                        }`}
-                    >
-                        <span className="text-xs md:text-sm font-bold leading-tight">{tab.label}</span>
-                        <span className="text-[9px] font-normal opacity-70 mt-0.5 leading-tight">{tab.desc}</span>
-                    </button>
-                ))}
+                    { id: 'booking', label: '🍽 ตั้งค่าร้าน & การจอง', desc: 'Core & Booking', icon: Power },
+                    { id: 'link', label: '🔗 Landing Page', desc: 'Link Manager', icon: FileText },
+                    { id: 'checkins', label: '📸 เช็กอิน / รีวิว', desc: 'Reviews', icon: Heart },
+                    { id: 'integrations', label: '⚙️ APIs & QR', desc: 'Integrations', icon: Terminal },
+                    { id: 'printers', label: '🖨 เครื่องพิมพ์ & สลิป', desc: 'Hardware & Receipts', icon: QrCode },
+                    { id: 'crm', label: '🪙 CRM & xhaus Coins', desc: 'Loyalty Program', icon: Coins },
+                    { id: 'debug', label: '🔧 Debug Logs', desc: 'System Logs', icon: AlertTriangle }
+                ].map(tab => {
+                    const IconComp = tab.icon;
+                    const isActive = activeSettingsTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveSettingsTab(tab.id)}
+                            className={`flex-1 min-w-[140px] px-3.5 py-2.5 rounded-xl font-bold text-left transition-all cursor-pointer flex items-center gap-3 ${
+                                isActive
+                                    ? 'bg-[#1A1A1A] text-white shadow-md'
+                                    : 'text-gray-600 hover:text-black hover:bg-gray-100/80'
+                            }`}
+                        >
+                            <div className={`p-2 rounded-lg ${isActive ? 'bg-white/15 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                <IconComp size={16} />
+                            </div>
+                            <div className="min-w-0">
+                                <span className="text-xs font-bold leading-tight block truncate">{tab.label}</span>
+                                <span className={`text-[9px] block truncate font-normal ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>{tab.desc}</span>
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* TAB 1: Booking & Core Settings */}
+            {/* TAB 1: Booking & Core Settings - Seamless Google Workspace Style Layout */}
             {activeSettingsTab === 'booking' && (
-                <div className="space-y-4 animate-fade-in">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                            {/* Enable Booking System - Redesigned as a Card */}
-                            <label className={`block bg-white p-5 rounded-xl border transition-all cursor-pointer shadow-sm ${settings.is_menu_system_enabled === 'true' ? 'border-[#FF5500] ring-1 ring-[#FF5500]/10' : 'border-[#D1D1CD] hover:border-[#B0B0AC]'}`}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-[#FF5500]' : 'bg-[#E0E0DC]'}`}>
-                                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
+                <div className="space-y-6 animate-fade-in">
+                    
+                    {/* Top Row: Master Switches & Status Controls */}
+                    <div className="grid lg:grid-cols-12 gap-6">
+                        
+                        {/* Column 1: Switches & Shop Status (8 cols) */}
+                        <div className="lg:col-span-7 space-y-6">
+                            
+                            {/* Master Toggle Cards */}
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                {/* Booking System Toggle */}
+                                <label className={`bg-white p-5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${settings.is_menu_system_enabled === 'true' ? 'border-emerald-500/50 bg-emerald-50/10 ring-1 ring-emerald-500/20' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl">
+                                            <Power size={20} />
                                         </div>
-                                        <div>
-                                            <span className="block font-bold text-sm text-[#1A1A1A]">
-                                                Booking System {settings.is_menu_system_enabled === 'true' ? 'Active' : 'Disabled'}
-                                            </span>
-                                            <span className="text-[10px] text-[#767673]">Master switch for all customer ordering</span>
+                                        <div className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+                                            <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <span className="block font-bold text-sm text-gray-900">
+                                            Booking System {settings.is_menu_system_enabled === 'true' ? 'Active' : 'Disabled'}
+                                        </span>
+                                        <span className="text-[11px] text-gray-500">Master switch for online ordering</span>
                                     </div>
                                     <input
                                         type="checkbox"
@@ -753,22 +771,23 @@ export default function AdminSettings() {
                                         checked={settings.is_menu_system_enabled === 'true'}
                                         onChange={(e) => handleSave('is_menu_system_enabled', e.target.checked ? 'true' : 'false')}
                                     />
-                                </div>
-                            </label>
+                                </label>
 
-                            {/* Default VAT (7%) Toggle - Redesigned as a Card */}
-                            <label className={`block bg-white p-5 rounded-xl border transition-all cursor-pointer shadow-sm ${settings.default_vat_enabled === 'true' ? 'border-[#FF5500] ring-1 ring-[#FF5500]/10' : 'border-[#D1D1CD] hover:border-[#B0B0AC]'}`}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${settings.default_vat_enabled === 'true' ? 'bg-[#FF5500]' : 'bg-[#E0E0DC]'}`}>
-                                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.default_vat_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
+                                {/* Default VAT Toggle */}
+                                <label className={`bg-white p-5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${settings.default_vat_enabled === 'true' ? 'border-blue-500/50 bg-blue-50/10 ring-1 ring-blue-500/20' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-2.5 bg-blue-100 text-blue-700 rounded-xl">
+                                            <TrendingUp size={20} />
                                         </div>
-                                        <div>
-                                            <span className="block font-bold text-sm text-[#1A1A1A]">
-                                                Default VAT (7%) {settings.default_vat_enabled === 'true' ? 'Enabled' : 'Disabled'}
-                                            </span>
-                                            <span className="text-[10px] text-[#767673]">เปิด-ปิด ภาษีมูลค่าเพิ่ม 7% เริ่มต้นของร้าน</span>
+                                        <div className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-300 ${settings.default_vat_enabled === 'true' ? 'bg-blue-500' : 'bg-gray-200'}`}>
+                                            <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.default_vat_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <span className="block font-bold text-sm text-gray-900">
+                                            Default VAT (7%) {settings.default_vat_enabled === 'true' ? 'Enabled' : 'Disabled'}
+                                        </span>
+                                        <span className="text-[11px] text-gray-500">ภาษีมูลค่าเพิ่ม 7% เริ่มต้นของร้าน</span>
                                     </div>
                                     <input
                                         type="checkbox"
@@ -776,142 +795,165 @@ export default function AdminSettings() {
                                         checked={settings.default_vat_enabled === 'true'}
                                         onChange={(e) => handleSave('default_vat_enabled', e.target.checked ? 'true' : 'false')}
                                     />
+                                </label>
+                            </div>
+
+                            {/* Shop Status Control Card */}
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-6">
+                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-gray-100 text-gray-700 rounded-xl">
+                                            <Power size={18} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-base font-bold text-gray-900">Shop Status Controls</h2>
+                                            <p className="text-xs text-gray-500">จัดการสถานะเปิด-ปิดรับจองหน้าร้านและออนไลน์</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </label>
 
-                            {/* Shop Status Control - Split into 3 */}
-                            <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-8 shadow-sm">
-                                <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                                     <Power size={20} className="text-brandDark" /> Shop Status Controls
-                                </h2>
-
-                                {/* 1. Table Booking Status */}
+                                {/* Table Booking Status */}
                                 <div className="space-y-3">
-                                    <h3 className="text-sm font-bold text-subInk uppercase">🍽 Table Booking Status</h3>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                                            <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_table === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
-                                                <input
-                                                    type="radio"
-                                                    name="shop_mode_table"
-                                                    checked={settings.shop_mode_table === mode}
-                                                    onChange={() => handleSave('shop_mode_table', mode)}
-                                                    className="accent-brandDark w-4 h-4"
-                                                />
-                                                <div>
-                                                    <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
-                                                    <span className="text-[10px] text-subInk">
-                                                        {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
-                                                    </span>
-                                                </div>
-                                            </label>
+                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">🍽 Table Booking Status</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
+                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-700 border-blue-300' },
+                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-700 border-red-300' }
+                                        ].map(({ mode, label, color }) => (
+                                            <button
+                                                key={mode}
+                                                type="button"
+                                                onClick={() => handleSave('shop_mode_table', mode)}
+                                                className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                    settings.shop_mode_table === mode
+                                                        ? `${color} ring-2 ring-black/10 shadow-sm font-extrabold`
+                                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* 2. Pickup Status */}
-                                <div className="space-y-3 border-t border-gray-100 pt-4">
-                                    <h3 className="text-sm font-bold text-subInk uppercase">🛍 Pickup Status</h3>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {['auto', 'manual_open', 'manual_close'].map((mode) => (
-                                            <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${settings.shop_mode_pickup === mode ? 'bg-brand/10 border-brand' : 'border-gray-200 hover:bg-gray-50'}`}>
-                                                <input
-                                                    type="radio"
-                                                    name="shop_mode_pickup"
-                                                    checked={settings.shop_mode_pickup === mode}
-                                                    onChange={() => handleSave('shop_mode_pickup', mode)}
-                                                    className="accent-brandDark w-4 h-4"
-                                                />
-                                                <div>
-                                                    <span className="block text-ink font-bold text-sm capitalize">{mode.replace('_', ' ')}</span>
-                                                    <span className="text-[10px] text-subInk">
-                                                        {mode === 'auto' ? 'กำหนดเวลาการจองกี่โมงถึงกี่โมง (Based on schedule)' : (mode === 'manual_open' ? 'Force Open' : 'Force Close')}
-                                                    </span>
-                                                </div>
-                                            </label>
+                                {/* Pickup Status */}
+                                <div className="space-y-3 pt-2">
+                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">🛍 Pickup Status</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
+                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-700 border-blue-300' },
+                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-700 border-red-300' }
+                                        ].map(({ mode, label, color }) => (
+                                            <button
+                                                key={mode}
+                                                type="button"
+                                                onClick={() => handleSave('shop_mode_pickup', mode)}
+                                                className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                    settings.shop_mode_pickup === mode
+                                                        ? `${color} ring-2 ring-black/10 shadow-sm font-extrabold`
+                                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
 
-
-                                {/* Time Settings */}
+                                {/* Schedule Hours */}
                                 <div className="pt-4 border-t border-gray-100">
-                                    <p className="text-[10px] text-subInk mb-3">* Time settings below apply to all "Auto" modes</p>
-                                    <div className={`grid grid-cols-2 gap-4 transition-opacity duration-300`}>
+                                    <p className="text-xs text-gray-400 font-medium mb-3">* เวลาเปิด-ปิดสำหรับโหมด Auto</p>
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs text-subInk mb-1">Opens at</label>
-                                            <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand shadow-inner" />
+                                            <label className="block text-xs font-bold text-gray-700 mb-1">เวลาเปิด (Opens at)</label>
+                                            <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black" />
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-subInk mb-1">Closes at</label>
-                                            <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand shadow-inner" />
+                                            <label className="block text-xs font-bold text-gray-700 mb-1">เวลาปิด (Closes at)</label>
+                                            <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black" />
                                         </div>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
 
-                        {/* Blocked Dates Management */}
-                        <div className="bg-paper p-6 md:p-8 rounded-3xl border border-gray-200 space-y-6 flex flex-col shadow-sm h-full">
-                            <div className="flex-1">
-                                <h2 className="text-xl font-bold text-ink flex items-center gap-2 mb-2">
-                                    <Calendar size={20} className="text-red-500" /> Blocked Dates
-                                </h2>
-                                <p className="text-xs text-subInk mb-6">Close bookings for specific days or ranges.</p>
-
-                                <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-6 bg-canvas p-4 rounded-xl border border-gray-200">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="text-[10px] text-subInk uppercase font-bold">วันที่เริ่มหยุด (Start)</label>
-                                            <input
-                                                type="date"
-                                                value={blockForm.startDate}
-                                                onClick={(e) => e.target.showPicker?.()}
-                                                onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })}
-                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-ink text-sm focus:border-brand outline-none cursor-pointer"
-                                                required
-                                            />
+                        {/* Column 2: Blocked Dates (5 cols) */}
+                        <div className="lg:col-span-5">
+                            <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm h-full flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+                                        <div className="p-2.5 bg-red-100 text-red-700 rounded-xl">
+                                            <Calendar size={18} />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] text-subInk uppercase font-bold">ถึงวันที่ (End)</label>
-                                            <input
-                                                type="date"
-                                                value={blockForm.endDate}
-                                                min={blockForm.startDate}
-                                                onClick={(e) => e.target.showPicker?.()}
-                                                onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })}
-                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-ink text-sm focus:border-brand outline-none cursor-pointer"
-                                            />
+                                            <h2 className="text-base font-bold text-gray-900">Blocked Dates</h2>
+                                            <p className="text-xs text-gray-500">ปิดรับจองเฉพาะวันพิเศษ/วันหยุด</p>
                                         </div>
                                     </div>
-                                    <input type="text" placeholder="Reason (e.g. Holiday)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-ink text-sm focus:border-brand outline-none" />
-                                    <button className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg text-sm transition-colors mt-1 cursor-pointer">Block Dates</button>
-                                </form>
 
-                                <div className="space-y-2 max-h-[350px] overflow-y-auto custom-scrollbar">
-                                    {blockedList.map(item => (
-                                        <div key={item.id} className="flex justify-between items-center bg-canvas p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                                    <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200/60">
+                                        <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <div className="text-ink text-sm font-bold">{new Date(item.blocked_date).toLocaleDateString()}</div>
-                                                <div className="text-xs text-subInk">{item.reason}</div>
+                                                <label className="text-[10px] text-gray-500 uppercase font-bold">วันที่เริ่มหยุด</label>
+                                                <input
+                                                    type="date"
+                                                    value={blockForm.startDate}
+                                                    onClick={(e) => e.target.showPicker?.()}
+                                                    onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })}
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-gray-900 outline-none focus:border-black cursor-pointer"
+                                                    required
+                                                />
                                             </div>
-                                            <button onClick={() => handleDeleteBlockedDate(item.id)} className="text-red-500 hover:text-red-400 p-2 cursor-pointer"><Trash2 size={16} /></button>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 uppercase font-bold">ถึงวันที่</label>
+                                                <input
+                                                    type="date"
+                                                    value={blockForm.endDate}
+                                                    min={blockForm.startDate}
+                                                    onClick={(e) => e.target.showPicker?.()}
+                                                    onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })}
+                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-gray-900 outline-none focus:border-black cursor-pointer"
+                                                />
+                                            </div>
                                         </div>
-                                    ))}
-                                    {blockedList.length === 0 && (
-                                        <div className="text-center text-subInk text-xs py-10">No blocked dates</div>
-                                    )}
+                                        <input type="text" placeholder="สาเหตุ (เช่น วันหยุดนักขัตฤกษ์)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 outline-none focus:border-black" />
+                                        <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-sm">
+                                            + เพิ่มวันหยุด (Block Date)
+                                        </button>
+                                    </form>
+
+                                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                        {blockedList.map(item => (
+                                            <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200/60 hover:border-gray-300 transition-colors">
+                                                <div>
+                                                    <div className="text-gray-900 text-xs font-bold">{new Date(item.blocked_date).toLocaleDateString('th-TH')}</div>
+                                                    <div className="text-[11px] text-gray-500">{item.reason || 'ปิดรับจอง'}</div>
+                                                </div>
+                                                <button onClick={() => handleDeleteBlockedDate(item.id)} className="text-red-500 hover:text-red-700 p-1.5 cursor-pointer rounded-lg hover:bg-red-50 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {blockedList.length === 0 && (
+                                            <div className="text-center text-gray-400 text-xs font-mono py-8">ไม่มีวันหยุดที่ตั้งค่าไว้</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
                     {/* Announcement Card Settings */}
-                    <div className="bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                                Announcement Card
-                            </h2>
+                    <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-6">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-900">Announcement & Store Policies</h2>
+                                <p className="text-xs text-gray-500">จัดการข้อความประกาศ เงื่อนไขการสั่ง และรอบเวลาบริการ</p>
+                            </div>
                             <button
                                 onClick={async () => {
                                     await handleSave('announcement_headline', settings.announcement_headline)
@@ -926,120 +968,125 @@ export default function AdminSettings() {
                                     await handleSave('contact_map_url', settings.contact_map_url)
                                     alert('บันทึกการตั้งค่าเรียบร้อย!')
                                 }}
-                                className="flex items-center gap-2 bg-brand text-ink px-4 py-2 rounded-full font-bold text-sm hover:scale-105 transition-transform shadow cursor-pointer"
+                                className="flex items-center gap-2 bg-[#1A1A1A] hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-xs transition-transform active:scale-95 shadow cursor-pointer"
                             >
-                                <Save size={16} /> บันทึกการ์ดประกาศ
+                                <Save size={16} /> บันทึกการตั้งค่า
                             </button>
                         </div>
-                        <div>
-                            <label className="block text-xs text-subInk mb-1">Headline (Bold)</label>
-                            <input
-                                type="text"
-                                value={settings.announcement_headline || ''}
-                                onChange={(e) => setSettings(prev => ({ ...prev, announcement_headline: e.target.value }))}
-                                placeholder="e.g. BY ร้านในบ้าน"
-                                className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs text-subInk mb-1">Detail (Marquee)</label>
-                            <input
-                                type="text"
-                                value={settings.announcement_detail || ''}
-                                onChange={(e) => setSettings(prev => ({ ...prev, announcement_detail: e.target.value }))}
-                                placeholder="e.g. IN THE HAUS..."
-                                className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
-                            />
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Headline (หัวข้อข่าวประกาศ)</label>
+                                <input
+                                    type="text"
+                                    value={settings.announcement_headline || ''}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, announcement_headline: e.target.value }))}
+                                    placeholder="เช่น BY ร้านในบ้าน"
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Detail (ข้อความวิ่ง Marquee)</label>
+                                <input
+                                    type="text"
+                                    value={settings.announcement_detail || ''}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, announcement_detail: e.target.value }))}
+                                    placeholder="เช่น IN THE HAUS..."
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm text-gray-900 outline-none focus:border-black"
+                                />
+                            </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid md:grid-cols-2 gap-4">
                              <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Contact Phone</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">เบอร์โทรติดต่อร้าน (Contact Phone)</label>
                                 <input
                                     type="text"
                                     value={settings.contact_phone || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, contact_phone: e.target.value }))}
-                                    placeholder="e.g. 0812345678"
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono"
+                                    placeholder="เช่น 0812345678"
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-mono text-gray-900 outline-none focus:border-black"
                                 />
                              </div>
                              <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Google Maps URL</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Google Maps URL</label>
                                 <input
                                     type="text"
                                     value={settings.contact_map_url || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, contact_map_url: e.target.value }))}
                                     placeholder="https://maps.google.com/..."
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm text-gray-900 outline-none focus:border-black"
                                 />
                              </div>
                         </div>
 
                         {/* Policy & Rate Settings */}
-                        <div className="pt-4 border-t border-gray-100 space-y-4">
+                        <div className="pt-4 border-t border-gray-100 grid md:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Minimum Spend per Person (THB)</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">ขั้นต่ำต่อท่าน (บาท)</label>
                                 <input
                                     type="number"
                                     value={settings.booking_min_spend || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, booking_min_spend: e.target.value }))}
-                                    placeholder="e.g. 150"
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
+                                    placeholder="150"
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Min Advance Booking (Hours)</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">จองล่วงหน้าขั้นต่ำ (ชั่วโมง)</label>
                                 <input
                                     type="number"
                                     value={settings.booking_min_advance_hours || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, booking_min_advance_hours: e.target.value }))}
-                                    placeholder="e.g. 2"
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
+                                    placeholder="2"
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Min Advance Pickup (Hours)</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">Pickup ล่วงหน้าขั้นต่ำ (ชั่วโมง)</label>
                                 <input
                                     type="number"
                                     value={settings.pickup_min_advance_hours || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, pickup_min_advance_hours: e.target.value }))}
-                                    placeholder="e.g. 1"
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand"
+                                    placeholder="1"
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black"
                                 />
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Service Time Slots (Comma separated)</label>
-                                <input
-                                    type="text"
-                                    value={settings.booking_time_slots || ''}
-                                    onChange={(e) => setSettings(prev => ({ ...prev, booking_time_slots: e.target.value }))}
-                                    placeholder="e.g. 11:00, 12:00, 13:00"
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand font-mono"
-                                />
-                            </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">รอบเวลาให้บริการ (Comma separated)</label>
+                            <input
+                                type="text"
+                                value={settings.booking_time_slots || ''}
+                                onChange={(e) => setSettings(prev => ({ ...prev, booking_time_slots: e.target.value }))}
+                                placeholder="11:00, 12:00, 13:00..."
+                                className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-mono text-gray-900 outline-none focus:border-black"
+                            />
+                        </div>
 
+                        <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Dine-in Policy (Before Pay)</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">เงื่อนไขการจอง Dine-in (หน้าชำระเงิน)</label>
                                 <textarea
                                     rows={3}
                                     value={settings.policy_dine_in || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, policy_dine_in: e.target.value }))}
-                                    placeholder="Message above the confirm checkbox..."
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand text-sm"
+                                    placeholder="ข้อความนโยบายการจอง..."
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-xs text-gray-900 outline-none focus:border-black"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs text-brandDark font-bold mb-1">Pickup Policy (Before Pay)</label>
+                                <label className="block text-xs font-bold text-gray-700 mb-1">เงื่อนไข Pickup (หน้าชำระเงิน)</label>
                                 <textarea
                                     rows={3}
                                     value={settings.policy_pickup || ''}
                                     onChange={(e) => setSettings(prev => ({ ...prev, policy_pickup: e.target.value }))}
-                                    placeholder="Message above the confirm checkbox..."
-                                    className="w-full bg-canvas border border-gray-200 p-3 rounded-xl text-ink outline-none focus:border-brand text-sm"
+                                    placeholder="ข้อความนโยบายการสั่งกลับบ้าน..."
+                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-xs text-gray-900 outline-none focus:border-black"
                                 />
                             </div>
                         </div>
