@@ -637,6 +637,29 @@ export default function ArcadeLobby() {
                 <div className="mt-4 text-center text-[10px] text-[var(--color-ink-2)] font-mono leading-relaxed max-w-sm border-t border-dashed border-[var(--color-rule)] w-full pt-3">
                   <span className="text-[var(--color-accent)] font-bold">// INSTRUCTION:</span> แตะหน้าจอช่วยแมวส้มบินเพื่อสะสมแต้มแลกเหรียญ xhaus!
                 </div>
+
+                {/* SATOR CHILL Teaser */}
+                <div className="mt-8 w-full border border-dashed border-[var(--color-rule)] rounded-[4px] p-5 bg-[#1b1c1e] flex flex-col sm:flex-row items-center gap-5 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+                  <div className="w-16 h-16 shrink-0 bg-black border border-[#2d2e30] rounded flex items-center justify-center p-2 relative overflow-hidden">
+                    {/* Pixel art mockup placeholder */}
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#06C755 1px, transparent 1px)', backgroundSize: '4px 4px' }}></div>
+                    <div className="text-[32px] leading-none select-none z-10 filter drop-shadow-[0_0_2px_#06C755]">🎧</div>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-bold font-mono text-[#06C755] uppercase tracking-widest drop-shadow-[0_0_4px_rgba(6,199,85,0.4)]">
+                        SATOR CHILL
+                      </h3>
+                      <span className="text-[8px] font-mono bg-red-600 text-white px-1.5 py-0.5 rounded-sm animate-pulse border border-red-400">
+                        COMING SOON
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 font-mono leading-relaxed">
+                      // NEW 8-BIT ARCADE EXPERIENCE<br />
+                      เดินหลับตาฟังเพลง เก็บ <span className="text-emerald-400 font-bold">เม็ดสะตอพิกเซล</span> ซดเบียร์เย็นๆ หรือน้ำแดงโซดา หนีคนเกลียดกลิ่นสะตอ... เร็วๆ นี้!
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
