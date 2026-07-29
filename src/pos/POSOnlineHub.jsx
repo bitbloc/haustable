@@ -312,6 +312,20 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             ลูกค้ารับแล้ว
                         </button>
                     )}
+
+                    {/* Cancel / Dismiss stuck order */}
+                    {order.status !== 'cancelled' && order.status !== 'completed' && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm(`ยกเลิกออเดอร์ของ "${name}" ?\nออเดอร์จะถูกย้ายไปแท็บ "ยกเลิกแล้ว"`)) {
+                                    updateBookingStatus(order.id, 'cancelled');
+                                }
+                            }}
+                            className="shrink-0 flex items-center justify-center gap-1 py-2 px-3 rounded border border-red-200 bg-red-50 text-red-700 text-xs font-bold transition-all hover:bg-red-100 active:scale-95 cursor-pointer"
+                        >
+                            ✕ ยกเลิก
+                        </button>
+                    )}
                 </div>
             </motion.div>
         );

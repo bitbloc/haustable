@@ -219,17 +219,11 @@ export default function SlipModal({ booking, type, onClose }) {
                 await new Promise(resolve => setTimeout(resolve, 400));
                 try {
                     let activePaperSize = '80mm';
-                    try {
-                        const stored = localStorage.getItem('onhaus_printer_config');
-                        if (stored) {
-                            const config = JSON.parse(stored);
-                            if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
-                                activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
-                            } else {
-                                activePaperSize = config.cashier_paper_size || config.paper_width || '80mm';
-                            }
-                        }
-                    } catch (e) {}
+                    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+                        activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
+                    } else {
+                        activePaperSize = printerConfig.cashier_paper_size || printerConfig.paper_width || '80mm';
+                    }
 
                     if (activeTab === 'kitchen') {
                         // Print Kitchen slip (KITCHEN ORDER / ใบออเดอร์ครัว)
@@ -290,14 +284,7 @@ export default function SlipModal({ booking, type, onClose }) {
         const kitchenCatIds = printerConfig.kitchen_categories || [];
         const barCatIds = printerConfig.bar_categories || [];
         
-        let isSeparateBarPrinterEnabled = false;
-        try {
-            const stored = localStorage.getItem('onhaus_printer_config');
-            if (stored) {
-                const config = JSON.parse(stored);
-                isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-            }
-        } catch (e) {}
+        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
 
         let filteredItems = booking.order_items || [];
         if (activeTab === 'kitchen_all' || (activeTab === 'kitchen' && !isSeparateBarPrinterEnabled)) {
@@ -485,11 +472,9 @@ export default function SlipModal({ booking, type, onClose }) {
             
             let cashChangeHtml = ''
             if (paymentMethod === 'cash') {
-                const storedRecv = localStorage.getItem('last_cash_received');
-                const storedChange = localStorage.getItem('last_cash_change');
-                if (storedRecv !== null && storedChange !== null) {
-                    const cashRecvVal = parseFloat(storedRecv).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                    const cashChangeVal = parseFloat(storedChange).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const cashRecvVal = parseFloat(localStorage.getItem('last_cash_received')).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const cashChangeVal = parseFloat(localStorage.getItem('last_cash_change')).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                if (cashRecvVal !== 'NaN' && cashChangeVal !== 'NaN') {
                     cashChangeHtml = `
                         <div style="font-size: 10px; margin-top: 6px; text-align: left; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px dashed black; padding-bottom: 4px; margin-bottom: 4px;">
                             <div style="display: flex; justify-content: space-between;"><span>รับเงินสดมา:</span> <span>฿${cashRecvVal}</span></div>
@@ -706,18 +691,11 @@ export default function SlipModal({ booking, type, onClose }) {
                     ${(() => {
                         let asciiHtml = '';
                         if (isKitchenTab) return '';
-                        try {
-                            const stored = localStorage.getItem('onhaus_printer_config');
-                            let art = printerConfig?.footer_ascii_art || '';
-                            if (!art && stored) {
-                                const cfg = JSON.parse(stored);
-                                art = cfg.footer_ascii_art || '';
-                            }
-                            if (!art) {
-                                art = `T H A N K   Y O U\n  S E E   Y O U   A G A I N`;
-                            }
-                            asciiHtml = `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>`;
-                        } catch(e) {}
+                        let art = printerConfig?.footer_ascii_art || '';
+                        if (!art) {
+                            art = `T H A N K   Y O U\n  S E E   Y O U   A G A I N`;
+                        }
+                        asciiHtml = `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>`;
                         return asciiHtml;
                     })()}
 
@@ -738,22 +716,14 @@ export default function SlipModal({ booking, type, onClose }) {
         let btDeviceName = '';
         let paperSize = '58mm';
         
-        try {
-            const stored = localStorage.getItem('onhaus_printer_config');
-            if (stored) {
-                const config = JSON.parse(stored);
-                if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
-                    printerType = config.kitchen_printer_type || 'sunmi';
-                    btDeviceName = config.kitchen_printer_bt_name || '';
-                    paperSize = config.kitchen_paper_size || '58mm';
-                } else {
-                    printerType = config.cashier_printer_type || 'sunmi';
-                    btDeviceName = config.cashier_printer_bt_name || '';
-                    paperSize = config.cashier_paper_size || '58mm';
-                }
-            }
-        } catch (err) {
-            console.error("Failed to read printer config:", err);
+        if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+            printerType = printerConfig.kitchen_printer_type || 'sunmi';
+            btDeviceName = printerConfig.kitchen_printer_bt_name || '';
+            paperSize = printerConfig.kitchen_paper_size || '58mm';
+        } else {
+            printerType = printerConfig.cashier_printer_type || 'sunmi';
+            btDeviceName = printerConfig.cashier_printer_bt_name || '';
+            paperSize = printerConfig.cashier_paper_size || '58mm';
         }
 
         const receiptConfig = {
@@ -771,17 +741,11 @@ export default function SlipModal({ booking, type, onClose }) {
         if (printerType === 'sunmi') {
             try {
                 let activePaperSize = '80mm';
-                try {
-                    const stored = localStorage.getItem('onhaus_printer_config');
-                    if (stored) {
-                        const config = JSON.parse(stored);
-                        if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
-                            activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
-                        } else {
-                            activePaperSize = config.cashier_paper_size || config.paper_width || '80mm';
-                        }
-                    }
-                } catch (e) {}
+                if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
+                    activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
+                } else {
+                    activePaperSize = printerConfig.cashier_paper_size || printerConfig.paper_width || '80mm';
+                }
 
                 if (activeTab === 'kitchen') {
                     let printedAny = false;
@@ -822,14 +786,7 @@ export default function SlipModal({ booking, type, onClose }) {
             try {
                 let targetTab = activeTab;
                 if (activeTab === 'kitchen') {
-                    let isSeparateBarPrinterEnabled = false;
-                    try {
-                        const stored = localStorage.getItem('onhaus_printer_config');
-                        if (stored) {
-                            const config = JSON.parse(stored);
-                            isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-                        }
-                    } catch (e) {}
+                    let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
                     if (!isSeparateBarPrinterEnabled) {
                         targetTab = 'kitchen_all';
                     }
@@ -845,14 +802,7 @@ export default function SlipModal({ booking, type, onClose }) {
             try {
                 let targetTab = activeTab;
                 if (activeTab === 'kitchen') {
-                    let isSeparateBarPrinterEnabled = false;
-                    try {
-                        const stored = localStorage.getItem('onhaus_printer_config');
-                        if (stored) {
-                            const config = JSON.parse(stored);
-                            isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-                        }
-                    } catch (e) {}
+                    let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
                     if (!isSeparateBarPrinterEnabled) {
                         targetTab = 'kitchen_all';
                     }

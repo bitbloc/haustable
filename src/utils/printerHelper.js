@@ -270,13 +270,13 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         Number(paperSize) === 80 ||
         /^80(?:mm)?(?:x|\*|×)80(?:mm)?$/.test(normalized)
     );
-    const fallback = is80mm ? 48 : 32;
+    const fallback = is80mm ? 36 : 26;
     const configured = Number(configuredMaxCols);
 
     if (!Number.isFinite(configured)) return fallback;
 
     const min = is80mm ? 36 : 24;
-    const max = is80mm ? 48 : 32;
+    const max = is80mm ? 42 : 32;
     return Math.max(min, Math.min(max, Math.floor(configured)));
 }
 
@@ -980,7 +980,7 @@ function formatThreeCols(left, mid, right, maxCols) {
     const isSmall = totalWidth <= 28;
     const midStr = String(mid ?? '');
     const rightStr = String(right ?? '');
-    const midWidth = Math.max(getPrinterCellWidth(midStr), isSmall ? 6 : 9);
+    const midWidth = Math.max(getPrinterCellWidth(midStr), isSmall ? 5 : 7);
     const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 9 : 12);
     const minLeftWidth = isSmall ? 6 : 8;
 
@@ -1359,22 +1359,22 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
            .line(shopAddress)
            .line('')
            .align('left')
-           .line(`เวลาเปิดรอบ: ${formatDateTime(reportData.openedAt)}`)
-           .line(`โดย: ${reportData.staffName}`)
-           .line('')
-           .line(`เวลาปิดรอบ: ${formatDateTime(reportData.closedAt)}`)
-           .line(`โดย: ${reportData.staffName}`)
+           .line(`เปิดรอบ: ${formatDateTime(reportData.openedAt)} (${reportData.staffName})`)
+           .line(`ปิดรอบ: ${reportData.closedAt ? formatDateTime(reportData.closedAt) : 'ยังไม่ปิดรอบ'} (${reportData.staffName})`)
            .line(divider);
 
     // Section 1: ยอดขายตามหมวดหมู่
     if (reportData.categorySales && reportData.categorySales.length > 0) {
         encoder.bold(true).line('ยอดขายตามหมวดหมู่').bold(false);
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
         let totalQty = 0;
         let totalAmt = 0;
         reportData.categorySales.forEach(cat => {
-            totalQty += cat.quantity || 0;
-            totalAmt += cat.amount || 0;
-            encoder.line(formatThreeCols(cat.name, cat.quantity, formatReceiptMoney(cat.amount), maxCols));
+            if (cat.quantity > 0 || cat.amount > 0) {
+                totalQty += cat.quantity || 0;
+                totalAmt += cat.amount || 0;
+                encoder.line(formatThreeCols(cat.name, cat.quantity, formatReceiptMoney(cat.amount), maxCols));
+            }
         });
         
         encoder.line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols));
@@ -1384,12 +1384,13 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         const netSales = reportData.totalSales - discountVal;
         const preVatVal = netSales - vatVal;
 
-        encoder.line(formatTwoCols('ส่วนลด', formatReceiptMoney(discountVal), maxCols));
-        encoder.line(formatTwoCols('ค่าบริการ', '0.00', maxCols));
+        if (discountVal > 0) {
+            encoder.line(formatTwoCols('ส่วนลด', formatReceiptMoney(discountVal), maxCols));
+        }
         encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', formatReceiptMoney(preVatVal), maxCols));
-        encoder.line(formatTwoCols('ภาษี (VAT)', formatReceiptMoney(vatVal), maxCols));
-        encoder.line(formatTwoCols('ปัดเศษ', '0.00', maxCols));
-        encoder.line(formatTwoCols('ส่วนลดท้ายบิล', '0.00', maxCols));
+        if (vatVal > 0) {
+            encoder.line(formatTwoCols('ภาษี (VAT)', formatReceiptMoney(vatVal), maxCols));
+        }
         encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
         encoder.line(formatTwoCols('จำนวนลูกค้า (Pax)', (reportData.totalGuests || 0).toString(), maxCols));
         encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อบิล', formatReceiptMoney(reportData.averageSalesPerBill), maxCols));
@@ -1407,6 +1408,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     if (reportData.topSellingItems && reportData.topSellingItems.length > 0) {
         encoder.line(divider);
         encoder.bold(true).line('★ เมนูขายดี 3 อันดับ (Top 3 Selling Items)').bold(false);
+        encoder.line(formatThreeCols('เมนู', 'จำนวน', 'ยอดเงิน', maxCols));
         reportData.topSellingItems.forEach((item, index) => {
             const rankLabel = `${index + 1}. ${item.name}`;
             encoder.line(formatThreeCols(rankLabel, `${item.quantity} ชิ้น`, formatReceiptMoney(item.amount), maxCols));
@@ -1417,14 +1419,19 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     if (reportData.paymentSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามการชำระเงิน').bold(false);
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
         
         const cash = reportData.paymentSales.cash || { count: 0, amount: 0 };
         const credit = reportData.paymentSales.creditCard || { count: 0, amount: 0 };
         const qr = reportData.paymentSales.qrPromptPay || { count: 0, amount: 0 };
         const other = reportData.paymentSales.other || { count: 0, amount: 0, subItems: [] };
         
-        encoder.line(formatThreeCols('เงินสด', cash.count, formatReceiptMoney(cash.amount), maxCols));
-        encoder.line(formatThreeCols('QR PromptPay', qr.count, formatReceiptMoney(qr.amount), maxCols));
+        if (cash.count > 0 || cash.amount > 0) {
+            encoder.line(formatThreeCols('เงินสด', cash.count, formatReceiptMoney(cash.amount), maxCols));
+        }
+        if (qr.count > 0 || qr.amount > 0) {
+            encoder.line(formatThreeCols('QR PromptPay', qr.count, formatReceiptMoney(qr.amount), maxCols));
+        }
 
         if (credit.count > 0 || credit.amount > 0) {
             encoder.line(formatThreeCols('บัตรเครดิต', credit.count, formatReceiptMoney(credit.amount), maxCols));
@@ -1452,6 +1459,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     if (reportData.orderTypeSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามประเภทออเดอร์').bold(false);
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
         
         const dineIn = reportData.orderTypeSales.dineIn || { count: 0, amount: 0 };
         const pickup = reportData.orderTypeSales.pickup || { count: 0, amount: 0 };
@@ -1468,6 +1476,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     if (reportData.channelSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามช่องทางการขาย').bold(false);
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
         
         const linemanDelivery = reportData.channelSales.linemanDelivery || { count: 0, amount: 0 };
         const walkin = reportData.channelSales.walkin || { count: 0, amount: 0 };
@@ -1485,11 +1494,19 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     encoder.bold(true).line('รอบการขาย').bold(false);
     encoder.line(formatTwoCols('เงินสดเริ่มต้น', formatReceiptMoney(reportData.openingFloat), maxCols));
     encoder.line(formatTwoCols('ยอดขายเงินสด', formatReceiptMoney(reportData.cashSales), maxCols));
-    encoder.line(formatTwoCols('คืนเงิน', '0.00', maxCols));
-    encoder.line(formatTwoCols('เงินเข้า/เงินออก', formatReceiptMoney((reportData.totalIn || 0) - (reportData.totalOut || 0)), maxCols));
-    encoder.line(formatTwoCols('จำนวนเงินที่ควรมี', formatReceiptMoney(reportData.expectedCash), maxCols));
-    encoder.line(formatTwoCols('จำนวนจริงในลิ้นชัก', formatReceiptMoney(reportData.actualCash), maxCols));
-    encoder.line(formatTwoCols('ส่วนต่าง', formatReceiptMoney(reportData.difference), maxCols));
+
+    const netCashFlow = (reportData.totalIn || 0) - (reportData.totalOut || 0);
+    if (netCashFlow !== 0) {
+        encoder.line(formatTwoCols('เงินเข้า/เงินออก', formatReceiptMoney(netCashFlow), maxCols));
+    }
+    
+    encoder.line(formatTwoCols('เงินที่ควรมีในลิ้นชัก', formatReceiptMoney(reportData.expectedCash), maxCols));
+    
+    if (reportData.closedAt) {
+        encoder.line(formatTwoCols('จำนวนจริงในลิ้นชัก', formatReceiptMoney(reportData.actualCash), maxCols));
+        encoder.line(formatTwoCols('ส่วนต่าง', formatReceiptMoney(reportData.difference), maxCols));
+    }
+    
     encoder.line(formatTwoCols('บิลทั้งหมด', (reportData.totalBookings || 0).toString(), maxCols));
 
     // Detailed adjustments list on receipt
@@ -1505,18 +1522,24 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
 
     // Section 6: ทำลายบิล (Void)
     const voidData = reportData.voidData || { wholeBill: { count: 0, amount: 0 }, itemLevel: { count: 0, amount: 0 }, paidBillVoidCount: 0 };
-    encoder.line(divider);
-    encoder.bold(true).line('ทำลายบิล (Void)').bold(false);
-    encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, formatReceiptMoney(voidData.wholeBill.amount), maxCols));
-    encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, formatReceiptMoney(voidData.itemLevel.amount), maxCols));
-    encoder.line(formatTwoCols('ทำลายบิลที่ชำระเงินแล้ว', (voidData.paidBillVoidCount || 0).toString(), maxCols));
+    if (voidData.wholeBill.count > 0 || voidData.itemLevel.count > 0 || voidData.paidBillVoidCount > 0) {
+        encoder.line(divider);
+        encoder.bold(true).line('ทำลายบิล (Void)').bold(false);
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
+        if (voidData.wholeBill.count > 0) encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, formatReceiptMoney(voidData.wholeBill.amount), maxCols));
+        if (voidData.itemLevel.count > 0) encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, formatReceiptMoney(voidData.itemLevel.amount), maxCols));
+        if (voidData.paidBillVoidCount > 0) encoder.line(formatTwoCols('ทำลายบิลที่ชำระเงินแล้ว', (voidData.paidBillVoidCount || 0).toString(), maxCols));
+    }
 
     // Section 7: ยกเลิกเมนู (Cancel)
     const cancelData = reportData.cancelData || { wholeBill: { count: 0, amount: 0 }, itemLevel: { count: 0, amount: 0 } };
-    encoder.line(divider);
-    encoder.bold(true).line('ยกเลิกเมนู (Cancel)').bold(false);
-    encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, formatReceiptMoney(cancelData.wholeBill.amount), maxCols));
-    encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, formatReceiptMoney(cancelData.itemLevel.amount), maxCols));
+    if (cancelData.wholeBill.count > 0 || cancelData.itemLevel.count > 0) {
+        encoder.line(divider);
+        encoder.bold(true).line('ยกเลิกเมนู (Cancel)').bold(false);
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
+        if (cancelData.wholeBill.count > 0) encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, formatReceiptMoney(cancelData.wholeBill.amount), maxCols));
+        if (cancelData.itemLevel.count > 0) encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, formatReceiptMoney(cancelData.itemLevel.amount), maxCols));
+    }
 
     encoder.line(divider)
            .feed(2)

@@ -40,6 +40,7 @@ export default function POSDashboard() {
                 syncShiftToCloud(updatedShift);
             }
             setActiveShift(updatedShift);
+            setIsPinVerified(true);
             toast.success(`ยินดีต้อนรับ: ${staff.display_name} (เข้าสู่กะปัจจุบัน)`);
             setPinInput('');
         } else {
@@ -79,6 +80,9 @@ export default function POSDashboard() {
     const [pinInput, setPinInput] = useState('');
     const [showOpeningFloatModal, setShowOpeningFloatModal] = useState(false);
     const [showCashAdjustmentModal, setShowCashAdjustmentModal] = useState(false);
+    // isPinVerified: NEVER persisted — starts false on every page load/refresh
+    // Forces PIN entry even when an active shift exists in cloud/local
+    const [isPinVerified, setIsPinVerified] = useState(false);
     const [isLocked, setIsLocked] = useState(() => {
         return localStorage.getItem('pos_is_locked') === 'true';
     });
@@ -88,6 +92,7 @@ export default function POSDashboard() {
 
     const lockScreen = () => {
         setIsLocked(true);
+        setIsPinVerified(false); // Force PIN re-entry on unlock
         localStorage.setItem('pos_is_locked', 'true');
         setLockPinInput('');
         setSelectedStaffForUnlock(null);
@@ -2129,8 +2134,9 @@ export default function POSDashboard() {
                     />
                 </div>
             )}
-            {/* Open Shift Overlay (Full Screen PIN Pad / Staff Grid) */}
-            {!activeShift && (
+            {/* Open Shift / PIN Verification Overlay (Full Screen PIN Pad) */}
+            {/* Always require PIN on fresh page load, even if shift exists */}
+            {(!activeShift || !isPinVerified) && (
                 <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
