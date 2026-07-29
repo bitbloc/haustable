@@ -112,11 +112,11 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
             try {
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                // Simplified status check for POC
+                // Fetch only active seated bookings for store floorplan display
                 const { data: activeBookings } = await supabase
                     .from('bookings')
                     .select('*')
-                    .in('status', ['pending', 'confirmed', 'seated', 'ready']);
+                    .in('status', ['seated']);
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
@@ -126,24 +126,14 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                 localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
 
                 const merged = currentTables.map(t => {
-                    const activeBooking = currentBookings.find(b => b.table_id === t.id && (b.status === 'seated' || b.status === 'confirmed'));
-                    const pendingBooking = currentBookings.find(b => b.table_id === t.id && b.status === 'pending');
-                    const primaryBooking = activeBooking || pendingBooking;
-
-                    // Check for conflict: Table is currently occupied AND has an upcoming booking within 45 mins
-                    const upcomingConflict = currentBookings.find(b => 
-                        b.table_id === t.id &&
-                        (b.status === 'confirmed' || b.status === 'pending') &&
-                        primaryBooking && b.id !== primaryBooking.id &&
-                        new Date(b.booking_time) > new Date() &&
-                        (new Date(b.booking_time) - new Date()) <= 45 * 60 * 1000
-                    );
+                    // Only seated/active floorplan bookings bind to physical table cards
+                    const activeBooking = currentBookings.find(b => b.table_id === t.id && b.status === 'seated');
 
                     return {
                         ...t,
-                        status: primaryBooking ? (primaryBooking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                        booking: primaryBooking,
-                        upcomingConflict: upcomingConflict
+                        status: activeBooking ? 'occupied' : 'free',
+                        booking: activeBooking || null,
+                        upcomingConflict: null
                     };
                 });
 
