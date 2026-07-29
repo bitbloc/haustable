@@ -1876,68 +1876,66 @@ export default function POSDashboard() {
                 </div>
             )}
 
-            {/* 🔔 Incoming Online Bookings Floating Pop-up Overlay Modal (Dieter Rams + Thai Modern Style) */}
+            {/* 🔔 Incoming Online Bookings Floating Pop-up Overlay Modal (Dieter Rams Ultra-Minimalist + Thai Modern Style, Hallmark Approved - ZERO ICONS) */}
+            {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-zero-icons */}
             {showPendingModal && pendingBookingsList.length > 0 && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
-                        {/* Rams Matte Dark Header */}
-                        <div className="bg-[oklch(18%_0.012_28)] p-4 text-[oklch(97%_0.008_28)] flex justify-between items-center shrink-0 border-b border-[oklch(85%_0.012_28)]">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-[oklch(52%_0.16_28)]/20 border border-[oklch(52%_0.16_28)]/40 flex items-center justify-center font-mono font-bold text-sm text-[oklch(52%_0.16_28)]">
-                                    🔔
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-sm leading-tight flex items-center gap-2 text-[oklch(97%_0.008_28)]">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
+                        {/* Rams Matte Dark Ink Header (No Icons) */}
+                        <div className="bg-[oklch(18%_0.012_28)] px-5 py-4 text-[oklch(97%_0.008_28)] flex justify-between items-center shrink-0 border-b border-[oklch(85%_0.012_28)]">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-sm tracking-tight text-[oklch(97%_0.008_28)] uppercase">
                                         คิวจอง & ออเดอร์ออนไลน์รอยืนยัน
-                                        <span className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 rounded-full text-xs font-mono font-bold">
-                                            {pendingBookingsList.length}
-                                        </span>
                                     </h3>
-                                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                                        ตรวจสอบสลิปและรายละเอียดก่อนกดยืนยัน (กล่องแยกเดี่ยว ไม่กระทบผังโต๊ะหน้าร้าน)
-                                    </p>
+                                    <span className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 rounded-md text-xs font-mono font-bold">
+                                        {pendingBookingsList.length}
+                                    </span>
                                 </div>
+                                <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5 tracking-tight">
+                                    กล่องตรวจสอบส่วนตัว (แยกเดี่ยว ไม่กระทบผังโต๊ะหน้าร้าน)
+                                </p>
                             </div>
                             <button
                                 onClick={() => setShowPendingModal(false)}
-                                className="p-1.5 hover:bg-white/10 rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(97%_0.008_28)] transition-colors cursor-pointer"
+                                className="px-2.5 py-1 text-[11px] font-mono font-bold text-[oklch(55%_0.010_28)] hover:text-[oklch(97%_0.008_28)] hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                             >
-                                <X size={18} />
+                                [ ปิด ]
                             </button>
                         </div>
 
                         {/* Scrollable Pending Cards List */}
-                        <div className="p-4 overflow-y-auto space-y-3.5 flex-1 bg-[oklch(94%_0.010_28)] scrollbar-none">
+                        <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[oklch(94%_0.010_28)] scrollbar-none">
                             {pendingBookingsList.map((item, idx) => (
                                 <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
-                                    {/* Card Top Details */}
+                                    {/* Card Top Details (No Icons) */}
                                     <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-2.5">
                                         <div>
-                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20 inline-block mb-1">
+                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20 inline-block mb-1.5">
                                                 ONLINE QUEUE #{item.id?.slice(-4) || (idx + 1)}
                                             </span>
-                                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)]">
+                                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] leading-tight">
                                                 {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || 'ลูกค้าออนไลน์'}
                                             </h4>
                                             <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                                                📞 {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์โทร'}
+                                                {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์โทร'}
                                             </p>
                                         </div>
-                                        <div className="text-right font-mono">
+                                        <div className="text-right font-mono shrink-0">
                                             <span className="text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1 rounded-md inline-block">
-                                                ⏰ {new Date(item.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                                เวลา: {new Date(item.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                                             </span>
                                             <p className="text-[10px] text-[oklch(55%_0.010_28)] mt-1 font-bold">
-                                                👥 {item.pax || 1} คน
+                                                จำนวน: {item.pax || 1} คน
                                             </p>
                                         </div>
                                     </div>
 
-                                    {/* Pre-ordered Food Items (if any) */}
+                                    {/* Pre-ordered Food Items (No Icons) */}
                                     {item.order_items && item.order_items.length > 0 && (
                                         <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] space-y-1">
                                             <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1">
-                                                🍽️ รายการสั่งล่วงหน้า ({item.order_items.length} รายการ)
+                                                รายการสั่งล่วงหน้า ({item.order_items.length} รายการ)
                                             </p>
                                             <div className="space-y-0.5 text-xs text-[oklch(18%_0.012_28)]">
                                                 {item.order_items.map((oi, i) => (
@@ -1950,33 +1948,33 @@ export default function POSDashboard() {
                                         </div>
                                     )}
 
-                                    {/* Table Preset Information */}
+                                    {/* Table Preset Information (No Icons) */}
                                     {item.tables_layout && (
                                         <div className="text-[10px] font-mono text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 rounded-lg border border-[oklch(85%_0.012_28)] flex justify-between items-center">
-                                            <span>📍 โต๊ะระบุล่วงหน้า: <strong className="text-[oklch(18%_0.012_28)]">{item.tables_layout.table_name}</strong></span>
+                                            <span>โต๊ะระบุล่วงหน้า: <strong className="text-[oklch(18%_0.012_28)]">{item.tables_layout.table_name}</strong></span>
                                             <span className="text-[oklch(52%_0.16_28)] font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
                                         </div>
                                     )}
 
-                                    {/* Deposit & Slip Section */}
+                                    {/* Deposit & Slip Section (No Icons) */}
                                     {item.deposit_amount > 0 && (
                                         <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg text-emerald-950 font-mono text-xs">
-                                            <span className="font-bold flex items-center gap-1">💳 ยอดมัดจำ: ฿{item.deposit_amount}</span>
+                                            <span className="font-bold">ยอดมัดจำ: ฿{item.deposit_amount}</span>
                                             {item.payment_slip_url && (
                                                 <button
                                                     type="button"
                                                     onClick={() => {
                                                         setViewSlipImageUrl(item.payment_slip_url);
                                                     }}
-                                                    className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+                                                    className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-3 py-1 rounded-md transition-all cursor-pointer shadow-sm active:scale-95 uppercase font-mono"
                                                 >
-                                                    <ReceiptText size={12} /> ตรวจสลิปโอนเงิน
+                                                    ตรวจสลิปโอนเงิน
                                                 </button>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Card Bottom Actions */}
+                                    {/* Card Bottom Actions (No Icons) */}
                                     <div className="flex items-center gap-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
                                         <button
                                             type="button"
@@ -1987,9 +1985,9 @@ export default function POSDashboard() {
                                                     checkPendingOrders();
                                                 }
                                             }}
-                                            className="flex-1 py-2.5 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
+                                            className="flex-1 py-2 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
                                         >
-                                            ❌ ปฏิเสธคิว
+                                            ปฏิเสธคิว
                                         </button>
                                         <button
                                             type="button"
@@ -2000,16 +1998,16 @@ export default function POSDashboard() {
                                                     checkPendingOrders();
                                                 }
                                             }}
-                                            className="flex-2 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                                            className="flex-2 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center"
                                         >
-                                            <Check size={14} /> ✓ อนุมัติ & ยืนยันคิว
+                                            อนุมัติ & ยืนยันคิว
                                         </button>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Modal Footer */}
+                        {/* Modal Footer (No Icons) */}
                         <div className="p-3 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)] flex justify-end">
                             <button
                                 onClick={() => setShowPendingModal(false)}
