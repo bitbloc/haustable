@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock, MapPin, Copy, RefreshCw } from 'lucide-react'
+import { Search, Music, MessageSquare, Upload, Play, CheckCircle2, ListMusic, Send, Heart, X, Sparkles, Clock, MapPin, Copy, RefreshCw, ArrowLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Toaster, toast } from 'sonner'
@@ -48,6 +48,9 @@ export default function SongRequestPage() {
     longitude: 104.79292770946343,
     radius: 1000 // meters (1 km)
   })
+
+  // System Settings
+  const [isSystemEnabled, setIsSystemEnabled] = useState(true)
 
   // Success Overlay
   const [showSuccess, setShowSuccess] = useState(false)
@@ -176,6 +179,13 @@ export default function SongRequestPage() {
       const lat = data.find(item => item.key === 'qr_latitude')?.value
       const lng = data.find(item => item.key === 'qr_longitude')?.value
       const rad = data.find(item => item.key === 'qr_radius')?.value
+      
+      const enabled = data.find(item => item.key === 'song_request_enabled')?.value
+      if (enabled === 'false') {
+        setIsSystemEnabled(false)
+      } else {
+        setIsSystemEnabled(true)
+      }
       
       setGpsConfig({
         enabled: gpsEnabled !== 'false',
@@ -622,6 +632,17 @@ export default function SongRequestPage() {
         }
       `}</style>
 
+      {/* Back to Arcade Button */}
+      <div className="w-full bg-[oklch(20%_0.003_80)] text-[var(--color-paper)] py-2.5 px-6 flex items-center justify-between shadow-md z-10 sticky top-0">
+        <Link
+          to="/arcade"
+          className="btn-action flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider hover:text-white"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>BACK TO ARCADE / กลับไปหน้าเกม</span>
+        </Link>
+      </div>
+
       {/* Dieter Rams Dashboard Masthead */}
       <header className="w-full border-b border-[var(--color-rule)] bg-[var(--color-paper-2)] py-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 select-none mb-6">
         {/* Brand block */}
@@ -681,7 +702,15 @@ export default function SongRequestPage() {
 
       {/* Main Content Body */}
       <main className="w-full max-w-md px-6 flex-grow flex flex-col">
-        {activeTab === 'request' ? (
+        {!isSystemEnabled ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+            <Music className="w-12 h-12 text-[var(--color-muted)]" />
+            <h2 className="text-lg font-bold font-mono text-[var(--color-ink)] uppercase tracking-widest">SYSTEM OFFLINE</h2>
+            <p className="text-xs text-[var(--color-ink-2)] font-sans max-w-xs leading-relaxed">
+              ขออภัยค่ะ ระบบขอเพลงปิดให้บริการชั่วคราว<br/>กรุณาติดตามเวลาเปิดให้บริการอีกครั้ง
+            </p>
+          </div>
+        ) : activeTab === 'request' ? (
           <form onSubmit={handleSubmitRequest} className="flex-grow flex flex-col gap-5">
             
             {/* Guidelines alert board */}

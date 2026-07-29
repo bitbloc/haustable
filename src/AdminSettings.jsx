@@ -98,6 +98,7 @@ export default function AdminSettings() {
         contact_map_url: '',
 
         qr_ordering_enabled: 'true',
+        song_request_enabled: 'true',
         qr_gps_enabled: 'true',
         qr_latitude: '17.40722',
         qr_longitude: '104.78028',
@@ -1374,6 +1375,20 @@ export default function AdminSettings() {
                                         type="checkbox"
                                         checked={settings.qr_ordering_enabled === 'true'}
                                         onChange={(e) => handleSave('qr_ordering_enabled', e.target.checked ? 'true' : 'false')}
+                                        className="accent-brandDark w-4 h-4"
+                                    />
+                                </label>
+
+                                {/* Enable Song Request Toggle */}
+                                <label className="flex items-center justify-between cursor-pointer border-t border-gray-100 pt-3 mt-3">
+                                    <div>
+                                        <span className="block font-bold text-sm text-ink">Enable Song Request</span>
+                                        <span className="text-[10px] text-subInk">Turn on/off the song request page for customers</span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.song_request_enabled !== 'false'}
+                                        onChange={(e) => handleSave('song_request_enabled', e.target.checked ? 'true' : 'false')}
                                         className="accent-brandDark w-4 h-4"
                                     />
                                 </label>
