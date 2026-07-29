@@ -5,12 +5,20 @@ export const getThaiDate = () => {
 
 export const toThaiISO = (dateStr, timeStr) => {
     // Construct ISO string with explicit +07:00 offset
-    // Input: dateStr (YYYY-MM-DD), timeStr (HH:MM)
+    // Input: dateStr (YYYY-MM-DD), timeStr (HH:MM or HH.MM)
     // Output: YYYY-MM-DDTHH:MM:00+07:00
     if (!dateStr || !timeStr) return null
-    // Ensure timeStr matches HH:MM format (add seconds if needed or just use as is if purely for the API that accepts Timestamptz)
-    // Supabase timestamptz accepts ISO 8601 with offset
-    return `${dateStr}T${timeStr}:00+07:00`
+    
+    // Auto-fix dot notation (e.g. "19.00" -> "19:00", "21.30" -> "21:30")
+    let cleanTime = String(timeStr).trim().replace('.', ':')
+    const parts = cleanTime.split(':')
+    if (parts.length >= 2) {
+        const hh = parts[0].padStart(2, '0')
+        const mm = parts[1].padStart(2, '0')
+        cleanTime = `${hh}:${mm}`
+    }
+    
+    return `${dateStr}T${cleanTime}:00+07:00`
 }
 
 export const formatThaiTime = (isoString) => {
