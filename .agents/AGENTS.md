@@ -32,3 +32,9 @@ All user interfaces in this project must be designed following a clean, minimali
 
 ### 4. Proactive Engineering & Advisory Principle
 - **Do Not Blindly Follow Instructions Literally**: When the user requests a change or suggests parameter adjustments (e.g., margins, line widths, feed lines, cut commands), ALWAYS analyze the engineering trade-offs first. Recommend the best technical solution and explain potential side-effects (such as paper stubs, uneven margins, or right-edge clipping) instead of blindly executing literal requests to extreme values.
+
+### 5. Hallmark Anti-AI-Slop & Zero-Icon Designer Discipline
+- **Zero-Icon Priority**: Avoid decorative icons, emojis, or arbitrary vector badges. Rely strictly on pure typography, deliberate whitespace, monospace tags (`font-mono`), and clean border enclosures (`border-[oklch(85%_0.012_28)]`).
+- **Designer Handcrafted Touch**: Every modal, card, or panel must feel handcrafted by a high-end human designer — clear visual hierarchy, upright headings, subtle micro-interactions, no generic boilerplate visuals or AI Tells.
+- **Hallmark Pre-Emit Critique**: All UI components must satisfy Hallmark anti-slop rules (`/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */`).
+
