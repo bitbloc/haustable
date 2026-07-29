@@ -457,48 +457,6 @@ export default function POSOrderPanel({
                 </button>
             </div>
 
-            {/* 🏷️ Order Channel Indicator Banner (แยกออเดอร์ออนไลน์ vs หน้าร้านชัดเจน) */}
-            {booking && (
-                <div className={`mx-3 mt-3 p-3 rounded-xl border flex items-center justify-between shrink-0 shadow-sm ${
-                    (booking.source === 'online' || booking.deposit_amount > 0 || booking.payment_slip_url || booking.pickup_contact_name || booking.booking_type === 'pickup' || booking.status === 'pending')
-                        ? 'bg-gradient-to-r from-indigo-900 to-purple-900 border-indigo-500 text-white'
-                        : 'bg-gray-800 border-gray-700 text-white'
-                }`}>
-                    <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-base ${
-                            (booking.source === 'online' || booking.deposit_amount > 0 || booking.payment_slip_url || booking.pickup_contact_name || booking.booking_type === 'pickup' || booking.status === 'pending')
-                                ? 'bg-purple-500/30 text-purple-200 border border-purple-400/40'
-                                : 'bg-gray-700 text-gray-300'
-                        }`}>
-                            {(booking.source === 'online' || booking.deposit_amount > 0 || booking.payment_slip_url || booking.pickup_contact_name || booking.booking_type === 'pickup' || booking.status === 'pending') ? '🌐' : '🏢'}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-xs">
-                                    {(booking.source === 'online' || booking.deposit_amount > 0 || booking.payment_slip_url || booking.pickup_contact_name || booking.booking_type === 'pickup' || booking.status === 'pending')
-                                        ? 'ออเดอร์ออนไลน์ / คิวจอง'
-                                        : 'ออเดอร์เปิดหน้าร้าน'}
-                                </span>
-                                <span className="text-[9px] font-mono opacity-80 px-1.5 py-0.5 rounded bg-black/30 border border-white/10 uppercase">
-                                    {(booking.source === 'online' || booking.deposit_amount > 0 || booking.payment_slip_url || booking.pickup_contact_name || booking.booking_type === 'pickup' || booking.status === 'pending') ? 'ONLINE' : 'WALK-IN'}
-                                </span>
-                            </div>
-                            <p className="text-[10px] opacity-75 font-mono">
-                                {booking.pickup_contact_name || booking.customer_name || 'ลูกค้าออนไลน์'} 
-                                {booking.booking_time ? ` • ⏰ ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                            </p>
-                        </div>
-                    </div>
-                    {booking.deposit_amount > 0 && (
-                        <div className="text-right">
-                            <span className="text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-1 rounded-md flex items-center gap-1">
-                                ✓ มัดจำ ฿{booking.deposit_amount}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            )}
-
             {/* Pending Order Alert */}
             {booking && booking.status === 'pending' && (
                 <div className="mx-3 mt-3 p-3 bg-[#FFF9E6] border border-[#E5A900] rounded-xl flex flex-col gap-2 shrink-0">
