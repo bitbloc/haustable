@@ -1,0 +1,402 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Globe, 
+    AlertCircle, 
+    Clock, 
+    CheckCircle2, 
+    ReceiptText,
+    UtensilsCrossed,
+    Calendar,
+    BellRing
+} from 'lucide-react';
+import { Toaster, toast } from 'sonner';
+
+export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey }) {
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [persistentAlert, setPersistentAlert] = useState(null); // stores the incoming order that triggered the alert
+    const audioRef = useRef(null);
+    const alertIntervalRef = useRef(null);
+
+    // Initialize audio context for alert
+    useEffect(() => {
+        audioRef.current = new Audio('/alert.mp3'); // Fallback if doesn't exist, we can use a synthesized beep
+        audioRef.current.loop = true;
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+            if (alertIntervalRef.current) clearInterval(alertIntervalRef.current);
+        };
+    }, []);
+
+    const playAlert = () => {
+        if (audioRef.current) {
+            audioRef.current.play().catch(e => {
+                // Autoplay blocked fallback: use AudioContext oscillator
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const playBeep = () => {
+                        const osc = ctx.createOscillator();
+                        const gainNode = ctx.createGain();
+                        osc.connect(gainNode);
+                        gainNode.connect(ctx.destination);
+                        osc.type = 'sine';
+                        osc.frequency.value = 800;
+                        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                        gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                        osc.start(ctx.currentTime);
+                        osc.stop(ctx.currentTime + 0.5);
+                    };
+                    playBeep();
+                    alertIntervalRef.current = setInterval(playBeep, 2000); // Beep every 2 seconds
+                } catch(err) {}
+            });
+        }
+    };
+
+    const stopAlert = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        if (alertIntervalRef.current) {
+            clearInterval(alertIntervalRef.current);
+            alertIntervalRef.current = null;
+        }
+    };
+
+    const fetchOnlineData = async () => {
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayIso = today.toISOString();
+
+            // We fetch bookings that are source = 'online' OR have payment_slip_url (for slip verification) OR booking_type = 'pickup' with online tracking
+            const { data, error } = await supabase
+                .from('bookings')
+                .select('*, profiles(display_name, phone_number)')
+                .gte('booking_time', todayIso)
+                .order('booking_time', { ascending: false });
+
+            if (error) throw error;
+
+            // Filter for online relevant ones
+            const onlineRelevant = (data || []).filter(b => {
+                const isOnlineSource = b.source === 'online' || b.source === 'line';
+                const hasSlip = !!b.payment_slip_url;
+                const isOnlinePickup = b.booking_type === 'pickup' && (b.tracking_token || isOnlineSource);
+                return isOnlineSource || hasSlip || isOnlinePickup;
+            });
+
+            setOrders(onlineRelevant);
+        } catch (err) {
+            console.error('Failed to fetch online orders:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOnlineData();
+
+        // Subscription for real-time online order alerts
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        const channel = supabase.channel('online_orders_hub')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'bookings',
+                },
+                (payload) => {
+                    const b = payload.new;
+                    // Check if it's relevant for online hub
+                    const isOnlineSource = b.source === 'online' || b.source === 'line';
+                    const hasSlip = !!b.payment_slip_url;
+                    const isOnlinePickup = b.booking_type === 'pickup' && (b.tracking_token || isOnlineSource);
+                    
+                    if (isOnlineSource || hasSlip || isOnlinePickup) {
+                        // Trigger persistent alert!
+                        setPersistentAlert(b);
+                        playAlert();
+                        fetchOnlineData();
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'bookings',
+                },
+                (payload) => {
+                    fetchOnlineData();
+                    // If a slip was just uploaded for an existing booking
+                    if (payload.new.payment_slip_url && !payload.old.payment_slip_url) {
+                        setPersistentAlert(payload.new);
+                        playAlert();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (refreshKey > 0) {
+            fetchOnlineData();
+        }
+    }, [refreshKey]);
+
+    const handleAcknowledge = () => {
+        setPersistentAlert(null);
+        stopAlert();
+    };
+
+    const updateBookingStatus = async (id, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('bookings')
+                .update({ status: newStatus })
+                .eq('id', id);
+            if (error) throw error;
+            toast.success(`อัปเดตสถานะเป็น ${newStatus} สำเร็จ`);
+            fetchOnlineData();
+        } catch (err) {
+            console.error(err);
+            toast.error('ไม่สามารถอัปเดตสถานะได้');
+        }
+    };
+
+    // Derived buckets
+    const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'no_show');
+    
+    // Grouping
+    const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status !== 'paid' && o.status !== 'completed');
+    const newBookings = activeOrders.filter(o => o.booking_type === 'dine_in' && o.status === 'pending');
+    const onlinePickups = activeOrders.filter(o => o.booking_type === 'pickup');
+
+    if (loading) return (
+        <div className="flex h-full items-center justify-center bg-[oklch(97%_0.008_28)]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[oklch(52%_0.16_28)]"></div>
+        </div>
+    );
+
+    const renderCard = (order, typeLabel) => {
+        const timeStr = new Date(order.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const name = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'ลูกค้าทั่วไป';
+        const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
+
+        return (
+            <motion.div 
+                key={order.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-4 flex flex-col gap-3 shadow-sm hover:border-[oklch(18%_0.012_28)] transition-colors"
+            >
+                <div className="flex justify-between items-start">
+                    <div>
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded-full inline-block mb-2">
+                            {typeLabel}
+                        </span>
+                        <h4 className="font-bold text-[oklch(18%_0.012_28)] leading-tight">{name}</h4>
+                        {phone && <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-1">{phone}</p>}
+                    </div>
+                    <div className="text-right">
+                        <span className="text-sm font-bold text-[oklch(18%_0.012_28)] font-mono">{timeStr}</span>
+                        <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono uppercase mt-0.5">Time</p>
+                    </div>
+                </div>
+
+                {order.customer_note && (
+                    <div className="bg-[oklch(94%_0.010_28)] p-2 rounded text-xs text-[oklch(18%_0.012_28)] border-l-2 border-[oklch(52%_0.16_28)]">
+                        "{order.customer_note}"
+                    </div>
+                )}
+
+                <div className="mt-auto pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2">
+                    {order.payment_slip_url && (
+                        <button 
+                            onClick={() => onOpenSlipModal(order, 'billing')}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer"
+                        >
+                            <ReceiptText size={14} />
+                            ตรวจสลิป
+                        </button>
+                    )}
+
+                    {order.booking_type === 'dine_in' && order.status === 'pending' && (
+                        <button 
+                            onClick={() => updateBookingStatus(order.id, 'confirmed')}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-bold transition-all hover:bg-[oklch(85%_0.012_28)] active:scale-95 cursor-pointer"
+                        >
+                            <CheckCircle2 size={14} />
+                            ยืนยันโต๊ะ
+                        </button>
+                    )}
+
+                    {order.booking_type === 'pickup' && order.status === 'pending' && (
+                        <button 
+                            onClick={() => updateBookingStatus(order.id, 'ready')}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-bold transition-all hover:bg-[oklch(85%_0.012_28)] active:scale-95 cursor-pointer"
+                        >
+                            <CheckCircle2 size={14} />
+                            ทำอาหารเสร็จ
+                        </button>
+                    )}
+                     {order.booking_type === 'pickup' && order.status === 'ready' && (
+                        <button 
+                            onClick={() => updateBookingStatus(order.id, 'completed')}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer"
+                        >
+                            <CheckCircle2 size={14} />
+                            ลูกค้ารับแล้ว
+                        </button>
+                    )}
+                </div>
+            </motion.div>
+        );
+    };
+
+    return (
+        <div className="h-full flex flex-col bg-[oklch(94%_0.010_28)] overflow-hidden font-sans">
+            <Toaster position="top-center" />
+            
+            {/* Header */}
+            <div className="p-6 pb-2 shrink-0">
+                <h1 className="text-2xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">ONLINE ORDERS HUB</h1>
+                <p className="text-[oklch(55%_0.010_28)] text-sm font-mono mt-1">Manage online reservations, slips, and pickups in one place.</p>
+            </div>
+
+            {/* Kanban Grid */}
+            <div className="flex-1 p-6 overflow-x-auto flex gap-6 snap-x scrollbar-none">
+                
+                {/* Column 1: Slips to Verify */}
+                <div className="w-[320px] shrink-0 flex flex-col snap-start">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
+                        <div className="flex items-center gap-2">
+                            <ReceiptText className="text-[oklch(18%_0.012_28)]" size={18} />
+                            <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Verify Slips</h2>
+                        </div>
+                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
+                            {slipsToVerify.length}
+                        </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
+                        {slipsToVerify.length === 0 ? (
+                            <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No slips to verify</div>
+                        ) : (
+                            <AnimatePresence>
+                                {slipsToVerify.map(o => renderCard(o, 'SLIP VERIFICATION'))}
+                            </AnimatePresence>
+                        )}
+                    </div>
+                </div>
+
+                {/* Column 2: New Online Bookings */}
+                <div className="w-[320px] shrink-0 flex flex-col snap-start">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="text-[oklch(18%_0.012_28)]" size={18} />
+                            <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Table Bookings</h2>
+                        </div>
+                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
+                            {newBookings.length}
+                        </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
+                        {newBookings.length === 0 ? (
+                            <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No new bookings</div>
+                        ) : (
+                            <AnimatePresence>
+                                {newBookings.map(o => renderCard(o, 'ONLINE BOOKING'))}
+                            </AnimatePresence>
+                        )}
+                    </div>
+                </div>
+
+                {/* Column 3: Online Pickups */}
+                <div className="w-[320px] shrink-0 flex flex-col snap-start">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
+                        <div className="flex items-center gap-2">
+                            <UtensilsCrossed className="text-[oklch(18%_0.012_28)]" size={18} />
+                            <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Online Pick-ups</h2>
+                        </div>
+                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
+                            {onlinePickups.length}
+                        </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
+                        {onlinePickups.length === 0 ? (
+                            <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No active pick-ups</div>
+                        ) : (
+                            <AnimatePresence>
+                                {onlinePickups.map(o => renderCard(o, o.status === 'ready' ? 'READY TO PICKUP' : 'PREPARING PICKUP'))}
+                            </AnimatePresence>
+                        )}
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Persistent Alert Overlay */}
+            <AnimatePresence>
+                {persistentAlert && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-50 bg-[oklch(18%_0.012_28)]/80 backdrop-blur-sm flex items-center justify-center p-6"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-[oklch(97%_0.008_28)] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border-4 border-[oklch(52%_0.16_28)]"
+                        >
+                            <div className="bg-[oklch(52%_0.16_28)] p-6 text-center text-[oklch(97%_0.008_28)] flex flex-col items-center">
+                                <motion.div
+                                    animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
+                                    transition={{ repeat: Infinity, duration: 1.5, repeatDelay: 1 }}
+                                >
+                                    <BellRing size={48} className="mb-4" />
+                                </motion.div>
+                                <h2 className="text-2xl font-bold tracking-tight uppercase">NEW ONLINE ORDER</h2>
+                                <p className="opacity-80 font-mono text-sm mt-1">Please acknowledge immediately</p>
+                            </div>
+                            
+                            <div className="p-6 flex flex-col items-center text-center gap-2">
+                                <p className="text-[oklch(18%_0.012_28)] font-bold text-lg">
+                                    {persistentAlert.profiles?.display_name || persistentAlert.pickup_contact_name || persistentAlert.customer_name || 'Customer'}
+                                </p>
+                                <p className="text-[oklch(55%_0.010_28)] font-mono text-sm">
+                                    Type: {persistentAlert.booking_type === 'pickup' ? 'Pick-up' : 'Dine-in'} {persistentAlert.payment_slip_url ? '(with Slip)' : ''}
+                                </p>
+                                
+                                <button 
+                                    onClick={handleAcknowledge}
+                                    className="mt-6 w-full py-4 rounded-xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-lg uppercase tracking-widest transition-transform hover:bg-black active:scale-95 shadow-lg cursor-pointer"
+                                >
+                                    Acknowledge & View
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+        </div>
+    );
+}

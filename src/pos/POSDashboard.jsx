@@ -12,6 +12,7 @@ import POSCRMPanel from './POSCRMPanel';
 import POSOpenBillsGrid from './POSOpenBillsGrid';
 import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
 import SlipModal from '../components/shared/SlipModal';
+import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
@@ -1604,10 +1605,20 @@ export default function POSDashboard() {
                         {view === 'reports' && (
                             <POSReportsPanel />
                         )}
+                        {view === 'online_hub' && (
+                            <POSOnlineHub 
+                                activeShift={activeShift} 
+                                onOpenSlipModal={(booking, slipType) => {
+                                    setActiveSlipBooking(booking);
+                                    setActiveSlipType(slipType);
+                                }}
+                                refreshKey={refreshKey}
+                            />
+                        )}
                     </div>
 
                     {/* Order Panel Sidebar */}
-                    {view !== 'reports' && view !== 'crm' && view !== 'open_bills' && (
+                    {view !== 'reports' && view !== 'crm' && view !== 'open_bills' && view !== 'online_hub' && (
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
