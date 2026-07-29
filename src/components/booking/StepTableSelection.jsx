@@ -111,6 +111,7 @@ export default function StepTableSelection() {
         let textColor = (isBooked || isSelected || isLockedByOthers || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) ? 'white' : 'black'
         let borderColor = isSelected ? 'white' : 'transparent'
 
+        return (
             <button
                 key={table.id}
                 onClick={(e) => {
