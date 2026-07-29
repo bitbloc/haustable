@@ -12,6 +12,7 @@ import POSCRMPanel from './POSCRMPanel';
 import POSOpenBillsGrid from './POSOpenBillsGrid';
 import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
 import SlipModal from '../components/shared/SlipModal';
+import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
@@ -47,6 +48,7 @@ export default function POSDashboard() {
     };
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
     const [activeSlipType, setActiveSlipType] = useState('billing');
+    const [viewSlipImageUrl, setViewSlipImageUrl] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Move / Merge / Split States
@@ -1633,6 +1635,7 @@ export default function POSDashboard() {
                                     setActiveSlipBooking(booking);
                                     setActiveSlipType(slipType);
                                 }}
+                                onViewSlipImage={(url) => setViewSlipImageUrl(url)}
                                 refreshKey={refreshKey}
                             />
                         )}
@@ -1767,6 +1770,13 @@ export default function POSDashboard() {
                             handleBackToTables();
                         }
                     }}
+                />
+            )}
+
+            {viewSlipImageUrl && (
+                <ViewSlipModal 
+                    url={viewSlipImageUrl}
+                    onClose={() => setViewSlipImageUrl(null)}
                 />
             )}
 
@@ -1956,8 +1966,7 @@ export default function POSDashboard() {
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        setActiveSlipBooking(item);
-                                                        setActiveSlipType('billing');
+                                                        setViewSlipImageUrl(item.payment_slip_url);
                                                     }}
                                                     className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
                                                 >

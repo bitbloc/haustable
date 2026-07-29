@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
-export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey }) {
+export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, refreshKey }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [persistentAlert, setPersistentAlert] = useState(null); // stores the incoming order that triggered the alert
@@ -261,7 +261,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
                 <div className="mt-auto pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2">
                     {order.payment_slip_url && (
                         <button 
-                            onClick={() => onOpenSlipModal(order, 'billing')}
+                            onClick={() => {
+                                if (onViewSlipImage && order.payment_slip_url) {
+                                    onViewSlipImage(order.payment_slip_url);
+                                } else {
+                                    onOpenSlipModal(order, 'billing');
+                                }
+                            }}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer"
                         >
                             <ReceiptText size={14} />
