@@ -11,9 +11,12 @@ import {
     Maximize,
     LayoutGrid,
     Map,
-    Search
+    Search,
+    RefreshCw,
+    ArrowRightLeft
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { toast } from 'sonner';
 
 export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey }) {
     const [tables, setTables] = useState([]);
@@ -22,6 +25,8 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
     const [viewMode, setViewMode] = useState('grid'); // 'floorplan' or 'grid'
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'free', 'occupied', 'pending'
+    const [reassignModalBooking, setReassignModalBooking] = useState(null); // Booking needing table re-assignment
+    const [reassigning, setReassigning] = useState(false);
 
     useEffect(() => {
         // Immediate local cache render for sub-100ms UI responsiveness
@@ -121,11 +126,24 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                 localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
 
                 const merged = currentTables.map(t => {
-                    const booking = currentBookings.find(b => b.table_id === t.id);
+                    const activeBooking = currentBookings.find(b => b.table_id === t.id && (b.status === 'seated' || b.status === 'confirmed'));
+                    const pendingBooking = currentBookings.find(b => b.table_id === t.id && b.status === 'pending');
+                    const primaryBooking = activeBooking || pendingBooking;
+
+                    // Check for conflict: Table is currently occupied AND has an upcoming booking within 45 mins
+                    const upcomingConflict = currentBookings.find(b => 
+                        b.table_id === t.id &&
+                        (b.status === 'confirmed' || b.status === 'pending') &&
+                        primaryBooking && b.id !== primaryBooking.id &&
+                        new Date(b.booking_time) > new Date() &&
+                        (new Date(b.booking_time) - new Date()) <= 45 * 60 * 1000
+                    );
+
                     return {
                         ...t,
-                        status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                        booking: booking
+                        status: primaryBooking ? (primaryBooking.status === 'pending' ? 'pending' : 'occupied') : 'free',
+                        booking: primaryBooking,
+                        upcomingConflict: upcomingConflict
                     };
                 });
 
@@ -375,6 +393,14 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                         >
                                                             {/* LED indicator light in top-right */}
                                                             <div className="absolute top-1 right-1 flex items-center justify-center gap-1">
+                                                                {table.upcomingConflict && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setReassignModalBooking(table.booking); }}
+                                                                        className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-bounce shadow cursor-pointer pointer-events-auto"
+                                                                    >
+                                                                        ⚠️ ชนคิว!
+                                                                    </button>
+                                                                )}
                                                                 {hasOrder && (
                                                                     <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
                                                                         ORDER
@@ -534,6 +560,73 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                     </div>
                 )}
             </div>
+            {/* 🔄 Smart Re-assignment Modal (แก้ปัญหาคิวจองชนลูกค้านั่งแช่) */}
+            {reassignModalBooking && (
+                <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-amber-500 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+                            <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
+                                <AlertCircle size={24} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-900 text-base">ย้ายคิวจองไปโต๊ะอื่น (Re-assign Table)</h3>
+                                <p className="text-xs text-gray-500">โต๊ะเดิมมีลูกค้านั่งอยู่ ย้ายคิวไปโต๊ะว่างอื่นได้ทันที</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 mb-4 text-xs text-amber-900 space-y-1">
+                            <p className="font-bold">👤 ลูกค้าจอง: {reassignModalBooking.pickup_contact_name || reassignModalBooking.customer_name || 'ลูกค้าออนไลน์'}</p>
+                            <p>⏰ เวลาจอง: {new Date(reassignModalBooking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+
+                        <p className="text-xs font-bold text-gray-700 uppercase mb-2">เลือกโต๊ะว่างที่จะย้ายไป:</p>
+                        <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-6">
+                            {tables.filter(t => t.status === 'free').map(freeT => (
+                                <button
+                                    key={freeT.id}
+                                    type="button"
+                                    disabled={reassigning}
+                                    onClick={async () => {
+                                        setReassigning(true);
+                                        try {
+                                            const { error } = await supabase
+                                                .from('bookings')
+                                                .update({ table_id: freeT.id })
+                                                .eq('id', reassignModalBooking.id);
+
+                                            if (error) throw error;
+
+                                            toast.success(`ย้ายคิวจองไป ${freeT.table_name} สำเร็จ! (หน้า Tracking ลูกค้าอัปเดตแล้ว)`);
+                                            setReassignModalBooking(null);
+                                            fetchTables();
+                                        } catch (err) {
+                                            console.error(err);
+                                            toast.error('ไม่สามารถย้ายโต๊ะได้');
+                                        } finally {
+                                            setReassigning(false);
+                                        }
+                                    }}
+                                    className="p-3 rounded-xl border border-gray-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer active:scale-95"
+                                >
+                                    <span className="text-sm font-black">{freeT.table_name}</span>
+                                    <span className="text-[9px] opacity-75 font-normal">ว่าง (Free)</span>
+                                </button>
+                            ))}
+                            {tables.filter(t => t.status === 'free').length === 0 && (
+                                <div className="col-span-3 text-center text-gray-400 text-xs py-6">ไม่มีโต๊ะว่างในขณะนี้</div>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setReassignModalBooking(null)}
+                            className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                        >
+                            ยกเลิก
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
