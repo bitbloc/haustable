@@ -7,7 +7,7 @@ const SHIFT_HISTORY_KEY = 'pos_shift_history';
 export async function syncShiftToCloud(shift) {
     if (!shift || !shift.id) return;
     try {
-        const payload = {
+        const corePayload = {
             id: String(shift.id),
             staff_name: String(shift.staffName || 'Staff'),
             opened_at: shift.openedAt ? new Date(shift.openedAt).toISOString() : new Date().toISOString(),
@@ -18,18 +18,12 @@ export async function syncShiftToCloud(shift) {
             difference: Number(shift.difference) || 0,
             status: String(shift.status || 'open'),
             transactions: Array.isArray(shift.transactions) ? shift.transactions : [],
-            adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : [],
-            cash_sales: Number(shift.cashSales) || 0,
-            qr_sales: Number(shift.qrSales) || 0,
-            credit_sales: Number(shift.creditSales) || 0,
-            total_sales: Number(shift.totalSales) || 0,
-            total_in: Number(shift.totalIn) || 0,
-            total_out: Number(shift.totalOut) || 0
+            adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : []
         };
 
         const { error } = await supabase
             .from('pos_shifts')
-            .upsert(payload);
+            .upsert(corePayload);
 
         if (error) {
             console.warn('[Shift Sync] Supabase upsert error:', error.message || error);
