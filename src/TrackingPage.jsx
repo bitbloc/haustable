@@ -144,6 +144,26 @@ export default function TrackingPage() {
       }
   }
 
+  const handleCancelBooking = async () => {
+      if (!window.confirm(t('confirmCancel') || 'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้?')) return;
+      
+      setCancelling(true)
+      try {
+          const { error } = await supabase
+              .from('bookings')
+              .update({ status: 'cancelled' })
+              .eq('id', data.id)
+              
+          if (error) throw error
+          window.location.reload()
+      } catch (err) {
+          console.error(err)
+          alert('ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่อีกครั้ง')
+      } finally {
+          setCancelling(false)
+      }
+  }
+
   // --- RENDER ---
   if (loading) return (
       <div className="flex flex-col h-screen items-center justify-center bg-gray-50 space-y-4">
