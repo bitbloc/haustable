@@ -179,8 +179,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
         }
     };
 
-    // Derived buckets
-    const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'no_show');
+    // Derived buckets (Filter out cancelled & completed to keep UI 100% clean)
+    const activeOrders = orders
+        .filter(o => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'no_show')
+        .sort((a, b) => new Date(b.created_at || b.booking_time) - new Date(a.created_at || a.booking_time));
     
     // Grouping
     const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status !== 'paid' && o.status !== 'completed');
@@ -194,9 +196,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
     );
 
     const renderCard = (order, typeLabel) => {
-        const timeStr = new Date(order.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const orderTimeStr = order.created_at ? new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : null;
+        const bookingTimeStr = new Date(order.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         const name = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'ลูกค้าทั่วไป';
         const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
+        const isPickup = order.booking_type === 'pickup';
 
         return (
             <motion.div 
@@ -204,25 +208,48 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-4 flex flex-col gap-3 shadow-sm hover:border-[oklch(18%_0.012_28)] transition-colors"
+                className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex flex-col gap-3 shadow-sm hover:border-[oklch(18%_0.012_28)] transition-colors"
             >
                 <div className="flex justify-between items-start">
                     <div>
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded-full inline-block mb-2">
-                            {typeLabel}
-                        </span>
+                        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block ${
+                                isPickup ? 'bg-blue-100 text-blue-900 border border-blue-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                            }`}>
+                                {isPickup ? '🛍️ PICKUP (รับกลับบ้าน)' : '🍽️ DINE-IN (จองโต๊ะ)'}
+                            </span>
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded-full">
+                                {typeLabel}
+                            </span>
+                        </div>
                         <h4 className="font-bold text-[oklch(18%_0.012_28)] leading-tight">{name}</h4>
-                        {phone && <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-1">{phone}</p>}
-                        {order.deposit_amount > 0 && (
-                            <p className="text-[10px] font-bold text-orange-600 font-mono mt-1 bg-orange-50 px-2 py-0.5 rounded inline-block border border-orange-100">
-                                DEPOSIT PAID: ฿{order.deposit_amount}
+                        {phone && <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">📞 {phone}</p>}
+                    </div>
+
+                    <div className="text-right font-mono shrink-0">
+                        {orderTimeStr && (
+                            <p className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                📩 สั่งเมื่อ: <strong className="text-[oklch(18%_0.012_28)]">{orderTimeStr} น.</strong>
                             </p>
                         )}
+                        <p className="text-xs font-bold text-[oklch(18%_0.012_28)] mt-0.5 bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
+                            ⏰ นัดหมาย: {bookingTimeStr} น.
+                        </p>
                     </div>
-                    <div className="text-right">
-                        <span className="text-sm font-bold text-[oklch(18%_0.012_28)] font-mono">{timeStr}</span>
-                        <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono uppercase mt-0.5">Time</p>
-                    </div>
+                </div>
+
+                {/* Amount badges */}
+                <div className="flex items-center gap-2 font-mono text-xs pt-1 border-t border-[oklch(85%_0.012_28)] flex-wrap">
+                    {order.total_amount > 0 && (
+                        <span className="font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1 rounded border border-[oklch(85%_0.012_28)]">
+                            💰 ยอดรวม: ฿{order.total_amount}
+                        </span>
+                    )}
+                    {order.deposit_amount > 0 && (
+                        <span className="font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                            💳 โอนมัดจำ: ฿{order.deposit_amount}
+                        </span>
+                    )}
                 </div>
 
                 {order.customer_note && (
@@ -261,7 +288,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
                             ทำอาหารเสร็จ
                         </button>
                     )}
-                     {order.booking_type === 'pickup' && order.status === 'ready' && (
+                    {order.booking_type === 'pickup' && order.status === 'ready' && (
                         <button 
                             onClick={() => updateBookingStatus(order.id, 'completed')}
                             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer"
