@@ -178,7 +178,7 @@ export function usePOSOrder() {
             const mockBooking = {
                 id: tempId,
                 table_id: null,
-                status: 'pending',
+                status: 'seated',
                 booking_type: 'pickup',
                 booking_time: new Date().toISOString(),
                 pax: 1,
@@ -194,7 +194,7 @@ export function usePOSOrder() {
             addToOfflineQueue('create_pickup', {
                 tempBookingId: tempId,
                 customerNote: note,
-                status: 'pending',
+                status: 'seated',
                 bookingTime: mockBooking.booking_time
             });
 
@@ -207,7 +207,7 @@ export function usePOSOrder() {
                 .from('bookings')
                 .insert({
                     table_id: null,
-                    status: 'pending',
+                    status: 'seated',
                     booking_type: 'pickup',
                     booking_time: new Date().toISOString(),
                     pax: 1,
