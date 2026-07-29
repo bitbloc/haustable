@@ -184,6 +184,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         shopFooter: settingsMap.receipt_shop_footer,
                         paymentQrUrl: settingsMap.payment_qr_url,
                         divider_style: currentPrinterConfig.divider_style || printerConfig.divider_style || 'dashed',
+                        footer_ascii_art: currentPrinterConfig.footer_ascii_art || printerConfig.footer_ascii_art || '',
                         kitchen_categories: currentPrinterConfig.kitchen_categories || printerConfig.kitchen_categories || [],
                         bar_categories: currentPrinterConfig.bar_categories || printerConfig.bar_categories || []
                     };
