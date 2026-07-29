@@ -393,6 +393,15 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
                                                         >
                                                             {/* LED indicator light in top-right */}
                                                             <div className="absolute top-1 right-1 flex items-center justify-center gap-1">
+                                                                {table.booking && (
+                                                                     <span className={`text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none ${
+                                                                         (table.booking.source === 'online' || table.booking.deposit_amount > 0 || table.booking.payment_slip_url || table.booking.pickup_contact_name || table.booking.booking_type === 'pickup' || table.booking.status === 'pending')
+                                                                             ? 'bg-purple-600 text-white animate-pulse shadow-sm'
+                                                                             : 'bg-gray-700 text-gray-200'
+                                                                     }`}>
+                                                                         {(table.booking.source === 'online' || table.booking.deposit_amount > 0 || table.booking.payment_slip_url || table.booking.pickup_contact_name || table.booking.booking_type === 'pickup' || table.booking.status === 'pending') ? '🌐 ONLINE' : '🏢 DINE-IN'}
+                                                                     </span>
+                                                                 )}
                                                                 {table.upcomingConflict && (
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); setReassignModalBooking(table.booking); }}
