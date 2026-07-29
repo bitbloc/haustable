@@ -16,6 +16,7 @@ import { Toaster, toast } from 'sonner';
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, refreshKey }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [hubTab, setHubTab] = useState('active'); // 'active' | 'completed' | 'cancelled'
     const [persistentAlert, setPersistentAlert] = useState(null); // stores the incoming order that triggered the alert
     const audioRef = useRef(null);
     const alertIntervalRef = useRef(null);
@@ -179,10 +180,18 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         }
     };
 
-    // Derived buckets (Filter out cancelled & completed to keep UI 100% clean)
+    // Derived buckets
     const activeOrders = orders
         .filter(o => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'no_show')
         .sort((a, b) => new Date(b.created_at || b.booking_time) - new Date(a.created_at || a.booking_time));
+
+    const completedOrders = orders
+        .filter(o => o.status === 'completed' || o.status === 'seated' || o.status === 'paid' || o.status === 'confirmed')
+        .sort((a, b) => new Date(b.updated_at || b.booking_time) - new Date(a.updated_at || a.booking_time));
+
+    const cancelledOrders = orders
+        .filter(o => o.status === 'cancelled' || o.status === 'no_show')
+        .sort((a, b) => new Date(b.updated_at || b.booking_time) - new Date(a.updated_at || a.booking_time));
     
     // Grouping
     const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status !== 'paid' && o.status !== 'completed');
@@ -312,82 +321,162 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         <div className="h-full flex flex-col bg-[oklch(94%_0.010_28)] overflow-hidden font-sans">
             <Toaster position="top-center" />
             
-            {/* Header */}
+            {/* Header & Sub-Tabs */}
             <div className="p-6 pb-2 shrink-0">
-                <h1 className="text-2xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">ONLINE ORDERS HUB</h1>
-                <p className="text-[oklch(55%_0.010_28)] text-sm font-mono mt-1">ศูนย์จัดการคิวจองออนไลน์ สลิปโอนเงิน และออเดอร์รับกลับบ้าน (ตรวจสอบทีละรายการ)</p>
+                <div className="flex justify-between items-end flex-wrap gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">ONLINE ORDERS HUB</h1>
+                        <p className="text-[oklch(55%_0.010_28)] text-sm font-mono mt-1">ศูนย์จัดการคิวจองออนไลน์ สลิปโอนเงิน และออเดอร์รับกลับบ้าน (ตรวจสอบทีละรายการ)</p>
+                    </div>
+
+                    {/* Sub-Tab Selector */}
+                    <div className="flex items-center gap-2 bg-[oklch(97%_0.008_28)] p-1.5 rounded-2xl border border-[oklch(85%_0.012_28)]">
+                        <button
+                            type="button"
+                            onClick={() => setHubTab('active')}
+                            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                                hubTab === 'active'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm'
+                                    : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                        >
+                            <span>🟢 รอดำเนินการ (ACTIVE)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-800">
+                                {activeOrders.length}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setHubTab('completed')}
+                            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                                hubTab === 'completed'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm'
+                                    : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                        >
+                            <span>✅ สำเร็จแล้ว (COMPLETED)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-800">
+                                {completedOrders.length}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setHubTab('cancelled')}
+                            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                                hubTab === 'cancelled'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm'
+                                    : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                        >
+                            <span>❌ ยกเลิกแล้ว (CANCELLED)</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-800">
+                                {cancelledOrders.length}
+                            </span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* Kanban Grid */}
-            <div className="flex-1 p-6 overflow-x-auto flex gap-6 snap-x scrollbar-none">
-                
-                {/* Column 1: Slips to Verify */}
-                <div className="w-[320px] shrink-0 flex flex-col snap-start">
-                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
-                        <div className="flex items-center gap-2">
-                            <ReceiptText className="text-[oklch(18%_0.012_28)]" size={18} />
-                            <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Verify Slips</h2>
+            {/* Content View */}
+            {hubTab === 'active' && (
+                <div className="flex-1 p-6 overflow-x-auto flex gap-6 snap-x scrollbar-none">
+                    {/* Column 1: Slips to Verify */}
+                    <div className="w-[320px] shrink-0 flex flex-col snap-start">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-2">
+                                <ReceiptText className="text-[oklch(18%_0.012_28)]" size={18} />
+                                <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Verify Slips</h2>
+                            </div>
+                            <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
+                                {slipsToVerify.length}
+                            </span>
                         </div>
-                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
-                            {slipsToVerify.length}
-                        </span>
+                        <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
+                            {slipsToVerify.length === 0 ? (
+                                <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No slips to verify</div>
+                            ) : (
+                                <AnimatePresence>
+                                    {slipsToVerify.map(o => renderCard(o, 'SLIP VERIFICATION'))}
+                                </AnimatePresence>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
-                        {slipsToVerify.length === 0 ? (
-                            <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No slips to verify</div>
+
+                    {/* Column 2: New Online Bookings */}
+                    <div className="w-[320px] shrink-0 flex flex-col snap-start">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="text-[oklch(18%_0.012_28)]" size={18} />
+                                <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Table Bookings</h2>
+                            </div>
+                            <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
+                                {newBookings.length}
+                            </span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
+                            {newBookings.length === 0 ? (
+                                <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No new bookings</div>
+                            ) : (
+                                <AnimatePresence>
+                                    {newBookings.map(o => renderCard(o, 'ONLINE BOOKING'))}
+                                </AnimatePresence>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Column 3: Online Pickups */}
+                    <div className="w-[320px] shrink-0 flex flex-col snap-start">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-2">
+                                <UtensilsCrossed className="text-[oklch(18%_0.012_28)]" size={18} />
+                                <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Online Pick-ups</h2>
+                            </div>
+                            <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
+                                {onlinePickups.length}
+                            </span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
+                            {onlinePickups.length === 0 ? (
+                                <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No active pick-ups</div>
+                            ) : (
+                                <AnimatePresence>
+                                    {onlinePickups.map(o => renderCard(o, o.status === 'ready' ? 'READY TO PICKUP' : 'PREPARING PICKUP'))}
+                                </AnimatePresence>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {hubTab === 'completed' && (
+                <div className="flex-1 p-6 overflow-y-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                        {completedOrders.length === 0 ? (
+                            <div className="col-span-full text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-16">
+                                ไม่มีออเดอร์ออนไลน์ที่สำเร็จแล้วในวันนี้
+                            </div>
                         ) : (
-                            <AnimatePresence>
-                                {slipsToVerify.map(o => renderCard(o, 'SLIP VERIFICATION'))}
-                            </AnimatePresence>
+                            completedOrders.map(o => renderCard(o, `✅ ${o.status.toUpperCase()}`))
                         )}
                     </div>
                 </div>
+            )}
 
-                {/* Column 2: New Online Bookings */}
-                <div className="w-[320px] shrink-0 flex flex-col snap-start">
-                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
-                        <div className="flex items-center gap-2">
-                            <Calendar className="text-[oklch(18%_0.012_28)]" size={18} />
-                            <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Table Bookings</h2>
-                        </div>
-                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
-                            {newBookings.length}
-                        </span>
-                    </div>
-                    <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
-                        {newBookings.length === 0 ? (
-                            <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No new bookings</div>
+            {hubTab === 'cancelled' && (
+                <div className="flex-1 p-6 overflow-y-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+                        {cancelledOrders.length === 0 ? (
+                            <div className="col-span-full text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-16">
+                                ไม่มีออเดอร์ออนไลน์ที่ยกเลิกในวันนี้
+                            </div>
                         ) : (
-                            <AnimatePresence>
-                                {newBookings.map(o => renderCard(o, 'ONLINE BOOKING'))}
-                            </AnimatePresence>
+                            cancelledOrders.map(o => renderCard(o, '❌ CANCELLED'))
                         )}
                     </div>
                 </div>
-
-                {/* Column 3: Online Pickups */}
-                <div className="w-[320px] shrink-0 flex flex-col snap-start">
-                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[oklch(85%_0.012_28)]">
-                        <div className="flex items-center gap-2">
-                            <UtensilsCrossed className="text-[oklch(18%_0.012_28)]" size={18} />
-                            <h2 className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-sm">Online Pick-ups</h2>
-                        </div>
-                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-mono font-bold px-2 py-0.5 rounded-full">
-                            {onlinePickups.length}
-                        </span>
-                    </div>
-                    <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-4 pb-20">
-                        {onlinePickups.length === 0 ? (
-                            <div className="text-center text-[oklch(55%_0.010_28)] text-sm font-mono py-10">No active pick-ups</div>
-                        ) : (
-                            <AnimatePresence>
-                                {onlinePickups.map(o => renderCard(o, o.status === 'ready' ? 'READY TO PICKUP' : 'PREPARING PICKUP'))}
-                            </AnimatePresence>
-                        )}
-                    </div>
-                </div>
-
-            </div>
+            )}
 
             {/* Persistent Alert Overlay */}
             <AnimatePresence>
