@@ -270,16 +270,18 @@ export default function BookingCheckout() {
                 </div>
             </div>
 
-            {/* Policy */}
-            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-4">
-                <h4 className="text-orange-800 font-bold text-xs uppercase mb-1">{t('condition')}</h4>
-                <p className="text-orange-700 text-xs whitespace-pre-line mb-2">
-                    {settings.policyNote}
-                </p>
-                <div className="text-[11px] text-orange-800 font-bold bg-orange-100 p-2 rounded border border-orange-200 mt-2">
-                    ⚠️ นโยบายการคืนเงินมัดจำ: <br/>
-                    สามารถยกเลิกและขอคืนเงินได้ผ่านระบบ หากแจ้งล่วงหน้ามากกว่า 24 ชั่วโมงก่อนถึงเวลานัดหมาย <br/>
-                    *หากยกเลิกภายใน 24 ชั่วโมงก่อนเวลานัดหมาย ระบบจะไม่สามารถคืนเงินมัดจำได้ กรุณาติดต่อทางร้านโดยตรง
+            {/* System Dine-in Policy (Hardcoded) */}
+            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-4 space-y-2">
+                <h4 className="text-orange-900 font-bold text-xs uppercase flex items-center gap-1.5">
+                    📌 เงื่อนไขการจองโต๊ะ (Dine-in Conditions)
+                </h4>
+                <ul className="text-orange-800 text-xs space-y-1 pl-4 list-disc font-medium">
+                    <li>สั่งอาหารขั้นต่ำ 150 บาทต่อท่าน (Min Spend 150 THB/pax)</li>
+                    <li>ชำระเงินมัดจำ 50% จากยอดค่าอาหาร (หักคืนให้อัตโนมัติจากบิลหน้าร้าน)</li>
+                    <li>ยกเลิกและขอคืนเงินมัดจำได้ผ่านระบบล่วงหน้าไม่น้อยกว่า 24 ชั่วโมงก่อนเวลานัดหมาย</li>
+                </ul>
+                <div className="text-[11px] text-orange-900 font-bold bg-orange-100/80 p-2.5 rounded-lg border border-orange-200 mt-2">
+                    ⚠️ หมายเหตุ: หากยกเลิกกระทันหันน้อยกว่า 24 ชั่วโมงก่อนเวลานัดหมาย ระบบจะไม่สามารถคืนเงินมัดจำได้ กรุณาติดต่อทางร้านโดยตรง
                 </div>
             </div>
 

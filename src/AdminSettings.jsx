@@ -1067,27 +1067,24 @@ export default function AdminSettings() {
                             />
                         </div>
 
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">เงื่อนไขการจอง Dine-in (หน้าชำระเงิน)</label>
-                                <textarea
-                                    rows={3}
-                                    value={settings.policy_dine_in || ''}
-                                    onChange={(e) => setSettings(prev => ({ ...prev, policy_dine_in: e.target.value }))}
-                                    placeholder="ข้อความนโยบายการจอง..."
-                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-xs text-gray-900 outline-none focus:border-black"
-                                />
+                        {/* Active Hardcoded System Policies */}
+                        <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200/80 space-y-3">
+                            <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
+                                <ShieldCheck size={16} />
+                                System Default Active Policies (เงื่อนไขการจองในระบบ)
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 mb-1">เงื่อนไข Pickup (หน้าชำระเงิน)</label>
-                                <textarea
-                                    rows={3}
-                                    value={settings.policy_pickup || ''}
-                                    onChange={(e) => setSettings(prev => ({ ...prev, policy_pickup: e.target.value }))}
-                                    placeholder="ข้อความนโยบายการสั่งกลับบ้าน..."
-                                    className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-xs text-gray-900 outline-none focus:border-black"
-                                />
+                            <div className="grid md:grid-cols-2 gap-4 text-xs text-emerald-900">
+                                <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm space-y-1">
+                                    <span className="font-bold text-emerald-800 block mb-1">🍽 Dine-in Policy (การจองโต๊ะทานที่ร้าน):</span>
+                                    <p>• สั่งอาหารขั้นต่ำ 150 บาทต่อท่าน</p>
+                                    <p>• ชำระมัดจำ 50% อัตโนมัติ (หักคืนให้อัตโนมัติจากบิลหน้าร้าน)</p>
+                                    <p>• คืนมัดจำได้หากยกเลิกล่วงหน้าเกิน 24 ชั่วโมง</p>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm space-y-1">
+                                    <span className="font-bold text-emerald-800 block mb-1">🛍 Pickup Policy (การสั่งกลับบ้าน):</span>
+                                    <p>• ชำระเงินเต็มจำนวน 100% เท่านั้น</p>
+                                    <p>• ไม่สามารถยกเลิกออเดอร์และขอคืนเงินได้ทุกกรณี</p>
+                                </div>
                             </div>
                         </div>
                     </div>
