@@ -99,6 +99,11 @@ export default function POSDashboard() {
     };
     const [cashAdjustmentForm, setCashAdjustmentForm] = useState({ amount: '', note: '', type: 'out' });
 
+    // Pending Online Bookings Pop-up Modal State
+    const [pendingBookingsList, setPendingBookingsList] = useState([]);
+    const [showPendingModal, setShowPendingModal] = useState(false);
+    const prevPendingCountRef = useRef(0);
+
     // CRM Profile Attach States
     const [showAttachCRMModal, setShowAttachCRMModal] = useState(false);
     const [crmSearchTerm, setCrmSearchTerm] = useState('');
@@ -522,19 +527,25 @@ export default function POSDashboard() {
     const checkPendingOrders = async () => {
         try {
             const today = new Date().toISOString().split('T')[0];
-            const { count, error } = await supabase
+            const { data: pendingBookings, error } = await supabase
                 .from('bookings')
-                .select('id', { count: 'exact', head: true })
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
                 .eq('status', 'pending')
-                .gte('booking_time', `${today}T00:00:00`);
+                .gte('booking_time', `${today}T00:00:00`)
+                .order('booking_time', { ascending: false });
             
-            if (!error) {
-                const hasPending = (count || 0) > 0;
+            if (!error && pendingBookings) {
+                setPendingBookingsList(pendingBookings);
+                const count = pendingBookings.length;
+                const hasPending = count > 0;
                 setHasPendingOrders(hasPending);
-                if (hasPending !== prevHasPendingOrdersRef.current) {
-                    prevHasPendingOrdersRef.current = hasPending;
-                    setRefreshKey(prev => prev + 1);
+                
+                // Auto trigger pop-up overlay if new pending bookings arrive
+                if (count > prevPendingCountRef.current) {
+                    setShowPendingModal(true);
                 }
+                prevPendingCountRef.current = count;
+                setRefreshKey(prev => prev + 1);
             }
         } catch (err) {
             console.error("Check pending orders failed:", err);
@@ -1849,6 +1860,135 @@ export default function POSDashboard() {
                                 className="flex-1 bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <Check size={16} /> เปิดโต๊ะ (Open Table) *
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 🔔 Incoming Online Bookings Floating Pop-up Overlay Modal (กล่องเด้งแยกเดี่ยวรอยืนยัน) */}
+            {showPendingModal && pendingBookingsList.length > 0 && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in duration-200">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[#1A1A1A]">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-white flex justify-between items-center shrink-0 shadow-sm">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-black/20 flex items-center justify-center font-bold text-lg">
+                                    🔔
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm leading-tight flex items-center gap-2">
+                                        คิวจอง & ออเดอร์ออนไลน์รอยืนยัน 
+                                        <span className="bg-black/30 px-2 py-0.5 rounded-full text-xs font-mono">
+                                            {pendingBookingsList.length} รายการ
+                                        </span>
+                                    </h3>
+                                    <p className="text-[10px] opacity-90 font-mono mt-0.5">
+                                        กรุณาตรวจสอบสลิปและข้อมูลก่อนกดอนุมัติ (กล่องแยกเดี่ยว ไม่กระทบผังโต๊ะหน้าร้าน)
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowPendingModal(false)}
+                                className="p-1.5 hover:bg-black/20 rounded-lg text-white/90 hover:text-white transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Scrollable Pending Cards List */}
+                        <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[#ECECE9]">
+                            {pendingBookingsList.map((item, idx) => (
+                                <div key={item.id || idx} className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                                    <div className="flex justify-between items-start border-b border-[#EAEAE6] pb-2.5">
+                                        <div>
+                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full inline-block mb-1">
+                                                ONLINE QUEUE #{item.id?.slice(-4) || (idx + 1)}
+                                            </span>
+                                            <h4 className="font-bold text-sm text-[#1A1A1A]">
+                                                {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || 'ลูกค้าออนไลน์'}
+                                            </h4>
+                                            <p className="text-xs text-[#767673] font-mono mt-0.5">
+                                                📞 {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์'}
+                                            </p>
+                                        </div>
+                                        <div className="text-right font-mono">
+                                            <span className="text-xs font-bold text-[#ff0000] bg-red-50 border border-red-200 px-2 py-1 rounded-md inline-block">
+                                                ⏰ {new Date(item.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                            </span>
+                                            <p className="text-[10px] text-[#767673] mt-1 font-bold">
+                                                👥 {item.pax || 1} คน
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Table info */}
+                                    {item.tables_layout && (
+                                        <div className="text-[10px] font-mono text-[#767673] bg-[#F5F5F2] px-2.5 py-1.5 rounded-lg border border-[#EAEAE6] flex justify-between items-center">
+                                            <span>📍 โต๊ะที่เลือกล่วงหน้า: <strong className="text-[#1A1A1A]">{item.tables_layout.table_name}</strong></span>
+                                            <span className="text-amber-700 font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
+                                        </div>
+                                    )}
+
+                                    {/* Deposit info & slip view button */}
+                                    {item.deposit_amount > 0 && (
+                                        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg text-emerald-900 font-mono text-xs">
+                                            <span className="font-bold flex items-center gap-1">💳 ยอดโอนมัดจำ: ฿{item.deposit_amount}</span>
+                                            {item.payment_slip_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveSlipBooking(item);
+                                                        setActiveSlipType('billing');
+                                                    }}
+                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                                >
+                                                    <ReceiptText size={12} /> ตรวจสลิปโอนเงิน
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Action buttons */}
+                                    <div className="flex items-center gap-2 pt-1 border-t border-[#EAEAE6]">
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', item.id);
+                                                if (!error) {
+                                                    toast.success("ยกเลิกรายการจองเรียบร้อยแล้ว");
+                                                    checkPendingOrders();
+                                                }
+                                            }}
+                                            className="flex-1 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
+                                        >
+                                            ❌ ยกเลิก / ปฏิเสธ
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const success = await acceptOrder(item.id);
+                                                if (success) {
+                                                    toast.success("อนุมัติคิวจองเรียบร้อยแล้ว!");
+                                                    checkPendingOrders();
+                                                }
+                                            }}
+                                            className="flex-2 py-2 bg-amber-500 hover:bg-amber-600 text-black border border-amber-600 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                                        >
+                                            <Check size={14} /> ✓ อนุมัติ & ยืนยันคิว
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-3 bg-[#F5F5F2] border-t border-[#D1D1CD] flex justify-end">
+                            <button
+                                onClick={() => setShowPendingModal(false)}
+                                className="px-4 py-2 bg-white border border-[#D1D1CD] hover:bg-gray-100 rounded-xl text-xs font-mono font-bold text-[#767673] cursor-pointer active:scale-95 transition-all"
+                            >
+                                ปิดหน้าต่างเตือน (Close Overlay)
                             </button>
                         </div>
                     </div>
