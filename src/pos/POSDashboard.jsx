@@ -1866,74 +1866,92 @@ export default function POSDashboard() {
                 </div>
             )}
 
-            {/* 🔔 Incoming Online Bookings Floating Pop-up Overlay Modal (กล่องเด้งแยกเดี่ยวรอยืนยัน) */}
+            {/* 🔔 Incoming Online Bookings Floating Pop-up Overlay Modal (Dieter Rams + Thai Modern Style) */}
             {showPendingModal && pendingBookingsList.length > 0 && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in duration-200">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[#1A1A1A]">
-                        {/* Modal Header */}
-                        <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-white flex justify-between items-center shrink-0 shadow-sm">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-black/20 flex items-center justify-center font-bold text-lg">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
+                        {/* Rams Matte Dark Header */}
+                        <div className="bg-[oklch(18%_0.012_28)] p-4 text-[oklch(97%_0.008_28)] flex justify-between items-center shrink-0 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-[oklch(52%_0.16_28)]/20 border border-[oklch(52%_0.16_28)]/40 flex items-center justify-center font-mono font-bold text-sm text-[oklch(52%_0.16_28)]">
                                     🔔
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-sm leading-tight flex items-center gap-2">
-                                        คิวจอง & ออเดอร์ออนไลน์รอยืนยัน 
-                                        <span className="bg-black/30 px-2 py-0.5 rounded-full text-xs font-mono">
-                                            {pendingBookingsList.length} รายการ
+                                    <h3 className="font-bold text-sm leading-tight flex items-center gap-2 text-[oklch(97%_0.008_28)]">
+                                        คิวจอง & ออเดอร์ออนไลน์รอยืนยัน
+                                        <span className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 rounded-full text-xs font-mono font-bold">
+                                            {pendingBookingsList.length}
                                         </span>
                                     </h3>
-                                    <p className="text-[10px] opacity-90 font-mono mt-0.5">
-                                        กรุณาตรวจสอบสลิปและข้อมูลก่อนกดอนุมัติ (กล่องแยกเดี่ยว ไม่กระทบผังโต๊ะหน้าร้าน)
+                                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                        ตรวจสอบสลิปและรายละเอียดก่อนกดยืนยัน (กล่องแยกเดี่ยว ไม่กระทบผังโต๊ะหน้าร้าน)
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setShowPendingModal(false)}
-                                className="p-1.5 hover:bg-black/20 rounded-lg text-white/90 hover:text-white transition-colors cursor-pointer"
+                                className="p-1.5 hover:bg-white/10 rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(97%_0.008_28)] transition-colors cursor-pointer"
                             >
                                 <X size={18} />
                             </button>
                         </div>
 
                         {/* Scrollable Pending Cards List */}
-                        <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[#ECECE9]">
+                        <div className="p-4 overflow-y-auto space-y-3.5 flex-1 bg-[oklch(94%_0.010_28)] scrollbar-none">
                             {pendingBookingsList.map((item, idx) => (
-                                <div key={item.id || idx} className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm flex flex-col gap-3">
-                                    <div className="flex justify-between items-start border-b border-[#EAEAE6] pb-2.5">
+                                <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                                    {/* Card Top Details */}
+                                    <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-2.5">
                                         <div>
-                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full inline-block mb-1">
+                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20 inline-block mb-1">
                                                 ONLINE QUEUE #{item.id?.slice(-4) || (idx + 1)}
                                             </span>
-                                            <h4 className="font-bold text-sm text-[#1A1A1A]">
+                                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)]">
                                                 {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || 'ลูกค้าออนไลน์'}
                                             </h4>
-                                            <p className="text-xs text-[#767673] font-mono mt-0.5">
-                                                📞 {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์'}
+                                            <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                                📞 {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์โทร'}
                                             </p>
                                         </div>
                                         <div className="text-right font-mono">
-                                            <span className="text-xs font-bold text-[#ff0000] bg-red-50 border border-red-200 px-2 py-1 rounded-md inline-block">
+                                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1 rounded-md inline-block">
                                                 ⏰ {new Date(item.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                                             </span>
-                                            <p className="text-[10px] text-[#767673] mt-1 font-bold">
+                                            <p className="text-[10px] text-[oklch(55%_0.010_28)] mt-1 font-bold">
                                                 👥 {item.pax || 1} คน
                                             </p>
                                         </div>
                                     </div>
 
-                                    {/* Table info */}
-                                    {item.tables_layout && (
-                                        <div className="text-[10px] font-mono text-[#767673] bg-[#F5F5F2] px-2.5 py-1.5 rounded-lg border border-[#EAEAE6] flex justify-between items-center">
-                                            <span>📍 โต๊ะที่เลือกล่วงหน้า: <strong className="text-[#1A1A1A]">{item.tables_layout.table_name}</strong></span>
-                                            <span className="text-amber-700 font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
+                                    {/* Pre-ordered Food Items (if any) */}
+                                    {item.order_items && item.order_items.length > 0 && (
+                                        <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] space-y-1">
+                                            <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1">
+                                                🍽️ รายการสั่งล่วงหน้า ({item.order_items.length} รายการ)
+                                            </p>
+                                            <div className="space-y-0.5 text-xs text-[oklch(18%_0.012_28)]">
+                                                {item.order_items.map((oi, i) => (
+                                                    <div key={i} className="flex justify-between font-mono text-[11px]">
+                                                        <span>{oi.quantity}x {oi.menu_items?.name || oi.name || 'เมนูสั่งล่วงหน้า'}</span>
+                                                        <span className="font-bold">฿{(oi.price_at_time || oi.price || 0) * oi.quantity}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 
-                                    {/* Deposit info & slip view button */}
+                                    {/* Table Preset Information */}
+                                    {item.tables_layout && (
+                                        <div className="text-[10px] font-mono text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 rounded-lg border border-[oklch(85%_0.012_28)] flex justify-between items-center">
+                                            <span>📍 โต๊ะระบุล่วงหน้า: <strong className="text-[oklch(18%_0.012_28)]">{item.tables_layout.table_name}</strong></span>
+                                            <span className="text-[oklch(52%_0.16_28)] font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
+                                        </div>
+                                    )}
+
+                                    {/* Deposit & Slip Section */}
                                     {item.deposit_amount > 0 && (
-                                        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg text-emerald-900 font-mono text-xs">
-                                            <span className="font-bold flex items-center gap-1">💳 ยอดโอนมัดจำ: ฿{item.deposit_amount}</span>
+                                        <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg text-emerald-950 font-mono text-xs">
+                                            <span className="font-bold flex items-center gap-1">💳 ยอดมัดจำ: ฿{item.deposit_amount}</span>
                                             {item.payment_slip_url && (
                                                 <button
                                                     type="button"
@@ -1941,7 +1959,7 @@ export default function POSDashboard() {
                                                         setActiveSlipBooking(item);
                                                         setActiveSlipType('billing');
                                                     }}
-                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                                                    className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
                                                 >
                                                     <ReceiptText size={12} /> ตรวจสลิปโอนเงิน
                                                 </button>
@@ -1949,8 +1967,8 @@ export default function POSDashboard() {
                                         </div>
                                     )}
 
-                                    {/* Action buttons */}
-                                    <div className="flex items-center gap-2 pt-1 border-t border-[#EAEAE6]">
+                                    {/* Card Bottom Actions */}
+                                    <div className="flex items-center gap-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
                                         <button
                                             type="button"
                                             onClick={async () => {
@@ -1960,9 +1978,9 @@ export default function POSDashboard() {
                                                     checkPendingOrders();
                                                 }
                                             }}
-                                            className="flex-1 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
+                                            className="flex-1 py-2.5 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
                                         >
-                                            ❌ ยกเลิก / ปฏิเสธ
+                                            ❌ ปฏิเสธคิว
                                         </button>
                                         <button
                                             type="button"
@@ -1973,7 +1991,7 @@ export default function POSDashboard() {
                                                     checkPendingOrders();
                                                 }
                                             }}
-                                            className="flex-2 py-2 bg-amber-500 hover:bg-amber-600 text-black border border-amber-600 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                                            className="flex-2 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
                                         >
                                             <Check size={14} /> ✓ อนุมัติ & ยืนยันคิว
                                         </button>
@@ -1983,10 +2001,10 @@ export default function POSDashboard() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-3 bg-[#F5F5F2] border-t border-[#D1D1CD] flex justify-end">
+                        <div className="p-3 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)] flex justify-end">
                             <button
                                 onClick={() => setShowPendingModal(false)}
-                                className="px-4 py-2 bg-white border border-[#D1D1CD] hover:bg-gray-100 rounded-xl text-xs font-mono font-bold text-[#767673] cursor-pointer active:scale-95 transition-all"
+                                className="px-4 py-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xl text-xs font-mono font-bold text-[oklch(55%_0.010_28)] cursor-pointer active:scale-95 transition-all"
                             >
                                 ปิดหน้าต่างเตือน (Close Overlay)
                             </button>
