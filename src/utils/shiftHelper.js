@@ -51,12 +51,9 @@ export function getCurrentShift() {
     }
 }
 
-// Check and restore active open shift from Supabase cloud if wiped locally
+// Check and restore active open shift from Supabase cloud if wiped locally or stale
 export async function checkAndRestoreActiveShift() {
     try {
-        const localShift = getCurrentShift();
-        if (localShift) return localShift;
-
         // Query Supabase for any active open shift (using limit(1) array check to avoid maybeSingle errors)
         const { data, error } = await supabase
             .from('pos_shifts')
@@ -65,36 +62,55 @@ export async function checkAndRestoreActiveShift() {
             .order('opened_at', { ascending: false })
             .limit(1);
 
-        if (!error && data && data.length > 0) {
-            const shiftData = data[0];
-            const restoredShift = {
-                id: shiftData.id,
-                staffName: shiftData.staff_name,
-                openedAt: shiftData.opened_at,
-                closedAt: shiftData.closed_at,
-                openingFloat: parseFloat(shiftData.opening_float) || 0,
-                transactions: shiftData.transactions || [],
-                adjustments: shiftData.adjustments || [],
-                status: shiftData.status,
-                closedCash: parseFloat(shiftData.closed_cash) || 0,
-                expectedCash: parseFloat(shiftData.expected_cash) || 0,
-                difference: parseFloat(shiftData.difference) || 0,
-                cashSales: parseFloat(shiftData.cash_sales) || 0,
-                qrSales: parseFloat(shiftData.qr_sales) || 0,
-                creditSales: parseFloat(shiftData.credit_sales) || 0,
-                totalSales: parseFloat(shiftData.total_sales) || 0,
-                totalIn: parseFloat(shiftData.total_in) || 0,
-                totalOut: parseFloat(shiftData.total_out) || 0
-            };
-            localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(restoredShift));
-            window.dispatchEvent(new Event('pos-shift-changed'));
-            console.log('[Shift Sync] Restored active shift from cloud:', restoredShift);
-            return restoredShift;
+        if (!error && data) {
+            if (data.length > 0) {
+                const shiftData = data[0];
+                const restoredShift = {
+                    id: shiftData.id,
+                    staffName: shiftData.staff_name,
+                    openedAt: shiftData.opened_at,
+                    closedAt: shiftData.closed_at,
+                    openingFloat: parseFloat(shiftData.opening_float) || 0,
+                    transactions: shiftData.transactions || [],
+                    adjustments: shiftData.adjustments || [],
+                    status: shiftData.status,
+                    closedCash: parseFloat(shiftData.closed_cash) || 0,
+                    expectedCash: parseFloat(shiftData.expected_cash) || 0,
+                    difference: parseFloat(shiftData.difference) || 0,
+                    cashSales: parseFloat(shiftData.cash_sales) || 0,
+                    qrSales: parseFloat(shiftData.qr_sales) || 0,
+                    creditSales: parseFloat(shiftData.credit_sales) || 0,
+                    totalSales: parseFloat(shiftData.total_sales) || 0,
+                    totalIn: parseFloat(shiftData.total_in) || 0,
+                    totalOut: parseFloat(shiftData.total_out) || 0
+                };
+                
+                // Compare with local shift to prevent unnecessary updates if identical, but if different we update.
+                const localShift = getCurrentShift();
+                if (!localShift || localShift.id !== restoredShift.id) {
+                     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(restoredShift));
+                     window.dispatchEvent(new Event('pos-shift-changed'));
+                     console.log('[Shift Sync] Synced active shift from cloud:', restoredShift);
+                }
+                return restoredShift;
+            } else {
+                // IMPORTANT: Cloud says NO open shifts.
+                // We must close/clear local shift if it exists!
+                const localShift = getCurrentShift();
+                if (localShift) {
+                    console.log('[Shift Sync] Cloud has no open shift. Clearing stale local shift.');
+                    localStorage.removeItem(CURRENT_SHIFT_KEY);
+                    window.dispatchEvent(new Event('pos-shift-changed'));
+                }
+                return null;
+            }
         }
     } catch (err) {
         console.error('[Shift Sync] Failed to check/restore active shift:', err);
     }
-    return null;
+    
+    // Fallback if offline or error
+    return getCurrentShift();
 }
 
 // Clean up all active open shifts in cloud and local storage
