@@ -807,15 +807,24 @@ function formatDateTime(dateStr) {
     return `${day}/${month}/${year} - ${hours}:${minutes}`;
 }
 
-// Measure string cell width by exact byte count per ESC/POS TIS-620 printer rules.
-// Every character byte (including Thai combining vowels and tone marks) consumes 1 physical cell slot on printhead.
+// Measure string cell width for visual alignment.
+// Thai combining vowels and tone marks do NOT consume horizontal space on the printhead.
 function getPrinterCellWidth(str) {
-    return String(str ?? '').length;
+    const value = String(str ?? '');
+    let width = 0;
+    for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (!isThaiCombiningCode(code)) {
+            width++;
+        }
+    }
+    return width;
 }
 
 function isThaiCombiningCode(code) {
     return (
-        (code >= 0x0E31 && code <= 0x0E3A) ||
+        code === 0x0E31 ||
+        (code >= 0x0E34 && code <= 0x0E3A) ||
         (code >= 0x0E47 && code <= 0x0E4E)
     );
 }
@@ -1334,6 +1343,12 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
     const shopAddress = reportData.shopAddress || 'นครพนม';
 
     encoder.align('center')
+           .bold(true)
+           .size(1, 1) // Double width & height for logo
+           .line('ONHAUS')
+           .size(0, 0)
+           .line('POS SYSTEM')
+           .line(divider)
            .bold(true)
            .size(0, 1) // Double height
            .line('รายงานยอดการขาย')
