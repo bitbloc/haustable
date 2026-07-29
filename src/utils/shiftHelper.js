@@ -94,13 +94,12 @@ export async function checkAndRestoreActiveShift() {
                 }
                 return restoredShift;
             } else {
-                // IMPORTANT: Cloud says NO open shifts.
-                // We must close/clear local shift if it exists!
+                // If cloud has no open shift, BUT local shift is active, TRUST and RE-SYNC local shift to cloud!
                 const localShift = getCurrentShift();
                 if (localShift) {
-                    console.log('[Shift Sync] Cloud has no open shift. Clearing stale local shift.');
-                    localStorage.removeItem(CURRENT_SHIFT_KEY);
-                    window.dispatchEvent(new Event('pos-shift-changed'));
+                    console.log('[Shift Sync] Local active shift exists. Re-syncing local shift to cloud:', localShift);
+                    syncShiftToCloud(localShift);
+                    return localShift;
                 }
                 return null;
             }
