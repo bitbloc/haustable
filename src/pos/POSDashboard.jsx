@@ -571,44 +571,25 @@ export default function POSDashboard() {
         fetchSound();
         checkPendingOrders();
 
-        // Warning toast to unlock sound (De-duplicated using id)
-        toast.info("🔊 กรุณาแตะที่ใดก็ได้บนหน้าจอ 1 ครั้ง เพื่อเปิดระบบเสียงแจ้งเตือนออเดอร์", { id: "unlock-sound-toast" });
-
         // Poll pending orders every 4 seconds
         const pollInterval = setInterval(checkPendingOrders, 4000);
 
-        // Unlock audio context on first click/touch
-        const unlock = () => {
-            try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext) {
-                    const ctx = new AudioContext();
-                    if (ctx.state === 'suspended') {
-                        ctx.resume();
-                    }
-                    // Silent osc to trigger browser permissions
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    gain.gain.value = 0;
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(0);
-                    osc.stop(0.01);
-                    setAudioContext(ctx);
+        // Auto initialize audio context for APK
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const ctx = new AudioContext();
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
                 }
-                window.removeEventListener('click', unlock);
-                window.removeEventListener('touchstart', unlock);
-            } catch (err) {
-                console.error("Failed to unlock audio context:", err);
+                setAudioContext(ctx);
             }
-        };
-        window.addEventListener('click', unlock);
-        window.addEventListener('touchstart', unlock);
+        } catch (err) {
+            console.error("Failed to init audio context:", err);
+        }
 
         return () => {
             clearInterval(pollInterval);
-            window.removeEventListener('click', unlock);
-            window.removeEventListener('touchstart', unlock);
             if (cleanupPrinterSync) cleanupPrinterSync();
         };
     }, []);
@@ -2551,7 +2532,8 @@ export default function POSDashboard() {
                                         } else {
                                             toast.success('ปลดล็อคหน้าจอสำเร็จ');
                                         }
-                                        setIsLocked(false);
+                                        unlockScreen();
+                                        setIsPinVerified(true);
                                     } else {
                                         toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
                                         onError();

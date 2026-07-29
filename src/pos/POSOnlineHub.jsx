@@ -23,7 +23,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
     // Initialize audio context for alert
     useEffect(() => {
-        audioRef.current = new Audio('/alert.mp3'); // Fallback if doesn't exist, we can use a synthesized beep
+        audioRef.current = new Audio('/arcade/audio/point.wav'); 
         audioRef.current.loop = true;
         return () => {
             if (audioRef.current) {

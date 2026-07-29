@@ -124,6 +124,16 @@ function StaffLiveOrdersContent() {
 
     }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, request, release, play, stop, soundUrl, requestPush, triggerNotification])
 
+    // Auto-start system on mount without requiring tap
+    useEffect(() => {
+        const cleanup = startSystem();
+        return () => {
+            cleanup.then(clean => {
+                if (typeof clean === 'function') clean();
+            });
+        };
+    }, [startSystem]);
+
     // --- Update Handler Wrapper ---
     const handleUpdateStatus = (id, newStatus) => {
         const isDangerous = ['cancelled', 'void'].includes(newStatus)
@@ -158,16 +168,6 @@ function StaffLiveOrdersContent() {
     const handleLogout = async () => {
         await supabase.auth.signOut()
         navigate('/login')
-    }
-
-    if (!systemReady) {
-        return (
-            <SystemStatus 
-                onStart={startSystem} 
-                onRequestPermission={requestPush}
-                isIOS={/iPad|iPhone|iPod/.test(navigator.userAgent)} 
-            />
-        )
     }
 
     return (
