@@ -67,14 +67,23 @@ export default function StepTableSelection() {
         }
     }, [date, time, sessionId]) 
 
-    // Update Presence when selectedTable changes
+    // Update Presence & 5-minute Auto-Release Timer when selectedTable changes
     useEffect(() => {
+        let idleTimer = null;
         if (channelRef.current && channelRef.current.state === 'joined') {
             if (selectedTable) {
                 channelRef.current.track({ table_id: selectedTable.id })
+                
+                // 5-minute (300,000ms) Auto-Release Timeout
+                idleTimer = setTimeout(() => {
+                    selectTable(null)
+                }, 5 * 60 * 1000)
             } else {
                 channelRef.current.untrack()
             }
+        }
+        return () => {
+            if (idleTimer) clearTimeout(idleTimer)
         }
     }, [selectedTable])
 
