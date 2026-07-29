@@ -33,13 +33,7 @@ export default function POSDashboard() {
         setSelectedStaffForLogin(staff);
         const existingShift = await checkAndRestoreActiveShift();
         if (existingShift) {
-            let updatedShift = existingShift;
-            if (existingShift.staffName !== staff.display_name) {
-                updatedShift = { ...existingShift, staffName: staff.display_name };
-                localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
-                syncShiftToCloud(updatedShift);
-            }
-            setActiveShift(updatedShift);
+            setActiveShift(existingShift);
             setIsPinVerified(true);
             toast.success(`ยินดีต้อนรับ: ${staff.display_name} (เข้าสู่กะปัจจุบัน)`);
             setPinInput('');
@@ -2196,6 +2190,7 @@ export default function POSDashboard() {
                                         setSelectedStaffForLogin(null);
                                         setPinInput('');
                                         setShowOpeningFloatModal(false);
+                                        setIsPinVerified(true);
                                     }} 
                                     className="flex flex-col gap-4"
                                 >
