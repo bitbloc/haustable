@@ -5,31 +5,34 @@ const SHIFT_HISTORY_KEY = 'pos_shift_history';
 
 // Helper: Sync shift log directly to Supabase cloud in background
 export async function syncShiftToCloud(shift) {
-    if (!shift) return;
+    if (!shift || !shift.id) return;
     try {
+        const payload = {
+            id: String(shift.id),
+            staff_name: String(shift.staffName || 'Staff'),
+            opened_at: shift.openedAt ? new Date(shift.openedAt).toISOString() : new Date().toISOString(),
+            closed_at: shift.closedAt ? new Date(shift.closedAt).toISOString() : null,
+            opening_float: Number(shift.openingFloat) || 0,
+            closed_cash: Number(shift.closedCash) || 0,
+            expected_cash: Number(shift.expectedCash) || 0,
+            difference: Number(shift.difference) || 0,
+            status: String(shift.status || 'open'),
+            transactions: Array.isArray(shift.transactions) ? shift.transactions : [],
+            adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : [],
+            cash_sales: Number(shift.cashSales) || 0,
+            qr_sales: Number(shift.qrSales) || 0,
+            credit_sales: Number(shift.creditSales) || 0,
+            total_sales: Number(shift.totalSales) || 0,
+            total_in: Number(shift.totalIn) || 0,
+            total_out: Number(shift.totalOut) || 0
+        };
+
         const { error } = await supabase
             .from('pos_shifts')
-            .upsert({
-                id: shift.id,
-                staff_name: shift.staffName,
-                opened_at: shift.openedAt,
-                closed_at: shift.closedAt,
-                opening_float: shift.openingFloat,
-                closed_cash: shift.closedCash,
-                expected_cash: shift.expectedCash,
-                difference: shift.difference,
-                status: shift.status,
-                transactions: shift.transactions || [],
-                adjustments: shift.adjustments || [],
-                cash_sales: shift.cashSales || 0,
-                qr_sales: shift.qrSales || 0,
-                credit_sales: shift.creditSales || 0,
-                total_sales: shift.totalSales || 0,
-                total_in: shift.totalIn || 0,
-                total_out: shift.totalOut || 0
-            });
+            .upsert(payload);
+
         if (error) {
-            console.warn('[Shift Sync] Failed to sync shift to Supabase:', error);
+            console.warn('[Shift Sync] Supabase upsert error:', error.message || error);
         } else {
             console.log('[Shift Sync] Shift synced successfully to cloud:', shift.id);
         }
