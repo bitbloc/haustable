@@ -275,44 +275,14 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
         );
     };
 
-    const confirmAllBookings = async () => {
-        if (newBookings.length === 0) return;
-        try {
-            const ids = newBookings.map(b => b.id);
-            const { error } = await supabase
-                .from('bookings')
-                .update({ status: 'confirmed' })
-                .in('id', ids);
-
-            if (error) throw error;
-            toast.success(`อนุมัติและยืนยันคิวจองออนไลน์ ${ids.length} รายการสำเร็จเรียบร้อยแล้ว!`);
-            fetchOnlineData();
-        } catch (err) {
-            console.error(err);
-            toast.error('เกิดข้อผิดพลาดในการอนุมัติคิวทั้งหมด');
-        }
-    };
-
     return (
         <div className="h-full flex flex-col bg-[oklch(94%_0.010_28)] overflow-hidden font-sans">
             <Toaster position="top-center" />
             
             {/* Header */}
-            <div className="p-6 pb-2 shrink-0 flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">ONLINE ORDERS HUB</h1>
-                    <p className="text-[oklch(55%_0.010_28)] text-sm font-mono mt-1">ศูนย์จัดการคิวจองออนไลน์ สลิปโอนเงิน และออเดอร์รับกลับบ้าน</p>
-                </div>
-                {newBookings.length > 0 && (
-                    <button
-                        type="button"
-                        onClick={confirmAllBookings}
-                        className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 active:scale-95 animate-pulse"
-                    >
-                        <CheckCircle2 size={16} />
-                        ⚡ อนุมัติ & ยืนยันคิวจองทั้งหมด ({newBookings.length} รายการ)
-                    </button>
-                )}
+            <div className="p-6 pb-2 shrink-0">
+                <h1 className="text-2xl font-bold text-[oklch(18%_0.012_28)] tracking-tight">ONLINE ORDERS HUB</h1>
+                <p className="text-[oklch(55%_0.010_28)] text-sm font-mono mt-1">ศูนย์จัดการคิวจองออนไลน์ สลิปโอนเงิน และออเดอร์รับกลับบ้าน (ตรวจสอบทีละรายการ)</p>
             </div>
 
             {/* Kanban Grid */}
