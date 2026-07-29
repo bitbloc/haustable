@@ -97,7 +97,7 @@ export function useBooking() {
     }
 
     // Submit Booking
-    const submitBooking = async (promotionData = null) => { // Modified to accept promotion
+    const submitBooking = async (promotionData = null, depositAmount = 0) => { // Modified to accept promotion and deposit
         try {
             if (!state.contactName || !state.contactPhone) throw new Error('กรุณากรอกข้อมูลให้ครบ')
             if (!state.isAgreed) throw new Error('Please agree to terms')
@@ -115,11 +115,11 @@ export function useBooking() {
 
             // Min Spend Check
             const cartTotal = state.cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
-            if (state.settings.minSpend > 0) {
-                const requiredSpend = state.settings.minSpend * state.pax
-                if (cartTotal < requiredSpend) {
-                    throw new Error(`ยอดขั้นต่ำต่อท่านคือ ${state.settings.minSpend} บาท (ขาดอีก ${requiredSpend - cartTotal} บาท)`)
-                }
+            const MIN_SPEND_PER_PAX = 150;
+            const requiredSpend = MIN_SPEND_PER_PAX * state.pax;
+            
+            if (cartTotal < requiredSpend) {
+                throw new Error(`ยอดขั้นต่ำต่อท่านคือ ${MIN_SPEND_PER_PAX} บาท (ขาดอีก ${requiredSpend - cartTotal} บาท)`)
             }
 
             // Prepare Payload (Dine-in)
@@ -149,6 +149,7 @@ export function useBooking() {
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
                 discount_amount: promotionData?.discountAmount || 0,
+                deposit_amount: depositAmount,
                 tracking_token: crypto.randomUUID()
             }
 

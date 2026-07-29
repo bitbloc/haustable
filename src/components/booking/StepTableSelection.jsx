@@ -21,37 +21,76 @@ export default function StepTableSelection() {
     // Local UI State
     const [previewImage, setPreviewImage] = useState(null)
     const [availabilityTooltip, setAvailabilityTooltip] = useState(null)
+    const [lockedTableIds, setLockedTableIds] = useState([]) // From Presence
+    const channelRef = React.useRef(null)
+    
+    // Unique ID for this browser session's presence
+    const sessionId = React.useMemo(() => crypto.randomUUID(), [])
 
     // Fetch availability on mount (or whenever entering this step)
     useEffect(() => {
         refreshAvailability()
 
-        // Real-time Subscription
-        const channel = supabase
+        // 1. Database Real-time (Bookings)
+        const dbChannel = supabase
             .channel('public:bookings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-                console.log('Real-time update:', payload)
                 refreshAvailability()
             })
             .subscribe()
 
+        // 2. Presence Real-time (Table Locks)
+        const presenceChannel = supabase.channel('table_locks', {
+            config: { presence: { key: sessionId } }
+        })
+        
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState()
+                const lockedIds = []
+                for (const key in state) {
+                    if (key !== sessionId) { // Don't lock our own selected table
+                        state[key].forEach(presence => {
+                            if (presence.table_id) lockedIds.push(presence.table_id)
+                        })
+                    }
+                }
+                setLockedTableIds(lockedIds)
+            })
+            .subscribe()
+
+        channelRef.current = presenceChannel
+
         return () => {
-            supabase.removeChannel(channel)
+            supabase.removeChannel(dbChannel)
+            supabase.removeChannel(presenceChannel)
         }
-    }, [date, time]) // Refresh if date/time changes, though usually they are set before entering
+    }, [date, time, sessionId]) 
+
+    // Update Presence when selectedTable changes
+    useEffect(() => {
+        if (channelRef.current && channelRef.current.state === 'joined') {
+            if (selectedTable) {
+                channelRef.current.track({ table_id: selectedTable.id })
+            } else {
+                channelRef.current.untrack()
+            }
+        }
+    }, [selectedTable])
 
     // Toggle Expanded
     const toggleExpanded = () => dispatch({ type: 'TOGGLE_EXPAND' })
 
     const renderTable = (table) => {
         const isBooked = bookedTableIds.includes(table.id)
+        const isLockedByOthers = lockedTableIds.includes(table.id) && !isBooked
         const isSelected = selectedTable?.id === table.id
         const rotation = table.rotation || 0
 
         // Status Logic
         let statusType = 'online'
         if (isBooked && bookedTableStatuses && bookedTableStatuses[table.id]) {
-            statusType = bookedTableStatuses[table.id].type // 'walk_in' or 'online'
+            statusType = bookedTableStatuses[table.id].type 
         }
 
         const baseStyle = {
@@ -64,21 +103,24 @@ export default function StepTableSelection() {
         }
 
         let bgColor = isBooked 
-            ? (statusType === 'walk_in' ? '#F97316' : '#ef4444') // Orange (Walk-in) vs Red (Online)
-            : (isSelected ? '#000000' : (table.table_color || '#ffffff'))
+            ? (statusType === 'walk_in' ? '#F97316' : '#ef4444') 
+            : isLockedByOthers 
+                ? '#9CA3AF' // Grey for temporarily locked
+                : (isSelected ? '#000000' : (table.table_color || '#ffffff'))
             
-        let textColor = (isBooked || isSelected || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) ? 'white' : 'black'
+        let textColor = (isBooked || isSelected || isLockedByOthers || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) ? 'white' : 'black'
         let borderColor = isSelected ? 'white' : 'transparent'
 
-        return (
             <button
                 key={table.id}
                 onClick={(e) => {
                     e.stopPropagation()
                     if (isBooked) {
-                        // Show tooltip
                         const statusLabel = statusType === 'walk_in' ? 'Walk-in' : 'Booked'
                         setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `${t('bookedTooltip')} (${statusLabel})`, loading: false })
+                        setTimeout(() => setAvailabilityTooltip(null), 2000)
+                    } else if (isLockedByOthers) {
+                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `กำลังจอง... (Someone is looking)`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
                     } else {
                         selectTable(table)
@@ -87,8 +129,9 @@ export default function StepTableSelection() {
                 style={baseStyle}
                 className={`transition-all duration-300 flex flex-col items-center justify-center shadow-md
                 ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
-                ${isBooked ? 'opacity-90 cursor-not-allowed contrast-100' : 'hover:scale-105 active:scale-95 cursor-pointer'}
-                ${isSelected ? 'z-20 ring-4 ring-black/20' : ''}
+                ${isBooked || isLockedByOthers ? 'opacity-90 cursor-not-allowed contrast-100' : 'hover:scale-105 active:scale-95 cursor-pointer'}
+                ${isSelected ? 'z-20 ring-4 ring-black/20 scale-105' : ''}
+                ${isLockedByOthers ? 'animate-pulse' : ''}
                 `}
             >
                 <div className={`absolute inset-0 w-full h-full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'} `} style={{ backgroundColor: bgColor, border: `2px solid ${borderColor} ` }} />
@@ -97,6 +140,13 @@ export default function StepTableSelection() {
                         <>
                             <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
                                 {statusType === 'walk_in' ? 'WALK-IN' : t('full')}
+                            </span>
+                            <span className="text-[8px] opacity-75" style={{ color: textColor }}>{table.table_name}</span>
+                        </>
+                    ) : isLockedByOthers ? (
+                        <>
+                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
+                                LOCK
                             </span>
                             <span className="text-[8px] opacity-75" style={{ color: textColor }}>{table.table_name}</span>
                         </>

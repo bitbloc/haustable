@@ -206,6 +206,7 @@ export default function PickupPage() {
             promotion_code_id: appliedPromo?.id || null, 
             discount_amount: appliedPromo?.discountAmount || 0,
             total_amount: finalTotal,
+            deposit_amount: finalTotal, // 100% deposit for pickup
             tracking_token: crypto.randomUUID(),
             payment_slip_url: null // Will be handled by hook if slipFile present
         }
@@ -437,9 +438,9 @@ export default function PickupPage() {
                                 </div>
 
                                 <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 text-xs leading-relaxed">
-                                    <p className="font-bold mb-2 text-sm">{t('paymentRequired')}</p>
+                                    <p className="font-bold mb-2 text-sm">เงื่อนไขการสั่งกลับบ้าน (100% Payment)</p>
                                     {qrCodeUrl && <div className="mb-4 flex justify-center bg-white p-2 rounded-lg border border-red-200"><img src={qrCodeUrl} alt="Payment QR" className="w-48 h-auto object-contain" /></div>}
-                                    <p className="opacity-75 whitespace-pre-line mb-3 border-b border-red-200/50 pb-3">{policyNote || t('minCondition')}</p>
+                                    <p className="opacity-75 whitespace-pre-line mb-3 border-b border-red-200/50 pb-3">{policyNote || "ต้องโอนชำระเต็มจำนวน 100% เท่านั้น\nไม่สามารถยกเลิกและขอคืนเงินได้ทุกกรณี"}</p>
                                     <label className="flex items-center gap-2 mt-2 cursor-pointer">
                                         <input type="checkbox" checked={isAgreed} onChange={e => setIsAgreed(e.target.checked)} className="accent-black w-4 h-4" />
                                         <span className="font-bold">{t('agreeTerms')}</span>

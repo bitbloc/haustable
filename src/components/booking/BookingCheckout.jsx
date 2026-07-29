@@ -25,9 +25,10 @@ export default function BookingCheckout() {
 
     const cartTotal = cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
     
-    // Calculate Final Total
+    // Calculate Final Total & Deposit
     const discountAmount = appliedPromo?.discountAmount || 0
     const finalTotal = Math.max(0, cartTotal - discountAmount)
+    const depositAmount = finalTotal * 0.5
 
     // Revalidate when cartTotal changes
     React.useEffect(() => {
@@ -49,8 +50,8 @@ export default function BookingCheckout() {
 
     const handleSubmit = async () => {
         setSubmitting(true)
-        // Pass promotion data to submitBooking
-        const result = await submitBooking(appliedPromo) 
+        // Pass promotion data and deposit amount to submitBooking
+        const result = await submitBooking(appliedPromo, depositAmount) 
         setSubmitting(false)
 
         if (result.success) {
@@ -155,7 +156,7 @@ export default function BookingCheckout() {
             </div>
 
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 space-y-4 mb-4">
-                <h3 className="font-bold text-sm uppercase">2. {t('paymentTitle')}</h3>
+                <h3 className="font-bold text-sm uppercase">2. {t('paymentTitle')} (Deposit 50%)</h3>
                 
                 {/* PROMOTION SECTION */}
                 <div className="bg-gray-50 p-4 rounded-xl space-y-3">
@@ -215,13 +216,19 @@ export default function BookingCheckout() {
                     )}
 
                     <div className="flex justify-between items-end border-t border-gray-200 pt-2 mt-2">
-                         <span className="text-gray-500 text-xs">{t('totalPrice')}</span>
-                         <span className="text-3xl font-bold font-mono tracking-tight">{finalTotal}.-</span>
+                         <span className="text-gray-500 text-xs">{t('totalPrice')} (Food)</span>
+                         <span className="text-xl font-bold font-mono tracking-tight">{finalTotal}.-</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-end border-t border-gray-200 pt-2 mt-2 bg-orange-50 p-2 rounded-lg border-orange-100 border">
+                         <div>
+                             <span className="text-orange-800 text-xs font-bold block uppercase">Deposit Required (50%)</span>
+                             <span className="text-[10px] text-orange-600 block">ยอดมัดจำ 50% ที่ต้องชำระตอนนี้</span>
+                         </div>
+                         <span className="text-3xl font-bold font-mono tracking-tight text-orange-700">{depositAmount}.-</span>
                     </div>
 
-                    {settings.minSpend > 0 && (
-                        <p className="text-[10px] text-gray-400 text-right">Min Spend: {settings.minSpend * pax}.-</p>
-                    )}
+                    <p className="text-[10px] text-gray-400 text-right mt-1">ขั้นต่ำ 150 บาท ต่อท่าน (Min Spend: {150 * pax}.-)</p>
                 </div>
 
                 {settings.qrCodeUrl ? (
@@ -264,12 +271,17 @@ export default function BookingCheckout() {
             </div>
 
             {/* Policy */}
-            {settings.policyNote && (
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-4">
-                    <h4 className="text-orange-800 font-bold text-xs uppercase mb-1">{t('condition')}</h4>
-                    <p className="text-orange-700 text-xs whitespace-pre-line">{settings.policyNote}</p>
+            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-4">
+                <h4 className="text-orange-800 font-bold text-xs uppercase mb-1">{t('condition')}</h4>
+                <p className="text-orange-700 text-xs whitespace-pre-line mb-2">
+                    {settings.policyNote}
+                </p>
+                <div className="text-[11px] text-orange-800 font-bold bg-orange-100 p-2 rounded border border-orange-200 mt-2">
+                    ⚠️ นโยบายการคืนเงินมัดจำ: <br/>
+                    สามารถยกเลิกและขอคืนเงินได้ผ่านระบบ หากแจ้งล่วงหน้ามากกว่า 24 ชั่วโมงก่อนถึงเวลานัดหมาย <br/>
+                    *หากยกเลิกภายใน 24 ชั่วโมงก่อนเวลานัดหมาย ระบบจะไม่สามารถคืนเงินมัดจำได้ กรุณาติดต่อทางร้านโดยตรง
                 </div>
-            )}
+            </div>
 
             <label className="flex items-start gap-3 p-2 cursor-pointer">
                 <input type="checkbox" checked={isAgreed} onChange={e => updateForm('isAgreed', e.target.checked)} className="mt-1 w-4 h-4 accent-black" />

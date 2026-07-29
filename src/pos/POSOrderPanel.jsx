@@ -347,7 +347,9 @@ export default function POSOrderPanel({
     // Net total calculations (including reward discount)
     const netBeforeTax = Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount);
     const tax = includeTax ? netBeforeTax * 0.07 : 0;
-    const total = netBeforeTax + tax;
+    
+    const depositPaid = booking?.deposit_amount ? parseFloat(booking.deposit_amount) : 0;
+    const total = Math.max(0, netBeforeTax + tax - depositPaid);
     
     // xhaus points earned
     const pointsMultiplier = attachedMemberCrm ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
@@ -723,6 +725,13 @@ export default function POSOrderPanel({
                             ฿{(netBeforeTax * 0.07).toFixed(2)}
                         </span>
                     </div>
+
+                    {depositPaid > 0 && (
+                        <div className="flex justify-between items-center text-orange-600 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1">
+                            <span>DEPOSIT PAID (โอนมัดจำแล้ว)</span>
+                            <span>-฿{depositPaid.toFixed(2)}</span>
+                        </div>
+                    )}
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-1">
                         <span className="text-[9px] font-bold pb-0.5">NET TOTAL</span>

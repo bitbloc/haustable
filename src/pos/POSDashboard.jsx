@@ -798,6 +798,33 @@ export default function POSDashboard() {
                         activeNotificationsRef.current.delete(callBillKey);
                     }
 
+                    // 3. Cancellation Alert
+                    const cancelKey = `${bookingId}_CANCELLED`;
+                    if (newRow?.status === 'cancelled' && payload.old?.status !== 'cancelled') {
+                        if (!activeNotificationsRef.current.has(cancelKey)) {
+                            activeNotificationsRef.current.add(cancelKey);
+                            toast.error(`❌ ลูกค้ายกเลิกการจอง: โต๊ะ ${tableName} ยกเลิกออเดอร์แล้ว`, {
+                                duration: 15000,
+                                style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #F87171' }
+                            });
+                            playSystemAlertSound();
+                        }
+                    }
+
+                    // 4. Customer Arrived Alert (Check-in)
+                    const arrivedKey = `${bookingId}_ARRIVED`;
+                    if (newRemark.includes('[CUSTOMER_ARRIVED]')) {
+                        if (!activeNotificationsRef.current.has(arrivedKey)) {
+                            activeNotificationsRef.current.add(arrivedKey);
+                            const customerName = newRow?.pickup_contact_name || newRow?.customer_name || 'ลูกค้า';
+                            toast.info(`📍 ลูกค้า ${customerName} (ออเดอร์ #${newRow?.short_id || ''}) มาถึงหน้าร้านแล้ว!`, {
+                                duration: 15000,
+                                style: { background: '#F0FDF4', color: '#166534', border: '1px solid #86EFAC' }
+                            });
+                            playSystemAlertSound();
+                        }
+                    }
+
                     // 3. Call Staff Alert
                     if (newRemark.includes('[CALL_STAFF]')) {
                         if (!activeNotificationsRef.current.has(callStaffKey)) {

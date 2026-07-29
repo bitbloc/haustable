@@ -21,6 +21,9 @@ export default function TrackingPage() {
   const { data, loading, error, timeLeft } = useTrackingLogic(token)
   const { getSteps } = useStatusConfig()
   const [settings, setSettings] = useState({})
+  const [cancelling, setCancelling] = useState(false)
+  const [notifyingArrival, setNotifyingArrival] = useState(false)
+  const [arrivedNotified, setArrivedNotified] = useState(false)
   
   // State for Slip Modal & Options
   const [showSlipModal, setShowSlipModal] = useState(false)
@@ -119,6 +122,28 @@ export default function TrackingPage() {
       window.open(googleUrl, '_blank')
   }
 
+  const handleNotifyArrival = async () => {
+      if (!data?.id) return
+      setNotifyingArrival(true)
+      try {
+          const currentNote = data.customer_note || ''
+          if (!currentNote.includes('[CUSTOMER_ARRIVED]')) {
+              const updatedNote = `${currentNote}\n[CUSTOMER_ARRIVED] Customer arrived at shop (${new Date().toLocaleTimeString('th-TH')})`
+              const { error } = await supabase
+                  .from('bookings')
+                  .update({ customer_note: updatedNote })
+                  .eq('id', data.id)
+              if (error) throw error
+          }
+          setArrivedNotified(true)
+      } catch (err) {
+          console.error(err)
+          alert('เกิดข้อผิดพลาดในการแจ้งพนักงาน กรุณาลองอีกครั้ง')
+      } finally {
+          setNotifyingArrival(false)
+      }
+  }
+
   // --- RENDER ---
   if (loading) return (
       <div className="flex flex-col h-screen items-center justify-center bg-gray-50 space-y-4">
@@ -155,11 +180,27 @@ export default function TrackingPage() {
   const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
   const canSaveSlip = isBookingConfirmed || isPickupReady
 
+  // Cancellation Logic (24 hours rule)
+  const bookingTime = new Date(data.booking_time).getTime()
+  const now = Date.now()
+  const hoursUntilBooking = (bookingTime - now) / (1000 * 60 * 60)
+  const canCancelOnline = hoursUntilBooking > 24 && !isCancelled && !['completed', 'seated', 'ready'].includes(currentStatus)
+  const cannotCancelOnlineWarning = hoursUntilBooking <= 24 && !isCancelled && !['completed', 'seated', 'ready'].includes(currentStatus)
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-32 font-inter text-gray-900 selection:bg-black selection:text-white overflow-hidden">
+    <div className="min-h-screen bg-[oklch(97%_0.008_28)] pb-32 font-inter text-[oklch(18%_0.012_28)] selection:bg-[oklch(52%_0.16_28)] selection:text-white overflow-hidden relative">
       
+      {/* 🔴 LIVE SYNC INDICATOR */}
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+        <span className="text-[10px] font-bold text-gray-600 tracking-wider">LIVE SYNC</span>
+      </div>
+
       {/* 1. Header Area with Gradient */}
-      <div className={`pt-10 pb-6 px-6 text-center ${isCancelled ? 'bg-red-50' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+      <div className={`pt-12 pb-6 px-6 text-center ${isCancelled ? 'bg-red-50' : 'bg-gradient-to-b from-[oklch(94%_0.010_28)] to-[oklch(97%_0.008_28)]'}`}>
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }}
@@ -178,14 +219,41 @@ export default function TrackingPage() {
 
       {/* 2. Highlight Box (The "Realize" Section) */}
       <div className="px-6 mb-8">
-          <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-gray-100 text-center relative overflow-hidden">
+          <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-[oklch(85%_0.012_28)] text-center relative overflow-hidden">
              {/* Decorative background blob */}
-             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl ${isCancelled ? 'bg-red-400/10' : 'bg-yellow-400/10'}`} />
+             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl ${isCancelled ? 'bg-red-400/10' : 'bg-[oklch(52%_0.16_28)]/10'}`} />
              
-             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t('yourShortId')}</p>
-             <div className="text-5xl font-mono font-bold tracking-tighter text-black mb-4">
+             <p className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest mb-2">{t('yourShortId')}</p>
+             <div className="text-5xl font-mono font-bold tracking-tighter text-[oklch(18%_0.012_28)] mb-4">
                  #{data.short_id}
              </div>
+             
+             {/* 📍 One-Tap Check-in Button */}
+             {!isCancelled && !['completed'].includes(currentStatus) && (
+                 <div className="mb-4">
+                     {arrivedNotified || data?.customer_note?.includes('[CUSTOMER_ARRIVED]') ? (
+                         <div className="bg-emerald-50 text-emerald-700 font-bold px-4 py-3 rounded-xl text-xs border border-emerald-200 flex items-center justify-center gap-2">
+                             <CheckCircle size={16} />
+                             แจ้งพนักงานแล้วว่ามาถึงร้านแล้ว! (Staff Notified)
+                         </div>
+                     ) : (
+                         <button 
+                             onClick={handleNotifyArrival}
+                             disabled={notifyingArrival}
+                             className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-bold py-3.5 px-4 rounded-xl shadow-md text-sm transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                         >
+                             {notifyingArrival ? (
+                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                             ) : (
+                                 <>
+                                     <MapPin size={18} />
+                                     📍 ฉันมาถึงร้านแล้ว (กดแจ้งพนักงานหน้าร้าน)
+                                 </>
+                             )}
+                         </button>
+                     )}
+                 </div>
+             )}
              
              <div className="bg-gray-50 rounded-xl p-3 mb-4 flex items-center justify-between gap-3 border border-gray-100">
                  <div className="flex-1 min-w-0">
@@ -246,7 +314,7 @@ export default function TrackingPage() {
               <div className="grid grid-cols-2 gap-3 mb-4 animate-in fade-in slide-in-from-bottom-4">
                   <a 
                      href={`tel:${settings.contact_phone || '0812345678'}`}
-                     className="bg-black text-white p-4 rounded-xl shadow-lg shadow-black/20 flex flex-col items-center justify-center gap-2 hover:bg-gray-900 transition-all active:scale-95"
+                     className="bg-[oklch(18%_0.012_28)] text-white p-4 rounded-xl shadow-lg flex flex-col items-center justify-center gap-2 hover:bg-black transition-all active:scale-95"
                   >
                      <Phone size={24}/>
                      <span className="text-xs font-bold">{t('callShop')}</span>
@@ -311,6 +379,39 @@ export default function TrackingPage() {
                 <p className="text-center text-xs text-red-400 mt-2">
                     {isPickup ? t('slipNotePickup') : t('slipNoteBooking')}
                 </p>
+            )}
+
+            {/* Cancel Button section */}
+            {!isCancelled && !['completed', 'seated', 'ready'].includes(currentStatus) && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                    {canCancelOnline ? (
+                        <button 
+                            onClick={handleCancelBooking}
+                            disabled={cancelling}
+                            className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                        >
+                            {cancelling ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"/> : <XCircle size={18} />}
+                            {t('cancelBooking') || 'ยกเลิกการจอง (ขอเงินคืน)'}
+                        </button>
+                    ) : cannotCancelOnlineWarning ? (
+                        <div className="bg-red-50 p-4 rounded-xl text-center border border-red-100">
+                            <p className="text-xs text-red-600 font-bold mb-2">
+                                ⚠️ ไม่สามารถยกเลิกผ่านระบบได้
+                            </p>
+                            <p className="text-[10px] text-red-500 mb-3">
+                                เหลือเวลาไม่ถึง 24 ชั่วโมงก่อนเวลานัดหมาย หากต้องการยกเลิกกรุณาติดต่อทางร้านโดยตรง (สงวนสิทธิ์ไม่คืนเงินมัดจำ)
+                            </p>
+                            <div className="flex gap-2 justify-center">
+                                <a href={`tel:${settings.contact_phone || '0812345678'}`} className="bg-white border border-red-200 text-red-600 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                                    <Phone size={12}/> {t('callShop')}
+                                </a>
+                                <a href={settings.contact_line_url || "#"} className="bg-[#06C755] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                                    <Share2 size={12}/> {t('lineChat')}
+                                </a>
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
             )}
       </div>
 

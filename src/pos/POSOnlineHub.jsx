@@ -213,6 +213,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, refreshKey 
                         </span>
                         <h4 className="font-bold text-[oklch(18%_0.012_28)] leading-tight">{name}</h4>
                         {phone && <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-1">{phone}</p>}
+                        {order.deposit_amount > 0 && (
+                            <p className="text-[10px] font-bold text-orange-600 font-mono mt-1 bg-orange-50 px-2 py-0.5 rounded inline-block border border-orange-100">
+                                DEPOSIT PAID: ฿{order.deposit_amount}
+                            </p>
+                        )}
                     </div>
                     <div className="text-right">
                         <span className="text-sm font-bold text-[oklch(18%_0.012_28)] font-mono">{timeStr}</span>
