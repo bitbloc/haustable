@@ -1906,105 +1906,131 @@ export default function POSDashboard() {
 
                         {/* Scrollable Pending Cards List */}
                         <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[oklch(94%_0.010_28)] scrollbar-none">
-                            {pendingBookingsList.map((item, idx) => (
-                                <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
-                                    {/* Card Top Details (No Icons) */}
-                                    <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-2.5">
-                                        <div>
-                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20 inline-block mb-1.5">
-                                                ONLINE QUEUE #{item.id?.slice(-4) || (idx + 1)}
-                                            </span>
-                                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] leading-tight">
-                                                {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || 'ลูกค้าออนไลน์'}
-                                            </h4>
-                                            <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                                                {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์โทร'}
-                                            </p>
-                                        </div>
-                                        <div className="text-right font-mono shrink-0">
-                                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1 rounded-md inline-block">
-                                                เวลา: {new Date(item.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
-                                            </span>
-                                            <p className="text-[10px] text-[oklch(55%_0.010_28)] mt-1 font-bold">
-                                                จำนวน: {item.pax || 1} คน
-                                            </p>
-                                        </div>
-                                    </div>
+                            {pendingBookingsList.map((item, idx) => {
+                                const isPickup = item.booking_type === 'pickup';
 
-                                    {/* Pre-ordered Food Items (No Icons) */}
-                                    {item.order_items && item.order_items.length > 0 && (
-                                        <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] space-y-1">
-                                            <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1">
-                                                รายการสั่งล่วงหน้า ({item.order_items.length} รายการ)
-                                            </p>
-                                            <div className="space-y-0.5 text-xs text-[oklch(18%_0.012_28)]">
-                                                {item.order_items.map((oi, i) => (
-                                                    <div key={i} className="flex justify-between font-mono text-[11px]">
-                                                        <span>{oi.quantity}x {oi.menu_items?.name || oi.name || 'เมนูสั่งล่วงหน้า'}</span>
-                                                        <span className="font-bold">฿{(oi.price_at_time || oi.price || 0) * oi.quantity}</span>
-                                                    </div>
-                                                ))}
+                                return (
+                                    <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                                        {/* Card Top Details (No Icons) */}
+                                        <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap font-mono">
+                                                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block ${
+                                                        isPickup 
+                                                            ? 'bg-blue-100 text-blue-900 border-blue-200' 
+                                                            : 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/20'
+                                                    }`}>
+                                                        {isPickup ? 'PICKUP (รับกลับบ้าน)' : 'DINE-IN (จองโต๊ะ)'}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
+                                                        QUEUE #{item.id?.slice(-4) || (idx + 1)}
+                                                    </span>
+                                                </div>
+
+                                                <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] leading-tight">
+                                                    {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || (isPickup ? 'ลูกค้าสั่ง Pickup' : 'ลูกค้าออนไลน์')}
+                                                </h4>
+                                                <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                                    {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์โทร'}
+                                                </p>
+                                            </div>
+
+                                            <div className="text-right font-mono shrink-0">
+                                                <span className="text-xs font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2.5 py-1 rounded-md inline-block">
+                                                    เวลา: {new Date(item.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                                </span>
+                                                <p className="text-[10px] text-[oklch(55%_0.010_28)] mt-1 font-bold">
+                                                    {isPickup ? 'ประเภท: รับกลับบ้าน' : `จำนวน: ${item.pax || 1} คน`}
+                                                </p>
                                             </div>
                                         </div>
-                                    )}
 
-                                    {/* Table Preset Information (No Icons) */}
-                                    {item.tables_layout && (
-                                        <div className="text-[10px] font-mono text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 rounded-lg border border-[oklch(85%_0.012_28)] flex justify-between items-center">
-                                            <span>โต๊ะระบุล่วงหน้า: <strong className="text-[oklch(18%_0.012_28)]">{item.tables_layout.table_name}</strong></span>
-                                            <span className="text-[oklch(52%_0.16_28)] font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
+                                        {/* Pre-ordered Food Items (No Icons) */}
+                                        {item.order_items && item.order_items.length > 0 && (
+                                            <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] space-y-1">
+                                                <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1">
+                                                    รายการอาหาร ({item.order_items.length} รายการ)
+                                                </p>
+                                                <div className="space-y-0.5 text-xs text-[oklch(18%_0.012_28)]">
+                                                    {item.order_items.map((oi, i) => (
+                                                        <div key={i} className="flex justify-between font-mono text-[11px]">
+                                                            <span>{oi.quantity}x {oi.menu_items?.name || oi.name || 'รายการอาหาร'}</span>
+                                                            <span className="font-bold">฿{(oi.price_at_time || oi.price || 0) * oi.quantity}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Table Preset Information (Only for Dine-in) */}
+                                        {!isPickup && item.tables_layout && (
+                                            <div className="text-[10px] font-mono text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1.5 rounded-lg border border-[oklch(85%_0.012_28)] flex justify-between items-center">
+                                                <span>โต๊ะระบุล่วงหน้า: <strong className="text-[oklch(18%_0.012_28)]">{item.tables_layout.table_name}</strong></span>
+                                                <span className="text-[oklch(52%_0.16_28)] font-bold">ยังไม่เปิดโต๊ะหน้าร้าน</span>
+                                            </div>
+                                        )}
+
+                                        {/* Deposit & Slip Section (No Icons) */}
+                                        {(item.deposit_amount > 0 || item.total_amount > 0) && (
+                                            <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg text-emerald-950 font-mono text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    {item.deposit_amount > 0 && <span className="font-bold">ยอดมัดจำ: ฿{item.deposit_amount}</span>}
+                                                    {item.total_amount > 0 && <span className="font-bold text-[oklch(18%_0.012_28)]">ยอดรวม: ฿{item.total_amount}</span>}
+                                                </div>
+                                                {item.payment_slip_url && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setViewSlipImageUrl(item.payment_slip_url);
+                                                        }}
+                                                        className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-3 py-1 rounded-md transition-all cursor-pointer shadow-sm active:scale-95 uppercase font-mono"
+                                                    >
+                                                        ตรวจสลิปโอนเงิน
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Card Bottom Actions (No Icons) */}
+                                        <div className="flex items-center gap-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', item.id);
+                                                    if (!error) {
+                                                        toast.success("ยกเลิกรายการเรียบร้อยแล้ว");
+                                                        checkPendingOrders();
+                                                    }
+                                                }}
+                                                className="flex-1 py-2 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
+                                            >
+                                                ปฏิเสธ{isPickup ? 'ออเดอร์' : 'คิว'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={async () => {
+                                                    if (isPickup) {
+                                                        const { error } = await supabase.from('bookings').update({ status: 'ready' }).eq('id', item.id);
+                                                        if (!error) {
+                                                            toast.success("อนุมัติออเดอร์ Pickup เรียบร้อยแล้ว!");
+                                                            checkPendingOrders();
+                                                        }
+                                                    } else {
+                                                        const success = await acceptOrder(item.id);
+                                                        if (success) {
+                                                            toast.success("อนุมัติคิวจองเรียบร้อยแล้ว!");
+                                                            checkPendingOrders();
+                                                        }
+                                                    }
+                                                }}
+                                                className="flex-2 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center"
+                                            >
+                                                {isPickup ? 'อนุมัติออเดอร์ (Pickup)' : 'อนุมัติ & ยืนยันคิว'}
+                                            </button>
                                         </div>
-                                    )}
-
-                                    {/* Deposit & Slip Section (No Icons) */}
-                                    {item.deposit_amount > 0 && (
-                                        <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg text-emerald-950 font-mono text-xs">
-                                            <span className="font-bold">ยอดมัดจำ: ฿{item.deposit_amount}</span>
-                                            {item.payment_slip_url && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setViewSlipImageUrl(item.payment_slip_url);
-                                                    }}
-                                                    className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-3 py-1 rounded-md transition-all cursor-pointer shadow-sm active:scale-95 uppercase font-mono"
-                                                >
-                                                    ตรวจสลิปโอนเงิน
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Card Bottom Actions (No Icons) */}
-                                    <div className="flex items-center gap-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
-                                        <button
-                                            type="button"
-                                            onClick={async () => {
-                                                const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', item.id);
-                                                if (!error) {
-                                                    toast.success("ยกเลิกรายการจองเรียบร้อยแล้ว");
-                                                    checkPendingOrders();
-                                                }
-                                            }}
-                                            className="flex-1 py-2 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
-                                        >
-                                            ปฏิเสธคิว
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={async () => {
-                                                const success = await acceptOrder(item.id);
-                                                if (success) {
-                                                    toast.success("อนุมัติคิวจองเรียบร้อยแล้ว!");
-                                                    checkPendingOrders();
-                                                }
-                                            }}
-                                            className="flex-2 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center"
-                                        >
-                                            อนุมัติ & ยืนยันคิว
-                                        </button>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         {/* Modal Footer (No Icons) */}
