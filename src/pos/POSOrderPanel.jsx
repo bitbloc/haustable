@@ -292,28 +292,8 @@ export default function POSOrderPanel({
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // 1. Member Tier Discount Calculation
-    const getMemberDiscount = () => {
-        if (!booking || !booking.profiles) return 0;
-        const role = (booking.profiles.role || 'customer').toLowerCase();
-        const tier = attachedMemberCrm?.current_tier || '';
-        
-        let rate = 0;
-        if (role === 'admin' || role === 'vip' || tier === 'Inner Haus') {
-            rate = 0.15; // 15%
-        } else if (role === 'gold' || tier === 'Haus People') {
-            rate = 0.10; // 10%
-        } else if (role === 'customer' || tier === 'Haus Common') {
-            rate = 0.05; // 5%
-        }
-        return subtotal * rate;
-    };
-
-    const memberDiscount = getMemberDiscount();
-    const discountLabel = attachedMemberCrm?.current_tier 
-        ? attachedMemberCrm.current_tier.toUpperCase()
-        : booking?.profiles 
-            ? `${(booking.profiles.role || 'MEMBER').toUpperCase()}` 
-            : '';
+    const memberDiscount = 0;
+    const discountLabel = '';
         
     // 2. Promotion Code Discount Calculation
     const getPromoDiscount = () => {
@@ -673,13 +653,6 @@ export default function POSOrderPanel({
 
                     {(memberDiscount > 0 || promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
                         <div className="space-y-0.5 border-t border-[#D1D1CD]/30 pt-1 mt-1">
-                            {memberDiscount > 0 && (
-                                <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
-                                    <span>DISCOUNT ({discountLabel})</span>
-                                    <span>-฿{memberDiscount.toFixed(2)}</span>
-                                </div>
-                            )}
-
                             {promoDiscount > 0 && (
                                 <div className="flex justify-between items-center text-green-600 font-bold py-0.5 animate-fade-in">
                                     <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
@@ -737,14 +710,8 @@ export default function POSOrderPanel({
                         <span className="text-[9px] font-bold pb-0.5">NET TOTAL</span>
                         <span className="text-lg font-black text-[var(--color-accent)]">฿{total.toFixed(2)}</span>
                     </div>
+                    </div>
 
-                    {attachedMemberCrm && pointsEarned > 0 && (
-                        <div className="flex justify-between items-center text-emerald-600 font-bold pt-1.5 border-t border-dashed border-[#D1D1CD] animate-fade-in">
-                            <span>COINS TO EARN</span>
-                            <span>+{pointsEarned.toFixed(2)} xhaus</span>
-                        </div>
-                    )}
-                </div>
 
                 {/* Primary Action Row */}
                 {(order.items.length > 0 || booking) && (
@@ -1356,6 +1323,13 @@ export default function POSOrderPanel({
                                         <span className="text-[9px] font-bold pb-0.5">NET TOTAL TO PAY</span>
                                         <span className="text-xl font-black text-[var(--color-accent)]">฿{total.toFixed(2)}</span>
                                     </div>
+
+                                    {attachedMemberCrm && pointsEarned > 0 && (
+                                        <div className="flex justify-between items-center text-emerald-600 font-bold pt-1.5 border-t border-dashed border-[#D1D1CD] animate-fade-in">
+                                            <span>COINS TO EARN</span>
+                                            <span>+{pointsEarned.toFixed(2)} xhaus</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Payment Method Selector */}
