@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import POSLayout from './POSLayout';
 import POSTableGrid from './POSTableGrid';
