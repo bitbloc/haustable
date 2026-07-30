@@ -434,7 +434,7 @@ const decodeHTMLEntities = (text) => {
                 source,
                 user_name,
                 user_handle,
-                user_avatar: data.logo?.url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+                user_avatar: data.logo?.url || '',
                 text: text.slice(0, 500),
                 rating: ratingValue,
                 location: 'IN THE HAUS ในบ้าน นครพนม',
@@ -688,7 +688,7 @@ const decodeHTMLEntities = (text) => {
                 source: formData.source,
                 user_name: formData.user_name,
                 user_handle: formData.user_handle || (formData.source === 'google' ? 'Google Reviewer' : ''),
-                user_avatar: formData.user_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop', // default avatar
+                user_avatar: formData.user_avatar || '',
                 text: formData.text,
                 rating: ratingValue,
                 location: formData.location,

@@ -57,7 +57,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 1,
         source: 'instagram',
-        user: { name: 'Pimchaya T.', handle: '@pim.pimp', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop' },
+        user: { name: 'Pimchaya T.', handle: '@pim.pimp' },
         text: 'แกงส้มใต้รสจัดจ้านสะใจมากค่าาา ทานคู่กับข้าวสวยร้อนๆ คือที่สุด! หรอยแรงนิ 🌶️🐟 ปล. ร้านแต่งสวยแนวลอฟต์ดิบๆ เท่มากกก @inthehaus.th',
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: '2 hours ago',
@@ -68,7 +68,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 2,
         source: 'google',
-        user: { name: 'Liam Anderson', handle: 'Google Local Guide', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop' },
+        user: { name: 'Liam Anderson', handle: 'Google Local Guide' },
         text: 'Outstanding southern Thai food right next to the Mekong river. The fish curry is extremely spicy and delicious. Sleek retro industrial vibe with high-quality sound system. 5 stars.',
         rating: 5,
         location: 'IN THE HAUS ในบ้าน นครพนม',
@@ -78,7 +78,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 3,
         source: 'facebook',
-        user: { name: 'Tachapon W.', handle: 'Facebook Check-in', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop' },
+        user: { name: 'Tachapon W.', handle: 'Facebook Check-in' },
         text: 'ร้านอาหารใต้บรรยากาศดีริมน้ำโขงนครพนม แกงส้มใต้รสชาติเข้มข้นจัดจ้านสะใจ คอหมูย่างนุ่มอร่อย แนะนำเลยครับ เหมาะพาครอบครัวมาทานมาก 👍',
         location: 'IN THE HAUS - ในบ้าน',
         date: '2 days ago',
@@ -88,7 +88,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 4,
         source: 'instagram',
-        user: { name: 'Kavin.eat', handle: '@kavin.eatstory', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop' },
+        user: { name: 'Kavin.eat', handle: '@kavin.eatstory' },
         text: 'Vibe ดีมากกกก นึกว่าอยู่บาร์ลับกรุงเทพ แต่จริงๆ คือริมโขงนครพนมจ้าาา อาหารรสชาติจัดจ้านจริตใต้แท้ๆ เลิฟเลยยย 🧡🍴 คั่วกลิ้งหมูสับห้ามพลาด!',
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: '3 days ago',
@@ -99,7 +99,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 5,
         source: 'google',
-        user: { name: 'Nattaporn S.', handle: 'Local Guide', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop' },
+        user: { name: 'Nattaporn S.', handle: 'Local Guide' },
         text: 'อาหารรสชาติใต้แท้ๆ เผ็ดร้อนสะใจ บรรยากาศช่วงเย็นริมน้ำโขงดีมาก ลมพัดเย็นสบาย แนะนำแกงเหลืองกับคั่วกลิ้งครับ พนักงานบริการสุภาพดีมาก',
         rating: 5,
         location: 'IN THE HAUS ในบ้าน นครพนม',
@@ -109,7 +109,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 6,
         source: 'facebook',
-        user: { name: 'Saranya K.', handle: 'Facebook User', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop' },
+        user: { name: 'Saranya K.', handle: 'Facebook User' },
         text: 'จริตจัด รสชัดเจน สมคำร่ำลือจริงๆ ค่ะ อร่อยทุกเมนูเลย โดยเฉพาะหมูฮ้อง ทานแก้เผ็ดจากแกงไตปลาได้ดีมาก บรรยากาศดี ดนตรีเพราะ 😍',
         location: 'IN THE HAUS - ในบ้าน',
         date: '1 week ago',
@@ -119,7 +119,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 7,
         source: 'instagram',
-        user: { name: 'new.journey', handle: '@new.journey.np', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&h=100&fit=crop' },
+        user: { name: 'new.journey', handle: '@new.journey.np' },
         text: 'Dinner by the Mekong river at IN THE HAUS. Bold flavors, gorgeous presentation, nice design tunes playing in the background. 10/10.',
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: '1 week ago',
@@ -130,7 +130,7 @@ const SOCIAL_MOCK_DATA = [
     {
         id: 8,
         source: 'google',
-        user: { name: 'Winston Tan', handle: 'Reviewer', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop' },
+        user: { name: 'Winston Tan', handle: 'Reviewer' },
         text: 'A surprise find in Nakhon Phanom! Authentic southern food, beautifully designed interior with mid-century details. Clean toilet, cool design elements everywhere.',
         rating: 5,
         location: 'IN THE HAUS ในบ้าน นครพนม',
@@ -174,7 +174,7 @@ const parseSocialFeed = (feedData) => {
 
         const name = item.user_name || item.author_name || item.user?.name || item.author?.name || 'Customer'
         const handle = item.user_handle || item.author_handle || item.user?.username || item.author?.username || (source === 'google' ? 'Google Reviewer' : '')
-        const avatar = item.user_avatar || item.author_avatar || item.user?.avatar || item.author?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop'
+        const avatar = item.user_avatar || item.author_avatar || item.user?.avatar || item.author?.avatar_url || ''
         const text = item.text || item.caption || item.message || item.content || ''
         const image_url = item.image_url || item.media_url || item.image || item.media || ''
         const post_url = item.post_url || item.link || item.url || ''
@@ -829,23 +829,15 @@ export default function HausCheckinPage() {
                                 <div className="space-y-5">
                                     
                                     {/* User Profile info */}
-                                    <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-rule,#E2DDD3)]">
-                                        <img
-                                            src={getProxiedImageUrl(selectedItem.user.avatar)}
-                                            alt={selectedItem.user.name}
-                                            crossOrigin="anonymous"
-                                            className="w-10 h-10 rounded-xs object-cover border border-[var(--color-rule,#E2DDD3)]"
-                                        />
-                                        <div className="min-w-0">
-                                            <h4 className="text-xs font-bold text-[var(--color-ink,#23201D)] tracking-tight uppercase">
-                                                {selectedItem.user.name}
-                                            </h4>
-                                            {selectedItem.user.handle && (
-                                                <span className="text-[10px] font-mono text-[var(--color-neutral,#888279)] block">
-                                                    {selectedItem.user.handle}
-                                                </span>
-                                            )}
-                                        </div>
+                                    <div className="pb-3 border-b border-[var(--color-rule,#E2DDD3)]">
+                                        <h4 className="text-xs font-bold text-[var(--color-ink,#23201D)] tracking-tight uppercase">
+                                            {selectedItem.user?.name || selectedItem.user_name || 'GUEST'}
+                                        </h4>
+                                        {selectedItem.user?.handle && (
+                                            <span className="text-[10px] font-mono text-[var(--color-neutral,#888279)] block mt-0.5">
+                                                {selectedItem.user.handle}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Location & Rating */}
