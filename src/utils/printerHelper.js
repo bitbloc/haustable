@@ -79,6 +79,13 @@ export const initPrinterConfigSync = (onUpdate) => {
 const ESC = 0x1B;
 const GS = 0x1D;
 
+function normalizePrinterText(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) return value.map(v => normalizePrinterText(v)).join('\n');
+    return String(value);
+}
+
 class EscPosEncoder {
     constructor(isUtf8 = false) {
         this.buffer = [];
@@ -99,14 +106,23 @@ class EscPosEncoder {
     }
 
     text(txt) {
-        const bytes = this.isUtf8 ? encodeUTF8(txt) : encodeThaiTIS620(txt);
+        const textStr = normalizePrinterText(txt);
+        const bytes = this.isUtf8 ? encodeUTF8(textStr) : encodeThaiTIS620(textStr);
         this.buffer.push(...bytes);
         return this;
     }
 
     line(txt = '') {
-        this.text(txt + '\n');
+        if (Array.isArray(txt)) {
+            txt.forEach(l => this.line(l));
+            return this;
+        }
+        this.text(normalizePrinterText(txt) + '\n');
         return this;
+    }
+
+    lines(values = []) {
+        return this.line(values);
     }
 
     align(type) {
@@ -165,18 +181,23 @@ class EscPosEncoder {
     }
 }
 
-// Simple Thai TIS-620 Encoder (Thai POS printers use TIS-620 / Code Page 17)
+// Thai TIS-620 Encoder (Thai POS printers use TIS-620 / Code Page 17 or 21)
 function encodeThaiTIS620(str) {
     const bytes = [];
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
+    const textStr = String(str ?? '');
+    for (let i = 0; i < textStr.length; i++) {
+        const code = textStr.charCodeAt(i);
         if (code >= 0x0E01 && code <= 0x0E5B) {
             // Map Unicode Thai to TIS-620 (Unicode Thai is 0x0E01 - 0x0E5B, TIS-620 is 0xA1 - 0xFB)
             bytes.push(code - 0x0E00 + 0xA0);
         } else if (code < 128) {
             bytes.push(code);
         } else {
-            bytes.push(32); // Space for unknown characters
+            // Map common non-TIS620 symbols to TIS620 / ASCII safe equivalents
+            if (code === 0x2605 || code === 0x2B50) bytes.push(42); // ★ / ⭐ -> *
+            else if (code === 0x25B6 || code === 0x25B7) bytes.push(62); // ▶ -> >
+            else if (code === 0x2022 || code === 0x2023) bytes.push(45); // • -> -
+            else bytes.push(32); // Space for unknown characters
         }
     }
     return bytes;
@@ -184,12 +205,13 @@ function encodeThaiTIS620(str) {
 
 // UTF-8 Encoder fallback
 function encodeUTF8(str) {
+    const textStr = String(str ?? '');
     if (typeof TextEncoder !== 'undefined') {
-        return new TextEncoder().encode(str);
+        return new TextEncoder().encode(textStr);
     }
     const bytes = [];
-    for (let i = 0; i < str.length; i++) {
-        let code = str.charCodeAt(i);
+    for (let i = 0; i < textStr.length; i++) {
+        let code = textStr.charCodeAt(i);
         if (code < 0x80) {
             bytes.push(code);
         } else if (code < 0x800) {
@@ -246,7 +268,7 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
         return '='.repeat(targetWidth);
     }
     if (style === 'star') {
-        const p = '★ ';
+        const p = '* ';
         return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
     }
     if (style === 'wave') {
@@ -257,12 +279,12 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
     return p.repeat(Math.ceil(targetWidth / 2)).slice(0, targetWidth);
 }
 
-// Resolve a conservative printable column width.
-// 80 mm printers are commonly 512/576 dots wide, but Thai glyph bytes and
-// driver margins vary. 32 columns keeps a reliable right safety margin for
-// both 80 mm rolls and drivers whose custom page size is named 80 x 80 mm.
-// Override with receiptConfig.maxCols after a real print test.
+// Resolve printer column width cleanly from configuration or fallback
 function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
+    const configured = Number(configuredMaxCols);
+    if (Number.isFinite(configured) && configured > 0) {
+        return Math.max(20, Math.min(64, Math.floor(configured)));
+    }
     const normalized = String(paperSize ?? '').toLowerCase().replace(/\s+/g, '');
     const is80mm = (
         normalized === '80mm' ||
@@ -270,108 +292,208 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         Number(paperSize) === 80 ||
         /^80(?:mm)?(?:x|\*|×)80(?:mm)?$/.test(normalized)
     );
-    const fallback = is80mm ? 36 : 26;
-    const configured = Number(configuredMaxCols);
+    return is80mm ? 42 : 32;
+}
 
-    if (!Number.isFinite(configured)) return fallback;
+// Classifier helper to categorize menu items into kitchen, bar, or other
+export const classifyItem = (item, receiptConfig = {}) => {
+    const getItemCatId = (i) => i.menu_items?.category_id || i.category_id || i.category || '';
+    const catId = getItemCatId(item);
 
-    const min = is80mm ? 36 : 24;
-    const max = is80mm ? 42 : 32;
-    return Math.max(min, Math.min(max, Math.floor(configured)));
+    let kitchenCatIds = receiptConfig.kitchen_categories || [];
+    let barCatIds = receiptConfig.bar_categories || [];
+    let otherCatIds = receiptConfig.other_categories || [];
+
+    try {
+        const config = getPrinterConfig();
+        if (config) {
+            if (kitchenCatIds.length === 0) kitchenCatIds = config.kitchen_categories || [];
+            if (barCatIds.length === 0) barCatIds = config.bar_categories || [];
+            if (otherCatIds.length === 0) otherCatIds = config.other_categories || [];
+        }
+    } catch (e) {}
+
+    if (otherCatIds.length > 0 && otherCatIds.includes(catId)) return 'other';
+    if (barCatIds.length > 0 && barCatIds.includes(catId)) return 'bar';
+    if (kitchenCatIds.length > 0 && kitchenCatIds.includes(catId)) return 'kitchen';
+
+    const DEFAULT_BAR_CATS = [
+        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+    ];
+    if (DEFAULT_BAR_CATS.includes(catId)) return 'bar';
+
+    const cachedCategories = (() => {
+        try { return JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || []; } catch (e) { return []; }
+    })();
+    const categoryMap = cachedCategories.reduce((acc, cat) => { if (cat.id) acc[cat.id] = cat; return acc; }, {});
+
+    const catObj = categoryMap[catId];
+    const catName = (catObj?.name || item.menu_items?.categories?.name || item.menu_items?.menu_categories?.name || item.category_name || item.category || '').toLowerCase();
+    
+    const BAR_KEYWORDS = [
+        'บาร์', 'บาร์น้ำ', 'เครื่องดื่ม', 'น้ำ', 'กาแฟ', 'ชา', 'เหล้า', 'เบียร์', 'ค็อกเทล', 
+        'ม็อกเทล', 'โซดา', 'ไวน์', 'ชง', 'ปั่น', 'ดริ้ง', 'น้ำอัดลม',
+        'bar', 'drink', 'beverage', 'coffee', 'tea', 'beer', 'wine', 'cocktail', 'mocktail', 'alcohol', 'soda', 'smoothie'
+    ];
+
+    if (BAR_KEYWORDS.some(kw => catName.includes(kw))) return 'bar';
+
+    return 'kitchen';
+};
+
+export const selectItemsForTab = (orderItems = [], activeTab = 'receipt', receiptConfig = {}) => {
+    let items = orderItems || [];
+    if (activeTab === 'receipt') {
+        // Filter out void / cancelled items for receipt printing
+        items = items.filter(item => item.status !== 'void' && item.status !== 'cancelled');
+    }
+
+    if (activeTab === 'kitchen_all' || activeTab === 'receipt') {
+        return items;
+    }
+
+    return items.filter(item => classifyItem(item, receiptConfig) === activeTab);
+};
+
+export const groupReceiptItems = (itemsToRender = [], receiptConfig = {}) => {
+    const kitchenItems = [];
+    const barItems = [];
+    const otherItems = [];
+
+    itemsToRender.forEach(item => {
+        const cls = classifyItem(item, receiptConfig);
+        if (cls === 'bar') barItems.push(item);
+        else if (cls === 'other') otherItems.push(item);
+        else kitchenItems.push(item);
+    });
+
+    const groups = [];
+    if (kitchenItems.length > 0) groups.push({ type: 'kitchen', label: 'รายการอาหาร (Food)', items: kitchenItems });
+    if (barItems.length > 0) groups.push({ type: 'bar', label: 'รายการเครื่องดื่ม (Drinks)', items: barItems });
+    if (otherItems.length > 0) groups.push({ type: 'other', label: 'รายการอื่นๆ (Others)', items: otherItems });
+
+    return groups;
+};
+
+export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender = []) {
+    const validItems = (itemsToRender.length > 0 ? itemsToRender : (booking.order_items || []))
+        .filter(item => item.status !== 'void' && item.status !== 'cancelled');
+
+    let subtotalCents = 0;
+    validItems.forEach(item => {
+        const qty = Number(item.quantity) || 1;
+        const lineTotal = item.line_total ?? item.extended_price ?? item.total_price;
+        if (lineTotal !== undefined && lineTotal !== null && Number.isFinite(Number(lineTotal))) {
+            subtotalCents += Math.round(Number(lineTotal) * 100);
+        } else {
+            const unitPrice = Number(item.price_at_time ?? item.price ?? 0);
+            subtotalCents += Math.round(unitPrice * qty * 100);
+        }
+    });
+
+    const discountCents = Math.round(Number(booking.discount_amount || 0) * 100);
+    const netAfterDiscountCents = Math.max(0, subtotalCents - discountCents);
+
+    const vatMode = (receiptConfig.vat_mode || 'none').toLowerCase(); // 'none' | 'inclusive' | 'exclusive'
+    let vatCents = 0;
+    let totalCents = netAfterDiscountCents;
+
+    if (vatMode === 'inclusive') {
+        vatCents = Math.round((netAfterDiscountCents * 7) / 107);
+        totalCents = netAfterDiscountCents;
+    } else if (vatMode === 'exclusive') {
+        vatCents = Math.round(netAfterDiscountCents * 0.07);
+        totalCents = netAfterDiscountCents + vatCents;
+    } else {
+        if (booking.total_amount != null && Number.isFinite(Number(booking.total_amount))) {
+            const bookedCents = Math.round(Number(booking.total_amount) * 100);
+            const diffWithExclusive = Math.abs(bookedCents - Math.round(netAfterDiscountCents * 1.07));
+            if (diffWithExclusive <= 1) {
+                vatCents = Math.round(netAfterDiscountCents * 0.07);
+                totalCents = netAfterDiscountCents + vatCents;
+            }
+        }
+    }
+
+    const bookedTotalCents = (booking.total_amount != null && Number.isFinite(Number(booking.total_amount)))
+        ? Math.round(Number(booking.total_amount) * 100)
+        : totalCents;
+
+    const adjustmentCents = bookedTotalCents - totalCents;
+
+    return {
+        subtotal: subtotalCents / 100,
+        discount: discountCents / 100,
+        netAfterDiscount: netAfterDiscountCents / 100,
+        vat: vatCents / 100,
+        total: bookedTotalCents / 100,
+        calculatedTotal: totalCents / 100,
+        adjustmentCents,
+        hasAdjustment: adjustmentCents !== 0,
+        vatMode
+    };
+}
+
+export function buildReceiptTotalRows(booking, receiptConfig = {}, itemsToRender = []) {
+    const totals = resolveReceiptTotals(booking, receiptConfig, itemsToRender);
+    const validItems = (itemsToRender.length > 0 ? itemsToRender : (booking.order_items || []))
+        .filter(item => item.status !== 'void' && item.status !== 'cancelled');
+    const totalQty = validItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+
+    const rows = [];
+    rows.push({ type: 'qty', label: 'จำนวนชิ้น', value: `${totalQty} ชิ้น` });
+    rows.push({ type: 'subtotal', label: 'ยอดรวมก่อนหัก', value: formatReceiptMoney(totals.subtotal) });
+
+    if (totals.discount > 0) {
+        rows.push({ type: 'discount', label: 'ส่วนลด', value: `-${formatReceiptMoney(totals.discount)}` });
+    }
+
+    if (totals.vat > 0) {
+        const vatLabel = totals.vatMode === 'inclusive' ? 'ภาษีมูลค่าเพิ่ม 7% (รวมในยอด)' : 'ภาษีมูลค่าเพิ่ม (7%)';
+        rows.push({ type: 'vat', label: vatLabel, value: formatReceiptMoney(totals.vat) });
+    }
+
+    if (totals.hasAdjustment) {
+        const adjVal = totals.adjustmentCents > 0 
+            ? `+${formatReceiptMoney(totals.adjustmentCents / 100)}` 
+            : formatReceiptMoney(totals.adjustmentCents / 100);
+        rows.push({ type: 'adjustment', label: 'รายการปรับยอด', value: adjVal });
+    }
+
+    rows.push({ type: 'total', label: 'ยอดรวมสุทธิ', value: formatReceiptMoney(totals.total) });
+
+    return { totals, rows };
 }
 
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '80mm', receiptConfig = {}, printerType = 'universal') {
-    // Filter items based on activeTab (Kitchen vs Bar vs Others) using printer configuration
-    let itemsToRender = booking.order_items || [];
-    
+    let itemsToRender = selectItemsForTab(booking.order_items || [], activeTab, receiptConfig);
     const isKitchenTab = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
 
-    let kitchenCatIds = receiptConfig.kitchen_categories || [];
-    let barCatIds = receiptConfig.bar_categories || [];
-    let isSeparateBarPrinter = false;
     try {
         const config = getPrinterConfig();
-        if (config) {
-            isSeparateBarPrinter = !!(config.separate_bar_printer || config.bar_printer_ip);
-            if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
-                kitchenCatIds = config.kitchen_categories || [];
-                barCatIds = config.bar_categories || [];
-            }
-            if (!paperSize || paperSize === '58mm') {
-                paperSize = isKitchenTab
-                    ? (config.kitchen_paper_size || config.paper_width || '80mm')
-                    : (config.cashier_paper_size || config.paper_width || '80mm');
-            }
+        if (config && (!paperSize || paperSize === '58mm')) {
+            paperSize = isKitchenTab
+                ? (config.kitchen_paper_size || config.paper_width || '80mm')
+                : (config.cashier_paper_size || config.paper_width || '80mm');
         }
-    } catch (e) {
-        // ignore
-    }
+    } catch (e) {}
 
-    const getItemCatId = (item) => item.menu_items?.category_id || item.category_id || item.category || '';
-
-    // Smart Bar item classification (Config -> Default UUIDs -> Category Name / Type Keywords)
-    const cachedCategories = (() => {
-        try {
-            return JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
-        } catch (e) {
-            return [];
-        }
-    })();
-
-    const categoryMap = cachedCategories.reduce((acc, cat) => {
-        if (cat.id) acc[cat.id] = cat;
-        return acc;
-    }, {});
-
-    const isBarItem = (item) => {
-        const catId = getItemCatId(item);
-        if (barCatIds.length > 0 && barCatIds.includes(catId)) return true;
-        if (kitchenCatIds.length > 0 && kitchenCatIds.includes(catId)) return false;
-
-        const DEFAULT_BAR_CATS = [
-            '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-            '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-            'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-            'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-            '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-            '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-            '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-        ];
-        if (DEFAULT_BAR_CATS.includes(catId)) return true;
-
-        const catObj = categoryMap[catId];
-        const catName = (catObj?.name || item.menu_items?.categories?.name || item.menu_items?.menu_categories?.name || item.category_name || item.category || '').toLowerCase();
-        
-        const BAR_KEYWORDS = [
-            'บาร์', 'บาร์น้ำ', 'เครื่องดื่ม', 'น้ำ', 'กาแฟ', 'ชา', 'เหล้า', 'เบียร์', 'ค็อกเทล', 
-            'ม็อกเทล', 'โซดา', 'ไวน์', 'ชง', 'ปั่น', 'ดริ้ง', 'น้ำอัดลม',
-            'bar', 'drink', 'beverage', 'coffee', 'tea', 'beer', 'wine', 'cocktail', 'mocktail', 'alcohol', 'soda', 'smoothie'
-        ];
-
-        return BAR_KEYWORDS.some(kw => catName.includes(kw));
-    };
-
-    if (activeTab === 'kitchen_all') {
-        itemsToRender = booking.order_items || [];
-    } else if (activeTab === 'kitchen') {
-        itemsToRender = (booking.order_items || []).filter(item => !isBarItem(item));
-    } else if (activeTab === 'bar') {
-        itemsToRender = (booking.order_items || []).filter(item => isBarItem(item));
-    } else if (activeTab === 'other') {
-        itemsToRender = [];
-    }
-
-    // Return null if there are no items to print for this specific tab
     if (isKitchenTab && itemsToRender.length === 0) {
         return null;
     }
 
-    // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
+    // Sort items for kitchen / bar / other by category first, then name
     if (isKitchenTab) {
         itemsToRender = [...itemsToRender].sort((a, b) => {
-            const catA = getItemCatId(a);
-            const catB = getItemCatId(b);
+            const catA = a.menu_items?.category_id || a.category_id || a.category || '';
+            const catB = b.menu_items?.category_id || b.category_id || b.category || '';
             if (catA !== catB) return catA.localeCompare(catB);
             const nameA = a.menu_items?.name || a.name || '';
             const nameB = b.menu_items?.name || b.name || '';
@@ -382,51 +504,42 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    // Auto kick cash drawer if this is a cash receipt printout
     if (activeTab === 'receipt' && paymentMethod === 'cash') {
         encoder.kickDrawer();
     }
 
     const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) 
         ? booking.tracking_token 
-        : String(booking.id).slice(0, 4);
-    const dateStr = new Date(booking.booking_time).toLocaleString('th-TH');
+        : (booking.id ? String(booking.id).slice(0, 4) : '0000');
+    const dateStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
 
-    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols); // 34 cols by default on 80 mm: keeps a real right safety margin
+    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols);
 
-    let selectedDividerStyle = null;
+    let cfg = {};
     try {
-        const cfg = getPrinterConfig();
-        if (cfg && cfg.divider_style) {
-            selectedDividerStyle = cfg.divider_style;
-        }
+        cfg = getPrinterConfig() || {};
     } catch (e) {}
-    if (!selectedDividerStyle) {
-        selectedDividerStyle = receiptConfig.divider_style || 'dashed';
-    }
+
+    const selectedDividerStyle = receiptConfig.divider_style || cfg.divider_style || 'dashed';
 
     const divider = generateDivider(selectedDividerStyle, maxCols);
     const doubleDivider = generateDivider(selectedDividerStyle === 'double' ? 'double' : (selectedDividerStyle === 'star' ? 'star' : (selectedDividerStyle === 'wave' ? 'wave' : selectedDividerStyle)), maxCols);
 
-    // Load receipt configuration details
-    const shopName = (receiptConfig.shopName || 'IN THE HAUS').toUpperCase();
-    const shopAddress = receiptConfig.shopAddress || '';
-    const shopPhone = receiptConfig.shopPhone || '';
-    const shopVat = receiptConfig.shopVat || '';
-    const shopFooter = receiptConfig.shopFooter || 'THANK YOU FOR YOUR VISIT';
+    const shopName = (receiptConfig.shopName || cfg.shop_name || 'IN THE HAUS').toUpperCase();
+    const shopAddress = receiptConfig.shopAddress || cfg.shop_address || '';
+    const shopPhone = receiptConfig.shopPhone || cfg.shop_phone || '';
+    const shopVat = receiptConfig.shopVat || cfg.shop_vat || '';
+    const shopFooter = receiptConfig.shopFooter || cfg.shop_footer_text || '';
 
-    // Get current logged-in staff member
     let staffName = '';
     try {
         const shift = JSON.parse(localStorage.getItem('pos_current_shift'));
         if (shift && shift.staffName) {
             staffName = shift.staffName;
         }
-    } catch (e) {
-        // ignore
-    }
+    } catch (e) {}
 
-    // 1. Header (Omit for kitchen and bar)
+    // Header
     if (!isKitchenTab) {
         encoder.align('center')
                .line(doubleDivider)
@@ -450,7 +563,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .line(doubleDivider)
                .bold(true)
-               .size(1, 1) // Double size header for kitchen!
+               .size(1, 1)
                .line('KITCHEN ORDER')
                .size(0, 0)
                .bold(true)
@@ -461,7 +574,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .line(doubleDivider)
                .bold(true)
-               .size(1, 1) // Double size header for bar!
+               .size(1, 1)
                .line('BAR ORDER')
                .size(0, 0)
                .bold(true)
@@ -472,7 +585,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .line(doubleDivider)
                .bold(true)
-               .size(1, 1) // Double size header for other!
+               .size(1, 1)
                .line('OTHER ORDER')
                .size(0, 0)
                .bold(true)
@@ -481,10 +594,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(doubleDivider);
     }
 
-    // 2. Table Name & Queue Number (Highly visible / double size)
+    // Table Name & Queue Number
     const tableName = (booking.tables_layout?.table_name || 'PICKUP').toUpperCase();
     
-    // For kitchen/bar: Make Table Name and Queue ID even bigger and print order time prominently
     if (isKitchenTab) {
         let serviceType = 'กินที่ร้าน (DINE-IN)';
         const remark = (booking.staff_remark || '').toLowerCase();
@@ -495,7 +607,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             serviceType = 'รับกลับ (TAKEAWAY / PICKUP)';
         }
 
-        const totalItemsCount = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
+        const totalItemsCount = itemsToRender.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
 
         encoder.align('center')
                .bold(true)
@@ -508,7 +620,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .line(`บริการ: ${serviceType}`)
                .line(`พนักงานสั่ง: ${staffName.toUpperCase() || 'SYSTEM'}`)
-               .line(`เวลาสั่ง: ${new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
+               .line(`เวลาสั่ง: ${new Date(booking.booking_time || Date.now()).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
                .line(`จำนวนคน: ${booking.pax || 1} คน`)
                .line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
                .bold(false)
@@ -524,7 +636,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(divider);
     }
 
-    // 3. Meta info
+    // Meta info
     if (!isKitchenTab) {
         encoder.align('left')
                .line(`วันที่-เวลา: ${dateStr}`)
@@ -540,19 +652,20 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.line(divider);
     }
 
-    // 4. Items Header
-    // Always reset alignment/font size before fixed-width columns.
+    // Items Header
     encoder.align('left')
            .size(0, 0)
            .bold(true)
-           .line(activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : activeTab === 'other' ? 'รายการอื่นๆ (ทั่วไป)' : (activeTab === 'kitchen' || activeTab === 'kitchen_all') ? 'รายการอาหาร (ครัว)' : 'รายการอาหารและเครื่องดื่ม')
+           .line(
+               activeTab === 'bar' ? 'รายการเครื่องดื่ม (บาร์)' : 
+               activeTab === 'other' ? 'รายการอื่นๆ (ทั่วไป)' : 
+               (activeTab === 'kitchen' || activeTab === 'kitchen_all') ? 'รายการอาหาร (ครัว)' : 
+               'รายการ'
+           )
            .bold(false)
            .line(divider);
 
-    // 5. Items List
-    // 5. Items List Grouped by Kitchen vs Bar
-    const isKitchenItem = (item) => !isBarItem(item);
-
+    // Items List
     if (isKitchenTab) {
         const renderKitchenGroup = (groupItems) => {
             groupItems.forEach((item) => {
@@ -560,7 +673,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const qtyStr = padStartPrinter(`${item.quantity}x`, qtyColWidth);
                 const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
                 
-                // Double-width text has only about half the normal columns.
                 const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
                 const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth - 1);
                 
@@ -573,7 +685,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 }
                 
                 encoder.bold(true).size(1, 1);
-                kitchenItemLines.forEach(line => encoder.line(line));
+                kitchenItemLines.forEach(l => encoder.line(l));
                 encoder.size(0, 0).bold(false);
                 
                 if (item.selected_options || item.item_note) {
@@ -582,12 +694,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                         optionsList = item.selected_options.map(opt => {
                             if (typeof opt === 'object' && opt !== null) {
                                 if (opt.group_name && opt.name) {
-                                    const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                    return `${opt.group_name}: ${opt.name}${priceStr}`;
+                                    return `${opt.group_name}: ${opt.name}`;
                                 }
                                 if (opt.name) {
-                                    const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                    return `${opt.name}${priceStr}`;
+                                    return `${opt.name}`;
                                 }
                                 return JSON.stringify(opt);
                             }
@@ -607,11 +717,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     }
 
                     optionsList.forEach(opt => {
-                        const optLine = `▶ ${String(opt).toUpperCase()}`;
-                        wrapTextByWords(optLine, maxCols - 4).forEach(line => {
-                            encoder.bold(true)
-                                   .line(`    ${line}`)
-                                   .bold(false);
+                        const optLine = `> ${String(opt).toUpperCase()}`;
+                        wrapTextByWords(optLine, maxCols - 4).forEach(l => {
+                            encoder.bold(true).line(`    ${l}`).bold(false);
                         });
                     });
                 }
@@ -624,11 +732,15 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const renderReceiptGroup = (groupItems) => {
             groupItems.forEach(item => {
                 const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
-                const unitPrice = formatReceiptMoney(item.price_at_time || item.price || 0);
-                const priceStr = formatReceiptMoney((item.price_at_time || item.price || 0) * item.quantity);
-                const calculationText = `${item.quantity} x ${unitPrice}`;
+                const unitPriceNum = Number(item.price_at_time ?? item.price ?? 0);
+                const qtyNum = Number(item.quantity) || 1;
+                const unitPriceStr = formatReceiptMoney(unitPriceNum);
+                const lineTotalNum = item.line_total ?? item.extended_price ?? item.total_price ?? (unitPriceNum * qtyNum);
+                const priceStr = formatReceiptMoney(lineTotalNum);
+                const calculationText = `${qtyNum} x ${unitPriceStr}`;
 
-                encoder.text(formatItemLine(calculationText, name, priceStr, maxCols));
+                // Fix P0 newline bug by calling encoder.line() instead of encoder.text()
+                encoder.line(formatItemLine(calculationText, name, priceStr, maxCols));
 
                 if (item.selected_options || item.item_note) {
                     let optionsList = [];
@@ -636,12 +748,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                         optionsList = item.selected_options.map(opt => {
                             if (typeof opt === 'object' && opt !== null) {
                                 if (opt.group_name && opt.name) {
-                                    const pStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                    return `${opt.group_name}: ${opt.name}${pStr}`;
+                                    return `${opt.group_name}: ${opt.name}`;
                                 }
                                 if (opt.name) {
-                                    const pStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                    return `${opt.name}${pStr}`;
+                                    return `${opt.name}`;
                                 }
                                 return JSON.stringify(opt);
                             }
@@ -663,61 +773,43 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     optionsList.forEach(opt => {
                         const optionText = `+ ${String(opt)}`;
                         wrapTextByWords(optionText, maxCols - 4)
-                            .forEach(line => encoder.line(`    ${line}`));
+                            .forEach(l => encoder.line(`    ${l}`));
                     });
                 }
             });
         };
 
-        const kitchenGroup = itemsToRender.filter(isKitchenItem);
-        const barGroup = itemsToRender.filter(isBarItem);
-        const otherGroup = itemsToRender.filter(item => !isKitchenItem(item) && !isBarItem(item));
-
-        if (kitchenGroup.length > 0 && barGroup.length > 0) {
-            encoder.bold(true).line('--- รายการอาหาร (Food) ---').bold(false);
-            renderReceiptGroup(kitchenGroup);
-            encoder.line(divider);
-            encoder.bold(true).line('--- รายการเครื่องดื่ม (Drinks) ---').bold(false);
-            renderReceiptGroup(barGroup);
-            if (otherGroup.length > 0) {
-                encoder.line(divider);
-                encoder.bold(true).line('--- รายการอื่นๆ (Others) ---').bold(false);
-                renderReceiptGroup(otherGroup);
+        const groups = groupReceiptItems(itemsToRender, receiptConfig);
+        groups.forEach((group, index) => {
+            if (groups.length > 1) {
+                encoder.bold(true).line(`--- ${group.label} ---`).bold(false);
             }
-        } else {
-            renderReceiptGroup(itemsToRender);
-        }
+            renderReceiptGroup(group.items);
+            if (index < groups.length - 1) {
+                encoder.line(divider);
+            }
+        });
         encoder.line(divider);
     }
 
-    // 6. Totals
+    // Totals Section
     if (!isKitchenTab) {
-        const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
-        const discount = booking.discount_amount || 0;
-        const netAfterDiscount = subtotal - discount;
-        const vatVal = (booking.total_amount && Math.abs(booking.total_amount - (netAfterDiscount * 1.07)) < 1) 
-            ? (netAfterDiscount * 0.07) 
-            : 0;
+        const { rows } = buildReceiptTotalRows(booking, receiptConfig, itemsToRender);
 
-        const totalQty = itemsToRender.reduce((sum, item) => sum + item.quantity, 0);
         encoder.align('left').size(0, 0);
-        encoder.text(formatTwoCols('จำนวนชิ้น', `${totalQty} ชิ้น`, maxCols) + '\n');
-        encoder.text(formatTwoCols('ยอดรวมก่อนหัก', formatReceiptMoney(subtotal), maxCols) + '\n');
-        if (discount > 0) {
-            encoder.text(formatTwoCols('ส่วนลด', `-${formatReceiptMoney(discount)}`, maxCols) + '\n');
-        }
-        if (vatVal > 0) {
-            encoder.text(formatTwoCols('ภาษีมูลค่าเพิ่ม (7%)', formatReceiptMoney(vatVal), maxCols) + '\n');
-        }
-        encoder.line(divider)
-               .bold(true)
-               .size(0, 0)
-               .text(formatTwoCols('ยอดรวมสุทธิ', formatReceiptMoney(booking.total_amount), maxCols) + '\n')
-               .bold(false)
-               .line(doubleDivider);
+        rows.forEach(row => {
+            if (row.type === 'total') {
+                encoder.line(divider).bold(true);
+            }
+            encoder.line(formatTwoCols(row.label, row.value, maxCols));
+            if (row.type === 'total') {
+                encoder.bold(false);
+            }
+        });
+        encoder.line(doubleDivider);
     }
 
-    // 7. Payment details (Omit for kitchen)
+    // Payment details
     if (activeTab === 'receipt') {
         const methodLabel = paymentMethod === 'cash' ? 'เงินสด' : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
         encoder.align('center')
@@ -729,11 +821,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             const storedChange = localStorage.getItem('last_cash_change');
             if (storedRecv !== null) {
                 const cashRecvVal = formatReceiptMoney(parseFloat(storedRecv));
-                encoder.text(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols) + '\n');
+                encoder.line(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols));
             }
             if (storedChange !== null) {
                 const cashChangeVal = formatReceiptMoney(parseFloat(storedChange));
-                encoder.text(formatTwoCols('เงินทอน', cashChangeVal, maxCols) + '\n');
+                encoder.line(formatTwoCols('เงินทอน', cashChangeVal, maxCols));
             }
         }
         
@@ -745,7 +837,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(doubleDivider);
     }
 
-    // 8. Note
+    // Notes
     const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
     const combinedNotes = [];
     if (booking.customer_note?.trim()) combinedNotes.push(`ลูกค้า: ${booking.customer_note.trim()}`);
@@ -763,7 +855,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.line(divider);
     }
 
-    // 9. Footer
+    // Footer
     if (!isKitchenTab) {
         let asciiArt = receiptConfig.footer_ascii_art || '';
         if (!asciiArt) {
@@ -771,9 +863,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const config = getPrinterConfig();
                 asciiArt = config?.footer_ascii_art || '';
             } catch(e) {}
-        }
-        if (!asciiArt) {
-            asciiArt = `T H A N K   Y O U\n  S E E   Y O U   A G A I N`;
         }
 
         encoder.align('center');
@@ -807,20 +896,6 @@ function formatDateTime(dateStr) {
     return `${day}/${month}/${year} - ${hours}:${minutes}`;
 }
 
-// Measure string cell width for visual alignment.
-// Thai combining vowels and tone marks do NOT consume horizontal space on the printhead.
-function getPrinterCellWidth(str) {
-    const value = String(str ?? '');
-    let width = 0;
-    for (let i = 0; i < value.length; i++) {
-        const code = value.charCodeAt(i);
-        if (!isThaiCombiningCode(code)) {
-            width++;
-        }
-    }
-    return width;
-}
-
 function isThaiCombiningCode(code) {
     return (
         code === 0x0E31 ||
@@ -829,7 +904,7 @@ function isThaiCombiningCode(code) {
     );
 }
 
-// Keep a Thai base character together with its vowels/tone marks when slicing.
+// Split a string into printer grapheme clusters so combining Thai vowels/tones stay with base character
 function splitPrinterGraphemes(str) {
     const clusters = [];
     for (const char of Array.from(String(str ?? ''))) {
@@ -843,22 +918,29 @@ function splitPrinterGraphemes(str) {
     return clusters;
 }
 
-function padEndPrinter(str, targetWidth, padChar = ' ') {
+// Measure string cell width for ESC/POS printing (TIS-620 grapheme cluster width)
+export function getPrinterCellWidth(str) {
+    if (str === null || str === undefined) return 0;
+    const clusters = splitPrinterGraphemes(str);
+    return clusters.length;
+}
+
+export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
     const neededPadding = targetWidth - getPrinterCellWidth(value);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
-function padStartPrinter(str, targetWidth, padChar = ' ') {
+export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
     const neededPadding = targetWidth - getPrinterCellWidth(value);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
 
-// Slice by printer-byte width without orphaning Thai combining marks.
-function sliceThai(str, maxPrinterWidth) {
+// Slice by printer-byte width without orphaning Thai combining marks
+export function sliceThai(str, maxPrinterWidth) {
     const clusters = splitPrinterGraphemes(str);
     let currentWidth = 0;
     let result = '';
@@ -874,7 +956,7 @@ function sliceThai(str, maxPrinterWidth) {
     return result;
 }
 
-// Word/phrase-aware text wrapping using the actual TIS-620 byte width.
+// Word/phrase-aware text wrapping using actual TIS-620 grapheme cell width
 export function wrapTextByWords(str, maxColWidth) {
     if (!str) return [];
     const width = Math.max(1, Number(maxColWidth) || 1);
@@ -913,7 +995,7 @@ export function wrapTextByWords(str, maxColWidth) {
                     currentLine += word;
                 } else {
                     flushLongWord(currentLine + word);
-                    currentLine = ''; // reset after flush
+                    currentLine = '';
                 }
                 return;
             }
@@ -925,7 +1007,7 @@ export function wrapTextByWords(str, maxColWidth) {
             }
 
             output.push(currentLine);
-            currentLine = leadingSpace; // next line gets the same indentation
+            currentLine = leadingSpace;
             if (getPrinterCellWidth(currentLine + word) <= width) {
                 currentLine += word;
             } else {
@@ -951,10 +1033,6 @@ function formatReceiptMoney(value) {
     });
 }
 
-// Receipt item row for Thai ESC/POS printers.
-// Keep Thai menu text on its own line(s), then print a numeric-only calculation
-// row. This guarantees every total ends at the exact same right edge regardless
-// of Thai combining marks or printer firmware.
 function formatItemLine(calculationText, name, priceStr, maxCols) {
     const totalWidth = Math.max(20, Number(maxCols) || 48);
     const nameLines = wrapTextByWords(String(name ?? ''), totalWidth);
@@ -1035,15 +1113,17 @@ function formatTwoCols(left, right, maxCols) {
 }
 
 // Compile raw bookings into rich structured shift report details
-export function compileShiftReportData(shift, bookingsData, categoriesData = []) {
+export function compileShiftReportData(shift = {}, bookingsData = [], categoriesData = []) {
     const categoryMap = {};
     categoriesData.forEach(cat => {
-        categoryMap[cat.id] = cat.name;
+        if (cat?.id) categoryMap[cat.id] = cat.name;
     });
 
-    const completedBookings = bookingsData.filter(b => b.status === 'completed');
-    const voidBookings = bookingsData.filter(b => b.status === 'void');
-    const cancelledBookings = bookingsData.filter(b => b.status === 'cancelled');
+    const isSaleItem = (item) => item && item.status !== 'void' && item.status !== 'cancelled';
+
+    const completedBookings = bookingsData.filter(b => b && b.status === 'completed');
+    const voidBookings = bookingsData.filter(b => b && b.status === 'void');
+    const cancelledBookings = bookingsData.filter(b => b && b.status === 'cancelled');
 
     // 1. Category & Top Items Sales
     const categorySalesMap = {};
@@ -1052,12 +1132,12 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     let totalItemsAmount = 0;
 
     completedBookings.forEach(b => {
-        b.order_items?.forEach(item => {
-            const catId = item.menu_items?.category_id || 'other';
+        (b.order_items || []).filter(isSaleItem).forEach(item => {
+            const catId = item.menu_items?.category_id || item.category_id || 'other';
             const catName = categoryMap[catId] || 'อื่นๆ / Uncategorized';
             const itemName = (item.menu_items?.name || item.name || 'Unknown Item').toUpperCase();
-            const qty = item.quantity || 0;
-            const price = item.price_at_time || 0;
+            const qty = Number(item.quantity) || 0;
+            const price = Number(item.price_at_time ?? item.price ?? 0);
             const amt = qty * price;
 
             totalItemsCount += qty;
@@ -1100,7 +1180,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     completedBookings.forEach(b => {
         const remark = (b.staff_remark || '').toLowerCase();
         const note = (b.customer_note || '').toLowerCase();
-        const amt = b.total_amount || 0;
+        const amt = Number(b.total_amount) || 0;
         const isLineman = remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man');
         
         let isCash = true;
@@ -1161,7 +1241,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     let pickupAmount = 0;
 
     completedBookings.forEach(b => {
-        const amt = b.total_amount || 0;
+        const amt = Number(b.total_amount) || 0;
         if (b.booking_type === 'pickup') {
             pickupCount++;
             pickupAmount += amt;
@@ -1178,7 +1258,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     let walkinAmount = 0;
 
     completedBookings.forEach(b => {
-        const amt = b.total_amount || 0;
+        const amt = Number(b.total_amount) || 0;
         const remark = (b.staff_remark || '').toLowerCase();
         const note = (b.customer_note || '').toLowerCase();
         
@@ -1193,7 +1273,7 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
 
     // 5. Voids & Cancels
     let voidBillCount = voidBookings.length;
-    let voidBillAmount = voidBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    let voidBillAmount = voidBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
     
     let voidItemCount = 0;
     let voidItemAmount = 0;
@@ -1201,59 +1281,53 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
     let cancelItemAmount = 0;
 
     bookingsData.forEach(b => {
-        b.order_items?.forEach(item => {
+        (b.order_items || []).forEach(item => {
             if (item.status === 'void') {
-                voidItemCount += item.quantity || 0;
-                voidItemAmount += (item.quantity || 0) * (item.price_at_time || 0);
+                const q = Number(item.quantity) || 0;
+                voidItemCount += q;
+                voidItemAmount += q * (Number(item.price_at_time ?? item.price ?? 0));
             } else if (item.status === 'cancelled') {
-                cancelItemCount += item.quantity || 0;
-                cancelItemAmount += (item.quantity || 0) * (item.price_at_time || 0);
+                const q = Number(item.quantity) || 0;
+                cancelItemCount += q;
+                cancelItemAmount += q * (Number(item.price_at_time ?? item.price ?? 0));
             }
         });
     });
 
     let cancelBillCount = cancelledBookings.length;
-    let cancelBillAmount = cancelledBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    let cancelBillAmount = cancelledBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
 
     // 6. General metrics
-    const totalDiscounts = completedBookings.reduce((sum, b) => sum + (b.discount_amount || 0), 0);
-    const totalGuests = completedBookings.reduce((sum, b) => sum + (b.pax || 0), 0);
+    const totalDiscounts = completedBookings.reduce((sum, b) => sum + (Number(b.discount_amount) || 0), 0);
+    const totalGuests = completedBookings.reduce((sum, b) => sum + (Number(b.pax) || 0), 0);
     
-    let totalVat = 0;
-    completedBookings.forEach(b => {
-        const sub = b.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
-        const disc = b.discount_amount || 0;
-        const net = sub - disc;
-        if (b.total_amount && Math.abs(b.total_amount - (net * 1.07)) < 1) {
-            totalVat += net * 0.07;
-        }
-    });
-
-    const netSales = completedBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    // Total net sales (booking.total_amount is ALREADY net after discount!)
+    const netSales = completedBookings.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0);
     const avgSalesPerBill = completedBookings.length > 0 ? (netSales / completedBookings.length) : 0;
     const avgSalesPerGuest = totalGuests > 0 ? (netSales / totalGuests) : 0;
 
     // Deduct adjustments
     const adjustments = shift.adjustments || [];
-    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
 
     return {
-        staffName: shift.staffName,
+        staffName: shift.staffName || '',
         openedAt: shift.openedAt,
         closedAt: shift.closedAt || new Date().toISOString(),
-        openingFloat: shift.openingFloat,
-        cashSales: shift.cashSales || cashAmount,
-        qrSales: shift.qrSales || qrAmount,
-        creditSales: shift.creditSales || creditAmount,
-        totalSales: shift.totalSales || (cashAmount + qrAmount + creditAmount),
+        openingFloat: shift.openingFloat ?? 0,
+        cashSales: shift.cashSales ?? cashAmount,
+        qrSales: shift.qrSales ?? qrAmount,
+        creditSales: shift.creditSales ?? creditAmount,
+        totalSales: netSales,
+        netSales,
         totalIn,
         totalOut,
         expectedCash: shift.expectedCash,
         actualCash: shift.closedCash,
         difference: shift.difference,
         
-        shiftId: shift.id ? shift.id.replace('shift_', '') : '',
+        shiftId: shift.id ? String(shift.id).replace('shift_', '') : '',
         totalBookings: completedBookings.length,
         totalItemsCount,
         totalItemsAmount,
@@ -1290,9 +1364,11 @@ export function compileShiftReportData(shift, bookingsData, categoriesData = [])
         },
         
         totalDiscounts,
-        totalVat,
+        totalVat: 0,
         totalGuests,
         averageSalesPerBill: avgSalesPerBill,
+        averageSalesPerGuest: avgSalesPerGuest,
+        paymentReconciliationDifference: netSales - (cashAmount + qrAmount + creditAmount + otherAmount),
         adjustments
     };
 }
@@ -1303,7 +1379,7 @@ export function encodeShiftReportData(reportData, paperSize = '58mm', printerTyp
 }
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
-export function encodeShiftClosureReportData(reportData, paperSize = '80mm', printerType = 'universal') {
+export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm', printerType = 'universal') {
     if (!paperSize) {
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
@@ -1344,26 +1420,29 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
 
     encoder.align('center')
            .bold(true)
-           .size(1, 1) // Double width & height for logo
+           .size(1, 1)
            .line('ONHAUS')
            .size(0, 0)
            .line('POS SYSTEM')
            .line(divider)
            .bold(true)
-           .size(0, 1) // Double height
+           .size(0, 1)
            .line('รายงานยอดการขาย')
            .size(0, 0)
            .bold(false)
-           .line(`รหัส: ${reportData.shiftId || reportData.staffName || ''}`)
-           .line(shopName)
-           .line(shopAddress)
+           .line(wrapTextByWords(`รหัส: ${reportData.shiftId || reportData.staffName || ''}`, maxCols))
+           .line(wrapTextByWords(shopName, maxCols))
+           .line(wrapTextByWords(shopAddress, maxCols))
            .line('')
            .align('left')
-           .line(`เปิดรอบ: ${formatDateTime(reportData.openedAt)} (${reportData.staffName})`)
-           .line(`ปิดรอบ: ${reportData.closedAt ? formatDateTime(reportData.closedAt) : 'ยังไม่ปิดรอบ'} (${reportData.staffName})`)
+           .line(wrapTextByWords(`เปิดรอบ: ${formatDateTime(reportData.openedAt)} (${reportData.staffName || 'STAFF'})`, maxCols))
+           .line(wrapTextByWords(`ปิดรอบ: ${reportData.closedAt ? formatDateTime(reportData.closedAt) : 'ยังไม่ปิดรอบ'} (${reportData.staffName || 'STAFF'})`, maxCols))
            .line(divider);
 
     // Section 1: ยอดขายตามหมวดหมู่
+    const netSales = Number(reportData.netSales ?? reportData.totalSales ?? 0);
+    const discountVal = Number(reportData.totalDiscounts || 0);
+
     if (reportData.categorySales && reportData.categorySales.length > 0) {
         encoder.bold(true).line('ยอดขายตามหมวดหมู่').bold(false);
         encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols));
@@ -1379,16 +1458,14 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         
         encoder.line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols));
         
-        const discountVal = reportData.totalDiscounts || 0;
-        const vatVal = reportData.totalVat || 0;
-        const netSales = reportData.totalSales - discountVal;
+        const vatVal = Number(reportData.totalVat || 0);
         const preVatVal = netSales - vatVal;
 
         if (discountVal > 0) {
             encoder.line(formatTwoCols('ส่วนลด', formatReceiptMoney(discountVal), maxCols));
         }
-        encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', formatReceiptMoney(preVatVal), maxCols));
         if (vatVal > 0) {
+            encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', formatReceiptMoney(preVatVal), maxCols));
             encoder.line(formatTwoCols('ภาษี (VAT)', formatReceiptMoney(vatVal), maxCols));
         }
         encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
@@ -1399,19 +1476,22 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         // Fallback backward compatibility
         encoder.bold(true).line('SALES SUMMARY').bold(false);
         encoder.line(formatTwoCols('Total Bookings', (reportData.totalBookings || 0).toString(), maxCols));
-        encoder.line(formatTwoCols('Gross Revenue', formatReceiptMoney(reportData.grossRevenue || reportData.totalSales), maxCols));
-        encoder.line(formatTwoCols('Discounts', formatReceiptMoney(reportData.discounts || reportData.totalDiscounts), maxCols));
+        encoder.line(formatTwoCols('Gross Revenue', formatReceiptMoney(reportData.grossRevenue || netSales), maxCols));
+        if (discountVal > 0) {
+            encoder.line(formatTwoCols('Discounts', formatReceiptMoney(discountVal), maxCols));
+        }
+        encoder.line(formatTwoCols('Net Sales', formatReceiptMoney(netSales), maxCols));
         encoder.line(divider);
     }
 
     // Section Top 3 Selling Items
     if (reportData.topSellingItems && reportData.topSellingItems.length > 0) {
         encoder.line(divider);
-        encoder.bold(true).line('★ เมนูขายดี 3 อันดับ (Top 3 Selling Items)').bold(false);
+        encoder.bold(true).line('* เมนูขายดี 3 อันดับ (Top 3 Selling Items)').bold(false);
         encoder.line(formatThreeCols('เมนู', 'จำนวน', 'ยอดเงิน', maxCols));
         reportData.topSellingItems.forEach((item, index) => {
             const rankLabel = `${index + 1}. ${item.name}`;
-            encoder.line(formatThreeCols(rankLabel, `${item.quantity} ชิ้น`, formatReceiptMoney(item.amount), maxCols));
+            encoder.line(formatThreeCols(rankLabel, item.quantity, formatReceiptMoney(item.amount), maxCols));
         });
     }
 
@@ -1432,7 +1512,6 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         if (qr.count > 0 || qr.amount > 0) {
             encoder.line(formatThreeCols('QR PromptPay', qr.count, formatReceiptMoney(qr.amount), maxCols));
         }
-
         if (credit.count > 0 || credit.amount > 0) {
             encoder.line(formatThreeCols('บัตรเครดิต', credit.count, formatReceiptMoney(credit.amount), maxCols));
         }
@@ -1441,12 +1520,11 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
             encoder.line(formatThreeCols('การชำระเงินแบบอื่นๆ', other.count, formatReceiptMoney(other.amount), maxCols));
             if (other.subItems && other.subItems.length > 0) {
                 other.subItems.forEach(sub => {
-                    encoder.line(formatThreeCols(`• ${sub.name}`, sub.count, formatReceiptMoney(sub.amount), maxCols));
+                    encoder.line(formatThreeCols(`- ${sub.name}`, sub.count, formatReceiptMoney(sub.amount), maxCols));
                 });
             }
         }
         
-        const netSales = reportData.totalSales - (reportData.totalDiscounts || 0);
         encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
     } else {
         // Fallback
@@ -1514,7 +1592,7 @@ export function encodeShiftClosureReportData(reportData, paperSize = '80mm', pri
         reportData.adjustments.forEach(adj => {
             const prefix = adj.type === 'in' ? 'นำเข้า' : 'นำออก';
             const sign = adj.type === 'in' ? '+' : '-';
-            const label = `  • [${prefix}] ${adj.note || ''}`;
+            const label = `  - [${prefix}] ${adj.note || ''}`;
             const amountStr = `${sign}${formatReceiptMoney(adj.amount)}`;
             encoder.line(formatTwoCols(label, amountStr, maxCols));
         });
@@ -1557,13 +1635,11 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
     logger.logNativeStart('print_bluetooth_direct', { targetDeviceName, bytesLength: rawData ? rawData.length : 0 });
     let device;
     try {
-        // Try getting previously paired devices first
         if (navigator.bluetooth.getDevices) {
             const paired = await navigator.bluetooth.getDevices();
             device = paired.find(d => d.name === targetDeviceName || d.id === targetDeviceName);
         }
 
-        // If not in the paired list, we must prompt the device chooser (must be inside a user gesture handler)
         if (!device) {
             device = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
@@ -1580,10 +1656,8 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
             throw new Error("No Bluetooth device selected.");
         }
 
-        // Connect to GATT
         const server = await device.gatt.connect();
         
-        // Find standard SPP or custom print service
         const commonServices = [
             '00001101-0000-1000-8000-00805f9b34fb',
             '0000fee7-0000-1000-8000-00805f9b34fb',
@@ -1596,21 +1670,16 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
             try {
                 service = await server.getPrimaryService(uuid);
                 if (service) break;
-            } catch (e) {
-                // Try next service
-            }
+            } catch (e) {}
         }
 
         if (!service) {
-            // Fallback: try getting all services and take the first non-generic one
             try {
                 const services = await server.getPrimaryServices();
                 if (services && services.length > 0) {
                     service = services.find(s => !s.uuid.startsWith('000018')) || services[0];
                 }
-            } catch (e) {
-                // Fallback failed
-            }
+            } catch (e) {}
         }
 
         if (!service) {
@@ -1618,13 +1687,11 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
         }
 
         const characteristics = await service.getCharacteristics();
-        // Find writable characteristic
         const characteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
         if (!characteristic) {
             throw new Error("No writeable Bluetooth characteristic found.");
         }
 
-        // Send data in chunks of 20 bytes (standard BLE/SPP MTU constraint)
         const chunkSize = 20;
         for (let i = 0; i < rawData.length; i += chunkSize) {
             const chunk = rawData.slice(i, i + chunkSize);
@@ -1635,7 +1702,6 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
             }
         }
 
-        // Disconnect gracefully
         device.gatt.disconnect();
         logger.logNativeEnd('print_bluetooth_direct');
         return true;
@@ -1647,24 +1713,19 @@ export async function printToBluetoothDirect(targetDeviceName, rawData) {
     }
 }
 
-// Print via RawBT Android Intent (Directly calls the main RawBT App)
+// Print via RawBT Android Intent
 export async function printToRawBTWebSocket(rawData) {
     logger.logNativeStart('print_rawbt_intent', { bytesLength: rawData ? rawData.length : 0 });
     try {
-        // Convert raw Uint8Array bytes to binary string
         let binary = '';
         const len = rawData.byteLength;
         for (let i = 0; i < len; i++) {
             binary += String.fromCharCode(rawData[i]);
         }
         
-        // Encode binary string to Base64
         const base64Data = window.btoa(binary);
-        
-        // Build the Android Intent URL targeting the RawBT main application package
         const intentUrl = `intent:base64,${base64Data}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
         
-        // Redirect the WebView to trigger the intent
         window.location.href = intentUrl;
         logger.logNativeEnd('print_rawbt_intent');
         return true;
@@ -1679,7 +1740,6 @@ export async function printToRawBTWebSocket(rawData) {
 let sunmiPrintQueue = Promise.resolve();
 const imageBase64Cache = {};
 
-// Download and resize image url to base64 JPEG format for thermal printers
 async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -1692,7 +1752,6 @@ async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
                 canvas.width = targetWidth;
                 canvas.height = img.height * scale;
                 const ctx = canvas.getContext('2d');
-                // Fill with white background to handle PNG transparency gracefully
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -1702,48 +1761,57 @@ async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
                 reject(err);
             }
         };
-        img.onerror = (err) => {
+        img.onerror = () => {
             reject(new Error("Failed to load image url: " + logoUrl));
         };
     });
 }
 
-// Get cached or download/resize remote image to base64 JPEG
 async function getCachedResizedImage(url, targetWidth) {
     if (!url) return null;
     const cacheKey = `img_cache_${url}_w${targetWidth}`;
     
-    // 1. In-memory check
     if (imageBase64Cache[cacheKey]) {
         return imageBase64Cache[cacheKey];
     }
     
-    // 2. LocalStorage check
     try {
         const stored = localStorage.getItem(cacheKey);
         if (stored) {
             imageBase64Cache[cacheKey] = stored;
             return stored;
         }
-    } catch (e) {
-        // ignore
-    }
+    } catch (e) {}
     
-    // 3. Download and resize
     const base64 = await downloadAndResizeLogoToBase64(url, targetWidth);
     
-    // 4. Update cache
     imageBase64Cache[cacheKey] = base64;
     try {
         localStorage.setItem(cacheKey, base64);
-    } catch (e) {
-        // ignore quota errors
-    }
+    } catch (e) {}
     
     return base64;
 }
 
-// Print directly to SUNMI Built-in Thermal Printer (via Capacitor SUNMI Plugin / AIDL Service) with FIFO Queue
+// Strip trailing ESC/POS cut bytes so paper isn't cut before QR code is printed
+function stripTrailingEscPosCut(bytes) {
+    if (!bytes || bytes.length < 3) return bytes;
+    let end = bytes.length;
+    while (end > 0) {
+        if (end >= 4 && bytes[end-4] === 0x1D && bytes[end-3] === 0x56 && bytes[end-2] === 0x42 && bytes[end-1] === 0x00) {
+            end -= 4;
+        } else if (end >= 3 && bytes[end-3] === 0x1D && bytes[end-2] === 0x56 && bytes[end-1] === 0x00) {
+            end -= 3;
+        } else if (end >= 3 && bytes[end-3] === 0x1B && bytes[end-2] === 0x64) {
+            end -= 3;
+        } else {
+            break;
+        }
+    }
+    return bytes.slice(0, end);
+}
+
+// Print directly to SUNMI Built-in Thermal Printer with FIFO Queue
 export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null) {
     logger.logNativeStart('print_sunmi_built_in', { bytesLength: rawData ? rawData.length : 0, hasLogo: !!logoUrl, hasQr: !!qrUrl });
     return new Promise((resolve, reject) => {
@@ -1759,11 +1827,11 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     logger.warn("SUNMI: bindService warning (non-fatal)", bindErr);
                 }
 
-                // 1. If logo URL is provided, print logo bitmap at the top of the receipt
+                // 1. Logo printing
                 if (logoUrl) {
                     try {
                         logger.info("SUNMI: getting Logo from cache or loading: " + logoUrl);
-                        const base64Logo = await getCachedResizedImage(logoUrl, 384); // 384px width for 80mm logo
+                        const base64Logo = await getCachedResizedImage(logoUrl, 384);
                         if (base64Logo) {
                             logger.info("SUNMI: printing Logo bitmap");
                             await SunmiPrinter.setAlignment({ alignment: "center" });
@@ -1777,12 +1845,13 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     }
                 }
 
-                // 2. Convert raw ESC/POS byte array directly to base64 string
+                // 2. Body raw bytes (strip trailing cut if QR URL is present)
                 logger.info("SUNMI: converting rawData to base64 string");
+                const bodyBytes = qrUrl ? stripTrailingEscPosCut(rawData) : rawData;
                 let binary = '';
-                const len = rawData.byteLength;
+                const len = bodyBytes.byteLength;
                 for (let i = 0; i < len; i++) {
-                    binary += String.fromCharCode(rawData[i]);
+                    binary += String.fromCharCode(bodyBytes[i]);
                 }
                 const base64Data = window.btoa(binary);
 
@@ -1790,7 +1859,7 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                 await SunmiPrinter.sendRAWBase64Data({ data: base64Data });
                 logger.info("SUNMI: sendRAWBase64Data completed successfully");
                 
-                // 3. If QR URL is provided, print it at the bottom (enlarged to 360px for easy scanning)
+                // 3. QR printing
                 let didPrintQr = false;
                 if (qrUrl) {
                     try {
@@ -1810,16 +1879,13 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                     }
                 }
 
-                // 4. Trigger cutter ONLY if QR was printed after rawData (rawData already contains ESC/POS cut command)
+                // 4. Cut paper after QR
                 if (didPrintQr) {
                     try {
                         await SunmiPrinter.cutPaper();
-                    } catch (cutErr) {
-                        // non-fatal if built-in printer has manual tear bar instead of auto cutter
-                    }
+                    } catch (cutErr) {}
                 }
 
-                // Buffer delay (200ms) for physical motor, paper feed, and cutter completion
                 await new Promise(r => setTimeout(r, 200));
                 
                 logger.logNativeEnd('print_sunmi_built_in');

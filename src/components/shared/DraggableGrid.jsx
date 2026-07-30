@@ -214,7 +214,7 @@ const GridCard = memo(function GridCard({
                 />
             ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center select-none font-mono text-[var(--color-neutral,#888279)]">
-                    <span className="text-xl">📸</span>
+                    <span className="text-[10px] uppercase font-bold tracking-widest border border-[var(--color-rule,#E2DDD3)] px-2 py-1 bg-[var(--color-paper,#FBF9F5)]">POST</span>
                     <span className="text-[9px] uppercase tracking-wider mt-2 font-bold">{item.user?.name || item.user_name || "Check-in"}</span>
                 </div>
             )}

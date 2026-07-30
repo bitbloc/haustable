@@ -569,9 +569,10 @@ export default function HausCheckinPage() {
                         onLikeToggle={handleLikeToggle}
                     />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center font-mono">
-                        <Compass className="w-8 h-8 text-[var(--color-accent,#D85436)] animate-spin-slow" />
-                        <p className="text-xs text-[var(--color-neutral,#888279)] uppercase tracking-widest font-bold">No atmosphere posts found</p>
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center font-mono">
+                        <p className="text-xs text-[var(--color-neutral,#888279)] uppercase tracking-widest font-bold border border-[var(--color-rule,#E2DDD3)] px-4 py-2 bg-[var(--color-paper-2,#F4F1EA)]">
+                            NO ATMOSPHERE POSTS FOUND
+                        </p>
                     </div>
                 )}
             </div>
@@ -624,24 +625,23 @@ export default function HausCheckinPage() {
             <div className="fixed bottom-4 left-4 right-4 z-40 bg-[var(--color-paper-2,#F4F1EA)]/90 backdrop-blur-md border border-[var(--color-rule,#E2DDD3)] px-4 py-2.5 rounded-xs flex items-center justify-between gap-4 shadow-sm select-none">
                 {/* Left section: drag help */}
                 <div className="hidden lg:flex items-center gap-2 text-[9px] font-mono text-[var(--color-muted,#656058)] uppercase tracking-wider font-semibold">
-                    <span>🖱️ CLICK & DRAG TO EXPLORE</span>
+                    <span>CLICK & DRAG TO EXPLORE</span>
                 </div>
 
                 {/* Center section: filter tabs */}
                 <div className="flex items-center gap-1 p-0.5 bg-[var(--color-paper,#FBF9F5)] rounded-xs border border-[var(--color-rule,#E2DDD3)] mx-auto lg:mx-0">
                     {[
-                        { id: 'all', label: 'ALL', icon: <Compass size={11} /> },
-                        { id: 'instagram', label: 'INSTAGRAM', icon: <Instagram size={11} /> },
-                        { id: 'facebook', label: 'FACEBOOK', icon: <Facebook size={11} /> },
-                        { id: 'google', label: 'GOOGLE', icon: <Star size={11} /> }
+                        { id: 'all', label: 'ALL' },
+                        { id: 'instagram', label: 'INSTAGRAM' },
+                        { id: 'facebook', label: 'FACEBOOK' },
+                        { id: 'google', label: 'GOOGLE' }
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveFilter(tab.id)}
-                            className={`px-3.5 py-1.5 rounded-xs font-mono text-[9px] font-extrabold tracking-widest flex items-center gap-1.5 cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-accent,#D85436)] text-white shadow-xs font-bold' : 'text-[var(--color-neutral,#888279)] hover:text-[var(--color-ink,#23201D)] bg-transparent hover:bg-[var(--color-paper-2,#F4F1EA)]'}`}
+                            className={`px-3.5 py-1.5 rounded-xs font-mono text-[9px] font-extrabold tracking-widest cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-accent,#D85436)] text-white shadow-xs font-bold' : 'text-[var(--color-neutral,#888279)] hover:text-[var(--color-ink,#23201D)] bg-transparent hover:bg-[var(--color-paper-2,#F4F1EA)]'}`}
                         >
-                            {tab.icon}
-                            <span className="hidden sm:inline">{tab.label}</span>
+                            <span>{tab.label}</span>
                         </button>
                     ))}
                 </div>
@@ -802,23 +802,23 @@ export default function HausCheckinPage() {
                                 {/* Platform label Overlay */}
                                 <div className="absolute bottom-4 left-4 z-10">
                                     {selectedItem.source === 'instagram' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#E1306C] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
-                                            <Instagram size={10} /> INSTAGRAM
+                                        <span className="px-2.5 py-1 bg-[#E1306C] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
+                                            INSTAGRAM
                                         </span>
                                     )}
                                     {selectedItem.source === 'facebook' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1877F2] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
-                                            <Facebook size={10} /> FACEBOOK
+                                        <span className="px-2.5 py-1 bg-[#1877F2] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
+                                            FACEBOOK
                                         </span>
                                     )}
                                     {selectedItem.source === 'google' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#4285F4] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
-                                            <Star size={10} className="fill-white" /> GOOGLE REVIEWS
+                                        <span className="px-2.5 py-1 bg-[#4285F4] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
+                                            GOOGLE REVIEWS
                                         </span>
                                     )}
                                     {selectedItem.source === 'note' && (
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--color-accent,#D85436)] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
-                                            <MessageCircle size={10} /> GUEST NOTE
+                                        <span className="px-2.5 py-1 bg-[var(--color-accent,#D85436)] text-white rounded-xs font-mono text-[9px] font-bold uppercase tracking-wider shadow-xs">
+                                            GUEST NOTE
                                         </span>
                                     )}
                                 </div>
@@ -850,8 +850,8 @@ export default function HausCheckinPage() {
 
                                     {/* Location & Rating */}
                                     <div className="flex flex-col gap-1.5">
-                                        <div className="flex items-center gap-1 text-[10px] font-mono text-[var(--color-accent,#D85436)] font-bold uppercase tracking-wider">
-                                            <MapPin size={10} /> {selectedItem.location}
+                                        <div className="text-[10px] font-mono text-[var(--color-accent,#D85436)] font-bold uppercase tracking-wider">
+                                            {selectedItem.location}
                                         </div>
                                         {selectedItem.rating && (
                                             <div className="flex gap-0.5">
