@@ -20,14 +20,45 @@ export const fetchPrinterConfigOnline = async () => {
     try {
         const { data } = await supabase
             .from('app_settings')
-            .select('value')
-            .eq('key', 'printer_config')
-            .maybeSingle();
+            .select('key, value');
 
-        if (data && data.value) {
-            const config = JSON.parse(data.value);
+        if (data && data.length > 0) {
+            const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+            
+            let config = {};
+            if (settingsMap.printer_config) {
+                try {
+                    config = JSON.parse(settingsMap.printer_config);
+                } catch(e) {}
+            }
+
+            if (settingsMap.receipt_shop_footer) {
+                config.shop_footer_text = settingsMap.receipt_shop_footer;
+                localStorage.setItem('receipt_shop_footer', settingsMap.receipt_shop_footer);
+            }
+            if (settingsMap.receipt_shop_name) {
+                config.shop_name = settingsMap.receipt_shop_name;
+                localStorage.setItem('receipt_shop_name', settingsMap.receipt_shop_name);
+            }
+            if (settingsMap.receipt_shop_address) {
+                config.shop_address = settingsMap.receipt_shop_address;
+                localStorage.setItem('receipt_shop_address', settingsMap.receipt_shop_address);
+            }
+            if (settingsMap.receipt_shop_phone) {
+                config.shop_phone = settingsMap.receipt_shop_phone;
+                localStorage.setItem('receipt_shop_phone', settingsMap.receipt_shop_phone);
+            }
+            if (settingsMap.receipt_shop_vat) {
+                config.shop_vat = settingsMap.receipt_shop_vat;
+                localStorage.setItem('receipt_shop_vat', settingsMap.receipt_shop_vat);
+            }
+            if (settingsMap.receipt_shop_logo_url) {
+                config.shop_logo_url = settingsMap.receipt_shop_logo_url;
+                localStorage.setItem('receipt_shop_logo_url', settingsMap.receipt_shop_logo_url);
+            }
+
             cachedPrinterConfig = config;
-            localStorage.setItem('onhaus_printer_config', data.value);
+            localStorage.setItem('onhaus_printer_config', JSON.stringify(config));
             return config;
         }
     } catch (e) {
@@ -50,16 +81,11 @@ export const initPrinterConfigSync = (onUpdate) => {
             .channel('global_printer_config_sync')
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'app_settings', filter: "key=eq.printer_config" },
-                (payload) => {
-                    if (payload.new && payload.new.value) {
-                        try {
-                            const updated = JSON.parse(payload.new.value);
-                            cachedPrinterConfig = updated;
-                            localStorage.setItem('onhaus_printer_config', payload.new.value);
-                            if (onUpdate) onUpdate(updated);
-                        } catch (e) {}
-                    }
+                { event: '*', schema: 'public', table: 'app_settings' },
+                () => {
+                    fetchPrinterConfigOnline().then(updated => {
+                        if (onUpdate && updated) onUpdate(updated);
+                    });
                 }
             )
             .subscribe();
@@ -923,7 +949,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // Footer
     if (!isKitchenTab) {
-        let asciiArt = receiptConfig.footer_ascii_art || '';
+        let asciiArt = receiptConfig.footer_ascii_art || cfg.footer_ascii_art || '';
         if (!asciiArt) {
             try {
                 const config = getPrinterConfig();
@@ -931,14 +957,20 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             } catch(e) {}
         }
 
+        const shopFooterText = receiptConfig.shopFooter 
+            || cfg.shop_footer_text 
+            || cfg.receipt_shop_footer 
+            || localStorage.getItem('receipt_shop_footer') 
+            || '';
+
         encoder.align('center');
         if (asciiArt) {
             asciiArt.split('\n').forEach(aLine => {
                 encoder.line(aLine);
             });
         }
-        if (shopFooter) {
-            encoder.line(shopFooter);
+        if (shopFooterText) {
+            encoder.line(shopFooterText);
         }
         encoder.feed(2)
                .cut();

@@ -51,7 +51,13 @@ export default function SlipModal({ booking, type, onClose }) {
     };
 
     const [isAutoPrinting, setIsAutoPrinting] = useState(getIsAutoPrintingInitial)
-    const [printerConfig, setPrinterConfig] = useState({ kitchen_categories: [], bar_categories: [] });
+    const [printerConfig, setPrinterConfig] = useState(() => {
+        try {
+            const stored = localStorage.getItem('onhaus_printer_config');
+            if (stored) return JSON.parse(stored);
+        } catch (e) {}
+        return { kitchen_categories: [], bar_categories: [] };
+    });
 
     useEffect(() => {
         const loadOnlineConfig = async () => {
@@ -65,12 +71,29 @@ export default function SlipModal({ booking, type, onClose }) {
             try {
                 const { data } = await supabase
                     .from('app_settings')
-                    .select('value')
-                    .eq('key', 'printer_config')
-                    .maybeSingle();
+                    .select('key, value');
 
-                if (data && data.value) {
-                    const onlineConfig = JSON.parse(data.value);
+                if (data && data.length > 0) {
+                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    
+                    let onlineConfig = {};
+                    if (settingsMap.printer_config) {
+                        try {
+                            onlineConfig = JSON.parse(settingsMap.printer_config);
+                        } catch(e) {}
+                    }
+
+                    if (settingsMap.receipt_shop_footer) {
+                        onlineConfig.shop_footer_text = settingsMap.receipt_shop_footer;
+                        setReceiptShopFooter(settingsMap.receipt_shop_footer);
+                        localStorage.setItem('receipt_shop_footer', settingsMap.receipt_shop_footer);
+                    }
+                    if (settingsMap.receipt_shop_name) setReceiptShopName(settingsMap.receipt_shop_name);
+                    if (settingsMap.receipt_shop_address) setReceiptShopAddress(settingsMap.receipt_shop_address);
+                    if (settingsMap.receipt_shop_phone) setReceiptShopPhone(settingsMap.receipt_shop_phone);
+                    if (settingsMap.receipt_shop_vat) setReceiptShopVat(settingsMap.receipt_shop_vat);
+                    if (settingsMap.receipt_shop_logo_url) setReceiptShopLogoUrl(settingsMap.receipt_shop_logo_url);
+
                     setPrinterConfig(onlineConfig);
                     localStorage.setItem('onhaus_printer_config', JSON.stringify(onlineConfig));
                 }
@@ -90,12 +113,27 @@ export default function SlipModal({ booking, type, onClose }) {
     }
     const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod)
 
-    const [receiptShopName, setReceiptShopName] = useState('IN THE HAUS');
-    const [receiptShopAddress, setReceiptShopAddress] = useState('');
-    const [receiptShopPhone, setReceiptShopPhone] = useState('');
-    const [receiptShopVat, setReceiptShopVat] = useState('');
-    const [receiptShopLogoUrl, setReceiptShopLogoUrl] = useState('');
-    const [receiptShopFooter, setReceiptShopFooter] = useState('THANK YOU FOR YOUR VISIT');
+    const getStoredShopSetting = (key, fallback = '') => {
+        try {
+            const val = localStorage.getItem(key);
+            if (val) return val;
+            const configStored = localStorage.getItem('onhaus_printer_config');
+            if (configStored) {
+                const parsed = JSON.parse(configStored);
+                if (key === 'receipt_shop_footer' && (parsed.shop_footer_text || parsed.shopFooter || parsed.receipt_shop_footer)) {
+                    return parsed.shop_footer_text || parsed.shopFooter || parsed.receipt_shop_footer;
+                }
+            }
+        } catch (e) {}
+        return fallback;
+    };
+
+    const [receiptShopName, setReceiptShopName] = useState(() => getStoredShopSetting('receipt_shop_name', 'IN THE HAUS'));
+    const [receiptShopAddress, setReceiptShopAddress] = useState(() => getStoredShopSetting('receipt_shop_address', ''));
+    const [receiptShopPhone, setReceiptShopPhone] = useState(() => getStoredShopSetting('receipt_shop_phone', ''));
+    const [receiptShopVat, setReceiptShopVat] = useState(() => getStoredShopSetting('receipt_shop_vat', ''));
+    const [receiptShopLogoUrl, setReceiptShopLogoUrl] = useState(() => getStoredShopSetting('receipt_shop_logo_url', ''));
+    const [receiptShopFooter, setReceiptShopFooter] = useState(() => getStoredShopSetting('receipt_shop_footer', ''));
 
     // Real-time subscription to sync receipt settings and printer config instantly across all machines
     useEffect(() => {
@@ -741,18 +779,14 @@ export default function SlipModal({ booking, type, onClose }) {
                     ${noteHtml}
 
                     ${(() => {
-                        let asciiHtml = '';
                         if (isKitchenTab) return '';
-                        let art = printerConfig?.footer_ascii_art || '';
-                        if (!art) {
-                            art = `T H A N K   Y O U\n  S E E   Y O U   A G A I N`;
-                        }
-                        asciiHtml = `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>`;
-                        return asciiHtml;
+                        let art = printerConfig?.footer_ascii_art || getStoredShopSetting('footer_ascii_art', '');
+                        if (!art) return '';
+                        return `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>`;
                     })()}
 
                     <div class="footer">
-                        ${receiptShopFooter || 'THANK YOU FOR YOUR VISIT'}
+                        ${receiptShopFooter || printerConfig?.shop_footer_text || getStoredShopSetting('receipt_shop_footer', '')}
                     </div>
 
                     <script>
@@ -1261,12 +1295,16 @@ export default function SlipModal({ booking, type, onClose }) {
                         {/* Footer & ASCII Art */}
                         {!isKitchenTab && (
                             <div className="text-center mt-5 space-y-1">
-                                <pre className="font-mono text-[9px] font-bold leading-tight text-center whitespace-pre overflow-x-auto text-black my-1.5">
-                                    {printerConfig.footer_ascii_art || `T H A N K   Y O U\n  S E E   Y O U   A G A I N`}
-                                </pre>
-                                <div className="text-[8px] font-mono text-gray-500 font-bold uppercase tracking-wider">
-                                    {receiptShopFooter || 'THANK YOU FOR YOUR VISIT'}
-                                </div>
+                                {(printerConfig.footer_ascii_art || getStoredShopSetting('footer_ascii_art')) && (
+                                    <pre className="font-mono text-[9px] font-bold leading-tight text-center whitespace-pre overflow-x-auto text-black my-1.5">
+                                        {printerConfig.footer_ascii_art || getStoredShopSetting('footer_ascii_art')}
+                                    </pre>
+                                )}
+                                {(receiptShopFooter || printerConfig.shop_footer_text || getStoredShopSetting('receipt_shop_footer')) && (
+                                    <div className="text-[10px] font-mono text-black font-bold uppercase tracking-wider">
+                                        {receiptShopFooter || printerConfig.shop_footer_text || getStoredShopSetting('receipt_shop_footer')}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

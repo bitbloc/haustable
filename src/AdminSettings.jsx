@@ -163,6 +163,21 @@ export default function AdminSettings() {
     const [allCategories, setAllCategories] = useState([]);
     const [draggedOverColumn, setDraggedOverColumn] = useState(null);
 
+    const defaultRouteCategory = (cat) => {
+        const name = (cat.name || '').toLowerCase();
+        if (
+            name.includes('coffee') || name.includes('soft drink') || name.includes('drink') || 
+            name.includes('beer') || name.includes('alcahol') || name.includes('alcohol') || 
+            name.includes('tea') || name.includes('beverage') || name.includes('bar') || 
+            name.includes('cocktail') || name.includes('mocktail') || name.includes('เครื่องดื่ม') || 
+            name.includes('กาแฟ') || name.includes('ชา') || name.includes('เบียร์') || 
+            name.includes('เหล้า') || name.includes('น้ำ')
+        ) {
+            return 'bar';
+        }
+        return 'kitchen';
+    };
+
     useEffect(() => {
         const fetchCats = async () => {
             try {
@@ -179,6 +194,43 @@ export default function AdminSettings() {
         };
         fetchCats();
     }, []);
+
+    // Auto-populate default category routing if any categories are unassigned or empty
+    useEffect(() => {
+        if (allCategories.length === 0) return;
+
+        const currentKitchen = printerConfig.kitchen_categories || [];
+        const currentBar = printerConfig.bar_categories || [];
+        const assignedIds = new Set([...currentKitchen, ...currentBar]);
+
+        const unassigned = allCategories.filter(cat => !assignedIds.has(cat.id));
+        if (unassigned.length > 0) {
+            const newKitchen = [...currentKitchen];
+            const newBar = [...currentBar];
+
+            unassigned.forEach(cat => {
+                const target = defaultRouteCategory(cat);
+                if (target === 'bar') {
+                    if (!newBar.includes(cat.id)) newBar.push(cat.id);
+                } else {
+                    if (!newKitchen.includes(cat.id)) newKitchen.push(cat.id);
+                }
+            });
+
+            const autoUpdated = {
+                ...printerConfig,
+                kitchen_categories: newKitchen,
+                bar_categories: newBar
+            };
+            setPrinterConfig(autoUpdated);
+            localStorage.setItem('onhaus_printer_config', JSON.stringify(autoUpdated));
+            supabase.from('app_settings').upsert({
+                key: 'printer_config',
+                value: JSON.stringify(autoUpdated),
+                updated_at: new Date().toISOString()
+            }).catch(err => console.error("Auto printer routing save err:", err));
+        }
+    }, [allCategories, printerConfig.kitchen_categories, printerConfig.bar_categories]);
 
     const handleCategoryDragStart = (e, catId) => {
         e.dataTransfer.setData('text/plain', catId);
