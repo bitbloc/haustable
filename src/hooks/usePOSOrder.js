@@ -87,6 +87,7 @@ export function usePOSOrder() {
                     table_id: tableId,
                     status: 'seated',
                     booking_type: 'walk_in',
+                    source: 'pos',
                     booking_time: new Date().toISOString(),
                     pax: capacity,
                     staff_remark: 'Walk-in Guest'
@@ -209,6 +210,7 @@ export function usePOSOrder() {
                     table_id: null,
                     status: 'seated',
                     booking_type: 'pickup',
+                    source: 'pos',
                     booking_time: new Date().toISOString(),
                     pax: 1,
                     customer_note: note,

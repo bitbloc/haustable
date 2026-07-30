@@ -125,7 +125,9 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {filteredOrders.map((order) => {
-                            const isOnline = !!order.pickup_contact_phone || !!order.tracking_token || !!order.payment_slip_url;
+                            const remarkLower = (order.staff_remark || '').toLowerCase();
+                            const sourceLower = (order.source || '').toLowerCase();
+                            const isOnline = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || !!order.payment_slip_url;
                             const isPending = order.status === 'pending';
                             const isReady = order.status === 'ready';
                             const isCompleted = order.status === 'completed';

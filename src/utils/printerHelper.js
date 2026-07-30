@@ -570,7 +570,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const noteLower = (booking.customer_note || '').toLowerCase();
     const sourceLower = (booking.source || '').toLowerCase();
     
-    const isOnlineOrder = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || !!booking.tracking_token;
+    // Explicitly check for Online source (DO NOT use tracking_token as EVERY booking gets one!)
+    const isOnlineOrder = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || !!booking.payment_slip_url;
     const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || !booking.tables_layout;
     const isLineman = remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || noteLower.includes('line man');
 
@@ -578,19 +579,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     let orderBannerSub = '';
 
     if (isLineman) {
-        orderBannerTitle = '*** LINE MAN DELIVERY ***';
+        orderBannerTitle = 'LINE MAN DELIVERY';
         orderBannerSub = '(เดลิเวอรี่ / ออเดอร์ออนไลน์)';
     } else if (isOnlineOrder && isPickupOrder) {
-        orderBannerTitle = '*** ONLINE PICKUP ORDER ***';
+        orderBannerTitle = 'ONLINE PICKUP ORDER';
         orderBannerSub = '(ออเดอร์รับกลับออนไลน์ - PICKUP)';
     } else if (isOnlineOrder && !isPickupOrder) {
-        orderBannerTitle = '*** ONLINE TABLE BOOKING ***';
-        orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
+        orderBannerTitle = 'ONLINE ORDER / QR DINE-IN';
+        orderBannerSub = '(สั่งผ่าน QR Code / จองออนไลน์)';
     } else if (!isOnlineOrder && isPickupOrder) {
-        orderBannerTitle = '*** IN-STORE PICKUP ***';
-        orderBannerSub = '(หน้าร้าน - รับกลับบ้าน)';
+        orderBannerTitle = 'IN-STORE PICKUP (WALK-IN)';
+        orderBannerSub = '(หน้าร้าน - สั่งกลับบ้าน)';
     } else {
-        orderBannerTitle = '*** IN-STORE DINE-IN ***';
+        orderBannerTitle = 'IN-STORE DINE-IN';
         orderBannerSub = '(หน้าร้าน - ทานที่ร้าน)';
     }
 

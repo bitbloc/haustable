@@ -88,9 +88,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
             // Filter for online relevant ones
             const onlineRelevant = (data || []).filter(b => {
-                const isOnlineSource = b.source === 'online' || b.source === 'line';
+                const sourceLower = (b.source || '').toLowerCase();
+                const remarkLower = (b.staff_remark || '').toLowerCase();
+                const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online');
                 const hasSlip = !!b.payment_slip_url;
-                const isOnlinePickup = b.booking_type === 'pickup' && (b.tracking_token || isOnlineSource);
+                const isOnlinePickup = b.booking_type === 'pickup' && isOnlineSource;
                 return isOnlineSource || hasSlip || isOnlinePickup;
             });
 
@@ -119,9 +121,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 (payload) => {
                     const b = payload.new;
                     // Check if it's relevant for online hub
-                    const isOnlineSource = b.source === 'online' || b.source === 'line';
+                    const sourceLower = (b.source || '').toLowerCase();
+                    const remarkLower = (b.staff_remark || '').toLowerCase();
+                    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online');
                     const hasSlip = !!b.payment_slip_url;
-                    const isOnlinePickup = b.booking_type === 'pickup' && (b.tracking_token || isOnlineSource);
+                    const isOnlinePickup = b.booking_type === 'pickup' && isOnlineSource;
                     
                     if (isOnlineSource || hasSlip || isOnlinePickup) {
                         // Trigger persistent alert!
