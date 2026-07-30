@@ -224,11 +224,17 @@ export default function AdminSettings() {
             };
             setPrinterConfig(autoUpdated);
             localStorage.setItem('onhaus_printer_config', JSON.stringify(autoUpdated));
-            supabase.from('app_settings').upsert({
-                key: 'printer_config',
-                value: JSON.stringify(autoUpdated),
-                updated_at: new Date().toISOString()
-            }).catch(err => console.error("Auto printer routing save err:", err));
+            (async () => {
+                try {
+                    await supabase.from('app_settings').upsert({
+                        key: 'printer_config',
+                        value: JSON.stringify(autoUpdated),
+                        updated_at: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error("Auto printer routing save err:", err);
+                }
+            })();
         }
     }, [allCategories, printerConfig.kitchen_categories, printerConfig.bar_categories]);
 
