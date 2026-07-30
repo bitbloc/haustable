@@ -490,33 +490,28 @@ export default function SlipModal({ booking, type, onClose }) {
             docTitle = 'RECEIPT / ใบเสร็จรับเงิน'
         }
 
-        // Determine Order Category & Source for Banner & Slip Proof
-        const remarkLower = (booking.staff_remark || '').toLowerCase();
-        const noteLower = (booking.customer_note || '').toLowerCase();
-        const sourceLower = (booking.source || '').toLowerCase();
+        // Check category: Online Pickup vs Online Table Booking vs Walk-in Pickup vs IN HAUS Dine-In
+        const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url;
+        const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr');
         
-        // Explicitly check for Online source (DO NOT use tracking_token as EVERY booking gets one!)
-        const isOnlineOrder = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || !!booking.payment_slip_url;
-        const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || !booking.tables_layout;
-        const isLineman = remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || noteLower.includes('line man');
+        const isOnlinePickup = isOnlineSource && isPickupOrder;
+        const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr';
 
         let orderBannerTitle = '';
         let orderBannerSub = '';
 
-        if (isLineman) {
-            orderBannerTitle = 'LINE MAN DELIVERY';
-            orderBannerSub = '(เดลิเวอรี่ / ออเดอร์ออนไลน์)';
-        } else if (isOnlineOrder && isPickupOrder) {
+        if (isOnlinePickup) {
             orderBannerTitle = 'ONLINE PICKUP ORDER';
-            orderBannerSub = '(ออเดอร์รับกลับออนไลน์ - PICKUP)';
-        } else if (isOnlineOrder && !isPickupOrder) {
-            orderBannerTitle = 'ONLINE ORDER / QR DINE-IN';
-            orderBannerSub = '(สั่งผ่าน QR Code / จองออนไลน์)';
-        } else if (!isOnlineOrder && isPickupOrder) {
-            orderBannerTitle = 'IN-STORE PICKUP (WALK-IN)';
+            orderBannerSub = '(รับกลับออนไลน์ - PICKUP)';
+        } else if (isOnlineBooking) {
+            orderBannerTitle = 'ONLINE TABLE BOOKING';
+            orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
+        } else if (isPickupOrder) {
+            orderBannerTitle = 'IN-STORE PICKUP';
             orderBannerSub = '(หน้าร้าน - สั่งกลับบ้าน)';
         } else {
-            orderBannerTitle = 'IN-STORE DINE-IN';
+            // Any Table Dine-In (QR ordering or POS table open)
+            orderBannerTitle = 'IN HAUS DINE-IN';
             orderBannerSub = '(หน้าร้าน - ทานที่ร้าน)';
         }
 
@@ -748,8 +743,8 @@ export default function SlipModal({ booking, type, onClose }) {
                     </div>
                     
                     <div class="meta">
-                        <div class="row"><span class="label">ช่องทาง / SOURCE</span> <span class="val" style="font-weight: bold;">${isOnlineOrder ? 'ONLINE (ออนไลน์)' : 'IN-STORE (หน้าร้าน)'}</span></div>
-                        <div class="row"><span class="label">บริการ / SERVICE</span> <span class="val" style="font-weight: bold;">${isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'}</span></div>
+                        <div class="row"><span class="label">ช่องทาง / SOURCE</span> <span class="val" style="font-weight: bold;">${(isOnlinePickup || isOnlineBooking) ? 'ONLINE (ออนไลน์)' : 'IN HAUS (หน้าร้าน)'}</span></div>
+                        <div class="row"><span class="label">บริการ / SERVICE</span> <span class="val" style="font-weight: bold;">${isOnlinePickup ? 'ONLINE PICKUP (รับกลับออนไลน์)' : (isOnlineBooking ? 'ONLINE BOOKING (จองโต๊ะออนไลน์)' : (isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'))}</span></div>
                         <div class="row"><span class="label">หมายเลขคิว / QUEUE</span> <span class="val">#${queueNo}</span></div>
                         <div class="row"><span class="label">วันที่ออกบิล / DATE</span> <span class="val">${dateStr}</span></div>
                         <div class="row"><span class="label">เวลานัดหมาย / TIME</span> <span class="val">${formattedBookingTimeStr}</span></div>
