@@ -744,46 +744,46 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             initial={{ scale: 0.97, y: 10 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.97, y: 10 }}
-                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[85vh]"
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh]"
                         >
                             {/* Header */}
                             <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
                                 <div>
-                                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Customer CRM & Rewards</h3>
-                                    <p className="text-[9px] text-[#767673] font-mono mt-0.5">จัดการข้อมูลสมาชิกและสิทธิพิเศษ</p>
+                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[#1A1A1A]">Customer CRM & Rewards</h3>
+                                    <p className="text-xs text-[#767673] font-medium mt-0.5">จัดการข้อมูลสมาชิกและสิทธิพิเศษสำหรับลูกค้า</p>
                                 </div>
                                 <button 
                                     onClick={() => setActiveModal(null)} 
-                                    className="p-1.5 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
+                                    className="p-2 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
                                 >
-                                    <X size={16} />
+                                    <X size={20} />
                                 </button>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
                                 {editingProfile ? (
                                     /* Edit Customer Profile Form */
-                                    <div className="space-y-4 text-left p-4 bg-[#F5F5F2] rounded-xl border border-[#D1D1CD] shadow-inner font-sans">
-                                        <h4 className="font-mono font-bold text-[10px] text-[#767673] uppercase tracking-wider">
+                                    <div className="space-y-4 text-left p-4.5 bg-[#F5F5F2] rounded-xl border border-[#D1D1CD] shadow-inner font-sans">
+                                        <h4 className="font-mono font-bold text-xs text-[#767673] uppercase tracking-wider">
                                             Edit Customer Profile / แก้ไขข้อมูลลูกค้า
                                         </h4>
                                         
                                         {/* Display Name Input */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[9px] font-mono font-bold text-[#767673] uppercase">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase">
                                                 Customer Name / ชื่อลูกค้า
                                             </label>
                                             <input 
                                                 type="text"
                                                 value={editDisplayName}
                                                 onChange={(e) => setEditDisplayName(e.target.value)}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-lg px-3 py-2 text-xs font-semibold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-11"
                                             />
                                         </div>
 
                                         {/* Phone Number Input */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[9px] font-mono font-bold text-[#767673] uppercase">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase">
                                                 Phone Number / เบอร์โทรศัพท์
                                             </label>
                                             <input 
@@ -791,13 +791,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 placeholder="e.g. 0812345678"
                                                 value={editPhone}
                                                 onChange={(e) => setEditPhone(e.target.value)}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-11"
                                             />
                                         </div>
 
                                         {/* Email Input */}
-                                        <div className="space-y-1">
-                                            <label className="block text-[9px] font-mono font-bold text-[#767673] uppercase">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase">
                                                 Email Address / อีเมล
                                             </label>
                                             <input 
@@ -805,17 +805,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 placeholder="e.g. customer@example.com"
                                                 value={editEmail}
                                                 onChange={(e) => setEditEmail(e.target.value)}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-lg px-3 py-2 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-11"
                                             />
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="flex gap-2.5 pt-2.5 border-t border-[#D1D1CD]/50">
+                                        <div className="flex gap-3 pt-3 border-t border-[#D1D1CD]/50">
                                             <button
                                                 type="button"
                                                 onClick={() => setEditingProfile(null)}
                                                 disabled={isSavingProfile}
-                                                className="flex-1 bg-white hover:bg-[#EBEBE9] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-2 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
+                                                className="flex-1 bg-white hover:bg-[#EBEBE9] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer h-11"
                                             >
                                                 Cancel
                                             </button>
@@ -823,11 +823,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 type="button"
                                                 onClick={handleSaveProfile}
                                                 disabled={isSavingProfile}
-                                                className="flex-1 bg-[#1A1A1A] hover:bg-[#333330] text-white py-2 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                                                className="flex-1 bg-[#1A1A1A] hover:bg-[#333330] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 h-11"
                                             >
                                                 {isSavingProfile ? (
                                                     <>
-                                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                                         <span>Saving...</span>
                                                     </>
                                                 ) : (
@@ -839,50 +839,50 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 ) : booking?.profiles ? (
                                     <div className="space-y-4 text-left">
                                         {/* Member Profile Card */}
-                                        <div className="bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-3.5 flex items-center justify-between shadow-sm">
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0 font-mono font-bold">
+                                        <div className="bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-4 flex items-center justify-between shadow-sm">
+                                            <div className="flex items-center gap-3.5 min-w-0">
+                                                <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0 font-mono font-bold text-base">
                                                     {booking.profiles.display_name?.charAt(0).toUpperCase() || 'U'}
                                                 </div>
                                                 <div className="text-left min-w-0">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <p className="text-[8px] font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-xs font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
                                                         {attachedMemberCrm && (
-                                                            <span className="px-1.5 py-0.2 bg-[#1A1A1A] text-white text-[7px] font-mono font-bold rounded uppercase tracking-wider">
+                                                            <span className="px-2 py-0.5 bg-[#1A1A1A] text-white text-xs font-mono font-bold rounded uppercase tracking-wider">
                                                                 {attachedMemberCrm.current_tier}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-xs font-bold text-[#1A1A1A] uppercase mt-1 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
+                                                    <p className="text-base font-bold text-[#1A1A1A] uppercase mt-1 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
                                                     
                                                     {/* Display Phone & Email */}
-                                                    <div className="flex flex-col gap-0.5 mt-1.5 text-[9px] font-mono text-[#767673]">
+                                                    <div className="flex flex-col gap-1 mt-2 text-xs font-mono text-[#555]">
                                                         {booking.profiles.phone_number ? (
-                                                            <span>📞 {booking.profiles.phone_number}</span>
+                                                            <span className="font-bold text-[#1A1A1A]">📞 {booking.profiles.phone_number}</span>
                                                         ) : (
-                                                            <span className="text-red-500 font-bold">📞 No Phone (ไม่มีเบอร์)</span>
+                                                            <span className="text-red-600 font-bold">📞 No Phone (ไม่มีเบอร์)</span>
                                                         )}
                                                         {booking.profiles.email ? (
                                                             <span>✉️ {booking.profiles.email}</span>
                                                         ) : (
-                                                            <span className="text-amber-600/70 font-semibold">✉️ No Email</span>
+                                                            <span className="text-amber-700/80 font-medium">✉️ No Email</span>
                                                         )}
                                                         {booking.profiles.xhaus_balance !== undefined && (
-                                                            <span className="text-amber-700 font-bold mt-0.5">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
+                                                            <span className="text-amber-800 font-bold text-sm mt-1">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
                                             
-                                            <div className="flex items-center gap-1.5 shrink-0">
+                                            <div className="flex items-center gap-2 shrink-0">
                                                 {/* Edit customer details button */}
                                                 <button 
                                                     type="button"
                                                     onClick={() => startEditingProfile(booking.profiles)}
-                                                    className="p-2 bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-lg transition-colors cursor-pointer"
+                                                    className="w-10 h-10 flex items-center justify-center bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-xl transition-colors cursor-pointer shadow-xs"
                                                     title="Edit Customer Profile"
                                                 >
-                                                    <Edit size={13} />
+                                                    <Edit size={16} />
                                                 </button>
 
                                                 {/* Detach customer button */}
@@ -894,22 +894,22 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         setAppliedReward(null);
                                                         setRewardDiscount(0);
                                                     }} 
-                                                    className="p-2 bg-white hover:bg-red-50 text-[#767673] hover:text-red-650 border border-[#D1D1CD] hover:border-red-200 rounded-lg transition-colors cursor-pointer"
+                                                    className="w-10 h-10 flex items-center justify-center bg-white hover:bg-red-50 text-[#767673] hover:text-red-650 border border-[#D1D1CD] hover:border-red-200 rounded-xl transition-colors cursor-pointer shadow-xs"
                                                     title="Detach Customer"
                                                 >
-                                                    <Trash2 size={13} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         </div>
 
                                         {/* xhaus Coins Redemption Panel */}
-                                        <div className="bg-[#FFF9E6] border border-amber-200 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm">
+                                        <div className="bg-[#FFF9E6] border border-amber-300/80 rounded-xl p-4 flex flex-col gap-3 shadow-sm">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                    <Coins size={14} className="text-[#FFAA00]" />
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Coins size={18} className="text-[#FFAA00]" />
                                                     <div className="text-left">
-                                                        <p className="text-[10px] font-mono font-bold text-amber-900 uppercase tracking-wide leading-none">xhaus Coins Redemption</p>
-                                                        <p className="text-[9px] text-amber-800/80 font-medium leading-none mt-0.5">
+                                                        <p className="text-xs font-mono font-bold text-amber-950 uppercase tracking-wide leading-none">xhaus Coins Redemption</p>
+                                                        <p className="text-xs text-amber-900/80 font-medium leading-none mt-1">
                                                             1 xhaus = ฿{crmSettings.crm_redeem_rate_xhaus} (Min: {crmSettings.crm_min_redeem_xhaus} xhaus)
                                                         </p>
                                                     </div>
@@ -917,26 +917,26 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             </div>
 
                                             {xhausToRedeem > 0 ? (
-                                                <div className="bg-white border border-amber-200 rounded-lg p-2.5 flex justify-between items-center text-xs">
-                                                    <span className="font-bold text-amber-900">Redeemed {xhausToRedeem} xhaus (-฿{xhausDiscount.toFixed(2)})</span>
+                                                <div className="bg-white border border-amber-300 rounded-xl p-3 flex justify-between items-center text-sm">
+                                                    <span className="font-bold text-amber-950">Redeemed {xhausToRedeem} xhaus (-฿{xhausDiscount.toFixed(2)})</span>
                                                     <button 
                                                         onClick={() => {
                                                             setXhausToRedeem(0);
                                                             setRedeemInputVal('');
                                                         }}
-                                                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-[9px] font-mono font-bold uppercase rounded cursor-pointer transition-colors"
+                                                        className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-mono font-bold uppercase rounded-lg cursor-pointer transition-colors"
                                                     >
                                                         Cancel
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2.5">
                                                     <input 
                                                         type="number"
                                                         value={redeemInputVal}
                                                         onChange={(e) => setRedeemInputVal(e.target.value)}
                                                         placeholder={`e.g. ${crmSettings.crm_min_redeem_xhaus}`}
-                                                        className="flex-1 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-3 py-1.5 text-xs font-bold font-mono text-[#1A1A1A] outline-none focus:border-amber-400"
+                                                        className="flex-1 bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-2.5 text-sm font-bold font-mono text-[#1A1A1A] outline-none focus:border-amber-500 h-11"
                                                     />
                                                     <button 
                                                         onClick={() => {
@@ -959,7 +959,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                             setXhausToRedeem(points);
                                                             toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toFixed(2)}`);
                                                         }}
-                                                        className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-[9px] font-bold uppercase rounded-lg px-4 cursor-pointer transition-all active:scale-95"
+                                                        className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-xs font-bold uppercase rounded-xl px-5 h-11 cursor-pointer transition-all active:scale-95 shadow-sm"
                                                     >
                                                         Apply
                                                     </button>
@@ -968,39 +968,39 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         </div>
 
                                         {/* xhaus Reward Code Redemption Panel */}
-                                        <div className="bg-[#E6F4FF] border border-blue-200 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                <Gift size={14} className="text-blue-500 shrink-0" />
-                                                <p className="text-[10px] font-mono font-bold text-blue-900 uppercase tracking-wide leading-none">Redeem Reward Code</p>
+                                        <div className="bg-[#E6F4FF] border border-blue-300/80 rounded-xl p-4 flex flex-col gap-3 shadow-sm">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <Gift size={18} className="text-blue-600 shrink-0" />
+                                                <p className="text-xs font-mono font-bold text-blue-950 uppercase tracking-wide leading-none">Redeem Reward Code</p>
                                             </div>
 
                                             {appliedReward ? (
-                                                <div className="bg-white border border-blue-300 p-2.5 rounded-lg flex justify-between items-center text-[10px]">
+                                                <div className="bg-white border border-blue-300 p-3 rounded-xl flex justify-between items-center text-xs">
                                                     <div className="space-y-0.5 text-left">
-                                                        <p className="font-bold text-blue-950 truncate max-w-[200px]">{appliedReward.title}</p>
-                                                        <p className="text-[8px] text-neutral-500 font-mono">
+                                                        <p className="font-bold text-blue-950 truncate max-w-[220px] text-sm">{appliedReward.title}</p>
+                                                        <p className="text-xs text-neutral-500 font-mono">
                                                             Cost: {appliedReward.xhaus_cost} xhaus ({appliedReward.claim_code})
                                                         </p>
                                                     </div>
                                                     <button 
                                                         onClick={handleCancelReward}
-                                                        className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-650 border border-red-200 text-[9px] font-mono font-bold uppercase rounded cursor-pointer transition-colors"
+                                                        className="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 border border-red-200 text-xs font-mono font-bold uppercase rounded-lg cursor-pointer transition-colors"
                                                     >
                                                         Cancel
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2.5">
                                                     <input 
                                                         type="text"
-                                                        placeholder="Enter Code (e.g. IHGLASS50)"
+                                                        placeholder="ENTER CODE (E.G. IHGLASS50)"
                                                         value={rewardCodeInput}
                                                         onChange={(e) => setRewardCodeInput(e.target.value.toUpperCase())}
-                                                        className="flex-1 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg px-3 py-1.5 text-xs font-bold font-mono text-[#1A1A1A] outline-none placeholder:text-neutral-400 placeholder:font-sans uppercase focus:border-blue-400"
+                                                        className="flex-1 bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-2.5 text-sm font-bold font-mono text-[#1A1A1A] outline-none placeholder:text-neutral-400 placeholder:font-sans uppercase focus:border-blue-500 h-11"
                                                     />
                                                     <button 
                                                         onClick={handleApplyRewardCode}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold uppercase rounded-lg px-4 cursor-pointer transition-all active:scale-95"
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase rounded-xl px-5 h-11 cursor-pointer transition-all active:scale-95 shadow-sm"
                                                     >
                                                         Apply
                                                     </button>
@@ -1010,24 +1010,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     </div>
                                 ) : (
                                     /* Customer Search Area */
-                                    <div className="space-y-3">
+                                    <div className="space-y-3.5">
                                         <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767673]" size={14} />
+                                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
                                             <input 
                                                 type="text"
-                                                placeholder="SEARCH BY NAME OR PHONE..."
+                                                placeholder="SEARCH BY NAME OR PHONE (ค้นหาด้วยชื่อหรือเบอร์)..."
                                                 value={crmSearchTerm}
                                                 onChange={(e) => setCrmSearchTerm(e.target.value)}
-                                                className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl py-2.5 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#1A1A1A] font-medium transition-colors font-mono"
+                                                className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#1A1A1A] font-bold transition-colors font-mono h-12"
                                                 autoFocus
                                             />
                                         </div>
 
-                                        <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+                                        <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1 scrollbar-none">
                                             {crmLoading ? (
                                                 <div className="flex flex-col items-center justify-center opacity-50 py-12">
-                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1A1A1A] mb-2"></div>
-                                                    <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#767673]">LOADING REGISTRY...</span>
+                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1A1A1A] mb-2"></div>
+                                                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#767673]">LOADING REGISTRY...</span>
                                                 </div>
                                             ) : filteredCrmMembers.length > 0 ? (
                                                 filteredCrmMembers.map(m => (
@@ -1037,10 +1037,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                             await onAttachCustomer?.(m);
                                                             setActiveModal('crm');
                                                         }}
-                                                        className="w-full text-left bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] hover:border-[#B0B0AC] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between group shadow-sm active:scale-99"
+                                                        className="w-full text-left bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] hover:border-[#B0B0AC] p-3.5 rounded-xl transition-all cursor-pointer flex items-center justify-between group shadow-sm active:scale-99"
                                                     >
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-8 h-8 rounded-full border border-[#D1D1CD] bg-white overflow-hidden select-none shrink-0 flex items-center justify-center font-mono font-bold text-xs text-[#767673]">
+                                                        <div className="flex items-center gap-3.5 min-w-0">
+                                                            <div className="w-9 h-9 rounded-full border border-[#D1D1CD] bg-white overflow-hidden select-none shrink-0 flex items-center justify-center font-mono font-bold text-sm text-[#767673]">
                                                                 {m.avatar_url ? (
                                                                     <img src={m.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                                                                 ) : (
@@ -1048,25 +1048,25 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 )}
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="font-bold text-xs text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
+                                                                <p className="font-bold text-sm text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
                                                                 
                                                                 {/* Display Phone & Email in Search Items */}
-                                                                <div className="flex flex-col gap-0.5 mt-1 text-[9px] font-mono text-[#767673]">
+                                                                <div className="flex flex-col gap-0.5 mt-1 text-xs font-mono text-[#555]">
                                                                     {m.phone_number ? (
-                                                                        <span>📞 {m.phone_number}</span>
+                                                                        <span className="font-bold text-[#1A1A1A]">📞 {m.phone_number}</span>
                                                                     ) : (
-                                                                        <span className="text-red-500 font-semibold">📞 No Phone (ไม่มีเบอร์)</span>
+                                                                        <span className="text-red-600 font-semibold">📞 No Phone (ไม่มีเบอร์)</span>
                                                                     )}
                                                                     {m.email ? (
                                                                         <span>✉️ {m.email}</span>
                                                                     ) : (
-                                                                        <span className="text-amber-600/70 font-semibold">✉️ No Email</span>
+                                                                        <span className="text-amber-700/80 font-semibold">✉️ No Email</span>
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="flex items-center gap-2.5 shrink-0">
                                                             {/* Inline edit button for search registry item */}
                                                             <button 
                                                                 type="button"
@@ -1074,20 +1074,20 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                     e.stopPropagation(); // prevent select/attach
                                                                     startEditingProfile(m);
                                                                 }}
-                                                                className="p-1.5 bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-lg transition-colors cursor-pointer"
+                                                                className="w-9 h-9 flex items-center justify-center bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-xl transition-colors cursor-pointer"
                                                                 title="Edit Profile"
                                                             >
-                                                                <Edit size={11} />
+                                                                <Edit size={14} />
                                                             </button>
                                                             
-                                                            <span className="text-[9px] font-mono font-bold text-[var(--color-accent)] uppercase tracking-wider border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/5 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <span className="text-xs font-mono font-bold text-[var(--color-accent)] uppercase tracking-wider border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 px-3 py-1.5 rounded-lg">
                                                                 ATTACH
                                                             </span>
                                                         </div>
                                                     </button>
                                                 ))
                                             ) : (
-                                                <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic bg-[#F5F5F2] rounded-xl border border-dashed border-[#D1D1CD]">
+                                                <div className="text-center font-mono text-xs font-bold text-[#767673] py-12 uppercase italic bg-[#F5F5F2] rounded-xl border border-dashed border-[#D1D1CD]">
                                                     No customer profiles found
                                                 </div>
                                             )}
@@ -1100,341 +1100,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex justify-end">
                                 <button
                                     onClick={() => setActiveModal(null)}
-                                    className="bg-[#1A1A1A] hover:bg-[#333330] text-white px-4 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow"
+                                    className="bg-[#1A1A1A] hover:bg-[#333330] text-white px-6 py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow h-11"
                                 >
                                     Close Window
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-
-                {activeModal === 'discount' && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 font-sans"
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.97, y: 10 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.97, y: 10 }}
-                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
-                        >
-                            {/* Header */}
-                            <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
-                                <div>
-                                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Apply Discount / Promo</h3>
-                                    <p className="text-[9px] text-[#767673] font-mono mt-0.5">เลือกส่วนลดและโปรโมชั่นพิเศษสำหรับโต๊ะนี้</p>
-                                </div>
-                                <button 
-                                    onClick={() => setActiveModal(null)} 
-                                    className="p-1.5 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            {/* Body */}
-                            <div className="p-4 space-y-4 bg-white text-left">
-                                {/* Promotion Code Dropdown */}
-                                <div className="space-y-1.5">
-                                    <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
-                                        <Ticket size={11} /> Select Promotion (เลือกโปรโมชั่น)
-                                    </label>
-                                    <select
-                                        value={selectedPromo ? selectedPromo.id : ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (!val) {
-                                                setSelectedPromo(null);
-                                                return;
-                                            }
-                                            const found = activePromotions.find(p => p.id === val);
-                                            if (found) {
-                                                if (subtotal < parseFloat(found.min_spend || 0)) {
-                                                    toast.error(`โปรโมชั่นนี้ต้องการยอดขั้นต่ำ ฿${parseFloat(found.min_spend).toLocaleString()} ครับ (ยอดปัจจุบัน: ฿${subtotal.toLocaleString()})`);
-                                                    return;
-                                                }
-                                                setSelectedPromo(found);
-                                                toast.success(`ใช้โปรโมชั่น ${found.code} สำเร็จ!`);
-                                            }
-                                        }}
-                                        className="w-full px-3 py-2 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-semibold outline-none cursor-pointer focus:border-[#1A1A1A]"
-                                    >
-                                        <option value="">-- No Promotion Code --</option>
-                                        {activePromotions.map(p => (
-                                            <option key={p.id} value={p.id}>
-                                                🎟 {p.code} ({p.discount_type === 'percentage' ? `${p.discount_value}%` : `฿${p.discount_value}`} Off)
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Manual Discount Entry */}
-                                <div className="space-y-1.5">
-                                    <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] flex items-center gap-1">
-                                        <Percent size={11} /> Custom Manual Discount (ใส่ส่วนลดเอง)
-                                    </label>
-                                    <div className="flex gap-2">
-                                        {/* Unit Toggle */}
-                                        <div className="flex bg-[#F5F5F2] border border-[#D1D1CD] p-0.5 rounded-lg shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={() => setManualDiscountType('amount')}
-                                                className={`px-3 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${manualDiscountType === 'amount' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
-                                            >
-                                                ฿
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setManualDiscountType('percent')}
-                                                className={`px-3 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${manualDiscountType === 'percent' ? 'bg-[#1A1A1A] text-white' : 'text-[#767673]'}`}
-                                            >
-                                                %
-                                            </button>
-                                        </div>
-                                        {/* Input box */}
-                                        <input
-                                            type="number"
-                                            placeholder={manualDiscountType === 'amount' ? 'e.g. 50' : 'e.g. 10'}
-                                            value={manualDiscountVal}
-                                            onChange={(e) => setManualDiscountVal(e.target.value)}
-                                            className="flex-1 px-3 py-1.5 bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg text-xs font-bold font-mono text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex justify-end">
-                                <button
-                                    onClick={() => setActiveModal(null)}
-                                    className="bg-[#1A1A1A] hover:bg-[#333330] text-white px-5 py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow"
-                                >
-                                    Confirm Discount
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-
-                {activeModal === 'checkout' && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 font-sans"
-                    >
-                        <motion.div 
-                            initial={{ scale: 0.97, y: 10 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.97, y: 10 }}
-                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
-                        >
-                            {/* Header */}
-                            <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
-                                <div>
-                                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Payment & Settlement</h3>
-                                    <p className="text-[9px] text-[#767673] font-mono mt-0.5">เลือกช่องทางชำระเงินและรับเงิน</p>
-                                </div>
-                                <button 
-                                    onClick={() => setActiveModal(null)} 
-                                    className="p-1.5 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
-                                >
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            {/* Body */}
-                            <div className="p-4 space-y-4 bg-white text-left">
-                                {/* Bill summary list inside checkout */}
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-3.5 space-y-1.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#767673]">
-                                    <div className="flex justify-between items-center">
-                                        <span>SUBTOTAL</span>
-                                        <span className="text-[#1A1A1A]">฿{subtotal.toFixed(2)}</span>
-                                    </div>
-                                    {(memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount > 0) && (
-                                        <div className="flex justify-between items-center text-green-600">
-                                            <span>TOTAL DISCOUNTS</span>
-                                            <span>-฿{(memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount).toFixed(2)}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5">
-                                        <span>VAT (7%)</span>
-                                        <span className={`font-bold ${includeTax ? 'text-[#1A1A1A]' : 'text-gray-400 line-through'}`}>
-                                            ฿{(netBeforeTax * 0.07).toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-end text-[#1A1A1A] pt-1">
-                                        <span className="text-[9px] font-bold pb-0.5">NET TOTAL TO PAY</span>
-                                        <span className="text-xl font-black text-[var(--color-accent)]">฿{total.toFixed(2)}</span>
-                                    </div>
-
-                                    {attachedMemberCrm && pointsEarned > 0 && (
-                                        <div className="flex justify-between items-center text-emerald-600 font-bold pt-1.5 border-t border-dashed border-[#D1D1CD] animate-fade-in">
-                                            <span>COINS TO EARN</span>
-                                            <span>+{pointsEarned.toFixed(2)} xhaus</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Payment Method Selector */}
-                                <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] w-full font-mono text-[9px] font-bold uppercase tracking-wider gap-0.5">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setPaymentMethod('cash')}
-                                        className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                                    >
-                                        <Banknote size={10} /> CASH / เงินสด
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setPaymentMethod('qr')}
-                                        className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                                    >
-                                        <QrCode size={10} /> QR / โอน
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setPaymentMethod('credit')}
-                                        className={`flex-1 py-2 rounded-md transition-all flex items-center justify-center gap-0.5 cursor-pointer ${paymentMethod === 'credit' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                                    >
-                                        <CreditCard size={10} /> CREDIT / บัตร
-                                    </button>
-                                </div>
-
-                                {/* Cash calculator inside modal */}
-                                {paymentMethod === 'cash' && (
-                                    <div className="bg-[#FFF9E6] border border-amber-200 rounded-xl p-3.5 space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673]">
-                                                Cash Received (รับเงินมา)
-                                            </span>
-                                            <input 
-                                                type="number"
-                                                placeholder="0.00"
-                                                value={cashReceivedInput}
-                                                onChange={(e) => setCashReceivedInput(e.target.value)}
-                                                className="w-28 text-right bg-white border border-[#D1D1CD] rounded-lg px-3 py-1 text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-amber-400"
-                                                autoFocus
-                                            />
-                                        </div>
-                                        
-                                        {/* Quick Cash buttons */}
-                                        <div className="grid grid-cols-4 gap-1.5">
-                                            <button 
-                                                type="button"
-                                                onClick={() => setCashReceivedInput(total.toFixed(2))}
-                                                className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                            >
-                                                พอดี
-                                            </button>
-                                            {Math.ceil(total / 100) * 100 !== total && (
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setCashReceivedInput((Math.ceil(total / 100) * 100).toFixed(2))}
-                                                    className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                                >
-                                                    ฿{Math.ceil(total / 100) * 100}
-                                                </button>
-                                            )}
-                                            {total <= 500 && (
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setCashReceivedInput('500.00')}
-                                                    className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                                >
-                                                    ฿500
-                                                </button>
-                                            )}
-                                            <button 
-                                                type="button"
-                                                onClick={() => setCashReceivedInput('1000.00')}
-                                                className="bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] rounded-lg py-1.5 text-[9px] font-bold font-mono text-center cursor-pointer transition-all active:scale-95"
-                                            >
-                                                ฿1000
-                                            </button>
-                                        </div>
-
-                                        <div className="flex justify-between items-center text-[10px] border-t border-dashed border-[#D1D1CD]/50 pt-2.5">
-                                            <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
-                                            <span className={`font-mono font-bold text-sm ${parseFloat(cashReceivedInput) >= total ? 'text-green-600' : 'text-[#ff0000]'}`}>
-                                                {parseFloat(cashReceivedInput) >= total 
-                                                    ? `฿${(parseFloat(cashReceivedInput) - total).toFixed(2)}` 
-                                                    : cashReceivedInput ? `ขาดอีก ฿${(total - parseFloat(cashReceivedInput)).toFixed(2)}` : '฿0.00'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* QR buttons */}
-                                {paymentMethod === 'qr' && (
-                                    <button 
-                                        onClick={() => {
-                                            onOpenSlip && onOpenSlip('billing');
-                                            broadcastCFD({
-                                                type: 'SHOW_QR',
-                                                payload: {
-                                                    orderData: {
-                                                        items: order.items,
-                                                        subtotal,
-                                                        discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
-                                                        tax,
-                                                        total
-                                                    },
-                                                    total
-                                                }
-                                            });
-                                            toast.info("พิมพ์ใบแจ้งยอด/แสดงคิวอาร์โค้ดแล้ว");
-                                        }}
-                                        className="w-full bg-[#E6F4FF] hover:bg-blue-100 border border-blue-200 text-blue-800 py-2.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                                    >
-                                        <Printer size={12} /> DISPLAY QR / พิมพ์ใบแจ้งยอด
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Footer Checkout Action */}
-                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex justify-between gap-3">
-                                <button
-                                    onClick={() => setActiveModal(null)}
-                                    className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#F5F5F2] text-[#1A1A1A] py-2.5 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-98"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        if (paymentMethod === 'cash') {
-                                            const cashRecv = parseFloat(cashReceivedInput) || 0;
-                                            if (cashRecv < total) {
-                                                toast.error("กรุณากรอกจำนวนเงินรับมาให้พอดีหรือมากกว่ายอดรวมครับ");
-                                                return;
-                                            }
-                                            localStorage.setItem('last_cash_received', cashRecv);
-                                            localStorage.setItem('last_cash_change', (cashRecv - total).toFixed(2));
-                                        }
-                                        
-                                        onCheckout(
-                                            paymentMethod, 
-                                            includeTax, 
-                                            pointsEarned, 
-                                            xhausToRedeem + (appliedReward ? parseFloat(appliedReward.xhaus_cost) : 0), 
-                                            xhausDiscount + rewardDiscount, 
-                                            promoDiscount, 
-                                            manualDiscount,
-                                            appliedReward ? appliedReward.claim_code : null,
-                                            appliedReward ? appliedReward.id : null
-                                        );
-                                        setActiveModal(null);
-                                        if (paymentMethod === 'qr') {
-                                            broadcastCFD({ type: 'PAYMENT_SUCCESS' });
-                                        }
-                                    }}
-                                    className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-accent)] hover:bg-[#d00000] border border-[#c00000] text-white py-2.5 rounded-lg transition-all shadow-md active:scale-98 cursor-pointer font-mono text-[10px] font-bold uppercase tracking-wider"
-                                >
-                                    <Check size={11} /> CHECKOUT / ปิดโต๊ะ
                                 </button>
                             </div>
                         </motion.div>
@@ -1444,24 +1112,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Edit Guest Count (Pax) Modal */}
             {showEditPaxModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl font-sans text-[#1A1A1A]">
-                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-[#1A1A1A]">
+                        <div className="p-4.5 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
                             <div>
-                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ปรับจำนวนลูกค้า (Guest Count)</h3>
-                                <p className="text-[10px] text-[#767673] font-mono mt-0.5">{order.table ? `โต๊ะ ${order.table.table_name}` : 'Walk-in'}</p>
+                                <h3 className="font-mono font-bold text-sm uppercase tracking-wider">ปรับจำนวนลูกค้า (Guest Count)</h3>
+                                <p className="text-xs text-[#767673] font-mono mt-0.5">{order.table ? `โต๊ะ ${order.table.table_name}` : 'Walk-in'}</p>
                             </div>
-                            <button onClick={() => setShowEditPaxModal(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg cursor-pointer text-[#767673]"><X size={16} /></button>
+                            <button onClick={() => setShowEditPaxModal(false)} className="p-1.5 hover:bg-[#EAEAE6] rounded-xl cursor-pointer text-[#767673]"><X size={18} /></button>
                         </div>
                         
-                        <div className="p-5 flex flex-col items-center gap-4">
-                            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">ระบุจำนวนลูกค้า (คน) *</div>
+                        <div className="p-5 flex flex-col items-center gap-4 bg-white">
+                            <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#767673]">ระบุจำนวนลูกค้า (คน) *</div>
                             
                             {/* Stepper Input */}
                             <div className="flex items-center gap-3">
                                 <button 
                                     onClick={() => setEditPaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
-                                    className="w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
                                 >
                                     -
                                 </button>
@@ -1471,11 +1139,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     max="99"
                                     value={editPaxInput}
                                     onChange={(e) => setEditPaxInput(e.target.value)}
-                                    className="w-20 h-10 bg-white border border-[#D1D1CD] rounded-xl text-center text-xl font-mono font-bold text-[#1A1A1A] focus:outline-none focus:border-[#52281C]"
+                                    className="w-24 h-12 bg-white border border-[#D1D1CD] rounded-xl text-center text-2xl font-mono font-bold text-[#1A1A1A] focus:outline-none focus:border-[#52281C]"
                                 />
                                 <button 
                                     onClick={() => setEditPaxInput(prev => String((parseInt(prev) || 1) + 1))}
-                                    className="w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
                                 >
                                     +
                                 </button>
@@ -1487,7 +1155,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     <button
                                         key={num}
                                         onClick={() => setEditPaxInput(String(num))}
-                                        className={`py-2 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer ${parseInt(editPaxInput) === num ? 'bg-[#3C3D40] text-white shadow-sm' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
+                                        className={`py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer ${parseInt(editPaxInput) === num ? 'bg-[#3C3D40] text-white shadow-sm' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
                                     >
                                         {num}
                                     </button>
@@ -1495,10 +1163,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             </div>
                         </div>
 
-                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-2">
+                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-3">
                             <button
                                 onClick={() => setShowEditPaxModal(false)}
-                                className="flex-1 bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                className="flex-1 bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98 h-11"
                             >
                                 ยกเลิก (Cancel)
                             </button>
@@ -1514,7 +1182,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     }
                                     setShowEditPaxModal(false);
                                 }}
-                                className="flex-1 bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-2 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer"
+                                className="flex-1 bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer h-11"
                             >
                                 บันทึก (Save)
                             </button>

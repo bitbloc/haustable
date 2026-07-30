@@ -539,6 +539,35 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         }
     } catch (e) {}
 
+    // Determine Order Category & Source for Banner & Slip Proof
+    const remarkLower = (booking.staff_remark || '').toLowerCase();
+    const noteLower = (booking.customer_note || '').toLowerCase();
+    const sourceLower = (booking.source || '').toLowerCase();
+    
+    const isOnlineOrder = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || !!booking.tracking_token;
+    const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || !booking.tables_layout;
+    const isLineman = remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || noteLower.includes('line man');
+
+    let orderBannerTitle = '';
+    let orderBannerSub = '';
+
+    if (isLineman) {
+        orderBannerTitle = '*** LINE MAN DELIVERY ***';
+        orderBannerSub = '(เดลิเวอรี่ / ออเดอร์ออนไลน์)';
+    } else if (isOnlineOrder && isPickupOrder) {
+        orderBannerTitle = '*** ONLINE PICKUP ORDER ***';
+        orderBannerSub = '(ออเดอร์รับกลับออนไลน์ - PICKUP)';
+    } else if (isOnlineOrder && !isPickupOrder) {
+        orderBannerTitle = '*** ONLINE TABLE BOOKING ***';
+        orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
+    } else if (!isOnlineOrder && isPickupOrder) {
+        orderBannerTitle = '*** IN-STORE PICKUP ***';
+        orderBannerSub = '(หน้าร้าน - รับกลับบ้าน)';
+    } else {
+        orderBannerTitle = '*** IN-STORE DINE-IN ***';
+        orderBannerSub = '(หน้าร้าน - ทานที่ร้าน)';
+    }
+
     // Header
     if (!isKitchenTab) {
         encoder.align('center')
@@ -558,16 +587,27 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         if (shopVat) {
             encoder.line(`TAX ID: ${shopVat}`);
         }
-        encoder.line(doubleDivider);
+        encoder.line(doubleDivider)
+               .align('center')
+               .bold(true)
+               .size(1, 1)
+               .line(orderBannerTitle)
+               .size(0, 0)
+               .bold(true)
+               .line(orderBannerSub)
+               .bold(false)
+               .line(doubleDivider);
     } else if (activeTab === 'kitchen' || activeTab === 'kitchen_all') {
         encoder.align('center')
                .line(doubleDivider)
                .bold(true)
                .size(1, 1)
                .line('KITCHEN ORDER')
+               .line(orderBannerTitle)
                .size(0, 0)
                .bold(true)
                .line('(ใบออเดอร์ครัว)')
+               .line(orderBannerSub)
                .bold(false)
                .line(doubleDivider);
     } else if (activeTab === 'bar') {
@@ -576,9 +616,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .size(1, 1)
                .line('BAR ORDER')
+               .line(orderBannerTitle)
                .size(0, 0)
                .bold(true)
                .line('(ใบออเดอร์บาร์)')
+               .line(orderBannerSub)
                .bold(false)
                .line(doubleDivider);
     } else if (activeTab === 'other') {
@@ -587,41 +629,49 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .size(1, 1)
                .line('OTHER ORDER')
+               .line(orderBannerTitle)
                .size(0, 0)
                .bold(true)
                .line('(ใบออเดอร์ทั่วไป)')
+               .line(orderBannerSub)
                .bold(false)
                .line(doubleDivider);
     }
 
     // Table Name & Queue Number
-    const tableName = (booking.tables_layout?.table_name || 'PICKUP').toUpperCase();
-    
+    const tableName = (booking.tables_layout?.table_name || (isPickupOrder ? 'PICKUP' : 'WALK-IN')).toUpperCase();
+    const customerName = booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || 'ลูกค้าทั่วไป (Walk-in)';
+    const customerPhone = booking.profiles?.phone_number || booking.pickup_contact_phone || booking.customer_phone || '';
+    const depositAmt = Number(booking.deposit_amount) || 0;
+    const totalAmt = Number(booking.total_amount) || 0;
+    const balanceDue = Math.max(0, totalAmt - depositAmt);
+    const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+
     if (isKitchenTab) {
-        let serviceType = 'กินที่ร้าน (DINE-IN)';
-        const remark = (booking.staff_remark || '').toLowerCase();
-        const note = (booking.customer_note || '').toLowerCase();
-        if (remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man')) {
-            serviceType = 'LINE MAN DELIVERY';
-        } else if (booking.booking_type === 'pickup' || remark.includes('pickup') || remark.includes('takeaway') || remark.includes('รับกลับ') || remark.includes('กลับบ้าน') || !booking.tables_layout) {
-            serviceType = 'รับกลับ (TAKEAWAY / PICKUP)';
-        }
+        let serviceType = isOnlineOrder 
+            ? (isPickupOrder ? 'ONLINE PICKUP (รับกลับออนไลน์)' : 'ONLINE BOOKING (จองโต๊ะออนไลน์)')
+            : (isPickupOrder ? 'WALK-IN PICKUP (รับกลับหน้าร้าน)' : 'WALK-IN DINE-IN (ทานที่ร้าน)');
+
+        if (isLineman) serviceType = 'LINE MAN DELIVERY';
 
         const totalItemsCount = itemsToRender.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
 
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(`โต๊ะ ${tableName}`)
-               .line(`คิว: #${queueNo}`)
+               .line(isPickupOrder ? `คิวรับสินค้า: #${queueNo}` : `โต๊ะ ${tableName}`)
+               .line(`คิวออเดอร์: #${queueNo}`)
                .size(0, 0)
                .line(divider)
                .align('left')
                .bold(true)
                .line(`บริการ: ${serviceType}`)
-               .line(`พนักงานสั่ง: ${staffName.toUpperCase() || 'SYSTEM'}`)
-               .line(`เวลาสั่ง: ${new Date(booking.booking_time || Date.now()).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`)
-               .line(`จำนวนคน: ${booking.pax || 1} คน`)
+               .line(`ลูกค้า: ${customerName}`)
+               .line(`พนักงานรับ: ${staffName.toUpperCase() || 'ONLINE SYSTEM'}`)
+               .line(`เวลานัดหมาย: ${formattedBookingTimeStr}`)
+               .line(`จำนวนคน: ${booking.pax || booking.guest_count || 1} ท่าน`)
                .line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
                .bold(false)
                .line(divider);
@@ -629,25 +679,41 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(`โต๊ะ ${tableName}`)
+               .line(isPickupOrder ? `คิวรับสินค้า: #${queueNo}` : `โต๊ะ ${tableName}`)
                .line(`คิว: #${queueNo}`)
                .size(0, 0)
                .bold(false)
                .line(divider);
     }
 
-    // Meta info
+    // Meta info (Proof / Evidence details)
     if (!isKitchenTab) {
         encoder.align('left')
+               .bold(true)
+               .line(`ช่องทาง: ${isOnlineOrder ? 'ONLINE (ออนไลน์)' : 'IN-STORE (หน้าร้าน)'}`)
+               .line(`ประเภทบริการ: ${isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'}`)
+               .bold(false)
                .line(`วันที่-เวลา: ${dateStr}`)
-               .line(`ลูกค้า: ${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}`);
+               .line(`เวลานัดหมาย: ${formattedBookingTimeStr}`)
+               .line(`ลูกค้า: ${customerName}`);
 
-        const phone = booking.profiles?.phone_number || booking.pickup_contact_phone;
-        if (phone) {
-            encoder.line(`เบอร์โทร: ${phone}`);
+        if (customerPhone) {
+            encoder.line(`เบอร์โทร: ${customerPhone}`);
+        }
+        if (booking.pax || booking.guest_count) {
+            encoder.line(`จำนวนคน (PAX): ${booking.pax || booking.guest_count} ท่าน`);
         }
         if (staffName) {
             encoder.line(`พนักงาน: ${staffName.toUpperCase()}`);
+        }
+        
+        // Print deposit & remaining balance details if deposit exists
+        if (depositAmt > 0) {
+            encoder.line(divider)
+                   .bold(true)
+                   .line(`ยอดโอนมัดจำแล้ว: ฿${depositAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}`)
+                   .line(`ยอดคงเหลือชำระเพิ่ม: ฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}`)
+                   .bold(false);
         }
         encoder.line(divider);
     }

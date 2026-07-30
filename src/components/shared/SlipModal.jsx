@@ -452,6 +452,42 @@ export default function SlipModal({ booking, type, onClose }) {
             docTitle = 'RECEIPT / ใบเสร็จรับเงิน'
         }
 
+        // Determine Order Category & Source for Banner & Slip Proof
+        const remarkLower = (booking.staff_remark || '').toLowerCase();
+        const noteLower = (booking.customer_note || '').toLowerCase();
+        const sourceLower = (booking.source || '').toLowerCase();
+        
+        const isOnlineOrder = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || !!booking.tracking_token;
+        const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || !booking.tables_layout;
+        const isLineman = remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || noteLower.includes('line man');
+
+        let orderBannerTitle = '';
+        let orderBannerSub = '';
+
+        if (isLineman) {
+            orderBannerTitle = '*** LINE MAN DELIVERY ***';
+            orderBannerSub = '(เดลิเวอรี่ / ออเดอร์ออนไลน์)';
+        } else if (isOnlineOrder && isPickupOrder) {
+            orderBannerTitle = '*** ONLINE PICKUP ORDER ***';
+            orderBannerSub = '(ออเดอร์รับกลับออนไลน์ - PICKUP)';
+        } else if (isOnlineOrder && !isPickupOrder) {
+            orderBannerTitle = '*** ONLINE TABLE BOOKING ***';
+            orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
+        } else if (!isOnlineOrder && isPickupOrder) {
+            orderBannerTitle = '*** IN-STORE PICKUP ***';
+            orderBannerSub = '(หน้าร้าน - รับกลับบ้าน)';
+        } else {
+            orderBannerTitle = '*** IN-STORE DINE-IN ***';
+            orderBannerSub = '(หน้าร้าน - ทานที่ร้าน)';
+        }
+
+        const depositAmt = Number(booking.deposit_amount) || 0;
+        const totalAmt = Number(booking.total_amount) || 0;
+        const balanceDue = Math.max(0, totalAmt - depositAmt);
+        const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+
         // QR Code Section HTML - ONLY for billing tab (PromptPay before payment)
         let qrSectionHtml = ''
         if (activeTab === 'billing' && qrCodeUrl) {
@@ -659,21 +695,37 @@ export default function SlipModal({ booking, type, onClose }) {
                     
                     <div class="ticket-title">${docTitle}</div>
 
-                    <div class="center-flex">
+                    <!-- Distinct Order Banner -->
+                    <div style="border: 2px solid black; text-align: center; padding: 6px 4px; margin: 8px 0; background: #F8F8F8;">
+                        <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">${orderBannerTitle}</div>
+                        <div style="font-size: 10px; font-weight: bold; color: #333; margin-top: 2px;">${orderBannerSub}</div>
+                    </div>
+
+                    <div class="center-flex" style="margin-top: 10px;">
                         <div class="queue-box">
-                            <div class="queue-label">TABLE / โต๊ะ</div>
-                            <div class="queue-val">${booking.tables_layout?.table_name || 'PICKUP'}</div>
+                            <div class="queue-label">${isPickupOrder ? 'PICKUP QUEUE / คิวรับสินค้า' : 'TABLE / โต๊ะ'}</div>
+                            <div class="queue-val">${booking.tables_layout?.table_name || (isPickupOrder ? `คิว #${queueNo}` : 'WALK-IN')}</div>
                         </div>
                     </div>
                     
                     <div class="meta">
-                        <div class="row"><span class="label">หมายเลขคิว / QUEUE NO</span> <span class="val">#${queueNo}</span></div>
-                        <div class="row"><span class="label">วันที่-เวลา / DATE</span> <span class="val">${dateStr}</span></div>
+                        <div class="row"><span class="label">ช่องทาง / SOURCE</span> <span class="val" style="font-weight: bold;">${isOnlineOrder ? 'ONLINE (ออนไลน์)' : 'IN-STORE (หน้าร้าน)'}</span></div>
+                        <div class="row"><span class="label">บริการ / SERVICE</span> <span class="val" style="font-weight: bold;">${isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'}</span></div>
+                        <div class="row"><span class="label">หมายเลขคิว / QUEUE</span> <span class="val">#${queueNo}</span></div>
+                        <div class="row"><span class="label">วันที่ออกบิล / DATE</span> <span class="val">${dateStr}</span></div>
+                        <div class="row"><span class="label">เวลานัดหมาย / TIME</span> <span class="val">${formattedBookingTimeStr}</span></div>
                         <div class="row"><span class="label">ลูกค้า / GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}</span></div>
-                        <div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || 1} คน</span></div>
+                        <div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || booking.guest_count || 1} คน</span></div>
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">เบอร์โทร / PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
-                        <!-- Cashier shift staff info if customer receipt -->
                         ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">พนักงาน / STAFF</span> <span class="val">${staffName}</span></div>` : ''}
+                        
+                        <!-- Proof Deposit Details -->
+                        ${(!isKitchenTab && depositAmt > 0) ? `
+                            <div style="border-top: 1px dashed black; margin-top: 6px; padding-top: 6px;">
+                                <div class="row" style="font-weight: bold; color: #000;"><span>ยอดโอนมัดจำแล้ว:</span> <span>฿${depositAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                                <div class="row" style="font-weight: bold; color: #d00000;"><span>ยอดคงเหลือชำระเพิ่ม:</span> <span>฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                            </div>
+                        ` : ''}
                     </div>
 
                     <div class="items">

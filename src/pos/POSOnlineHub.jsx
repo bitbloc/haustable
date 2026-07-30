@@ -217,57 +217,57 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex flex-col gap-3 shadow-sm hover:border-[oklch(18%_0.012_28)] transition-colors"
+                className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl p-5 flex flex-col gap-3 shadow-sm hover:border-[oklch(18%_0.012_28)] transition-colors"
             >
                 <div className="flex justify-between items-start">
                     <div>
-                        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block ${
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className={`text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg inline-block ${
                                 isPickup ? 'bg-blue-100 text-blue-900 border border-blue-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
                             }`}>
                                 {isPickup ? '🛍️ PICKUP (รับกลับบ้าน)' : '🍽️ DINE-IN (จองโต๊ะ)'}
                             </span>
-                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded-full">
+                            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2.5 py-1 rounded-lg border border-[oklch(52%_0.16_28)]/20">
                                 {typeLabel}
                             </span>
                         </div>
-                        <h4 className="font-bold text-[oklch(18%_0.012_28)] leading-tight">{name}</h4>
-                        {phone && <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">📞 {phone}</p>}
+                        <h4 className="font-bold text-lg text-[oklch(18%_0.012_28)] leading-tight mt-1">{name}</h4>
+                        {phone && <p className="text-xs text-[oklch(55%_0.010_28)] font-mono font-bold mt-1">📞 {phone}</p>}
                     </div>
 
                     <div className="text-right font-mono shrink-0">
                         {orderTimeStr && (
-                            <p className="text-[10px] text-[oklch(55%_0.010_28)]">
-                                📩 สั่งเมื่อ: <strong className="text-[oklch(18%_0.012_28)]">{orderTimeStr} น.</strong>
+                            <p className="text-xs text-[oklch(55%_0.010_28)]">
+                                📩 สั่งเมื่อ: <strong className="text-[oklch(18%_0.012_28)] font-bold">{orderTimeStr} น.</strong>
                             </p>
                         )}
-                        <p className="text-xs font-bold text-[oklch(18%_0.012_28)] mt-0.5 bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
+                        <p className="text-xs font-bold text-[oklch(18%_0.012_28)] mt-1 bg-[oklch(94%_0.010_28)] px-2.5 py-1 rounded-lg border border-[oklch(85%_0.012_28)] inline-block">
                             ⏰ นัดหมาย: {bookingTimeStr} น.
                         </p>
                     </div>
                 </div>
 
                 {/* Amount badges */}
-                <div className="flex items-center gap-2 font-mono text-xs pt-1 border-t border-[oklch(85%_0.012_28)] flex-wrap">
+                <div className="flex items-center gap-2.5 font-mono text-xs pt-2 border-t border-[oklch(85%_0.012_28)] flex-wrap">
                     {order.total_amount > 0 && (
-                        <span className="font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] px-2.5 py-1 rounded border border-[oklch(85%_0.012_28)]">
+                        <span className="font-bold text-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] px-3 py-1.5 rounded-lg border border-[oklch(85%_0.012_28)]">
                             💰 ยอดรวม: ฿{order.total_amount}
                         </span>
                     )}
                     {order.deposit_amount > 0 && (
-                        <span className="font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
-                            💳 โอนมัดจำ: ฿{order.deposit_amount}
+                        <span className="font-bold text-emerald-900 bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-300">
+                            💳 โอนมัดจำแล้ว: ฿{order.deposit_amount}
                         </span>
                     )}
                 </div>
 
                 {order.customer_note && (
-                    <div className="bg-[oklch(94%_0.010_28)] p-2 rounded text-xs text-[oklch(18%_0.012_28)] border-l-2 border-[oklch(52%_0.16_28)]">
+                    <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-xl text-xs text-[oklch(18%_0.012_28)] font-bold border-l-4 border-[oklch(52%_0.16_28)] leading-normal">
                         "{order.customer_note}"
                     </div>
                 )}
 
-                <div className="mt-auto pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2">
+                <div className="mt-auto pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2.5">
                     {order.payment_slip_url && (
                         <button 
                             onClick={() => {
@@ -277,9 +277,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     onOpenSlipModal(order, 'billing');
                                 }
                             }}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 h-11 rounded-xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer uppercase tracking-wider"
                         >
-                            <ReceiptText size={14} />
+                            <ReceiptText size={16} />
                             ตรวจสลิป
                         </button>
                     )}
@@ -287,9 +287,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     {order.booking_type === 'dine_in' && order.status === 'pending' && (
                         <button 
                             onClick={() => updateBookingStatus(order.id, 'confirmed')}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-bold transition-all hover:bg-[oklch(85%_0.012_28)] active:scale-95 cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 h-11 rounded-xl bg-[oklch(52%_0.16_28)] text-white text-xs font-bold transition-all hover:bg-[oklch(45%_0.16_28)] active:scale-95 cursor-pointer uppercase tracking-wider shadow-sm"
                         >
-                            <CheckCircle2 size={14} />
+                            <CheckCircle2 size={16} />
                             ยืนยันโต๊ะ
                         </button>
                     )}
@@ -297,18 +297,18 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     {order.booking_type === 'pickup' && order.status === 'pending' && (
                         <button 
                             onClick={() => updateBookingStatus(order.id, 'ready')}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-bold transition-all hover:bg-[oklch(85%_0.012_28)] active:scale-95 cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 h-11 rounded-xl bg-blue-600 text-white text-xs font-bold transition-all hover:bg-blue-700 active:scale-95 cursor-pointer uppercase tracking-wider shadow-sm"
                         >
-                            <CheckCircle2 size={14} />
+                            <CheckCircle2 size={16} />
                             ทำอาหารเสร็จ
                         </button>
                     )}
                     {order.booking_type === 'pickup' && order.status === 'ready' && (
                         <button 
                             onClick={() => updateBookingStatus(order.id, 'completed')}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 h-11 rounded-xl bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] text-xs font-bold transition-all hover:opacity-90 active:scale-95 cursor-pointer uppercase tracking-wider shadow-sm"
                         >
-                            <CheckCircle2 size={14} />
+                            <CheckCircle2 size={16} />
                             ลูกค้ารับแล้ว
                         </button>
                     )}
@@ -321,7 +321,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     updateBookingStatus(order.id, 'cancelled');
                                 }
                             }}
-                            className="shrink-0 flex items-center justify-center gap-1 py-2 px-3 rounded border border-red-200 bg-red-50 text-red-700 text-xs font-bold transition-all hover:bg-red-100 active:scale-95 cursor-pointer"
+                            className="shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-4 h-11 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-bold transition-all hover:bg-red-100 active:scale-95 cursor-pointer uppercase"
                         >
                             ✕ ยกเลิก
                         </button>
