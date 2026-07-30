@@ -197,75 +197,75 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0 shadow-sm">
                 {/* Search and Filters */}
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <div className="relative w-full sm:w-56">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={16} />
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
                         <input 
                             type="search" 
-                            placeholder="ค้นหาโต๊ะ..." 
-                            className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors"
+                            placeholder="ค้นหาชื่อโต๊ะ..." 
+                            className="w-full bg-white border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[oklch(52%_0.16_28)] font-medium transition-colors touch-manipulation"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] text-[10px] font-mono font-bold uppercase tracking-wider">
+                    <div className="flex bg-[#E0E0DC] p-1 rounded-xl border border-[#D1D1CD] text-xs font-mono font-bold uppercase tracking-wider touch-manipulation">
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${statusFilter === 'all' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${statusFilter === 'all' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
                             ALL
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('free')}
-                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'free' ? 'bg-white text-emerald-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'free' ? 'bg-white text-emerald-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00CC44]"></span>
+                            <span className="w-2 h-2 rounded-full bg-[#00CC44]"></span>
                             VACANT
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('occupied')}
-                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'occupied' ? 'bg-white text-red-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'occupied' ? 'bg-white text-red-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#FF3300]"></span>
+                            <span className="w-2 h-2 rounded-full bg-[#FF3300]"></span>
                             OCCUPIED
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('pending')}
-                            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${statusFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#FFAA00] animate-pulse"></span>
+                            <span className="w-2 h-2 rounded-full bg-[#FFAA00] animate-pulse"></span>
                             PENDING
                         </button>
                     </div>
                 </div>
 
                 {/* Layout Mode Toggle */}
-                <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD] shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider">
+                <div className="flex bg-[#E0E0DC] p-1 rounded-xl border border-[#D1D1CD] shrink-0 font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
                     <button 
                         type="button"
                         onClick={() => setViewMode('floorplan')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${
                             viewMode === 'floorplan' 
                                 ? 'bg-white text-[#1A1A1A] shadow-sm' 
                                 : 'text-[#767673] hover:text-[#1A1A1A]'
                         } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-800 border border-amber-300 font-extrabold shadow-sm' : ''}`}
                     >
-                        <Map size={12} /> FLOORPLAN
+                        <Map size={14} /> FLOORPLAN
                     </button>
                     <button 
                         type="button"
                         onClick={() => setViewMode('grid')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${
                             viewMode === 'grid' 
                                 ? 'bg-white text-[#1A1A1A] shadow-sm' 
                                 : 'text-[#767673] hover:text-[#1A1A1A]'
                         } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-800 border border-amber-300 font-extrabold shadow-sm' : ''}`}
                     >
-                        <LayoutGrid size={12} /> REGISTRY LIST
+                        <LayoutGrid size={14} /> REGISTRY LIST
                     </button>
                 </div>
             </div>

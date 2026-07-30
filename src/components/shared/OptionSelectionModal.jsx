@@ -196,23 +196,23 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-2.5">
                                     {group.option_choices?.sort((a, b) => a.display_order - b.display_order).map(choice => {
                                         const isSelected = currentSelections.includes(choice.id)
                                         return (
                                             <div
                                                 key={choice.id}
                                                 onClick={() => handleOptionToggle(group, choice.id)}
-                                                className={`flex justify-between items-center p-3 rounded-xl border cursor-pointer active:scale-[0.98] transition-all ${isSelected ? 'border-black bg-black text-white shadow-md' : 'border-gray-100 bg-white hover:bg-gray-50 text-zinc-800'}`}
+                                                className={`flex justify-between items-center p-3.5 rounded-xl border cursor-pointer active:scale-[0.98] transition-all select-none touch-manipulation min-h-[48px] ${isSelected ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)] text-white shadow-md' : 'border-gray-200 bg-white hover:bg-gray-50 text-zinc-900'}`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-white' : 'border-gray-300'}`}>
+                                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'border-white' : 'border-gray-300'}`}>
                                                         {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
                                                     </div>
-                                                    <span className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-zinc-900'}`}>{choice.name}</span>
+                                                    <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-zinc-900'}`}>{choice.name}</span>
                                                 </div>
                                                 {Number(choice.price_modifier) > 0 && (
-                                                    <span className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>+{Number(choice.price_modifier)}</span>
+                                                    <span className={`font-mono text-sm font-bold ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>+{Number(choice.price_modifier)}</span>
                                                 )}
                                             </div>
                                         )
@@ -223,8 +223,8 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                     })}
 
                     {/* Special Note / Kitchen Instructions */}
-                    <div className="space-y-1.5 pt-3 border-t border-gray-100">
-                        <label className="block font-bold text-sm text-zinc-900 flex items-center justify-between">
+                    <div className="space-y-2 pt-3 border-t border-gray-100">
+                        <label className="block font-bold text-base text-zinc-900 flex items-center justify-between">
                             <span>📝 หมายเหตุเพิ่มเติมถึงครัว (Special Note)</span>
                             <span className="text-xs text-zinc-400 font-normal">ไม่บังคับ</span>
                         </label>
@@ -233,28 +233,28 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                             placeholder="เช่น เผ็ดน้อย, แยกน้ำซุป, ไม่ใส่ผักชี"
                             value={itemNote}
                             onChange={(e) => setItemNote(e.target.value)}
-                            className="w-full bg-zinc-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-black focus:bg-white transition-all font-medium"
+                            className="w-full bg-zinc-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-[oklch(52%_0.16_28)] focus:bg-white transition-all font-medium touch-manipulation"
                         />
                     </div>
                 </div>
 
                 {/* Footer Controls */}
-                <div className="p-4 border-t border-gray-100 bg-white safe-area-bottom text-zinc-950">
+                <div className="p-4 border-t border-gray-100 bg-white safe-area-bottom text-zinc-950 touch-manipulation select-none">
                     <div className="flex items-center justify-between gap-4 mb-4">
-                        <span className="font-bold text-zinc-400 text-xs uppercase">Quantity</span>
-                        <div className="flex items-center gap-4 bg-zinc-100 rounded-full px-2 py-1">
-                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm disabled:opacity-50 text-zinc-800 hover:bg-zinc-50" disabled={quantity <= 1}><Minus size={16} /></button>
-                            <span className="font-bold w-4 text-center text-zinc-900">{quantity}</span>
-                            <button onClick={() => setQuantity(quantity + 1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-sm text-zinc-800 hover:bg-zinc-50"><Plus size={16} /></button>
+                        <span className="font-bold text-zinc-500 text-xs font-mono uppercase">Quantity</span>
+                        <div className="flex items-center gap-4 bg-zinc-100 rounded-full px-3 py-1.5">
+                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-xs disabled:opacity-50 text-zinc-800 hover:bg-zinc-50 cursor-pointer touch-manipulation active:scale-95 transition-transform" disabled={quantity <= 1}><Minus size={18} /></button>
+                            <span className="font-mono font-bold w-6 text-center text-lg text-zinc-900">{quantity}</span>
+                            <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-xs text-zinc-800 hover:bg-zinc-50 cursor-pointer touch-manipulation active:scale-95 transition-transform"><Plus size={18} /></button>
                         </div>
                     </div>
 
                     <button
                         onClick={handleConfirm}
-                        className="w-full bg-black text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-transform flex justify-between px-6"
+                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-4 rounded-xl font-bold shadow-lg active:scale-98 transition-transform flex justify-between px-6 text-base cursor-pointer touch-manipulation"
                     >
                         <span>Add to Order</span>
-                        <span>{currentTotal}.-</span>
+                        <span className="font-mono">{currentTotal}.-</span>
                     </button>
                 </div>
             </motion.div>

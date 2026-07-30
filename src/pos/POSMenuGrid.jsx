@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Search, Plus, Layers } from 'lucide-react';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
@@ -82,34 +82,37 @@ export default function POSMenuGrid({ onAddItem }) {
         }
     };
 
-    const filteredItems = menuItems.filter(item => {
-        const matchesCat = activeCategory === 'all' || item.category_id === activeCategory;
-        const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
-        return matchesCat && matchesSearch;
-    });
+    const filteredItems = useMemo(() => {
+        const query = search.trim().toLowerCase();
+        return menuItems.filter(item => {
+            const matchesCat = activeCategory === 'all' || item.category_id === activeCategory;
+            const matchesSearch = !query || item.name.toLowerCase().includes(query);
+            return matchesCat && matchesSearch;
+        });
+    }, [menuItems, activeCategory, search]);
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[#ECECE9]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff0000]"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[oklch(52%_0.16_28)]"></div>
         </div>
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none relative">
+        <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none relative touch-manipulation">
             {/* Menu Header with Search and Categories */}
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] space-y-3 shadow-sm shrink-0">
                 <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={16} />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
                     <input 
                         type="search" 
-                        placeholder="Search menu items..." 
-                        className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-10 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#ff0000] font-medium transition-colors"
+                        placeholder="Search menu items (ค้นหารายการอาหาร/เครื่องดื่ม)..." 
+                        className="w-full bg-white border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[oklch(52%_0.16_28)] font-medium transition-colors touch-manipulation"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none font-mono text-[10px] font-bold uppercase tracking-wider">
+                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
                     <CategoryButton 
                         label="ALL ITEMS" 
                         active={activeCategory === 'all'} 
@@ -128,39 +131,39 @@ export default function POSMenuGrid({ onAddItem }) {
 
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                     {filteredItems.map(item => {
                         const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
                         return (
                             <button
                                 key={item.id}
                                 onClick={() => handleItemClick(item)}
-                                className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.98] active:translate-y-[1px] hover:-translate-y-[1px] transition-all cursor-pointer shadow-sm duration-100 relative"
+                                className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.97] transition-transform duration-75 cursor-pointer shadow-sm relative select-none touch-manipulation"
                             >
                                 <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
                                     {item.image_url ? (
-                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-300" />
+                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-xl uppercase">
+                                        <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-2xl uppercase">
                                             {item.name.charAt(0)}
                                         </div>
                                     )}
                                     {hasOptions && (
-                                        <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-xs text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-xs text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                                             <span>มีตัวเลือก</span>
                                         </div>
                                     )}
-                                    <div className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-white border border-[#D1D1CD] flex items-center justify-center shadow-sm group-hover:bg-[#ff0000] group-hover:text-white group-hover:border-[#d00000] transition-all">
-                                        <Plus size={14} />
+                                    <div className="absolute bottom-2 right-2 w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] flex items-center justify-center shadow-md group-hover:bg-[oklch(52%_0.16_28)] group-hover:text-white group-hover:border-[oklch(45%_0.16_28)] transition-colors">
+                                        <Plus size={20} />
                                     </div>
                                 </div>
                                 
-                                <div className="flex flex-col flex-1 min-h-[60px]">
-                                    <h4 className="font-bold text-xs text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
-                                    <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-[10px] font-mono font-bold uppercase tracking-wider">
-                                        <span className="text-[#1A1A1A]">฿{item.price}{hasOptions ? '+' : ''}</span>
+                                <div className="flex flex-col flex-1 min-h-[64px]">
+                                    <h4 className="font-bold text-base text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
+                                    <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-sm font-mono font-bold uppercase tracking-wider">
+                                        <span className="text-[oklch(52%_0.16_28)]">฿{item.price}{hasOptions ? '+' : ''}</span>
                                         {item.stock_quantity !== null && (
-                                            <span className="text-[#767673] tracking-normal font-medium">QTY: {item.stock_quantity}</span>
+                                            <span className="text-[#767673] text-xs tracking-normal font-medium">QTY: {item.stock_quantity}</span>
                                         )}
                                     </div>
                                 </div>
@@ -189,7 +192,7 @@ function CategoryButton({ label, active, onClick }) {
     return (
         <button 
             onClick={onClick}
-            className={`px-4 py-2 rounded-lg border transition-all cursor-pointer whitespace-nowrap ${
+            className={`px-4.5 py-2.5 rounded-xl border transition-all cursor-pointer whitespace-nowrap text-xs font-bold uppercase select-none touch-manipulation ${
                 active 
                 ? 'bg-[#E0E0DC] text-[#1A1A1A] border-[#B0B0AC] shadow-inner font-black' 
                 : 'bg-white text-[#767673] border-[#D1D1CD] hover:text-[#1A1A1A] hover:bg-[#FDFDFD] shadow-sm'

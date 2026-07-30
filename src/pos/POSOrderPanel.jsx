@@ -533,17 +533,17 @@ export default function POSOrderPanel({
             )}
 
             {/* Customer CRM Summary Header */}
-            <div className="px-3 py-1.5 shrink-0 border-b border-[#D1D1CD]/50 bg-white/40">
+            <div className="px-3.5 py-2 shrink-0 border-b border-[#D1D1CD]/50 bg-white/40 touch-manipulation select-none">
                 {booking?.profiles ? (
                     <div className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-2)] shrink-0 animate-pulse" />
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="w-3 h-3 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
                             <div className="text-left min-w-0">
-                                <span className="font-mono text-[8px] font-bold text-[var(--color-neutral)] uppercase tracking-wider block">Attached Customer</span>
-                                <p className="text-[11px] font-bold text-[var(--color-ink)] truncate uppercase">
+                                <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider block">Attached Customer</span>
+                                <p className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate uppercase">
                                     {booking.profiles.display_name || 'Anonymous User'} 
                                     {attachedMemberCrm && (
-                                        <span className="ml-1.5 px-1 py-0.2 bg-[var(--color-ink)] text-[var(--color-paper)] text-[7px] font-mono font-bold rounded uppercase">
+                                        <span className="ml-1.5 px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-mono font-bold rounded uppercase">
                                             {attachedMemberCrm.current_tier}
                                         </span>
                                     )}
@@ -552,7 +552,7 @@ export default function POSOrderPanel({
                         </div>
                         <button
                             onClick={() => setActiveModal('crm')}
-                            className="text-[9px] font-mono font-bold text-[var(--color-accent)] hover:underline px-2 py-1 bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded transition-all cursor-pointer"
+                            className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline px-2.5 py-1.5 bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg transition-all cursor-pointer touch-manipulation"
                         >
                             CRM & Rewards
                         </button>
@@ -560,12 +560,12 @@ export default function POSOrderPanel({
                 ) : (
                     <div className="flex items-center justify-between py-1">
                         <div className="flex items-center gap-2">
-                            <UserPlus size={13} className="text-[#767673]" />
-                            <span className="text-[9px] font-mono font-bold text-[#767673] uppercase tracking-wider">No Customer Attached</span>
+                            <UserPlus size={16} className="text-[#767673]" />
+                            <span className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">No Customer Attached</span>
                         </div>
                         <button
                             onClick={() => setActiveModal('crm')}
-                            className="text-[9px] font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-2.5 py-1 rounded transition-all cursor-pointer shadow-sm active:scale-95"
+                            className="text-xs font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-sm active:scale-95 touch-manipulation"
                         >
                             + Attach CRM
                         </button>
@@ -574,37 +574,37 @@ export default function POSOrderPanel({
             </div>
 
             {/* Items List */}
-            <div className="flex-1 overflow-y-auto px-3 py-1 space-y-1.5 scrollbar-none">
+            <div className="flex-1 overflow-y-auto px-3 py-1.5 space-y-2 scrollbar-none touch-manipulation">
                 {order.items.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-2 opacity-50 font-mono text-[9px] font-bold uppercase tracking-wider py-8">
-                        <UtensilsIcon size={24} strokeWidth={1.5} />
+                    <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-2 opacity-50 font-mono text-xs font-bold uppercase tracking-wider py-8">
+                        <UtensilsIcon size={28} strokeWidth={1.5} />
                         <span>Cart is empty</span>
                     </div>
                 ) : (
                     order.items.map(item => (
                         <div 
                             key={item.id}
-                            className="bg-white border border-[#D1D1CD] p-2.5 rounded-lg flex items-center justify-between shadow-sm"
+                            className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
                         >
-                            <div className="flex-1 min-w-0 mr-2">
-                                <h5 className="font-bold text-[11px] leading-tight text-[#1A1A1A] uppercase truncate">{item.name}</h5>
+                            <div className="flex-1 min-w-0 mr-3">
+                                <h5 className="font-bold text-sm leading-tight text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
                                 
                                 {/* Display existing options/notes if any */}
                                 {item.selected_options && item.selected_options.length > 0 && (
-                                    <div className="text-[9px] text-[#767673] font-mono leading-tight mt-0.5">
+                                    <div className="text-xs text-[#767673] font-mono leading-tight mt-1">
                                         {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
                                     </div>
                                 )}
                                 
                                 {/* Display newly added note */}
                                 {item.item_note && (
-                                    <div className="text-[9px] text-blue-600 font-mono font-bold leading-tight mt-0.5">
+                                    <div className="text-xs text-blue-600 font-mono font-bold leading-tight mt-1">
                                         Note: {item.item_note}
                                     </div>
                                 )}
                                 
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    <p className="text-[9px] text-[#ff0000] font-mono font-bold">฿{item.price}</p>
+                                <div className="flex items-center gap-2.5 mt-1">
+                                    <p className="text-xs text-[oklch(52%_0.16_28)] font-mono font-bold">฿{item.price}</p>
                                     
                                     {/* Only allow adding notes to new (unsubmitted) items */}
                                     {!item.db_id && (
@@ -615,7 +615,7 @@ export default function POSOrderPanel({
                                                     onUpdateItemNote(item.id, note.trim());
                                                 }
                                             }}
-                                            className="text-[8px] bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                                            className="text-xs bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded-md cursor-pointer transition-colors font-mono font-medium touch-manipulation"
                                         >
                                             + Note
                                         </button>
@@ -623,19 +623,19 @@ export default function POSOrderPanel({
                                 </div>
                             </div>
 
-                            <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-md p-0.5 gap-0.5 shrink-0 scale-90 origin-right">
+                            <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1 shrink-0">
                                 <button 
                                     onClick={() => onUpdateQuantity(item.id, -1)}
-                                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
                                 >
-                                    <Minus size={10} />
+                                    <Minus size={14} />
                                 </button>
-                                <span className="w-6 text-center font-mono font-bold text-[11px] text-[#1A1A1A]">{item.quantity}</span>
+                                <span className="w-8 text-center font-mono font-bold text-base text-[#1A1A1A] select-none">{item.quantity}</span>
                                 <button 
                                     onClick={() => onUpdateQuantity(item.id, 1)}
-                                    className="w-7 h-7 rounded flex items-center justify-center hover:bg-white text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
                                 >
-                                    <Plus size={10} />
+                                    <Plus size={14} />
                                 </button>
                             </div>
                         </div>
@@ -644,38 +644,38 @@ export default function POSOrderPanel({
             </div>
 
             {/* Summary & Checkout */}
-            <div className="p-4 bg-[#EBEBE9] border-t border-[#D1D1CD] space-y-3 shrink-0">
-                <div className="space-y-1 font-mono text-[9px] font-bold uppercase tracking-wider text-[#767673]">
-                    <div className="flex justify-between items-center">
+            <div className="p-4 bg-[#EBEBE9] border-t border-[#D1D1CD] space-y-3 shrink-0 select-none touch-manipulation">
+                <div className="space-y-1.5 font-mono text-xs font-bold uppercase tracking-wider text-[#767673]">
+                    <div className="flex justify-between items-center text-sm">
                         <span>SUBTOTAL</span>
                         <span className="text-[#1A1A1A]">฿{subtotal.toFixed(2)}</span>
                     </div>
 
                     {(memberDiscount > 0 || promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
-                        <div className="space-y-0.5 border-t border-[#D1D1CD]/30 pt-1 mt-1">
+                        <div className="space-y-1 border-t border-[#D1D1CD]/40 pt-1.5 mt-1 text-xs">
                             {promoDiscount > 0 && (
-                                <div className="flex justify-between items-center text-green-600 font-bold py-0.5 animate-fade-in">
+                                <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
                                     <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
                                     <span>-฿{promoDiscount.toFixed(2)}</span>
                                 </div>
                             )}
 
                             {manualDiscount > 0 && (
-                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5 animate-fade-in">
+                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5">
                                     <span>MANUAL DISCOUNT</span>
                                     <span>-฿{manualDiscount.toFixed(2)}</span>
                                 </div>
                             )}
 
                             {xhausDiscount > 0 && (
-                                <div className="flex justify-between items-center text-amber-700 font-bold py-0.5 animate-fade-in">
+                                <div className="flex justify-between items-center text-amber-700 font-bold py-0.5">
                                     <span>xhaus REDEEMED</span>
                                     <span>-฿{xhausDiscount.toFixed(2)}</span>
                                 </div>
                             )}
                             
                             {rewardDiscount > 0 && (
-                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5 animate-fade-in">
+                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5">
                                     <span>REWARD DISCOUNT</span>
                                     <span>-฿{rewardDiscount.toFixed(2)}</span>
                                 </div>
@@ -684,14 +684,14 @@ export default function POSOrderPanel({
                     )}
                     
                     {/* VAT Toggle Row */}
-                    <div className="flex justify-between items-center py-0.5 border-b border-dashed border-[#D1D1CD] pb-1.5 mt-1">
-                        <div className="flex items-center gap-1.5">
+                    <div className="flex justify-between items-center py-1 border-b border-dashed border-[#D1D1CD] pb-2 mt-1 text-xs">
+                        <div className="flex items-center gap-2">
                             <span>VAT (7%)</span>
                             <button 
                                 onClick={() => setIncludeTax(!includeTax)}
-                                className={`w-7 h-3.5 rounded-full transition-colors relative flex items-center cursor-pointer ${includeTax ? 'bg-[var(--color-accent)]' : 'bg-white/30'}`}
+                                className={`w-8 h-4 rounded-full transition-colors relative flex items-center cursor-pointer touch-manipulation ${includeTax ? 'bg-[oklch(52%_0.16_28)]' : 'bg-black/20'}`}
                             >
-                                <div className={`absolute w-2.5 h-2.5 bg-white rounded-full transition-transform ${includeTax ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                                <div className={`absolute w-3 h-3 bg-white rounded-full transition-transform ${includeTax ? 'translate-x-4' : 'translate-x-0.5'}`} />
                             </button>
                         </div>
                         <span className={`font-bold ${includeTax ? 'text-[#1A1A1A]' : 'text-gray-400 line-through'}`}>
@@ -700,34 +700,33 @@ export default function POSOrderPanel({
                     </div>
 
                     {depositPaid > 0 && (
-                        <div className="flex justify-between items-center text-orange-600 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1">
+                        <div className="flex justify-between items-center text-orange-600 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1 text-xs">
                             <span>DEPOSIT PAID (โอนมัดจำแล้ว)</span>
                             <span>-฿{depositPaid.toFixed(2)}</span>
                         </div>
                     )}
 
-                    <div className="flex justify-between items-end text-[#1A1A1A] pt-1">
-                        <span className="text-[9px] font-bold pb-0.5">NET TOTAL</span>
-                        <span className="text-lg font-black text-[var(--color-accent)]">฿{total.toFixed(2)}</span>
+                    <div className="flex justify-between items-end text-[#1A1A1A] pt-2">
+                        <span className="text-xs font-bold pb-1 text-[#767673]">NET TOTAL</span>
+                        <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">฿{total.toFixed(2)}</span>
                     </div>
-                    </div>
-
+                </div>
 
                 {/* Primary Action Row */}
                 {(order.items.length > 0 || booking) && (
-                    <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                    <div className="space-y-2 pt-1">
+                        <div className="grid grid-cols-2 gap-2.5 font-mono text-xs font-bold uppercase tracking-wider">
                             {/* Promo & Discount Trigger */}
                             <button
                                 type="button"
                                 onClick={() => setActiveModal('discount')}
-                                className={`w-full py-2 rounded-lg border transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
+                                className={`w-full py-3.5 rounded-xl border transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer touch-manipulation active:scale-[0.98] ${
                                     (selectedPromo || parseFloat(manualDiscountVal) > 0)
                                     ? 'bg-[#E6F4FF] border-blue-300 text-blue-800'
                                     : 'bg-white hover:bg-[#F5F5F2] border-[#D1D1CD] text-[#1A1A1A]'
                                 }`}
                             >
-                                <Tag size={10} /> 
+                                <Tag size={14} /> 
                                 {(selectedPromo || parseFloat(manualDiscountVal) > 0) ? 'Promo Applied' : 'Discount / Promo'}
                             </button>
 
@@ -735,9 +734,9 @@ export default function POSOrderPanel({
                             {hasNewItems ? (
                                 <button 
                                     onClick={() => onOpenSlip && onOpenSlip('kitchen')}
-                                    className="w-full bg-[#00CC44] hover:bg-[#00B33C] border border-[#009933] text-white py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
+                                    className="w-full bg-[#00CC44] hover:bg-[#00B33C] border border-[#009933] text-white py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] cursor-pointer touch-manipulation font-bold text-sm"
                                 >
-                                    <Send size={10} /> Send to Kitchen
+                                    <Send size={16} /> Send to Kitchen
                                 </button>
                             ) : (
                                 <button
@@ -746,30 +745,30 @@ export default function POSOrderPanel({
                                         setCashReceivedInput(''); // reset cash received input
                                         setActiveModal('checkout');
                                     }}
-                                    className="w-full bg-[var(--color-accent)] hover:bg-[#d00000] border border-[#c00000] text-white py-2 rounded-lg transition-all shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-1"
+                                    className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] border border-[oklch(42%_0.16_28)] text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
                                 >
-                                    <CreditCard size={10} /> Pay / Checkout
+                                    <CreditCard size={16} /> Pay / Checkout
                                 </button>
                             )}
                         </div>
 
                         {/* Secondary Slip / Split Payment Row */}
                         {!hasNewItems && (
-                            <div className="grid grid-cols-2 gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                            <div className="grid grid-cols-2 gap-2.5 font-mono text-xs font-bold uppercase tracking-wider">
                                 <button 
                                     type="button"
                                     onClick={() => onOpenSlip && onOpenSlip('kitchen')}
-                                    className="flex items-center justify-center gap-1 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-1.5 rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-all shadow-sm cursor-pointer"
+                                    className="flex items-center justify-center gap-2 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-2.5 rounded-xl text-[#1A1A1A] transition-all shadow-sm cursor-pointer touch-manipulation"
                                 >
-                                    <ReceiptText size={10} /> Kitchen Slip
+                                    <ReceiptText size={14} /> Kitchen Slip
                                 </button>
                                 {booking && (
                                     <button 
                                         type="button"
                                         onClick={() => onOpenSplitPayment?.()}
-                                        className="flex items-center justify-center gap-1 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-1.5 rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-all shadow-sm cursor-pointer"
+                                        className="flex items-center justify-center gap-2 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-2.5 rounded-xl text-[#1A1A1A] transition-all shadow-sm cursor-pointer touch-manipulation"
                                     >
-                                        <Coins size={10} /> Split Payment
+                                        <Coins size={14} /> Split Payment
                                     </button>
                                 )}
                             </div>
@@ -778,7 +777,7 @@ export default function POSOrderPanel({
                 )}
                 
                 {/* Branding footer */}
-                <div className="text-center pt-2 text-[8px] font-mono font-bold tracking-widest text-[#767673]/60 uppercase border-t border-[#D1D1CD] select-none">
+                <div className="text-center pt-2 text-[9px] font-mono font-bold tracking-widest text-[#767673]/60 uppercase border-t border-[#D1D1CD] select-none">
                     ONHAUS SYSTEM ©
                 </div>
             </div>

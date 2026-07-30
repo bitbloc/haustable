@@ -204,7 +204,7 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                     onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-close-shift'));
                                     }}
-                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
+                                    className="ml-1 text-xs uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors touch-manipulation"
                                 >
                                     ปิดรอบ
                                 </button>
@@ -212,7 +212,7 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                                     onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-lock'));
                                     }}
-                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
+                                    className="ml-1 text-xs uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors touch-manipulation"
                                 >
                                     ล็อค
                                 </button>
@@ -220,12 +220,12 @@ export default function POSLayout({ children, activeView, onViewChange, selected
                         )}
 
                         {/* Sub-Branding */}
-                        <span className="text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase select-none hidden md:inline">
+                        <span className="text-xs font-mono font-bold tracking-widest text-[#767673] uppercase select-none hidden md:inline">
                             ONHAUS SYSTEM ©
                         </span>
                         
-                        <div className="flex items-center gap-2 text-[#767673] text-xs bg-white border border-[#D1D1CD] px-3 py-1.5 rounded-full font-mono font-bold shadow-sm">
-                            <Clock size={12} />
+                        <div className="flex items-center gap-2 text-[#767673] text-xs bg-white border border-[#D1D1CD] px-3.5 py-2 rounded-full font-mono font-bold shadow-sm">
+                            <Clock size={14} />
                             <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                     </div>
@@ -243,21 +243,21 @@ function NavIcon({ icon: Icon, active, onClick, label }) {
     return (
         <button 
             onClick={onClick}
-            className={`group relative flex flex-col items-center justify-center w-full py-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
+            className={`group relative flex flex-col items-center justify-center w-full py-3 rounded-xl border transition-all duration-150 cursor-pointer select-none touch-manipulation active:scale-95 ${
                 active 
                 ? 'bg-[#E0E0DC] border-[#B0B0AC] shadow-inner font-bold' 
                 : 'bg-white hover:bg-[#FDFDFD] border-[#D1D1CD] shadow-sm hover:border-[#B0B0AC]'
             }`}
         >
-            <Icon size={16} className={active ? 'text-[#1A1A1A]' : 'text-[#767673]'} strokeWidth={active ? 2.5 : 2} />
+            <Icon size={20} className={active ? 'text-[#1A1A1A]' : 'text-[#767673]'} strokeWidth={active ? 2.5 : 2} />
             
-            <span className="text-[8px] font-mono font-bold tracking-wider uppercase mt-1 text-[#767673]">
+            <span className="text-xs font-mono font-bold tracking-wider uppercase mt-1 text-[#1A1A1A]">
                 {label}
             </span>
             
-            {/* Active Indicator LED Orange Dot */}
+            {/* Active Indicator LED Accent Dot */}
             {active && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#ff0000]"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]"></span>
             )}
         </button>
     );
