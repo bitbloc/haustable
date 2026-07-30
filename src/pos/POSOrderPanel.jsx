@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 
-export default function POSOrderPanel({ 
+const POSOrderPanel = React.memo(function POSOrderPanel({ 
     order, 
     booking, 
     attachedMemberCrm,
@@ -582,63 +582,12 @@ export default function POSOrderPanel({
                     </div>
                 ) : (
                     order.items.map(item => (
-                        <div 
+                        <OrderItemRow 
                             key={item.id}
-                            className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
-                        >
-                            <div className="flex-1 min-w-0 mr-3">
-                                <h5 className="font-bold text-sm leading-tight text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
-                                
-                                {/* Display existing options/notes if any */}
-                                {item.selected_options && item.selected_options.length > 0 && (
-                                    <div className="text-xs text-[#767673] font-mono leading-tight mt-1">
-                                        {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
-                                    </div>
-                                )}
-                                
-                                {/* Display newly added note */}
-                                {item.item_note && (
-                                    <div className="text-xs text-blue-600 font-mono font-bold leading-tight mt-1">
-                                        Note: {item.item_note}
-                                    </div>
-                                )}
-                                
-                                <div className="flex items-center gap-2.5 mt-1">
-                                    <p className="text-xs text-[oklch(52%_0.16_28)] font-mono font-bold">฿{item.price}</p>
-                                    
-                                    {/* Only allow adding notes to new (unsubmitted) items */}
-                                    {!item.db_id && (
-                                        <button 
-                                            onClick={() => {
-                                                const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
-                                                if (note !== null && onUpdateItemNote) {
-                                                    onUpdateItemNote(item.id, note.trim());
-                                                }
-                                            }}
-                                            className="text-xs bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded-md cursor-pointer transition-colors font-mono font-medium touch-manipulation"
-                                        >
-                                            + Note
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1 shrink-0">
-                                <button 
-                                    onClick={() => onUpdateQuantity(item.id, -1)}
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
-                                >
-                                    <Minus size={14} />
-                                </button>
-                                <span className="w-8 text-center font-mono font-bold text-base text-[#1A1A1A] select-none">{item.quantity}</span>
-                                <button 
-                                    onClick={() => onUpdateQuantity(item.id, 1)}
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
-                                >
-                                    <Plus size={14} />
-                                </button>
-                            </div>
-                        </div>
+                            item={item}
+                            onUpdateQuantity={onUpdateQuantity}
+                            onUpdateItemNote={onUpdateItemNote}
+                        />
                     ))
                 )}
             </div>
@@ -1581,7 +1530,70 @@ export default function POSOrderPanel({
             />
         </aside>
     );
-}
+});
+
+export default POSOrderPanel;
+
+const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, onUpdateItemNote }) {
+    return (
+        <div 
+            className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
+        >
+            <div className="flex-1 min-w-0 mr-3">
+                <h5 className="font-bold text-sm leading-tight text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
+                
+                {/* Display existing options/notes if any */}
+                {item.selected_options && item.selected_options.length > 0 && (
+                    <div className="text-xs text-[#767673] font-mono leading-tight mt-1">
+                        {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
+                    </div>
+                )}
+                
+                {/* Display newly added note */}
+                {item.item_note && (
+                    <div className="text-xs text-blue-600 font-mono font-bold leading-tight mt-1">
+                        Note: {item.item_note}
+                    </div>
+                )}
+                
+                <div className="flex items-center gap-2.5 mt-1">
+                    <p className="text-xs text-[oklch(52%_0.16_28)] font-mono font-bold">฿{item.price}</p>
+                    
+                    {/* Only allow adding notes to new (unsubmitted) items */}
+                    {!item.db_id && (
+                        <button 
+                            onClick={() => {
+                                const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
+                                if (note !== null && onUpdateItemNote) {
+                                    onUpdateItemNote(item.id, note.trim());
+                                }
+                            }}
+                            className="text-xs bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded-md cursor-pointer transition-colors font-mono font-medium touch-manipulation"
+                        >
+                            + Note
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1 shrink-0">
+                <button 
+                    onClick={() => onUpdateQuantity(item.id, -1)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
+                >
+                    <Minus size={14} />
+                </button>
+                <span className="w-8 text-center font-mono font-bold text-base text-[#1A1A1A] select-none">{item.quantity}</span>
+                <button 
+                    onClick={() => onUpdateQuantity(item.id, 1)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
+                >
+                    <Plus size={14} />
+                </button>
+            </div>
+        </div>
+    );
+});
 
 function UtensilsIcon({ size = 24, strokeWidth = 2 }) {
     return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>;

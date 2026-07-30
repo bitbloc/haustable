@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Search, Plus, Layers } from 'lucide-react';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 
-export default function POSMenuGrid({ onAddItem }) {
+const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
     const [menuItems, setMenuItems] = useState([]);
@@ -16,7 +16,6 @@ export default function POSMenuGrid({ onAddItem }) {
         try {
             const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
             const cachedItems = JSON.parse(localStorage.getItem('pos_cache_menu_items')) || [];
-            // Validate that cached items have menu_item_options property
             if (cachedItems.length > 0 && Array.isArray(cachedItems[0]?.menu_item_options)) {
                 setCategories(cachedCats);
                 setMenuItems(cachedItems);
@@ -43,7 +42,6 @@ export default function POSMenuGrid({ onAddItem }) {
             setCategories(cats);
             setMenuItems(items);
 
-            // Cache data in localStorage
             localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
             localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
 
@@ -58,7 +56,6 @@ export default function POSMenuGrid({ onAddItem }) {
     const handleItemClick = async (item) => {
         let opts = item.menu_item_options;
 
-        // If options are missing or empty in state, attempt an on-demand direct query
         if (!opts || !Array.isArray(opts) || opts.length === 0) {
             try {
                 const { data } = await supabase
@@ -67,7 +64,6 @@ export default function POSMenuGrid({ onAddItem }) {
                     .eq('menu_item_id', item.id);
                 if (data && data.length > 0) {
                     opts = data;
-                    // Update state and cache for future clicks
                     setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, menu_item_options: opts } : i));
                 }
             } catch (e) {
@@ -82,14 +78,28 @@ export default function POSMenuGrid({ onAddItem }) {
         }
     };
 
+    // Pre-index items by Category ID in O(1) Hash Map
+    const itemsByCategoryMap = useMemo(() => {
+        const map = new Map();
+        map.set('all', menuItems);
+        for (let i = 0; i < menuItems.length; i++) {
+            const item = menuItems[i];
+            const catId = item.category_id;
+            if (!map.has(catId)) {
+                map.set(catId, []);
+            }
+            map.get(catId).push(item);
+        }
+        return map;
+    }, [menuItems]);
+
+    // O(1) Filtered items lookup
     const filteredItems = useMemo(() => {
+        const catItems = itemsByCategoryMap.get(activeCategory) || itemsByCategoryMap.get('all') || [];
         const query = search.trim().toLowerCase();
-        return menuItems.filter(item => {
-            const matchesCat = activeCategory === 'all' || item.category_id === activeCategory;
-            const matchesSearch = !query || item.name.toLowerCase().includes(query);
-            return matchesCat && matchesSearch;
-        });
-    }, [menuItems, activeCategory, search]);
+        if (!query) return catItems;
+        return catItems.filter(item => item.name.toLowerCase().includes(query));
+    }, [itemsByCategoryMap, activeCategory, search]);
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[#ECECE9]">
@@ -142,7 +152,7 @@ export default function POSMenuGrid({ onAddItem }) {
                             >
                                 <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
                                     {item.image_url ? (
-                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                        <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-2xl uppercase">
                                             {item.name.charAt(0)}
@@ -186,9 +196,11 @@ export default function POSMenuGrid({ onAddItem }) {
             )}
         </div>
     );
-}
+});
 
-function CategoryButton({ label, active, onClick }) {
+export default POSMenuGrid;
+
+const CategoryButton = memo(function CategoryButton({ label, active, onClick }) {
     return (
         <button 
             onClick={onClick}
@@ -201,4 +213,4 @@ function CategoryButton({ label, active, onClick }) {
             {label}
         </button>
     );
-}
+});

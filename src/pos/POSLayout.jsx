@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { 
     LayoutGrid, 
     UtensilsCrossed, 
@@ -16,7 +16,7 @@ import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHel
 import { getCurrentShift } from '../utils/shiftHelper';
 import { supabase } from '../lib/supabaseClient';
 
-export default function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
+const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
     const [online, setOnline] = useState(isOnline());
     const [queueLength, setQueueLength] = useState(getOfflineQueue().length);
     const [activeShift, setActiveShift] = useState(getCurrentShift());
@@ -237,9 +237,11 @@ export default function POSLayout({ children, activeView, onViewChange, selected
             </div>
         </div>
     );
-}
+});
 
-function NavIcon({ icon: Icon, active, onClick, label }) {
+export default POSLayout;
+
+const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label }) {
     return (
         <button 
             onClick={onClick}
@@ -261,4 +263,4 @@ function NavIcon({ icon: Icon, active, onClick, label }) {
             )}
         </button>
     );
-}
+});

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 import { 
@@ -18,7 +18,7 @@ import {
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { toast } from 'sonner';
 
-export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey }) {
+const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -619,4 +619,6 @@ export default function POSTableGrid({ onSelectTable, hasPendingOrders, refreshK
             )}
         </div>
     );
-}
+});
+
+export default POSTableGrid;

@@ -542,11 +542,13 @@ export default function POSDashboard() {
                 setHasPendingOrders(hasPending);
                 
                 // Auto trigger pop-up overlay if new pending bookings arrive
-                if (count > prevPendingCountRef.current) {
-                    setShowPendingModal(true);
+                if (count !== prevPendingCountRef.current) {
+                    if (count > prevPendingCountRef.current) {
+                        setShowPendingModal(true);
+                    }
+                    prevPendingCountRef.current = count;
+                    setRefreshKey(prev => prev + 1);
                 }
-                prevPendingCountRef.current = count;
-                setRefreshKey(prev => prev + 1);
             }
         } catch (err) {
             console.error("Check pending orders failed:", err);
@@ -1123,7 +1125,7 @@ export default function POSDashboard() {
         setCurrentOrder({ items: [], customer: null, table: null });
     };
 
-    const handleAddToOrder = (item) => {
+    const handleAddToOrder = useCallback((item) => {
         setCurrentOrder(prev => {
             const addQty = item.quantity || item.qty || 1;
             const itemOpts = item.selected_options || item.optionsSummary || [];
@@ -1156,9 +1158,9 @@ export default function POSDashboard() {
                 }]
             };
         });
-    };
+    }, []);
 
-    const handleUpdateQuantity = (itemId, delta) => {
+    const handleUpdateQuantity = useCallback((itemId, delta) => {
         setCurrentOrder(prev => ({
             ...prev,
             items: prev.items.map(item => {
@@ -1169,9 +1171,9 @@ export default function POSDashboard() {
                 return item;
             }).filter(item => item.quantity > 0)
         }));
-    };
+    }, []);
 
-    const handleUpdateItemNote = (itemId, note) => {
+    const handleUpdateItemNote = useCallback((itemId, note) => {
         setCurrentOrder(prev => ({
             ...prev,
             items: prev.items.map(item => {
@@ -1181,7 +1183,7 @@ export default function POSDashboard() {
                 return item;
             })
         }));
-    };
+    }, []);
 
     const handleClearOrderOrTable = async () => {
         if (activeBooking) {
