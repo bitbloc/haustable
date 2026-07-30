@@ -759,16 +759,16 @@ export default function AdminSettings() {
                 <InstallPWA />
             </div>
 
-            {/* Tabs Control - Google Workspace Style Seamless Nav */}
-            <div className="bg-white p-2 rounded-2xl border border-gray-200/80 shadow-sm mb-6 flex flex-wrap gap-1">
+            {/* Tabs Control - High-Contrast Dieter Rams & Thai Modern Nav */}
+            <div className="bg-[#F5F5F2] p-2 rounded-2xl border border-[#D1D1CD] shadow-sm mb-6 flex flex-wrap gap-1.5">
                 {[
-                    { id: 'booking', label: '🍽 ตั้งค่าร้าน & การจอง', desc: 'Core & Booking', icon: Power },
-                    { id: 'link', label: '🔗 Landing Page', desc: 'Link Manager', icon: FileText },
-                    { id: 'checkins', label: '📸 เช็กอิน / รีวิว', desc: 'Reviews', icon: Heart },
-                    { id: 'integrations', label: '⚙️ APIs & QR', desc: 'Integrations', icon: Terminal },
-                    { id: 'printers', label: '🖨 เครื่องพิมพ์ & สลิป', desc: 'Hardware & Receipts', icon: QrCode },
-                    { id: 'crm', label: '🪙 CRM & xhaus Coins', desc: 'Loyalty Program', icon: Coins },
-                    { id: 'debug', label: '🔧 Debug Logs', desc: 'System Logs', icon: AlertTriangle }
+                    { id: 'booking', label: '🍽 ตั้งค่าร้าน & การจอง', desc: 'CORE & BOOKING', icon: Power },
+                    { id: 'link', label: '🔗 Landing Page', desc: 'LINK MANAGER', icon: FileText },
+                    { id: 'checkins', label: '📸 เช็กอิน / รีวิว', desc: 'REVIEWS', icon: Heart },
+                    { id: 'integrations', label: '⚙️ APIs & QR', desc: 'INTEGRATIONS', icon: Terminal },
+                    { id: 'printers', label: '🖨 เครื่องพิมพ์ & สลิป', desc: 'HARDWARE & RECEIPTS', icon: QrCode },
+                    { id: 'crm', label: '🪙 CRM & xhaus Coins', desc: 'LOYALTY PROGRAM', icon: Coins },
+                    { id: 'debug', label: '🔧 Debug Logs', desc: 'SYSTEM LOGS', icon: AlertTriangle }
                 ].map(tab => {
                     const IconComp = tab.icon;
                     const isActive = activeSettingsTab === tab.id;
@@ -777,18 +777,26 @@ export default function AdminSettings() {
                             key={tab.id}
                             type="button"
                             onClick={() => setActiveSettingsTab(tab.id)}
-                            className={`flex-1 min-w-[140px] px-3.5 py-2.5 rounded-xl font-bold text-left transition-all cursor-pointer flex items-center gap-3 ${
+                            className={`flex-1 min-w-[150px] px-3.5 py-3 rounded-xl font-bold text-left transition-all cursor-pointer flex items-center gap-3 border ${
                                 isActive
-                                    ? 'bg-[#1A1A1A] text-white shadow-md'
-                                    : 'text-gray-600 hover:text-black hover:bg-gray-100/80'
+                                    ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] shadow-md ring-2 ring-black/10'
+                                    : 'bg-white text-[#1A1A1A] border-[#D1D1CD] hover:bg-[#EFEFED] hover:border-[#1A1A1A]'
                             }`}
                         >
-                            <div className={`p-2 rounded-lg ${isActive ? 'bg-white/15 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                <IconComp size={16} />
+                            <div className={`p-2 rounded-lg flex items-center justify-center shrink-0 border ${
+                                isActive 
+                                    ? 'bg-[#ff0000] text-white border-red-600 shadow-sm' 
+                                    : 'bg-[#F0F0EC] text-[#1A1A1A] border-[#D1D1CD]'
+                            }`}>
+                                <IconComp size={16} strokeWidth={2.2} />
                             </div>
                             <div className="min-w-0">
                                 <span className="text-xs font-bold leading-tight block truncate">{tab.label}</span>
-                                <span className={`text-[9px] block truncate font-normal ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>{tab.desc}</span>
+                                <span className={`text-[9px] font-mono tracking-wider block truncate mt-0.5 font-bold ${
+                                    isActive ? 'text-[#ff9999]' : 'text-[#767673]'
+                                }`}>
+                                    {tab.desc}
+                                </span>
                             </div>
                         </button>
                     );
