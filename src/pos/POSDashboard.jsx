@@ -17,7 +17,7 @@ import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
 export default function POSDashboard() {
@@ -525,22 +525,86 @@ export default function POSDashboard() {
         setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
     };
 
+    const autoPrintedQrKeysRef = useRef(new Set(JSON.parse(localStorage.getItem('pos_auto_printed_qr_keys') || '[]')));
+
+    const markQrKeyAsPrinted = (key) => {
+        autoPrintedQrKeysRef.current.add(key);
+        const arr = Array.from(autoPrintedQrKeysRef.current).slice(-200);
+        localStorage.setItem('pos_auto_printed_qr_keys', JSON.stringify(arr));
+    };
+
+    const handleAutoPrintQROrder = async (bookingId, tableNameHint = 'TABLE') => {
+        if (!bookingId) return;
+        try {
+            const { data: fullBooking } = await supabase
+                .from('bookings')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_kitchen, is_bar, printer_target))')
+                .eq('id', bookingId)
+                .maybeSingle();
+
+            if (!fullBooking || !fullBooking.order_items || fullBooking.order_items.length === 0) return;
+
+            const remarkStr = (fullBooking.staff_remark || '').toLowerCase();
+            const isQrOrder = remarkStr.includes('qr walk-in') || remarkStr.includes('qr') || fullBooking.source === 'online' || fullBooking.source === 'qr';
+            if (!isQrOrder) return;
+
+            // Auto-accept if status was pending (change to seated so staff doesn't have to press accept)
+            if (fullBooking.status === 'pending') {
+                await supabase.from('bookings').update({ status: 'seated' }).eq('id', bookingId);
+                fullBooking.status = 'seated';
+            }
+
+            const printKey = `qr_${bookingId}_${fullBooking.total_amount}_${fullBooking.order_items.length}`;
+
+            if (!autoPrintedQrKeysRef.current.has(printKey)) {
+                markQrKeyAsPrinted(printKey);
+
+                const displayTable = fullBooking.tables_layout?.table_name || tableNameHint;
+                toast.success(`🛎️ ออเดอร์ QR โต๊ะ ${displayTable} (฿${fullBooking.total_amount}) - รับออเดอร์และพิมพ์ใบครัวอัตโนมัติแล้ว`, {
+                    duration: 10000,
+                    action: {
+                        label: 'ดูรายการ',
+                        onClick: () => {
+                            supabase.from('tables_layout').select('*').eq('id', fullBooking.table_id).single().then(({ data }) => {
+                                if (data) handleSelectTable(data);
+                            });
+                        }
+                    }
+                });
+                playSystemAlertSound();
+
+                await autoPrintQROrder(fullBooking);
+            }
+        } catch (err) {
+            console.error("Auto print QR order error:", err);
+        }
+    };
+
     const checkPendingOrders = async () => {
         try {
             const today = new Date().toISOString().split('T')[0];
-            const { data: pendingBookings, error } = await supabase
+            const { data: activeBookings, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
-                .eq('status', 'pending')
+                .in('status', ['pending', 'seated'])
                 .gte('booking_time', `${today}T00:00:00`)
                 .order('booking_time', { ascending: false });
             
-            if (!error && pendingBookings) {
-                setPendingBookingsList(pendingBookings);
-                const count = pendingBookings.length;
+            if (!error && activeBookings) {
+                const pendingOnly = activeBookings.filter(b => b.status === 'pending');
+                setPendingBookingsList(pendingOnly);
+                const count = pendingOnly.length;
                 const hasPending = count > 0;
                 setHasPendingOrders(hasPending);
                 
+                // Check if any active booking is a QR order that hasn't been auto-printed yet
+                for (const b of activeBookings) {
+                    const remark = (b.staff_remark || '').toLowerCase();
+                    if (remark.includes('qr walk-in') || remark.includes('qr') || b.source === 'online' || b.source === 'qr') {
+                        handleAutoPrintQROrder(b.id, b.tables_layout?.table_name);
+                    }
+                }
+
                 // Auto trigger pop-up overlay if new pending bookings arrive
                 if (count !== prevPendingCountRef.current) {
                     if (count > prevPendingCountRef.current) {
@@ -726,6 +790,12 @@ export default function POSDashboard() {
                 const callStaffKey = `${bookingId}_CALL_STAFF`;
                 const pendingOrderKey = `${bookingId}_PENDING_ORDER`;
                 const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
+
+                // Trigger Auto Print for QR Orders on INSERT or UPDATE
+                const remarkCheck = (newRow?.staff_remark || '').toLowerCase();
+                if (remarkCheck.includes('qr walk-in') || remarkCheck.includes('qr') || newRow?.source === 'online' || newRow?.source === 'qr') {
+                    handleAutoPrintQROrder(bookingId, tableName);
+                }
 
                 if (eventType === 'INSERT') {
                     if (newRow.status === 'pending') {

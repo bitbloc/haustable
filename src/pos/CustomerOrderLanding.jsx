@@ -526,7 +526,7 @@ export default function CustomerOrderLanding() {
                 const trackingToken = crypto.randomUUID();
                 const newBookingPayload = {
                     table_id: parseInt(tableId),
-                    status: 'pending', // Starts as pending to alert staff
+                    status: 'seated', // QR orders auto-accepted immediately
                     booking_type: 'walk_in',
                     booking_time: new Date().toISOString(),
                     pax: paxCount || table?.capacity || 2,
@@ -578,7 +578,7 @@ export default function CustomerOrderLanding() {
             }
 
             const updateData = {
-                status: 'pending', // Triggers audio alert & dashboard flash for kitchen
+                status: 'seated', // Auto-accepted; triggers auto-print on POS
                 total_amount: recalculatedTotal,
                 staff_remark: updatedRemark
             };

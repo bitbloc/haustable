@@ -1904,3 +1904,64 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
         });
     });
 }
+
+/**
+ * Auto print slips (kitchen/bar/other) for incoming QR code orders.
+ */
+export async function autoPrintQROrder(booking, optionMap = {}) {
+    if (!booking) return false;
+    try {
+        const config = getPrinterConfig() || {};
+        const printerType = config.printer_type || 'sunmi';
+        let activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
+
+        const orderItems = booking.order_items || [];
+        if (orderItems.length === 0) return false;
+
+        const paymentMethod = booking.payment_method || 'qr';
+
+        if (printerType === 'sunmi') {
+            let printed = false;
+            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+            if (kitchenBytes) {
+                await printToSunmiBuiltIn(kitchenBytes);
+                printed = true;
+            }
+            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+            if (barBytes) {
+                await printToSunmiBuiltIn(barBytes);
+                printed = true;
+            }
+            const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+            if (otherBytes) {
+                await printToSunmiBuiltIn(otherBytes);
+                printed = true;
+            }
+            return printed;
+        } else if (printerType === 'rawbt') {
+            let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+            let targetTab = isSeparateBarPrinterEnabled ? 'kitchen' : 'kitchen_all';
+            const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+            if (rawBytes) {
+                await printToRawBTWebSocket(rawBytes);
+            }
+            if (isSeparateBarPrinterEnabled) {
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+                if (barBytes) await printToRawBTWebSocket(barBytes);
+            }
+            return true;
+        } else if (printerType === 'bluetooth') {
+            const btDeviceName = config.bluetooth_device_name;
+            let targetTab = 'kitchen_all';
+            const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+            if (rawBytes) {
+                await printToBluetoothDirect(btDeviceName, rawBytes);
+            }
+            return true;
+        }
+    } catch (err) {
+        console.error("autoPrintQROrder failed:", err);
+    }
+    return false;
+}
+
