@@ -16,8 +16,10 @@ import {
     MapPin, 
     Edit2, 
     Loader2, 
-    X 
+    X,
+    LayoutTemplate
 } from 'lucide-react'
+import HauspeopleExporter from './HauspeopleExporter'
 
 const getProxiedImageUrl = (url) => {
     if (!url) return ''
@@ -43,6 +45,10 @@ export default function CheckinManager() {
     const [loading, setLoading] = useState(false)
     const [actionLoading, setActionLoading] = useState(false)
     const [uploadingImage, setUploadingImage] = useState(false)
+
+    // Collage Exporter State
+    const [selectedForCollage, setSelectedForCollage] = useState([])
+    const [showExporter, setShowExporter] = useState(false)
 
     // Quick URL Fetch State
     const [urlToFetch, setUrlToFetch] = useState('')
@@ -1080,6 +1086,7 @@ const decodeHTMLEntities = (text) => {
                         <table className="w-full border-collapse text-left text-xs text-ink font-medium">
                             <thead className="bg-canvas border-b border-gray-150 font-bold text-subInk">
                                 <tr>
+                                    <th className="p-4 w-[40px] text-center">✅</th>
                                     <th className="p-4 w-[120px]">รูปภาพ</th>
                                     <th className="p-4">ผู้รีวิว & แพลตฟอร์ม</th>
                                     <th className="p-4 hidden md:table-cell">ข้อความ / คอมเมนต์</th>
@@ -1089,7 +1096,27 @@ const decodeHTMLEntities = (text) => {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {checkins.map(item => (
-                                    <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
+                                    <tr key={item.id} className={`hover:bg-neutral-50/50 transition-colors ${selectedForCollage.includes(item.id) ? 'bg-[#E9F344]/10' : ''}`}>
+                                        <td className="p-4 text-center">
+                                            {item.image_url !== 'text_only' && (
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="w-4 h-4 cursor-pointer accent-[#23201D]"
+                                                    checked={selectedForCollage.includes(item.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            if (selectedForCollage.length >= 6) {
+                                                                alert('เลือกรูปภาพได้สูงสุด 6 รูปสำหรับ Collage');
+                                                                return;
+                                                            }
+                                                            setSelectedForCollage(prev => [...prev, item.id])
+                                                        } else {
+                                                            setSelectedForCollage(prev => prev.filter(id => id !== item.id))
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </td>
                                         <td className="p-4">
                                             <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-250 bg-gray-50 flex items-center justify-center font-mono p-1.5 text-center text-[9px] leading-tight select-none">
                                                 {item.image_url === 'text_only' ? (
@@ -1166,6 +1193,37 @@ const decodeHTMLEntities = (text) => {
                 )}
             </div>
             
+            {/* FLOATING ACTION BAR FOR COLLAGE EXPORTER */}
+            {selectedForCollage.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#23201D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-10 fade-in border border-gray-700">
+                    <div className="flex flex-col">
+                        <span className="font-mono text-xs font-bold text-[#E9F344] uppercase tracking-wider">Collage Generator</span>
+                        <span className="text-sm font-bold">{selectedForCollage.length} Photos Selected (Max 6)</span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setSelectedForCollage([])}
+                            className="px-4 py-2 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors cursor-pointer"
+                        >
+                            Clear
+                        </button>
+                        <button 
+                            onClick={() => setShowExporter(true)}
+                            className="px-4 py-2 text-xs font-bold bg-[#E9F344] text-[#23201D] hover:bg-[#d8e330] rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                            <LayoutTemplate size={14} /> Generate Collage
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* EXPORTER MODAL */}
+            {showExporter && (
+                <HauspeopleExporter 
+                    checkins={checkins.filter(c => selectedForCollage.includes(c.id))} 
+                    onClose={() => setShowExporter(false)} 
+                />
+            )}
         </div>
     )
 }
