@@ -311,111 +311,98 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
     return (
         <div className="ads-landing-page w-full min-h-screen flex flex-col bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] overflow-x-hidden font-[var(--font-body)] relative pb-safe">
             
-            {/* Custom Embedded CSS for layout and animations */}
-            <style>{`
-                .no-scrollbar::-webkit-scrollbar {
-                    display: none;
-                }
-                .no-scrollbar {
-                    -ms-overflow-style: none;
-                    scrollbar-width: none;
-                }
-                .active-dot-glow {
-                    box-shadow: 0 0 8px var(--color-brand);
-                }
-            `}</style>
-
-            <div className="w-full max-w-lg mx-auto px-4 relative z-10 flex-grow flex flex-col">
+            <div className="w-full max-w-xl mx-auto relative z-10 flex-grow flex flex-col border-x border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                 
-                {/* ─── HEADER: IDENTITY & METADATA ─── */}
-                <header className="pt-8 pb-4 border-b border-[var(--color-hallmark-rule)] animate-fade-in">
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-3">
-                            {logoUrl ? (
-                                <img
-                                    src={optimizeImageUrl(logoUrl, 120)}
-                                    alt="IN THE HAUS Logo"
-                                    className="w-12 h-12 rounded-sm object-cover border border-[var(--color-hallmark-ink)] flex-shrink-0"
-                                />
-                            ) : (
-                                <div className="w-12 h-12 rounded-sm bg-[var(--color-hallmark-ink)] flex items-center justify-center flex-shrink-0 p-1.5">
-                                    <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
-                                </div>
-                            )}
-                            <div>
-                                <h1 className="text-lg md:text-xl font-[var(--font-display)] font-bold text-[var(--color-hallmark-ink)] tracking-wider uppercase leading-none">
-                                    {shopName}
-                                </h1>
-                                <p className="text-[var(--color-hallmark-ink-muted)] font-[var(--font-display)] font-bold text-[10px] tracking-widest uppercase mt-1">{shopNameTh}</p>
-                            </div>
-                        </div>
-                        
-                        <p className="text-xs text-[var(--color-hallmark-ink-muted)] leading-relaxed font-[var(--font-body)]">
-                            {subtitle}
-                        </p>
-
-                        {/* Braun Info Panel */}
-                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] p-3 rounded-sm font-mono text-[9px] text-[var(--color-hallmark-ink)] space-y-1 mt-2">
-                            <div className="flex justify-between gap-4">
-                                <span className="text-[var(--color-hallmark-ink-muted)]">STATUS:</span>
-                                <span className="flex items-center gap-1 font-bold">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    OPEN DAILY
-                                </span>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="text-[var(--color-hallmark-ink-muted)]">HOURS:</span>
-                                <span className="font-bold">{hours.replace('เปิดทุกวัน ', '')}</span>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="text-[var(--color-hallmark-ink-muted)]">LOC:</span>
-                                <span className="font-bold">{locationText}</span>
-                            </div>
-                        </div>
-
-                        {/* Live Check-in Ticker Callout */}
-                        <a
-                            href="/link/hauscheckin"
-                            className="flex items-center justify-between gap-3 bg-[var(--color-brand)] border border-[var(--color-hallmark-rule)] px-3 py-2.5 rounded-sm hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer text-white group shadow-sm mt-3"
-                        >
-                            <span className="flex items-center gap-2 flex-shrink-0">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-white">
-                                    LIVE CUSTOMER FEED
-                                </span>
-                            </span>
-                            <span className="font-[var(--font-body)] font-bold text-xs flex items-center gap-1 min-w-0 truncate text-right text-white">
-                                <span className="truncate">ชมรูปภาพเช็กอินของลูกค้า</span> <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform flex-shrink-0 text-white" />
-                            </span>
-                        </a>
-
+                {/* ─── HEADER: IDENTITY & METADATA (TABULAR) ─── */}
+                <header className="flex flex-col border-b border-[var(--color-hallmark-rule)] animate-fade-in select-none">
+                    {/* Top Marquee Bar (High Contrast) */}
+                    <div className="w-full bg-[#E9F344] text-[var(--color-hallmark-ink)] border-b border-[var(--color-hallmark-rule)] py-1.5 px-3 flex items-center justify-center overflow-hidden">
+                        <span className="font-mono text-[9px] font-black uppercase tracking-widest truncate">
+                            *** {subtitle} ***
+                        </span>
                     </div>
+
+                    {/* Logo & Identity Cell */}
+                    <div className="flex items-center gap-4 p-4 border-b border-[var(--color-hallmark-rule)]">
+                        {logoUrl ? (
+                            <img
+                                src={optimizeImageUrl(logoUrl, 120)}
+                                alt="IN THE HAUS Logo"
+                                className="w-[52px] h-[52px] object-cover border border-[var(--color-hallmark-ink)] flex-shrink-0"
+                            />
+                        ) : (
+                            <div className="w-[52px] h-[52px] bg-[var(--color-hallmark-ink)] flex items-center justify-center flex-shrink-0 p-1.5">
+                                <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
+                            </div>
+                        )}
+                        <div className="flex flex-col justify-center">
+                            <h1 className="text-xl md:text-2xl font-[var(--font-display)] font-bold text-[var(--color-hallmark-ink)] tracking-wider uppercase leading-none">
+                                {shopName}
+                            </h1>
+                            <p className="text-[var(--color-hallmark-ink-muted)] font-mono font-bold text-[9px] tracking-widest uppercase mt-1.5">{shopNameTh}</p>
+                        </div>
+                    </div>
+
+                    {/* Tabular Metadata Grid */}
+                    <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)] font-mono text-[9px] text-[var(--color-hallmark-ink)] uppercase font-bold tracking-wider">
+                        <div className="p-3 flex flex-col gap-1">
+                            <span className="text-[var(--color-hallmark-ink-muted)]">STATUS</span>
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-emerald-500 animate-pulse border border-[var(--color-hallmark-rule)]" />
+                                OPEN DAILY
+                            </span>
+                        </div>
+                        <div className="p-3 flex flex-col gap-1">
+                            <span className="text-[var(--color-hallmark-ink-muted)]">HOURS</span>
+                            <span>{hours.replace('เปิดทุกวัน ', '')}</span>
+                        </div>
+                        <div className="p-3 flex flex-col gap-1 col-span-2 border-t border-[var(--color-hallmark-rule)]">
+                            <span className="text-[var(--color-hallmark-ink-muted)]">LOC</span>
+                            <span>{locationText}</span>
+                        </div>
+                    </div>
+
+                    {/* Live Check-in Ticker CTA */}
+                    <a
+                        href="/link/hauscheckin"
+                        className="w-full bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] p-4 flex items-center justify-between hover:bg-neutral-800 transition-colors cursor-pointer group border-t border-[var(--color-hallmark-rule)]"
+                    >
+                        <span className="flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex h-2 w-2 bg-emerald-500 border border-[var(--color-hallmark-paper)]"></span>
+                            </span>
+                            <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-[var(--color-hallmark-paper)]">
+                                LIVE STREAM
+                            </span>
+                        </span>
+                        <span className="font-[var(--font-body)] font-bold text-xs flex items-center gap-1">
+                            <span>ดูรูปภาพลูกค้า</span> <span className="font-mono font-bold">➔</span>
+                        </span>
+                    </a>
                 </header>
 
-                {/* ─── SECTION CONTROLS (Braun Selector Panel) ─── */}
-                <div className="grid grid-cols-3 border-b border-[var(--color-hallmark-rule)] mb-6 bg-[var(--color-hallmark-paper)] sticky top-0 z-30">
+                {/* ─── SECTION CONTROLS (Tabular Structure) ─── */}
+                <div className="grid grid-cols-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] sticky top-0 z-30 select-none divide-x divide-[var(--color-hallmark-rule)]">
                     <button
                         onClick={() => setActiveSection('menu')}
-                        className={`py-3.5 flex flex-col items-center justify-center gap-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-wider border-r border-[var(--color-hallmark-rule)] cursor-pointer transition-all ${activeSection === 'menu' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] font-black' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'}`}
+                        className={`py-3.5 flex items-center justify-center gap-2 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-colors ${activeSection === 'menu' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
-                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeSection === 'menu' ? 'bg-[var(--color-brand)] active-dot-glow scale-110' : 'bg-neutral-300'}`} />
+                        {activeSection === 'menu' && <span className="text-[var(--color-brand)] font-black">*</span>}
                         01 / MENU
                     </button>
                     <button
                         onClick={() => setActiveSection('atmosphere')}
-                        className={`py-3.5 flex flex-col items-center justify-center gap-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-wider border-r border-[var(--color-hallmark-rule)] cursor-pointer transition-all ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] font-black' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'}`}
+                        className={`py-3.5 flex items-center justify-center gap-2 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-colors ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
-                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeSection === 'atmosphere' ? 'bg-[var(--color-brand)] active-dot-glow scale-110' : 'bg-neutral-300'}`} />
+                        {activeSection === 'atmosphere' && <span className="text-[var(--color-brand)] font-black">*</span>}
                         02 / VIBE
                     </button>
                     <button
                         onClick={() => setActiveSection('connect')}
-                        className={`py-3.5 flex flex-col items-center justify-center gap-1.5 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-all ${activeSection === 'connect' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] font-black' : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'}`}
+                        className={`py-3.5 flex items-center justify-center gap-2 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-colors ${activeSection === 'connect' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
-                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${activeSection === 'connect' ? 'bg-[var(--color-brand)] active-dot-glow scale-110' : 'bg-neutral-300'}`} />
+                        {activeSection === 'connect' && <span className="text-[var(--color-brand)] font-black">*</span>}
                         03 / CONNECT
                     </button>
                 </div>
@@ -426,20 +413,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                         
                         {/* Signatures */}
                         {signatures.length > 0 && (
-                            <section className="space-y-3">
-                                <div className="flex items-center justify-between pb-2 border-b border-[var(--color-hallmark-rule)]">
-                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink-muted)]">
-                                        [ 01.1 // SIGNATURE DISHES ]
+                            <section className="border-b border-[var(--color-hallmark-rule)]">
+                                <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                        01.1 // SIGNATURE DISHES
                                     </h3>
-                                    <span className="text-[8px] font-mono bg-[var(--color-brand)] text-white px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider">
+                                    <span className="text-[8px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] px-1.5 py-0.5 font-bold uppercase tracking-wider border border-[var(--color-hallmark-ink)]">
                                         RECOMMENDED
                                     </span>
                                 </div>
-                                <div className={`grid gap-3 ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                                <div className={`grid ${signatures.length === 1 ? 'grid-cols-1' : signatures.length === 2 ? 'grid-cols-2 divide-x divide-[var(--color-hallmark-rule)]' : 'grid-cols-3 divide-x divide-[var(--color-hallmark-rule)]'}`}>
                                     {signatures.map((dish, i) => (
                                         <div 
                                             key={i} 
-                                            className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm overflow-hidden flex flex-col group cursor-pointer"
+                                            className="flex flex-col group cursor-pointer bg-[var(--color-hallmark-paper)]"
                                             onClick={() => setSelectedLightbox({ type: 'menu', url: dish.img })}
                                         >
                                             <div className="aspect-square relative overflow-hidden bg-neutral-100 border-b border-[var(--color-hallmark-rule)]">
@@ -451,9 +438,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                                     decoding="async"
                                                 />
                                             </div>
-                                            <div className="p-2 flex-grow flex flex-col justify-between">
+                                            <div className="p-3 flex-grow flex flex-col justify-between">
                                                 <p className="font-[var(--font-body)] font-bold text-[10px] leading-tight text-[var(--color-hallmark-ink)] line-clamp-2">{dish.name}</p>
-                                                <p className="font-mono text-[10px] font-bold text-[var(--color-brand)] mt-1.5">฿{dish.price}</p>
+                                                <p className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)] mt-1.5">฿{dish.price}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -463,10 +450,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
 
                         {/* Specialties List */}
                         {featuredMenuItems.length > 0 && (
-                            <section className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 space-y-4">
-                                <div className="flex items-center justify-between pb-2.5 border-b border-[var(--color-hallmark-rule)]">
+                            <section className="border-b border-[var(--color-hallmark-rule)]">
+                                <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        [ 01.2 // SPECIALTIES ]
+                                        01.2 // SPECIALTIES
                                     </h3>
                                     <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
                                         {featuredMenuItems.length} ITEMS
@@ -480,12 +467,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 </div>
                                 
                                 {/* Accordion Toggle Button */}
-                                <div className="pt-3 border-t border-dashed border-[var(--color-hallmark-rule)]">
+                                <div>
                                     <button
                                         onClick={() => setShowAllMenu(!showAllMenu)}
-                                        className="w-full py-2 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[9px] font-bold uppercase tracking-wider rounded-sm cursor-pointer"
+                                        className="w-full p-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[9px] font-bold uppercase tracking-wider cursor-pointer"
                                     >
-                                        {showAllMenu ? "[-] CLOSE ALL MENU SECTIONS" : "[+] VIEW FULL MENU (80+ ITEMS)"}
+                                        {showAllMenu ? "[-] CLOSE FULL MENU" : "[+] VIEW FULL MENU"}
                                     </button>
                                 </div>
                             </section>
@@ -499,17 +486,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
                                     transition={{ duration: 0.25, ease: 'easeOut' }}
-                                    className="w-full space-y-4 overflow-hidden"
+                                    className="w-full overflow-hidden border-b border-[var(--color-hallmark-rule)]"
                                 >
                                     {menuCategories.map((category) => {
                                         const categoryItems = menuItems.filter(item => item.category_id === category.id);
                                         if (categoryItems.length === 0) return null;
 
                                         return (
-                                            <div key={category.id} className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 animate-fade-in">
-                                                <div className="mb-3 pb-2 border-b border-[var(--color-hallmark-rule)] flex justify-between items-center">
-                                                    <span className="font-[var(--font-display)] text-xs font-bold tracking-wider text-[var(--color-hallmark-ink)] uppercase">
-                                                        // {category.name}
+                                            <div key={category.id} className="border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] animate-fade-in first:border-t-0">
+                                                <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex justify-between items-center">
+                                                    <span className="font-[var(--font-display)] text-[10px] font-bold tracking-wider text-[var(--color-hallmark-ink)] uppercase">
+                                                        {category.name}
                                                     </span>
                                                     <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
                                                         {categoryItems.length} ITEMS
@@ -529,7 +516,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
 
                         {/* Original Booklet Menu trigger */}
                         {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
-                            <section>
+                            <section className="border-b border-[var(--color-hallmark-rule)]">
                                 <button
                                     onClick={() => {
                                         setSelectedLightbox({
@@ -537,13 +524,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                             urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
                                         });
                                     }}
-                                    className="w-full bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 flex flex-col items-center justify-center gap-1 hover:bg-neutral-100/50 transition-colors cursor-pointer"
+                                    className="w-full bg-[var(--color-hallmark-paper-dark)] p-4 flex flex-col items-center justify-center gap-1 hover:bg-[var(--color-hallmark-ink)] hover:text-[var(--color-hallmark-paper)] group transition-colors cursor-pointer"
                                 >
-                                    <span className="text-[9px] font-mono text-[var(--color-brand)] font-bold tracking-widest uppercase">
-                                        // CLASSIC BOOKLET MENU
+                                    <span className="text-[9px] font-mono text-[var(--color-hallmark-ink-muted)] font-bold tracking-widest uppercase group-hover:text-[var(--color-hallmark-paper)] transition-colors">
+                                        CLASSIC BOOKLET MENU
                                     </span>
-                                    <span className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] flex items-center gap-1.5 mt-1">
-                                        📖 เปิดเล่มเมนูดั้งเดิม (PDF) ➔
+                                    <span className="font-[var(--font-body)] font-bold text-xs flex items-center gap-1.5 mt-1">
+                                        เปิดดูเมนูแบบเล่ม (PDF) <span className="font-mono">➔</span>
                                     </span>
                                 </button>
                             </section>
@@ -557,27 +544,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                     <div className="space-y-6 flex-grow animate-fade-in">
                         {/* Official Atmosphere Photos */}
                         {atmImages.length > 0 && (
-                            <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
-                                <div className="flex items-center justify-between pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                            <div className="border-b border-[var(--color-hallmark-rule)]">
+                                <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        [ 02.1 // ATMOSPHERE IMAGES ]
+                                        02.1 // ATMOSPHERE IMAGES
                                     </h3>
                                     <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
                                         {atmImages.length} VIEWS
                                     </span>
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)]">
                                     {atmImages.map((url, i) => (
                                         <div
                                             key={i}
                                             onClick={() => setSelectedLightbox({ type: 'atm', url })}
-                                            className="border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] rounded-sm overflow-hidden aspect-square cursor-pointer hover:border-[var(--color-brand)] transition-colors duration-150"
+                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer flex"
                                         >
                                             <img 
                                                 src={optimizeImageUrl(url, 500)} 
                                                 alt={`Atmosphere ${i + 1}`} 
-                                                className="w-full h-full object-cover hover:scale-102 transition-transform duration-300" 
+                                                className="w-full h-full object-cover hover:opacity-90 transition-opacity" 
                                                 loading="lazy"
                                                 decoding="async"
                                             />
@@ -589,49 +576,38 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
 
                         {/* Customer Live Check-in Photos */}
                         {customerCheckins.length > 0 && (
-                            <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
-                                <div className="flex items-center justify-between pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
+                            <div className="border-b border-[var(--color-hallmark-rule)]">
+                                <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        [ 02.2 // CUSTOMER MOMENTS // ภาพความประทับใจ ]
+                                        02.2 // CUSTOMER MOMENTS
                                     </h3>
-                                    <span className="font-mono text-[9px] text-[var(--color-brand)] font-bold animate-pulse">
-                                        ● LIVE STREAM
+                                    <span className="font-mono text-[9px] text-white bg-[var(--color-brand)] px-1.5 py-0.5 font-bold uppercase tracking-wider">
+                                        LIVE
                                     </span>
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    {customerCheckins.map((item) => (
+                                
+                                <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)]">
+                                    {customerCheckins.map((checkin, i) => (
                                         <div
-                                            key={item.id}
-                                            onClick={() => setSelectedLightbox({ type: 'checkin', item })}
-                                            className="border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] rounded-sm overflow-hidden aspect-square cursor-pointer hover:border-[var(--color-brand)] transition-all duration-150 relative group"
+                                            key={i}
+                                            onClick={() => setSelectedLightbox({ type: 'checkin', item: checkin })}
+                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer relative group flex"
                                         >
                                             <img 
-                                                src={optimizeImageUrl(item.image_url, 400)} 
-                                                alt={item.text || 'Customer Check-in'} 
-                                                className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300" 
+                                                src={optimizeImageUrl(checkin.image_url, 400)} 
+                                                alt={`Checkin ${i + 1}`} 
+                                                className="w-full h-full object-cover hover:opacity-90 transition-opacity" 
                                                 loading="lazy"
                                                 decoding="async"
                                             />
-                                            {/* Source Badge */}
-                                            <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-sm border border-neutral-800 rounded-sm p-1 flex items-center justify-center text-white">
-                                                {item.source === 'instagram' && <Instagram size={10} />}
-                                                {item.source === 'facebook' && <Facebook size={10} />}
-                                                {item.source === 'google' && <Star size={10} className="text-[#F4B400] fill-[#F4B400]" />}
+                                            {/* Minimal source indicator */}
+                                            <div className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {checkin.source === 'instagram' && <span className="bg-pink-500 text-white font-mono text-[8px] font-bold px-1 py-0.5 tracking-wider">IG</span>}
+                                                {checkin.source === 'facebook' && <span className="bg-blue-600 text-white font-mono text-[8px] font-bold px-1 py-0.5 tracking-wider">FB</span>}
+                                                {checkin.source === 'google' && <span className="bg-[#E9F344] text-black font-mono text-[8px] font-bold px-1 py-0.5 tracking-wider">GMAPS</span>}
                                             </div>
                                         </div>
                                     ))}
-                                </div>
-
-                                {/* Call to action to view the full draggable board */}
-                                <div className="mt-4">
-                                    <a
-                                        href="/link/hauscheckin"
-                                        className="w-full bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] rounded-sm py-3 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer font-mono text-[11px] font-extrabold tracking-wider uppercase text-center"
-                                    >
-                                        <Compass size={13} />
-                                        <span>ดูบอร์ดรูปเช็กอินแบบเต็มจอ</span>
-                                    </a>
                                 </div>
                             </div>
                         )}
@@ -642,13 +618,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 {activeSection === 'connect' && (
                     <div className="space-y-4 flex-grow animate-fade-in">
                         
-                        {/* Quick Connections */}
-                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
-                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
-                                [ 03.1 // QUICK CONNECTIONS ]
-                            </h3>
-                            
-                            <div className="space-y-2">
                                 <LinkCard 
                                     href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9" 
                                     icon={<MapPin size={12} />} 
@@ -1039,36 +1008,38 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
 
 // ─── HELPER SUB-COMPONENTS ───
 
-// Menu List Item Component
+// Menu List Item Component (Tabular Version)
 function MenuListItem({ item, index, onImageClick }) {
     const isRecommended = item.is_recommended === true;
     return (
-        <div className="flex items-center justify-between gap-4 py-3 border-b border-[var(--color-hallmark-rule)] last:border-0 group">
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center flex-wrap gap-1.5">
-                    <h4 className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] tracking-tight group-hover:text-[var(--color-brand)] transition-colors duration-150">
+        <div className="flex items-stretch min-h-[48px] border-b border-[var(--color-hallmark-rule)] last:border-0 group bg-[var(--color-hallmark-paper)]">
+            <div className="flex-1 flex flex-col justify-center p-3 border-r border-[var(--color-hallmark-rule)]">
+                <div className="flex items-center gap-2">
+                    <h4 className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] uppercase">
                         {item.name}
                     </h4>
                     {isRecommended && (
-                        <span className="text-[8px] font-mono bg-[var(--color-brand)] text-white font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider scale-95">
-                            BOLD
+                        <span className="text-[8px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-bold px-1 py-0.5 uppercase tracking-wider">
+                            REC
                         </span>
                     )}
                 </div>
                 {item.description && (
-                    <p className="text-[var(--color-hallmark-ink-muted)] text-[11px] mt-0.5 leading-normal line-clamp-2 pr-2 font-medium">
+                    <p className="text-[var(--color-hallmark-ink-muted)] text-[10px] mt-1 line-clamp-2">
                         {item.description}
                     </p>
                 )}
             </div>
             
-            <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="font-mono font-bold text-xs text-[var(--color-hallmark-ink)]">฿{item.price}</span>
+            <div className="flex flex-shrink-0">
+                <div className="flex items-center justify-center p-3 w-[60px] border-r border-[var(--color-hallmark-rule)]">
+                    <span className="font-mono font-bold text-[10px] text-[var(--color-hallmark-ink)]">฿{item.price}</span>
+                </div>
                 
-                {item.image_url && (
+                {item.image_url ? (
                     <div 
                         onClick={() => onImageClick(item.image_url)}
-                        className="w-12 h-12 rounded-sm overflow-hidden bg-neutral-100 border border-[var(--color-hallmark-ink)] cursor-zoom-in relative hover:scale-105 transition-transform duration-200 ease-out flex-shrink-0"
+                        className="w-16 h-full bg-neutral-100 cursor-pointer relative hover:brightness-95 transition-all"
                     >
                         <img 
                             src={optimizeImageUrl(item.image_url, 120)} 
@@ -1078,6 +1049,11 @@ function MenuListItem({ item, index, onImageClick }) {
                             fetchPriority={index !== undefined && index < 3 ? "high" : undefined}
                             decoding="async"
                         />
+                        <div className="absolute inset-0 border border-transparent hover:border-[var(--color-hallmark-ink)] transition-colors pointer-events-none" />
+                    </div>
+                ) : (
+                    <div className="w-16 h-full bg-[var(--color-hallmark-paper-dark)] flex items-center justify-center">
+                        <span className="text-[var(--color-hallmark-rule)]">-</span>
                     </div>
                 )}
             </div>
@@ -1085,8 +1061,8 @@ function MenuListItem({ item, index, onImageClick }) {
     );
 }
 
-// Link Card Component (Dieter Rams Style)
-function LinkCard({ href, icon, title, bg, wide = false, internal = false, id, onClick }) {
+// Link Card Component (Structural Grid Style)
+function LinkCard({ href, title, bg, wide = false, internal = false, id, onClick }) {
     return (
         <a
             href={href}
@@ -1094,10 +1070,9 @@ function LinkCard({ href, icon, title, bg, wide = false, internal = false, id, o
             onClick={onClick}
             target={internal ? "_self" : "_blank"}
             rel={internal ? undefined : "noopener noreferrer"}
-            className={`${bg} rounded-sm py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer ${wide ? 'w-full' : 'flex-1'} font-mono text-[10px] font-bold tracking-wider`}
+            className={`${bg} py-4 px-4 flex items-center justify-center transition-colors cursor-pointer ${wide ? 'w-full block text-center' : 'flex-1'} font-mono text-[10px] font-bold tracking-widest`}
         >
-            {icon}
-            <span className="whitespace-nowrap">{title}</span>
+            <span className="whitespace-nowrap uppercase">{title}</span>
         </a>
     );
 }

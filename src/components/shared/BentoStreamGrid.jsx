@@ -121,26 +121,25 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2 ml-auto">
+                    <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
                             {onLikeToggle && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         onLikeToggle(e, item.id)
                                     }}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 active:scale-95 cursor-pointer
+                                    className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 active:scale-95 cursor-pointer
                                         ${showFullImage || textColor === 'text-white' ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/5 text-black hover:bg-black/10'}`}
                                 >
                                     <Heart
-                                        size={18}
-                                        className={isLiked ? "fill-red-500 text-red-500" : ""}
+                                        className={`w-[14px] h-[14px] md:w-[18px] md:h-[18px] ${isLiked ? "fill-red-500 text-red-500" : ""}`}
                                     />
                                 </button>
                             )}
                             
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform group-hover:rotate-45
+                            <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-transform group-hover:rotate-45
                                 ${showFullImage || textColor === 'text-white' ? 'bg-white text-black' : 'bg-[#23201D] text-white'}`}>
-                                <ArrowUpRight size={22} strokeWidth={2.5} />
+                                <ArrowUpRight strokeWidth={2.5} className="w-4 h-4 md:w-[22px] md:h-[22px]" />
                             </div>
                         </div>
                 </div>

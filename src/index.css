@@ -193,90 +193,90 @@ input[type="range"]::-moz-range-thumb {
 
 /* Hallmark Redesign - Dieter Rams Scoped Variables */
 .ads-landing-page {
-  --color-hallmark-paper: oklch(96% 0.003 80);      /* Braun warm light-grey casing */
-  --color-hallmark-paper-dark: oklch(93% 0.004 80); /* Secondary elevation card */
-  --color-hallmark-ink: oklch(20% 0.003 80);        /* Deep charcoal for dials & typography */
-  --color-hallmark-ink-muted: oklch(50% 0.003 80);  /* Muted lettering */
-  --color-hallmark-rule: oklch(85% 0.003 80);       /* Hairline layout divisions */
+  --color-hallmark-paper: oklch(97% 0.008 28);      /* Warm cream/sand surface */
+  --color-hallmark-paper-dark: oklch(94% 0.010 28); /* Elevated surface */
+  --color-hallmark-ink: oklch(18% 0.012 28);        /* Primary text / high-contrast reading */
+  --color-hallmark-ink-muted: oklch(55% 0.010 28);  /* Muted lettering */
+  --color-hallmark-rule: oklch(85% 0.012 28);       /* Hairline layout divisions */
   
-  --font-display: 'Space Mono', monospace;          /* Display typography (mono slab) */
-  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
-  --font-outlier: 'Space Mono', monospace;
+  --font-display: 'Cabinet Grotesk', 'Geist', 'Space Mono', monospace;
+  --font-body: 'Switzer', 'Geist', 'Inter', sans-serif;
+  --font-outlier: 'Geist Mono', 'Space Mono', monospace;
 
-  /* Braun Dial Orange Accent */
-  --color-brand: oklch(62% 0.16 35);                /* Orange dial #E05315-like */
-  --color-accent-red: oklch(62% 0.16 35);           /* Dial Orange */
-  --color-accent-green: oklch(62% 0.16 35);         /* Dial Orange (Unified) */
-  --color-accent-blue: oklch(62% 0.16 35);          /* Dial Orange (Unified) */
+  /* Accent Colors */
+  --color-brand: oklch(52% 0.16 28);                /* Clay Terracotta */
+  --color-accent-red: oklch(52% 0.16 28);
+  --color-accent-green: oklch(45% 0.08 140);
+  --color-accent-blue: oklch(60% 0.15 28);
 }
 
 /* Hallmark Redesign - Dieter Rams & Thai Modern Scoped Variables */
 .haus-home-page {
-  --color-hallmark-paper: oklch(96% 0.008 70);      /* Braun light-grey casing with teak warm tint */
-  --color-hallmark-paper-dark: oklch(93% 0.010 70); /* Secondary elevation card */
-  --color-hallmark-ink: oklch(20% 0.005 70);        /* Deep charcoal for dials & typography */
-  --color-hallmark-ink-muted: oklch(48% 0.006 70);  /* Muted lettering */
-  --color-hallmark-rule: oklch(85% 0.008 70);       /* Hairline dividers */
+  --color-hallmark-paper: oklch(97% 0.008 28);      /* Warm cream/sand surface */
+  --color-hallmark-paper-dark: oklch(94% 0.010 28); /* Elevated surface */
+  --color-hallmark-ink: oklch(18% 0.012 28);        /* Primary text / high-contrast reading */
+  --color-hallmark-ink-muted: oklch(55% 0.010 28);  /* Muted lettering */
+  --color-hallmark-rule: oklch(85% 0.012 28);       /* Hairline layout divisions */
   
-  --font-display: 'Space Mono', monospace;          /* Display typography (mono slab) */
-  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
-  --font-outlier: 'Space Mono', monospace;
+  --font-display: 'Cabinet Grotesk', 'Geist', 'Space Mono', monospace;
+  --font-body: 'Switzer', 'Geist', 'Inter', sans-serif;
+  --font-outlier: 'Geist Mono', 'Space Mono', monospace;
 
-  /* Braun Dial Orange Accent */
-  --color-brand: oklch(62% 0.16 35);                /* Orange dial #E05315-like */
-  --color-accent-red: oklch(62% 0.16 35);
-  --color-accent-green: oklch(62% 0.16 35);
-  --color-accent-blue: oklch(62% 0.16 35);
+  /* Accent Colors */
+  --color-brand: oklch(52% 0.16 28);                /* Clay Terracotta */
+  --color-accent-red: oklch(52% 0.16 28);
+  --color-accent-green: oklch(45% 0.08 140);
+  --color-accent-blue: oklch(60% 0.15 28);
 }
 
 .haus-home-page .glass-card {
   background: var(--color-hallmark-paper);
-  border: 1.5px solid var(--color-hallmark-rule);
-  border-radius: 8px;
-  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-hallmark-rule);
+  border-radius: 0px;
+  box-shadow: none;
 }
 
 .haus-home-page .braun-btn {
   position: relative;
-  background: oklch(93% 0.010 70);
-  border: 1.5px solid oklch(85% 0.008 70);
-  border-radius: 8px;
+  background: var(--color-hallmark-paper-dark);
+  border: 1px solid var(--color-hallmark-rule);
+  border-radius: 0px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .haus-home-page .braun-btn:hover {
-  background: oklch(90% 0.012 70);
+  background: var(--color-hallmark-paper);
   border-color: var(--color-brand);
 }
 
 .haus-home-page .braun-btn:active {
-  background: oklch(88% 0.014 70);
+  background: var(--color-hallmark-paper-dark);
   transform: scale(0.99);
 }
 
 .haus-home-page .braun-btn:focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
+  outline: 1px solid var(--color-brand);
+  outline-offset: 1px;
 }
 
 
 /* Hallmark Redesign - Dieter Rams & Thai Modern Scoped Variables for SOP */
 .sop-rams-page {
-  --color-hallmark-paper: oklch(96% 0.008 70);      /* Braun light-grey casing with teak warm tint */
-  --color-hallmark-paper-dark: oklch(93% 0.010 70); /* Secondary elevation card */
-  --color-hallmark-ink: oklch(20% 0.005 70);        /* Deep charcoal for dials & typography */
-  --color-hallmark-ink-muted: oklch(48% 0.006 70);  /* Muted lettering */
-  --color-hallmark-rule: oklch(85% 0.008 70);       /* Hairline dividers */
+  --color-hallmark-paper: oklch(97% 0.008 28);      /* Warm cream/sand surface */
+  --color-hallmark-paper-dark: oklch(94% 0.010 28); /* Elevated surface */
+  --color-hallmark-ink: oklch(18% 0.012 28);        /* Primary text / high-contrast reading */
+  --color-hallmark-ink-muted: oklch(55% 0.010 28);  /* Muted lettering */
+  --color-hallmark-rule: oklch(85% 0.012 28);       /* Hairline layout divisions */
   
-  --font-display: 'Space Mono', monospace;          /* Display typography (mono slab) */
-  --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;
-  --font-outlier: 'Space Mono', monospace;
+  --font-display: 'Cabinet Grotesk', 'Geist', 'Space Mono', monospace;
+  --font-body: 'Switzer', 'Geist', 'Inter', sans-serif;
+  --font-outlier: 'Geist Mono', 'Space Mono', monospace;
 
-  /* Braun Dial Orange Accent */
-  --color-brand: oklch(62% 0.16 35);                /* Orange dial #E05315-like */
-  --color-accent-red: oklch(62% 0.16 35);
-  --color-accent-green: oklch(62% 0.16 35);
-  --color-accent-blue: oklch(62% 0.16 35);
+  /* Accent Colors */
+  --color-brand: oklch(52% 0.16 28);                /* Clay Terracotta */
+  --color-accent-red: oklch(52% 0.16 28);
+  --color-accent-green: oklch(45% 0.08 140);
+  --color-accent-blue: oklch(60% 0.15 28);
 }
 
 /* ==========================================================================
