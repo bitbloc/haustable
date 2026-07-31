@@ -617,34 +617,64 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 {/* ─── SECTION 3: CONNECT / LINKS ─── */}
                 {activeSection === 'connect' && (
                     <div className="space-y-4 flex-grow animate-fade-in">
-                        
-                                <LinkCard 
-                                    href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9" 
-                                    icon={<MapPin size={12} />} 
-                                    title="GOOGLE MAPS DIRECTION" 
-                                    bg="bg-[var(--color-brand)] text-white hover:opacity-90" 
-                                    wide 
-                                    id="cta-maps" 
-                                    onClick={(e) => handleDirectionsClick(e, "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9")}
-                                />
-                                
-                                <div className="flex gap-2">
-                                    <LinkCard 
-                                        href="https://www.facebook.com/inthehausth" 
-                                        icon={<ExternalLink size={10} />} 
-                                        title="FACEBOOK" 
-                                        bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:bg-neutral-100/50" 
-                                        id="cta-facebook" 
-                                    />
-                                    <LinkCard 
-                                        href="https://instagram.com/inthehausth" 
-                                        icon={<ExternalLink size={10} />} 
-                                        title="INSTAGRAM" 
-                                        bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:bg-neutral-100/50" 
-                                        id="cta-instagram" 
-                                    />
-                                </div>
+                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
+                                <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                    03.1 // RESERVATION & DELIVERY
+                                </h3>
                             </div>
+                            
+                            <LinkCard 
+                                href={settings?.link_url_1 || "https://lin.ee/xyz"} 
+                                title={settings?.link_title_1 || "LINE OA // จองโต๊ะ หรือ สั่งอาหาร"} 
+                                bg="bg-[#06C755] text-white hover:bg-[#05b34c]" 
+                                wide 
+                            />
+                            
+                            <LinkCard 
+                                href="tel:0948924666" 
+                                title="094-892-4666 // โทรติดต่อร้าน" 
+                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
+                                wide 
+                            />
+                        </div>
+
+                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
+                                <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                    03.2 // SOCIAL MEDIA
+                                </h3>
+                            </div>
+                            
+                            <LinkCard 
+                                href={settings?.link_url_2 || "https://instagram.com"} 
+                                title={settings?.link_title_2 || "INSTAGRAM // @inthehaus.th"} 
+                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
+                                wide 
+                            />
+                            
+                            <LinkCard 
+                                href={settings?.link_url_3 || "https://facebook.com"} 
+                                title={settings?.link_title_3 || "FACEBOOK // IN THE HAUS"} 
+                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
+                                wide 
+                            />
+                        </div>
+
+                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
+                                <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
+                                    03.3 // LOCATION
+                                </h3>
+                            </div>
+                            
+                            <LinkCard 
+                                href={settings?.link_url_4 || "https://maps.google.com"} 
+                                title={settings?.link_title_4 || "GOOGLE MAPS // นำทางมาร้าน"} 
+                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
+                                wide 
+                                onClick={(e) => handleDirectionsClick(e, settings?.link_url_4)}
+                            />
                         </div>
 
                         {/* Delivery */}
