@@ -39,3 +39,8 @@ All user interfaces in this project must be designed following a clean, minimali
 - **Designer Handcrafted Touch**: Every modal, card, or panel must feel handcrafted by a high-end human designer — clear visual hierarchy, upright headings, subtle micro-interactions, no generic boilerplate visuals or AI Tells.
 - **Hallmark Pre-Emit Critique**: All UI components must satisfy Hallmark anti-slop rules (`/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */`).
 
+### 6. Neo-Brutalist Structural Grid (Tabular Layout)
+- **Structural Headers & Tabular Layout**: When designing navigation bars, headers, or footers, prefer a brutalist tabular layout over floating pills. Use full-bleed container blocks divided strictly by 1px solid borders (`border-[var(--color-rule)]`).
+- **Cellular Division**: Treat header sections (Logo, Nav Links, CTAs, Status Indicators) as distinct CSS flex/grid cells with explicit vertical/horizontal borders separating them. 
+- **High Contrast Accent Banners**: Use a bright, high-contrast banner (e.g., Neon Yellow `#E9F344` or Thai Modern Accent) with uppercase monospace text to denote important states or decorative marquees.
+- **Stark CTAs**: Use stark background color contrast for Primary CTAs (e.g., solid `var(--color-ink)` with paper-colored text) that fill their entire grid cell.

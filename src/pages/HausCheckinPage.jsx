@@ -607,7 +607,7 @@ export default function HausCheckinPage() {
                     </a>
 
                     {/* Filters as Tab Links */}
-                    <div className="flex-1 flex items-center overflow-x-auto scrollbar-hide bg-[var(--color-paper-2,#F4F1EA)]">
+                    <div className="flex-1 min-w-0 flex items-center overflow-x-auto overflow-y-hidden scrollbar-hide bg-[var(--color-paper-2,#F4F1EA)] touch-pan-x">
                         {['all', 'instagram', 'facebook', 'google'].map(tab => (
                             <button
                                 key={tab}
