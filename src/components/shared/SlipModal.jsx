@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -273,12 +273,6 @@ export default function SlipModal({ booking, type, onClose }) {
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
                         }
-
-                        // Print Other slip (OTHER ORDER / ใบออเดอร์ทั่วไป)
-                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
-                        if (otherBytes) {
-                            await printToSunmiBuiltIn(otherBytes);
-                        }
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
@@ -307,15 +301,7 @@ export default function SlipModal({ booking, type, onClose }) {
     const getPrintHtml = () => {
         const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
         
-        let staffName = ''
-        try {
-            const shift = JSON.parse(localStorage.getItem('pos_current_shift'))
-            if (shift && shift.staffName) {
-                staffName = shift.staffName
-            }
-        } catch (e) {
-            console.error(e)
-        }
+        let staffName = resolveStaffDisplayName(booking);
         
         const kitchenCatIds = printerConfig.kitchen_categories || [];
         const barCatIds = printerConfig.bar_categories || [];
@@ -333,11 +319,9 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else {
             if (activeTab === 'kitchen') {
-                filteredItems = filteredItems.filter(item => kitchenCatIds.includes(item.menu_items?.category_id));
+                filteredItems = filteredItems.filter(item => !barCatIds.includes(item.menu_items?.category_id));
             } else if (activeTab === 'bar') {
                 filteredItems = filteredItems.filter(item => barCatIds.includes(item.menu_items?.category_id));
-            } else if (activeTab === 'other') {
-                filteredItems = filteredItems.filter(item => !kitchenCatIds.includes(item.menu_items?.category_id) && !barCatIds.includes(item.menu_items?.category_id));
             }
         }
 
@@ -739,17 +723,16 @@ export default function SlipModal({ booking, type, onClose }) {
 
                     <div class="center-flex" style="margin-top: 10px;">
                         <div class="queue-box">
-                            <div class="queue-label">${isPickupOrder ? 'PICKUP QUEUE / คิวรับสินค้า' : 'TABLE / โต๊ะ'}</div>
-                            <div class="queue-val">${booking.tables_layout?.table_name || (isPickupOrder ? `คิว #${queueNo}` : 'WALK-IN')}</div>
+                            <div class="queue-label">${isPickupOrder ? 'PICKUP QUEUE / รหัสสินค้า' : 'TABLE / โต๊ะ'}</div>
+                            <div class="queue-val">${booking.tables_layout?.table_name || (isPickupOrder ? `#${queueNo}` : 'WALK-IN')}</div>
                         </div>
                     </div>
                     
                     <div class="meta">
                         <div class="row"><span class="label">ช่องทาง / SOURCE</span> <span class="val" style="font-weight: bold;">${(isOnlinePickup || isOnlineBooking) ? 'ONLINE (ออนไลน์)' : 'IN HAUS (หน้าร้าน)'}</span></div>
                         <div class="row"><span class="label">บริการ / SERVICE</span> <span class="val" style="font-weight: bold;">${isOnlinePickup ? 'ONLINE PICKUP (รับกลับออนไลน์)' : (isOnlineBooking ? 'ONLINE BOOKING (จองโต๊ะออนไลน์)' : (isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'))}</span></div>
-                        <div class="row"><span class="label">หมายเลขคิว / QUEUE</span> <span class="val">#${queueNo}</span></div>
                         <div class="row"><span class="label">วันที่ออกบิล / DATE</span> <span class="val">${dateStr}</span></div>
-                        <div class="row"><span class="label">เวลานัดหมาย / TIME</span> <span class="val">${formattedBookingTimeStr}</span></div>
+                        ${isOnlineSource ? `<div class="row"><span class="label">เวลานัดหมาย / TIME</span> <span class="val">${formattedBookingTimeStr}</span></div>` : ''}
                         <div class="row"><span class="label">ลูกค้า / GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}</span></div>
                         <div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || booking.guest_count || 1} คน</span></div>
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">เบอร์โทร / PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
@@ -800,15 +783,8 @@ export default function SlipModal({ booking, type, onClose }) {
         let btDeviceName = '';
         let paperSize = '58mm';
         
-        if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
-            printerType = printerConfig.kitchen_printer_type || 'sunmi';
-            btDeviceName = printerConfig.kitchen_printer_bt_name || '';
-            paperSize = printerConfig.kitchen_paper_size || '58mm';
-        } else {
-            printerType = printerConfig.cashier_printer_type || 'sunmi';
-            btDeviceName = printerConfig.cashier_printer_bt_name || '';
-            paperSize = printerConfig.cashier_paper_size || '58mm';
-        }
+        printerType = 'sunmi';
+        paperSize = '80mm';
 
         const receiptConfig = {
             shopName: receiptShopName,
@@ -843,7 +819,7 @@ export default function SlipModal({ booking, type, onClose }) {
                             toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                         }
                     } else {
-                        // Split into kitchen, bar, other
+                        // Split into kitchen and bar
                         let printedAny = false;
                         const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                         if (kitchenBytes) {
@@ -853,11 +829,6 @@ export default function SlipModal({ booking, type, onClose }) {
                         const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                         if (barBytes) {
                             await printToSunmiBuiltIn(barBytes);
-                            printedAny = true;
-                        }
-                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                        if (otherBytes) {
-                            await printToSunmiBuiltIn(otherBytes);
                             printedAny = true;
                         }
                         if (!printedAny) {

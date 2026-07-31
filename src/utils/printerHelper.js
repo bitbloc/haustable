@@ -9,11 +9,26 @@ export const getPrinterConfig = () => {
     try {
         const stored = localStorage.getItem('onhaus_printer_config');
         if (stored) {
-            cachedPrinterConfig = JSON.parse(stored);
+            cachedPrinterConfig = {
+                printer_type: 'sunmi',
+                cashier_printer_type: 'sunmi',
+                kitchen_printer_type: 'sunmi',
+                paper_width: '80mm',
+                cashier_paper_size: '80mm',
+                kitchen_paper_size: '80mm',
+                ...JSON.parse(stored)
+            };
             return cachedPrinterConfig;
         }
     } catch (e) {}
-    return {};
+    return {
+        printer_type: 'sunmi',
+        cashier_printer_type: 'sunmi',
+        kitchen_printer_type: 'sunmi',
+        paper_width: '80mm',
+        cashier_paper_size: '80mm',
+        kitchen_paper_size: '80mm'
+    };
 };
 
 export const fetchPrinterConfigOnline = async () => {
@@ -312,13 +327,12 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         return Math.max(20, Math.min(64, Math.floor(configured)));
     }
     const normalized = String(paperSize ?? '').toLowerCase().replace(/\s+/g, '');
-    const is80mm = (
-        normalized === '80mm' ||
-        normalized === '80' ||
-        Number(paperSize) === 80 ||
-        /^80(?:mm)?(?:x|\*|×)80(?:mm)?$/.test(normalized)
+    const is58mm = (
+        normalized === '58mm' ||
+        normalized === '58' ||
+        Number(paperSize) === 58
     );
-    return is80mm ? 42 : 32;
+    return is58mm ? 26 : 36;
 }
 
 // Classifier helper to categorize menu items into kitchen, bar, or other
@@ -373,6 +387,47 @@ export const classifyItem = (item, receiptConfig = {}) => {
     return 'kitchen';
 };
 
+export function resolveStaffDisplayName(booking = {}, shiftObj = null) {
+    let raw = '';
+    if (booking.staff_name) raw = booking.staff_name;
+    else if (booking.staff?.display_name) raw = booking.staff.display_name;
+    else if (booking.staff && typeof booking.staff === 'string') raw = booking.staff;
+    else if (booking.profiles?.display_name) raw = booking.profiles.display_name;
+
+    if (!raw) {
+        let shift = shiftObj;
+        if (!shift) {
+            try { shift = JSON.parse(localStorage.getItem('pos_current_shift')); } catch (e) {}
+        }
+        if (shift && shift.staffName) raw = shift.staffName;
+    }
+
+    if (!raw) {
+        try {
+            const activeStaff = localStorage.getItem('pos_active_staff') || localStorage.getItem('pos_staff_user');
+            if (activeStaff) {
+                const p = JSON.parse(activeStaff);
+                if (p.display_name || p.name) raw = p.display_name || p.name;
+            }
+        } catch (e) {}
+    }
+
+    if (!raw) return '';
+
+    const isUuidOrId = /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(raw) || /^[0-9a-f]{16,}$/i.test(raw) || /^usr_/i.test(raw) || /^default_/i.test(raw);
+    if (isUuidOrId) {
+        try {
+            const cachedStaff = JSON.parse(localStorage.getItem('pos_cache_staff_list')) || [];
+            const found = cachedStaff.find(s => s.id === raw || s.user_id === raw);
+            if (found && found.display_name) return found.display_name;
+        } catch (e) {}
+
+        if (booking.profiles?.display_name) return booking.profiles.display_name;
+    }
+
+    return raw;
+}
+
 export const selectItemsForTab = (orderItems = [], activeTab = 'receipt', receiptConfig = {}) => {
     let items = orderItems || [];
     if (activeTab === 'receipt') {
@@ -382,6 +437,15 @@ export const selectItemsForTab = (orderItems = [], activeTab = 'receipt', receip
 
     if (activeTab === 'kitchen_all' || activeTab === 'receipt') {
         return items;
+    }
+
+    if (activeTab === 'bar') {
+        return items.filter(item => classifyItem(item, receiptConfig) === 'bar');
+    }
+
+    if (activeTab === 'kitchen') {
+        // Kitchen receives all non-bar items (food and other) so no 3rd slip is needed
+        return items.filter(item => classifyItem(item, receiptConfig) !== 'bar');
     }
 
     return items.filter(item => classifyItem(item, receiptConfig) === activeTab);
@@ -557,13 +621,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const shopVat = receiptConfig.shopVat || cfg.shop_vat || '';
     const shopFooter = receiptConfig.shopFooter || cfg.shop_footer_text || '';
 
-    let staffName = '';
-    try {
-        const shift = JSON.parse(localStorage.getItem('pos_current_shift'));
-        if (shift && shift.staffName) {
-            staffName = shift.staffName;
-        }
-    } catch (e) {}
+    let staffName = resolveStaffDisplayName(booking);
 
     // Determine Order Category & Source for Banner & Slip Proof
     const remarkLower = (booking.staff_remark || '').toLowerCase();
@@ -691,17 +749,21 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(isPickupOrder ? `คิวรับสินค้า: #${queueNo}` : `โต๊ะ ${tableName}`)
-               .line(`คิวออเดอร์: #${queueNo}`)
+               .line(isPickupOrder ? `รหัส: #${queueNo}` : `โต๊ะ ${tableName}`)
                .size(0, 0)
                .line(divider)
                .align('left')
                .bold(true)
                .line(`บริการ: ${serviceType}`)
                .line(`ลูกค้า: ${customerName}`)
-               .line(`พนักงานรับ: ${staffName.toUpperCase() || 'SYSTEM'}`)
-               .line(`เวลานัดหมาย: ${formattedBookingTimeStr}`)
-               .line(`จำนวนคน: ${booking.pax || booking.guest_count || 1} ท่าน`)
+               .line(`พนักงานรับ: ${staffName ? staffName.toUpperCase() : 'SYSTEM'}`)
+               .line(`เวลาสั่ง: ${dateStr}`);
+
+        if (isOnlineSource) {
+            encoder.line(`เวลานัดหมาย: ${formattedBookingTimeStr}`);
+        }
+
+        encoder.line(`จำนวนคน: ${booking.pax || booking.guest_count || 1} ท่าน`)
                .line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
                .bold(false)
                .line(divider);
@@ -709,8 +771,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(isPickupOrder ? `คิวรับสินค้า: #${queueNo}` : `โต๊ะ ${tableName}`)
-               .line(`คิว: #${queueNo}`)
+               .line(isPickupOrder ? `รหัส: #${queueNo}` : `โต๊ะ ${tableName}`)
                .size(0, 0)
                .bold(false)
                .line(divider);
@@ -730,9 +791,13 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(`ช่องทาง: ${channelText}`)
                .line(`ประเภทบริการ: ${isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : (isOnlineBooking ? 'จองโต๊ะออนไลน์ (RESERVATION)' : 'ทานที่ร้าน (DINE-IN)')}`)
                .bold(false)
-               .line(`วันที่-เวลา: ${dateStr}`)
-               .line(`เวลานัดหมาย: ${formattedBookingTimeStr}`)
-               .line(`ลูกค้า: ${customerName}`);
+               .line(`วันที่-เวลา: ${dateStr}`);
+
+        if (isOnlineSource) {
+            encoder.line(`เวลานัดหมาย: ${formattedBookingTimeStr}`);
+        }
+
+        encoder.line(`ลูกค้า: ${customerName}`);
 
         if (customerPhone) {
             encoder.line(`เบอร์โทร: ${customerPhone}`);
@@ -1483,24 +1548,13 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
 }
 
 // Convert shift report data to ESC/POS binary format
-export function encodeShiftReportData(reportData, paperSize = '58mm', printerType = 'universal') {
+export function encodeShiftReportData(reportData, paperSize = '80mm', printerType = 'sunmi') {
     return encodeShiftClosureReportData(reportData, paperSize, printerType);
 }
 
 // Convert shift closure report data to ESC/POS binary format for SUNMI / RawBT
-export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm', printerType = 'universal') {
-    if (!paperSize) {
-        try {
-            const stored = localStorage.getItem('onhaus_printer_config');
-            if (stored) {
-                const cfg = JSON.parse(stored);
-                if (cfg.cashier_paper_size || cfg.paper_width) {
-                    paperSize = cfg.cashier_paper_size || cfg.paper_width;
-                }
-            }
-        } catch (e) {}
-    }
-    paperSize = paperSize || '80mm';
+export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm', printerType = 'sunmi') {
+    paperSize = '80mm';
 
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
@@ -2039,11 +2093,6 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
             const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
             if (barBytes) {
                 await printToSunmiBuiltIn(barBytes);
-                printed = true;
-            }
-            const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-            if (otherBytes) {
-                await printToSunmiBuiltIn(otherBytes);
                 printed = true;
             }
             return printed;
