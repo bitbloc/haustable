@@ -2191,8 +2191,8 @@ export default function POSDashboard() {
                             /* Step 1: Enter PIN Code to Identify Staff */
                             <div className="flex flex-col gap-4">
                                 <div className="text-center">
-                                    <div className="w-14 h-14 bg-[#ff0000]/10 text-[#ff0000] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#ff0000]/20 shadow-inner">
-                                        <Users size={28} />
+                                    <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center rounded-full bg-white shadow-sm border border-[#D1D1CD]">
+                                        <img src="/logo.png" alt="In the Haus" className="w-10 h-10 object-contain" />
                                     </div>
                                     <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
                                     <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>
