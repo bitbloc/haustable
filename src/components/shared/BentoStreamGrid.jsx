@@ -40,24 +40,19 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
     const showFullImage = hasValidImage
 
     // Badges based on source
-    let badgeText = 'SOCIAL POST'
     let BadgeIcon = MessageSquare
     let badgeColorClass = showFullImage || textColor === 'text-white' ? 'border-white/40 text-white bg-black/20' : 'border-black/20 text-black bg-white/30'
     
     if (item.source === 'google') {
-        badgeText = 'GOOGLE REVIEW'
         BadgeIcon = MapPin
         badgeColorClass = 'text-[#23201D] bg-[#E9F344]/90 border-[#E9F344]/50'
     } else if (item.source === 'note') {
-        badgeText = 'GUEST NOTE'
         BadgeIcon = MessageSquare
         badgeColorClass = 'text-[#23201D] bg-white/90 border-white/50'
     } else if (item.source === 'instagram') {
-        badgeText = 'INSTAGRAM'
         BadgeIcon = Instagram
         badgeColorClass = 'text-white bg-pink-500/90 border-pink-400/50'
     } else if (item.source === 'facebook') {
-        badgeText = 'FACEBOOK'
         BadgeIcon = Facebook
         badgeColorClass = 'text-white bg-blue-500/90 border-blue-400/50'
     }
@@ -83,8 +78,8 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
                         crossOrigin="anonymous"
                         loading="lazy"
                     />
-                    {/* Dark gradient from bottom to make text readable but keep image very clear at the top */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity group-hover:from-black/90" />
+                    {/* Minimal overlay just for hover effect, no heavy gradient needed since text is removed */}
+                    <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
                 </div>
             )}
 
@@ -93,9 +88,8 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
                 
                 {/* Top Section: Badge & Rating */}
                 <div className="flex justify-between items-start">
-                    <span className={`px-3 py-1.5 text-[9px] font-sans font-bold tracking-wide uppercase border rounded-full backdrop-blur-md flex items-center gap-1.5 ${badgeColorClass}`}>
-                        <BadgeIcon size={12} />
-                        {badgeText}
+                    <span className={`w-8 h-8 rounded-full backdrop-blur-md flex items-center justify-center border shadow-sm ${badgeColorClass}`}>
+                        <BadgeIcon size={14} />
                     </span>
 
                     {item.rating && (
@@ -108,24 +102,23 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
                 </div>
 
                 {/* Middle/Bottom Section: Text & Actions */}
-                <div className={`mt-auto ${showFullImage ? 'text-white' : textColor}`}>
-                    <h3 className={`${bentoSpan.includes('row-span-2') ? 'text-xl md:text-2xl' : 'text-lg'} font-bold leading-[1.25] mb-4 line-clamp-[5]`} style={{ fontFamily: "Inter, 'IBM Plex Sans Thai', sans-serif", letterSpacing: "-0.01em" }}>
-                        {item.text ? `"${item.text}"` : `@${item.user?.name || item.user_name || "Guest"}`}
-                    </h3>
-
-                    <div className="flex items-end justify-between mt-6">
-                        {/* User Info */}
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-mono tracking-widest uppercase opacity-70 mb-1 font-bold">
-                                BY {item.user?.name || item.user_name || "GUEST"}
-                            </span>
-                            <span className="text-[10px] font-mono tracking-widest uppercase opacity-50">
-                                {item.date || 'Recently'}
-                            </span>
+                <div className={`mt-auto flex items-end justify-between ${showFullImage ? 'text-white' : textColor}`}>
+                    {/* Only show text if it's a text-only card (no image) */}
+                    {!showFullImage && (
+                        <div className="flex-1 pr-4">
+                            <h3 className={`${bentoSpan.includes('row-span-2') ? 'text-xl md:text-2xl' : 'text-lg'} font-bold leading-[1.25] mb-4 line-clamp-[5]`} style={{ fontFamily: "Inter, 'IBM Plex Sans Thai', sans-serif", letterSpacing: "-0.01em" }}>
+                                {item.text ? `"${item.text}"` : `@${item.user?.name || item.user_name || "Guest"}`}
+                            </h3>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-mono tracking-widest uppercase opacity-70 mb-1 font-bold">
+                                    BY {item.user?.name || item.user_name || "GUEST"}
+                                </span>
+                            </div>
                         </div>
+                    )}
 
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-2">
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 ml-auto">
                             {onLikeToggle && (
                                 <button
                                     onClick={(e) => {
