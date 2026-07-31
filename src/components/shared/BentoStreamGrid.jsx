@@ -140,7 +140,6 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
                                 <ArrowUpRight size={22} strokeWidth={2.5} />
                             </div>
                         </div>
-                    </div>
                 </div>
             </div>
         </motion.div>
