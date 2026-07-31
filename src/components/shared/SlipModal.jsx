@@ -509,7 +509,7 @@ export default function SlipModal({ booking, type, onClose }) {
             orderBannerTitle = 'ONLINE TABLE BOOKING';
             orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
         } else if (isPickupOrder) {
-            orderBannerTitle = 'IN-STORE PICKUP';
+            orderBannerTitle = 'IN-HAUS PICKUP';
             orderBannerSub = '(หน้าร้าน - สั่งกลับบ้าน)';
         } else {
             // Any Table Dine-In (QR ordering or POS table open)

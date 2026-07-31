@@ -1108,6 +1108,238 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </motion.div>
                     </motion.div>
                 )}
+
+                {/* Discount Modal */}
+                {activeModal === 'discount' && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.97, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.97, y: 10 }}
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
+                        >
+                            <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
+                                <div>
+                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[#1A1A1A]">Discount & Promos</h3>
+                                    <p className="text-xs text-[#767673] font-medium mt-0.5">ส่วนลดและโปรโมชัน</p>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveModal(null)} 
+                                    className="p-2 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-5 space-y-5 bg-white">
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">
+                                        Manual Discount / ส่วนลดกำหนดเอง
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-[#767673]">
+                                                {manualDiscountType === 'amount' ? '฿' : '%'}
+                                            </span>
+                                            <input
+                                                type="number"
+                                                placeholder="0.00"
+                                                value={manualDiscountVal}
+                                                onChange={(e) => setManualDiscountVal(e.target.value)}
+                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-8 pr-3 py-3 text-base font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-12"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => setManualDiscountType(manualDiscountType === 'amount' ? 'percent' : 'amount')}
+                                            className="px-4 bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] font-mono font-bold rounded-xl active:scale-95 transition-all cursor-pointer text-sm"
+                                        >
+                                            {manualDiscountType === 'amount' ? 'Baht (฿)' : 'Percent (%)'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">
+                                        Available Promos / โปรโมชันที่ใช้งานได้
+                                    </label>
+                                    {activePromotions && activePromotions.length > 0 ? (
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {activePromotions.map(promo => {
+                                                const isSelected = selectedPromo?.id === promo.id;
+                                                return (
+                                                    <button
+                                                        key={promo.id}
+                                                        onClick={() => setSelectedPromo(isSelected ? null : promo)}
+                                                        className={`w-full text-left p-3 rounded-xl border flex items-start gap-3 transition-all cursor-pointer touch-manipulation ${
+                                                            isSelected 
+                                                            ? 'bg-[#E6F4FF] border-blue-400 shadow-sm' 
+                                                            : 'bg-white border-[#D1D1CD] hover:border-gray-400'
+                                                        }`}
+                                                    >
+                                                        <Tag size={18} className={`mt-0.5 ${isSelected ? 'text-blue-600' : 'text-[#767673]'}`} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className={`font-bold text-sm truncate ${isSelected ? 'text-blue-900' : 'text-[#1A1A1A]'}`}>
+                                                                {promo.code} - {promo.name}
+                                                            </p>
+                                                            <p className={`text-xs mt-0.5 truncate ${isSelected ? 'text-blue-700' : 'text-[#767673]'}`}>
+                                                                ลด {promo.discount_type === 'percent' ? `${promo.discount_value}%` : `฿${promo.discount_value}`}
+                                                            </p>
+                                                        </div>
+                                                        {isSelected && <Check size={18} className="text-blue-600 shrink-0" />}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center font-mono text-xs font-bold text-[#767673] py-6 uppercase italic bg-[#F5F5F2] rounded-xl border border-dashed border-[#D1D1CD]">
+                                            No active promotions
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    className="w-full bg-[#1A1A1A] hover:bg-[#333330] text-white py-3.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow h-11"
+                                >
+                                    Apply & Close
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Checkout Modal */}
+                {activeModal === 'checkout' && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.97, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.97, y: 10 }}
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
+                        >
+                            <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
+                                <div>
+                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[#1A1A1A]">Payment & Checkout</h3>
+                                    <p className="text-xs text-[#767673] font-medium mt-0.5">ชำระเงินและปิดบิล</p>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveModal(null)} 
+                                    className="p-2 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            
+                            <div className="p-5 space-y-5 bg-white">
+                                <div className="text-center bg-[#EBEBE9] py-4 rounded-xl border border-[#D1D1CD]">
+                                    <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider mb-1">Total Amount</p>
+                                    <p className="text-4xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{netTotal.toFixed(2)}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">Payment Method</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPaymentMethod('cash')}
+                                            className={`py-3 rounded-xl border font-mono font-bold text-sm uppercase tracking-wider transition-all flex flex-col items-center gap-1 cursor-pointer touch-manipulation ${paymentMethod === 'cash' ? 'bg-[#1A1A1A] text-white border-black shadow-md' : 'bg-white text-[#1A1A1A] border-[#D1D1CD] hover:border-black/30'}`}
+                                        >
+                                            <Banknote size={20} />
+                                            CASH
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPaymentMethod('qr')}
+                                            className={`py-3 rounded-xl border font-mono font-bold text-sm uppercase tracking-wider transition-all flex flex-col items-center gap-1 cursor-pointer touch-manipulation ${paymentMethod === 'qr' ? 'bg-[#1A1A1A] text-white border-black shadow-md' : 'bg-white text-[#1A1A1A] border-[#D1D1CD] hover:border-black/30'}`}
+                                        >
+                                            <QrCode size={20} />
+                                            QR PROMPTPAY
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {paymentMethod === 'cash' && (
+                                    <div className="space-y-2 animate-in fade-in duration-200">
+                                        <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">Cash Received</p>
+                                        <input
+                                            type="number"
+                                            placeholder={`e.g. ${Math.ceil(netTotal / 100) * 100}`}
+                                            value={cashReceivedInput}
+                                            onChange={(e) => setCashReceivedInput(e.target.value)}
+                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-2xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[var(--color-accent)] h-14 placeholder:text-gray-300"
+                                        />
+                                        
+                                        <div className="grid grid-cols-4 gap-1.5 mt-2">
+                                            {[100, 500, 1000].map(amt => (
+                                                <button
+                                                    key={amt}
+                                                    type="button"
+                                                    onClick={() => setCashReceivedInput(String(amt))}
+                                                    className="py-2 bg-[#F5F5F2] border border-[#D1D1CD] hover:border-[#1A1A1A] rounded-lg font-mono font-bold text-sm text-[#1A1A1A] transition-colors cursor-pointer"
+                                                >
+                                                    ฿{amt}
+                                                </button>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => setCashReceivedInput(String(Math.ceil(netTotal)))}
+                                                className="py-2 bg-[#E6F4FF] border border-blue-200 hover:border-blue-400 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider text-blue-700 transition-colors cursor-pointer"
+                                            >
+                                                EXACT
+                                            </button>
+                                        </div>
+
+                                        {parseFloat(cashReceivedInput) > 0 && parseFloat(cashReceivedInput) >= netTotal && (
+                                            <div className="flex justify-between items-center px-4 py-3 bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl mt-3 text-[#1A1A1A]">
+                                                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#767673]">Change Due</span>
+                                                <span className="text-xl font-mono font-bold">฿{(parseFloat(cashReceivedInput) - netTotal).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
+                                <button
+                                    type="button"
+                                    disabled={paymentMethod === 'cash' && (parseFloat(cashReceivedInput) < netTotal || !cashReceivedInput)}
+                                    onClick={() => {
+                                        if (onCheckout) {
+                                            onCheckout(
+                                                booking?.id,
+                                                netTotal,
+                                                paymentMethod,
+                                                totalDiscount,
+                                                xhausToEarn,
+                                                xhausToRedeem,
+                                                xhausDiscount,
+                                                appliedReward?.claim_code || null,
+                                                appliedReward?.id || null
+                                            );
+                                        }
+                                        setActiveModal(null);
+                                    }}
+                                    className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-4 rounded-xl font-mono text-sm font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <Check size={18} />
+                                    Confirm Payment
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
             {/* Edit Guest Count (Pax) Modal */}

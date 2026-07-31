@@ -162,7 +162,7 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                                 </span>
                                             ) : (
                                                 <span className="bg-purple-100 text-purple-700 border border-purple-200 text-[9px] font-mono font-bold px-2 py-0.5 rounded tracking-widest uppercase">
-                                                    [ IN-STORE ]
+                                                    [ IN-HAUS ]
                                                 </span>
                                             )}
                                         </div>

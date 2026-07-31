@@ -587,7 +587,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         orderBannerTitle = 'ONLINE TABLE BOOKING';
         orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
     } else if (isPickupOrder) {
-        orderBannerTitle = 'IN-STORE PICKUP';
+        orderBannerTitle = 'IN HAUS PICKUP';
         orderBannerSub = '(หน้าร้าน - สั่งกลับบ้าน)';
     } else {
         // Any Table Dine-In (QR ordering or POS table open)
@@ -722,7 +722,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         if (isOnlinePickup || isOnlineBooking) {
             channelText = 'ONLINE (ออนไลน์)';
         } else if (isPickupOrder) {
-            channelText = 'IN-STORE (หน้าร้าน)';
+            channelText = 'IN-HAUS (หน้าร้าน)';
         }
 
         encoder.align('left')
