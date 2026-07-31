@@ -18,7 +18,7 @@ import {
     X
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import DraggableGrid from '../components/shared/DraggableGrid'
+import BentoStreamGrid from '../components/shared/BentoStreamGrid'
 import { toast } from 'sonner'
 
 // Helper for image compression proxy (similar to AdsLandingPage)
@@ -548,28 +548,22 @@ export default function HausCheckinPage() {
     }
 
     return (
-        <div className="haus-checkin-page w-screen h-screen bg-[var(--color-paper,#FBF9F5)] text-[var(--color-ink,#23201D)] font-sans relative overflow-hidden fixed inset-0">
+        <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] text-[var(--color-ink,#23201D)] font-sans relative overflow-x-hidden">
             
             {/* Background noise grid for light modern technical look */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(35,32,29,0.025)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(35,32,29,0.025)_1px,_transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0" />
+            <div className="fixed inset-0 bg-[linear-gradient(rgba(35,32,29,0.025)_1px,_transparent_1px),_linear-gradient(90deg,_rgba(35,32,29,0.025)_1px,_transparent_1px)] bg-[size:32px_32px] pointer-events-none z-0" />
             
-            {/* ─── IMMERSIVE FULLSCREEN GRID ─── */}
-            <div className="w-full h-full relative z-10 overflow-hidden">
+            {/* ─── BENTO STREAM GRID ─── */}
+            <div className="w-full relative z-10 pb-20">
                 {filteredItems.length > 0 ? (
-                    <DraggableGrid 
+                    <BentoStreamGrid 
                         items={filteredItems}
-                        columns={14}
-                        imageWidth={256}
-                        imageHeight={320}
-                        rounded={1}
-                        gap={4}
-                        enableWheel={true}
                         onItemClick={handleItemClick}
                         likedIds={likedIds}
                         onLikeToggle={handleLikeToggle}
                     />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center font-mono">
+                    <div className="w-full h-screen flex flex-col items-center justify-center gap-2 text-center font-mono">
                         <p className="text-xs text-[var(--color-neutral,#888279)] uppercase tracking-widest font-bold border border-[var(--color-rule,#E2DDD3)] px-4 py-2 bg-[var(--color-paper-2,#F4F1EA)]">
                             NO ATMOSPHERE POSTS FOUND
                         </p>
@@ -623,9 +617,9 @@ export default function HausCheckinPage() {
 
             {/* ─── BOTTOM CONSOLE BAR (Platform filters & stats) ─── */}
             <div className="fixed bottom-4 left-4 right-4 z-40 bg-[var(--color-paper-2,#F4F1EA)]/90 backdrop-blur-md border border-[var(--color-rule,#E2DDD3)] px-4 py-2.5 rounded-xs flex items-center justify-between gap-4 shadow-sm select-none">
-                {/* Left section: drag help */}
+                {/* Left section: scroll help */}
                 <div className="hidden lg:flex items-center gap-2 text-[9px] font-mono text-[var(--color-muted,#656058)] uppercase tracking-wider font-semibold">
-                    <span>CLICK & DRAG TO EXPLORE</span>
+                    <span>SCROLL TO EXPLORE</span>
                 </div>
 
                 {/* Center section: filter tabs */}
