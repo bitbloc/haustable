@@ -9,8 +9,44 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     const [ratio, setRatio] = useState('4:5'); // '1:1' or '4:5'
     const [styleMode, setStyleMode] = useState('swiss'); // 'swiss' | 'brutalist'
     const [logoScale, setLogoScale] = useState(1.0);
+    const [logoPos, setLogoPos] = useState({ x: 0, y: 0 });
+    const [imageRadius, setImageRadius] = useState(32);
+    const [gridGap, setGridGap] = useState(24);
     const [items, setItems] = useState(checkins.slice(0, 6));
     const [customLogo, setCustomLogo] = useState(null);
+    const fileInputRef = useRef();
+    const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
+    const handlePointerDown = (e) => {
+        dragRef.current.isDragging = true;
+        dragRef.current.startX = e.clientX;
+        dragRef.current.startY = e.clientY;
+        dragRef.current.initialX = logoPos.x;
+        dragRef.current.initialY = logoPos.y;
+        e.target.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e) => {
+        if (!dragRef.current.isDragging) return;
+        setLogoPos({
+            x: dragRef.current.initialX + (e.clientX - dragRef.current.startX),
+            y: dragRef.current.initialY + (e.clientY - dragRef.current.startY)
+        });
+    };
+
+    const handlePointerUp = (e) => {
+        dragRef.current.isDragging = false;
+        e.target.releasePointerCapture(e.pointerId);
+    };
+
+    const handleLogoClick = (e) => {
+        // Prevent click if it was a drag
+        if (Math.abs(e.clientX - dragRef.current.startX) > 5 || Math.abs(e.clientY - dragRef.current.startY) > 5) {
+            e.preventDefault();
+            return;
+        }
+        fileInputRef.current?.click();
+    };
 
     const isPortrait = ratio === '4:5';
     const canvasWidth = 1080;
@@ -68,14 +104,16 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     };
 
     const renderBrutalistGrid = () => {
-        const gridClasses = "w-full flex-1 p-6 grid gap-6 bg-[#F4F1EA] border-b-[4px] border-[#23201D]";
-        const itemClasses = "relative w-full h-full overflow-hidden rounded-[32px] border-[4px] border-[#23201D] shadow-[4px_4px_0_0_#23201D] bg-white";
+        const gridClasses = "w-full flex-1 grid bg-[#F4F1EA] border-b-[4px] border-[#23201D]";
+        const itemClasses = "relative w-full h-full overflow-hidden border-[4px] border-[#23201D] shadow-[4px_4px_0_0_#23201D] bg-white";
+        const gridStyle = { gap: `${gridGap}px`, padding: `${gridGap}px` };
+        const itemStyle = { borderRadius: `${imageRadius}px` };
 
         if (items.length === 6) {
             return (
-                <div className={`${gridClasses} grid-cols-3 grid-rows-2`}>
+                <div className={`${gridClasses} grid-cols-3 grid-rows-2`} style={gridStyle}>
                     {items.map((item, i) => (
-                        <div key={item.id || i} className={itemClasses}>
+                        <div key={item.id || i} className={itemClasses} style={itemStyle}>
                             <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
                         </div>
                     ))}
@@ -83,11 +121,11 @@ export default function HauspeopleExporter({ checkins, onClose }) {
             );
         } else if (items.length === 5) {
             return (
-                <div className={`${gridClasses} grid-cols-6 grid-rows-2`}>
+                <div className={`${gridClasses} grid-cols-6 grid-rows-2`} style={gridStyle}>
                     {items.map((item, i) => {
                         let colSpan = i < 2 ? 'col-span-3' : 'col-span-2';
                         return (
-                            <div key={item.id || i} className={`${colSpan} ${itemClasses}`}>
+                            <div key={item.id || i} className={`${colSpan} ${itemClasses}`} style={itemStyle}>
                                 <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
                             </div>
                         );
@@ -96,9 +134,9 @@ export default function HauspeopleExporter({ checkins, onClose }) {
             );
         } else {
             return (
-                <div className={`${gridClasses} grid-cols-2 grid-rows-2`}>
+                <div className={`${gridClasses} grid-cols-2 grid-rows-2`} style={gridStyle}>
                     {items.map((item, i) => (
-                        <div key={item.id || i} className={itemClasses}>
+                        <div key={item.id || i} className={itemClasses} style={itemStyle}>
                             <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
                         </div>
                     ))}
@@ -148,15 +186,6 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-2 ml-4">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Logo Size</span>
-                        <input 
-                            type="range" 
-                            min="0.5" max="4" step="0.1" 
-                            value={logoScale} 
-                            onChange={(e) => setLogoScale(parseFloat(e.target.value))}
-                            className="w-24 accent-[#23201D]"
-                        />
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -196,6 +225,28 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                 </div>
             </div>
 
+            {/* Adjustments Toolbar */}
+            <div className="h-12 border-b border-[#E2DDD3] flex items-center px-6 bg-[#FBF9F5] shrink-0 gap-6 overflow-x-auto text-xs">
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-500 uppercase whitespace-nowrap">Logo Size</span>
+                    <input type="range" min="0.5" max="4" step="0.1" value={logoScale} onChange={(e) => setLogoScale(parseFloat(e.target.value))} className="w-20 accent-[#23201D]" />
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-500 uppercase whitespace-nowrap">Image Radius</span>
+                    <input type="range" min="0" max="200" step="1" value={imageRadius} onChange={(e) => setImageRadius(parseInt(e.target.value))} className="w-24 accent-[#23201D]" />
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-500 uppercase whitespace-nowrap">Grid Gap</span>
+                    <input type="range" min="0" max="100" step="1" value={gridGap} onChange={(e) => setGridGap(parseInt(e.target.value))} className="w-24 accent-[#23201D]" />
+                </div>
+                <button 
+                    onClick={() => setLogoPos({x: 0, y: 0})} 
+                    className="px-3 py-1 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors font-bold text-gray-600 whitespace-nowrap"
+                >
+                    Reset Logo Pos
+                </button>
+            </div>
+
             {/* Canvas Preview Area */}
             <div className="flex-1 overflow-auto bg-[#ECECE9] p-8 flex justify-center items-start">
                 <div style={{ transform: 'scale(0.55)', transformOrigin: 'top center', marginBottom: '100px' }} className="shadow-2xl">
@@ -214,16 +265,24 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                             }}
                         >
                             {/* Huge Title & Logo (Swiss Grotesk Style) */}
-                            <div className="absolute top-[70px] left-[80px] flex flex-col items-start gap-4 z-10">
-                                <label className="cursor-pointer group relative block" title="คลิกเพื่ออัปโหลดโลโก้ใหม่ (PNG)">
-                                    <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'top left' }} className="transition-transform">
+                            <div className="absolute top-[70px] left-[80px] flex flex-col items-start gap-4 z-20">
+                                <div 
+                                    className="cursor-move group relative block" 
+                                    title="ลากเพื่อย้าย / คลิกเพื่ออัปโหลดโลโก้"
+                                    style={{ left: logoPos.x, top: logoPos.y, position: 'relative' }}
+                                    onPointerDown={handlePointerDown}
+                                    onPointerMove={handlePointerMove}
+                                    onPointerUp={handlePointerUp}
+                                    onClick={handleLogoClick}
+                                >
+                                    <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'top left' }} className="transition-transform pointer-events-none">
                                         <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
                                     </div>
-                                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded pointer-events-none">
                                         <Upload size={16} className="text-[#1A1A1A]" />
                                     </div>
-                                    <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
-                                </label>
+                                    <input ref={fileInputRef} type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
+                                </div>
                                 <div className="text-[42px] font-mono font-bold tracking-tighter text-[#1A1A1A] leading-[1]">
                                     people in<br/>the haus.
                                 </div>
@@ -245,7 +304,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                         </span>
                                         <div 
                                             className="overflow-hidden bg-gray-200"
-                                            style={{ width: config.width, height: config.height }}
+                                            style={{ width: config.width, height: config.height, borderRadius: `${imageRadius}px` }}
                                         >
                                             <img 
                                                 src={getExportImageUrl(item.image_url)} 
@@ -274,16 +333,24 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         >
                             {/* HEADER (h: 120px) */}
                             <div className="h-[120px] border-b-[4px] border-[#23201D] flex w-full bg-[#E9F344] shrink-0">
-                                <div className="w-[300px] border-r-[4px] border-[#23201D] flex items-center justify-center bg-white relative">
-                                    <label className="cursor-pointer group relative block" title="คลิกเพื่ออัปโหลดโลโก้ใหม่ (PNG)">
-                                        <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'center' }} className="transition-transform">
+                                <div className="w-[300px] border-r-[4px] border-[#23201D] flex items-center justify-center bg-white relative z-20">
+                                    <div 
+                                        className="cursor-move group relative block" 
+                                        title="ลากเพื่อย้าย / คลิกอัปโหลดโลโก้"
+                                        style={{ left: logoPos.x, top: logoPos.y, position: 'relative' }}
+                                        onPointerDown={handlePointerDown}
+                                        onPointerMove={handlePointerMove}
+                                        onPointerUp={handlePointerUp}
+                                        onClick={handleLogoClick}
+                                    >
+                                        <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'center' }} className="transition-transform pointer-events-none">
                                             <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
                                         </div>
-                                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded pointer-events-none">
                                             <Upload size={16} className="text-[#1A1A1A]" />
                                         </div>
-                                        <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
-                                    </label>
+                                        <input ref={fileInputRef} type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
+                                    </div>
                                 </div>
                                 <div className="flex-1 flex flex-col justify-center px-10">
                                     <h1 contentEditable suppressContentEditableWarning className="font-mono text-[42px] leading-none font-black tracking-tighter text-[#23201D] uppercase outline-none cursor-text focus:border-b-2 border-black/20 w-fit">
