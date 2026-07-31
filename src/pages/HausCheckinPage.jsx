@@ -541,11 +541,12 @@ export default function HausCheckinPage() {
 
     if (loading) {
         return (
-            <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] relative overflow-x-hidden pt-[112px] pb-24 px-4 md:px-6">
+            <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] relative overflow-x-hidden pt-[140px] md:pt-[112px] pb-24 px-4 md:px-6">
                 {/* Structural Top Header Placeholder */}
                 <div className="fixed top-0 left-0 right-0 z-40 flex flex-col w-full shadow-sm bg-[var(--color-paper,#FBF9F5)]">
                     <div className="w-full bg-[#E9F344] h-[32px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
                     <div className="w-full h-[52px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
+                    <div className="w-full h-[44px] md:hidden border-b border-[var(--color-rule,#E2DDD3)] bg-[var(--color-paper-2,#F4F1EA)]"></div>
                 </div>
                 
                 <div className="w-full max-w-[1600px] mx-auto mt-4">
@@ -599,15 +600,37 @@ export default function HausCheckinPage() {
                 </div>
                 
                 {/* Main Header Bar */}
-                <header className="bg-[var(--color-paper,#FBF9F5)] border-b border-[var(--color-rule,#E2DDD3)] flex h-[52px]">
-                    {/* Logo / Back */}
-                    <a href="/link" className="flex items-center justify-center px-4 md:px-8 border-r border-[var(--color-rule,#E2DDD3)] hover:bg-[var(--color-paper-2,#F4F1EA)] transition-colors cursor-pointer text-[var(--color-ink,#23201D)] flex-shrink-0">
-                        <ArrowLeft size={16} className="mr-2 md:mr-3" />
-                        <span className="font-mono text-[11px] md:text-[12px] font-extrabold tracking-widest uppercase">{shopName}</span>
-                    </a>
+                <header className="bg-[var(--color-paper,#FBF9F5)] border-b border-[var(--color-rule,#E2DDD3)] flex flex-col md:flex-row h-auto md:h-[52px]">
+                    {/* Top Row on Mobile / Left on Desktop */}
+                    <div className="flex h-[52px] w-full md:w-auto border-b md:border-b-0 border-[var(--color-rule,#E2DDD3)]">
+                        {/* Logo / Back */}
+                        <a href="/link" className="flex items-center justify-center px-4 md:px-8 border-r border-[var(--color-rule,#E2DDD3)] hover:bg-[var(--color-paper-2,#F4F1EA)] transition-colors cursor-pointer text-[var(--color-ink,#23201D)] flex-shrink-0">
+                            <ArrowLeft size={16} className="mr-2 md:mr-3" />
+                            <span className="font-mono text-[11px] md:text-[12px] font-extrabold tracking-widest uppercase">{shopName}</span>
+                        </a>
 
-                    {/* Filters as Tab Links */}
-                    <div className="flex-1 min-w-0 flex items-center overflow-x-auto overflow-y-hidden scrollbar-hide bg-[var(--color-paper-2,#F4F1EA)] touch-pan-x">
+                        {/* Mobile Spacer */}
+                        <div className="flex-1 md:hidden"></div>
+
+                        {/* Status (Desktop only) */}
+                        <div className="hidden md:flex items-center justify-center px-6 border-l border-r border-[var(--color-rule,#E2DDD3)] flex-shrink-0 bg-[var(--color-paper,#FBF9F5)]">
+                            <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-[var(--color-accent,#D85436)] rounded-full animate-pulse" />
+                                <span className="text-[10px] font-mono font-bold tracking-widest text-[var(--color-ink,#23201D)] uppercase">ONLINE</span>
+                            </div>
+                        </div>
+
+                        {/* CTA (Mobile only, Desktop is at the end) */}
+                        <button
+                            onClick={() => setShowAddTextModal(true)}
+                            className="md:hidden flex items-center justify-center px-6 bg-[var(--color-ink,#23201D)] text-[var(--color-paper,#FBF9F5)] hover:bg-black transition-colors font-mono text-[9px] font-extrabold tracking-widest uppercase cursor-pointer border-0 flex-shrink-0 border-l border-[var(--color-rule,#E2DDD3)]"
+                        >
+                            WRITE NOTE
+                        </button>
+                    </div>
+
+                    {/* Filters as Tab Links (Bottom Row on Mobile, Center on Desktop) */}
+                    <div className="flex-1 min-w-0 flex items-center overflow-x-auto overflow-y-hidden scrollbar-hide bg-[var(--color-paper-2,#F4F1EA)] touch-pan-x h-[44px] md:h-full">
                         {['all', 'instagram', 'facebook', 'google'].map(tab => (
                             <button
                                 key={tab}
@@ -622,18 +645,10 @@ export default function HausCheckinPage() {
                         <div className="flex-1 min-w-[20px] h-full"></div>
                     </div>
 
-                    {/* Status */}
-                    <div className="hidden md:flex items-center justify-center px-6 border-l border-[var(--color-rule,#E2DDD3)] flex-shrink-0 bg-[var(--color-paper,#FBF9F5)]">
-                        <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-[var(--color-accent,#D85436)] rounded-full animate-pulse" />
-                            <span className="text-[10px] font-mono font-bold tracking-widest text-[var(--color-ink,#23201D)] uppercase">ONLINE</span>
-                        </div>
-                    </div>
-
-                    {/* CTA */}
+                    {/* CTA (Desktop only) */}
                     <button
                         onClick={() => setShowAddTextModal(true)}
-                        className="flex items-center justify-center px-6 md:px-8 bg-[var(--color-ink,#23201D)] text-[var(--color-paper,#FBF9F5)] hover:bg-black transition-colors font-mono text-[9px] md:text-[10px] font-extrabold tracking-widest uppercase cursor-pointer border-0 flex-shrink-0"
+                        className="hidden md:flex items-center justify-center px-8 bg-[var(--color-ink,#23201D)] text-[var(--color-paper,#FBF9F5)] hover:bg-black transition-colors font-mono text-[10px] font-extrabold tracking-widest uppercase cursor-pointer border-0 flex-shrink-0"
                     >
                         WRITE NOTE
                     </button>
