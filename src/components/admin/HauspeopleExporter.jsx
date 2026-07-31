@@ -68,11 +68,14 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     };
 
     const renderBrutalistGrid = () => {
+        const gridClasses = "w-full flex-1 p-6 grid gap-6 bg-[#F4F1EA] border-b-[4px] border-[#23201D]";
+        const itemClasses = "relative w-full h-full overflow-hidden rounded-[32px] border-[4px] border-[#23201D] shadow-[4px_4px_0_0_#23201D] bg-white";
+
         if (items.length === 6) {
             return (
-                <div className="grid grid-cols-3 grid-rows-2 w-full flex-1 border-b-[4px] border-[#23201D]">
+                <div className={`${gridClasses} grid-cols-3 grid-rows-2`}>
                     {items.map((item, i) => (
-                        <div key={item.id || i} className="relative border-r-[4px] border-b-[4px] border-[#23201D] [&:nth-child(3n)]:border-r-0 [&:nth-child(n+4)]:border-b-0 w-full h-full overflow-hidden bg-[#F4F1EA]">
+                        <div key={item.id || i} className={itemClasses}>
                             <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
                         </div>
                     ))}
@@ -80,13 +83,11 @@ export default function HauspeopleExporter({ checkins, onClose }) {
             );
         } else if (items.length === 5) {
             return (
-                <div className="grid grid-cols-6 grid-rows-2 w-full flex-1 border-b-[4px] border-[#23201D]">
+                <div className={`${gridClasses} grid-cols-6 grid-rows-2`}>
                     {items.map((item, i) => {
                         let colSpan = i < 2 ? 'col-span-3' : 'col-span-2';
-                        let isRightEdge = i === 1 || i === 4;
-                        let isBottomEdge = i >= 2;
                         return (
-                            <div key={item.id || i} className={`${colSpan} relative ${!isRightEdge ? 'border-r-[4px]' : ''} ${!isBottomEdge ? 'border-b-[4px]' : ''} border-[#23201D] w-full h-full overflow-hidden bg-[#F4F1EA]`}>
+                            <div key={item.id || i} className={`${colSpan} ${itemClasses}`}>
                                 <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
                             </div>
                         );
@@ -95,9 +96,9 @@ export default function HauspeopleExporter({ checkins, onClose }) {
             );
         } else {
             return (
-                <div className="grid grid-cols-2 grid-rows-2 w-full flex-1 border-b-[4px] border-[#23201D]">
+                <div className={`${gridClasses} grid-cols-2 grid-rows-2`}>
                     {items.map((item, i) => (
-                        <div key={item.id || i} className={`relative border-r-[4px] border-b-[4px] border-[#23201D] ${(i+1)%2===0 ? 'border-r-0' : ''} ${i>=2 ? 'border-b-0' : ''} w-full h-full overflow-hidden bg-[#F4F1EA]`}>
+                        <div key={item.id || i} className={itemClasses}>
                             <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
                         </div>
                     ))}
@@ -151,10 +152,10 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         <span className="text-[10px] font-bold text-gray-500 uppercase">Logo Size</span>
                         <input 
                             type="range" 
-                            min="0.5" max="2" step="0.1" 
+                            min="0.5" max="4" step="0.1" 
                             value={logoScale} 
                             onChange={(e) => setLogoScale(parseFloat(e.target.value))}
-                            className="w-20 accent-[#23201D]"
+                            className="w-24 accent-[#23201D]"
                         />
                     </div>
                 </div>
@@ -204,7 +205,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         <div 
                             ref={exportRef} 
                             id="hauspeople-collage"
-                            className="relative overflow-hidden font-sans"
+                            className="relative overflow-hidden font-sans transition-all duration-300"
                             style={{ 
                                 width: `${canvasWidth}px`, 
                                 height: `${canvasHeight}px`,
@@ -268,7 +269,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         <div 
                             ref={exportRef} 
                             id="hauspeople-collage"
-                            className="bg-[#FBF9F5] border-[4px] border-[#23201D] flex flex-col relative font-sans"
+                            className="bg-[#FBF9F5] border-[4px] border-[#23201D] flex flex-col relative font-sans transition-all duration-300"
                             style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
                         >
                             {/* HEADER (h: 120px) */}
@@ -285,8 +286,8 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                     </label>
                                 </div>
                                 <div className="flex-1 flex flex-col justify-center px-10">
-                                    <h1 className="font-mono text-[42px] leading-none font-black tracking-tighter text-[#23201D] uppercase">
-                                        HAUSPEOPLE OF THE WEEK
+                                    <h1 contentEditable suppressContentEditableWarning className="font-mono text-[42px] leading-none font-black tracking-tighter text-[#23201D] uppercase outline-none cursor-text focus:border-b-2 border-black/20 w-fit">
+                                        people in the haus.
                                     </h1>
                                     <p className="font-mono text-xl font-bold tracking-widest text-[#23201D] uppercase mt-2">
                                         VOL. {getThaiDate().replace(/-/g, '.')}
