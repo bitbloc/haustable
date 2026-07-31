@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Heart, ArrowUpRight, Instagram, Facebook, MapPin, MessageSquare } from 'lucide-react'
+import { Heart, ArrowUpRight, Instagram, Facebook, MapPin, MessageSquare, Camera } from 'lucide-react'
 
 const COLORS = [
     'bg-[#B4AEDC]', // Soft Purple
@@ -25,13 +25,13 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
     
     // Make grid denser and images smaller (more frequent)
     const pattern = index % 10
-    let bentoSpan = 'col-span-1 sm:col-span-1 md:col-span-1 row-span-1'
+    let bentoSpan = 'col-span-1 row-span-1'
     
     // Occasionally make some cards larger for bento effect
     if (pattern === 0 || pattern === 5) {
         bentoSpan = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-2'
     } else if (pattern === 3) {
-        bentoSpan = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-1'
+        bentoSpan = 'col-span-2 sm:col-span-2 md:col-span-2 row-span-1'
     }
 
     const hasValidImage = item.image_url && item.image_url !== 'text_only'
@@ -55,6 +55,9 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
     } else if (item.source === 'facebook') {
         BadgeIcon = Facebook
         badgeColorClass = 'text-white bg-blue-500/90 border-blue-400/50'
+    } else if (item.source === 'shop') {
+        BadgeIcon = Camera
+        badgeColorClass = 'text-[#23201D] bg-[#E2DDD3]/90 border-[#E2DDD3]/50'
     }
 
     return (
@@ -66,7 +69,7 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
             viewport={{ once: true, margin: "-50px" }}
             whileHover={{ scale: 0.985 }}
             transition={{ type: "spring", stiffness: 300, damping: 25, opacity: { duration: 0.4 } }}
-            className={`relative group overflow-hidden rounded-[28px] cursor-pointer shadow-sm hover:shadow-lg transition-shadow duration-300 ${bentoSpan} ${showFullImage ? 'bg-[#1a1a1a]' : bgColor} min-h-[280px] flex flex-col border border-black/5`}
+            className={`relative group overflow-hidden rounded-[20px] md:rounded-[28px] cursor-pointer shadow-sm hover:shadow-lg transition-shadow duration-300 ${bentoSpan} ${showFullImage ? 'bg-[#1a1a1a]' : bgColor} min-h-[200px] md:min-h-[280px] flex flex-col border border-black/5`}
         >
             {/* Background Image Layer */}
             {hasValidImage && (
@@ -151,7 +154,7 @@ export default function BentoStreamGrid({ items, onItemClick, likedIds, onLikeTo
 
     return (
         <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 pt-28 pb-24">
-            <div className="grid grid-flow-dense grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[minmax(280px,auto)]">
+            <div className="grid grid-flow-dense grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 auto-rows-[minmax(200px,auto)] md:auto-rows-[minmax(280px,auto)]">
                 {items.map((item, index) => (
                     <BentoCard 
                         key={item.id || index}

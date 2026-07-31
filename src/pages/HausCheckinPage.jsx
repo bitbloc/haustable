@@ -550,14 +550,14 @@ export default function HausCheckinPage() {
                 </div>
                 
                 <div className="w-full max-w-[1600px] mx-auto mt-4">
-                    <div className="grid grid-flow-dense grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[280px]">
+                    <div className="grid grid-flow-dense grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 auto-rows-[180px] md:auto-rows-[280px]">
                         {[...Array(10)].map((_, i) => {
                             const pattern = i % 10;
-                            let span = 'col-span-1 sm:col-span-1 md:col-span-1 row-span-1';
+                            let span = 'col-span-1 row-span-1';
                             if (pattern === 0 || pattern === 5) span = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-2';
-                            else if (pattern === 3) span = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-1';
+                            else if (pattern === 3) span = 'col-span-2 sm:col-span-2 md:col-span-2 row-span-1';
                             return (
-                                <div key={i} className={`bg-black/5 animate-pulse rounded-[28px] ${span}`} />
+                                <div key={i} className={`bg-black/5 animate-pulse rounded-[20px] md:rounded-[28px] ${span}`} />
                             )
                         })}
                     </div>
@@ -631,7 +631,7 @@ export default function HausCheckinPage() {
 
                     {/* Filters as Tab Links (Bottom Row on Mobile, Center on Desktop) */}
                     <div className="flex-1 min-w-0 flex items-center overflow-x-auto overflow-y-hidden scrollbar-hide bg-[var(--color-paper-2,#F4F1EA)] touch-pan-x h-[44px] md:h-full">
-                        {['all', 'instagram', 'facebook', 'google'].map(tab => (
+                        {['all', 'instagram', 'facebook', 'google', 'shop'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveFilter(tab)}

@@ -109,27 +109,31 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     };
 
     const renderBrutalistGrid = () => {
-        const gridClasses = "w-full flex-1 grid bg-[#F4F1EA] border-b-[4px] border-[#23201D]";
-        const itemClasses = "relative w-full h-full overflow-hidden border-[4px] border-[#23201D] shadow-[4px_4px_0_0_#23201D] bg-white";
-        const gridStyle = { gap: `${gridGap}px`, padding: `${gridGap}px` };
-        const itemStyle = { borderRadius: `${imageRadius}px` };
+        const gridClasses = "w-full flex-1 flex flex-col items-center justify-center bg-[#F4F1EA] border-b-[4px] border-[#23201D] overflow-hidden p-6";
+        const gridStyle = { gap: `${gridGap}px` };
+        const isSquareGrid = ratio === '1:1';
+        
+        const itemStyle = { borderRadius: `${imageRadius}px`, aspectRatio: isSquareGrid ? '1/1' : 'auto' };
         const imgStyle = { borderRadius: `${Math.max(0, imageRadius - 4)}px` };
 
+        let colsClass = "grid-cols-3";
         if (items.length === 6) {
-            return (
-                <div className={`${gridClasses} grid-cols-3 grid-rows-2`} style={gridStyle}>
-                    {items.map((item, i) => (
-                        <div key={item.id || i} className={itemClasses} style={itemStyle}>
-                            <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" style={imgStyle} />
-                        </div>
-                    ))}
-                </div>
-            );
+            colsClass = "grid-cols-3";
         } else if (items.length === 5) {
-            return (
-                <div className={`${gridClasses} grid-cols-6 grid-rows-2`} style={gridStyle}>
+            colsClass = "grid-cols-6";
+        } else {
+            colsClass = "grid-cols-2";
+        }
+
+        return (
+            <div className={gridClasses}>
+                <div className={`grid w-full ${isSquareGrid ? 'h-auto max-w-[850px]' : 'h-full'} ${colsClass}`} style={gridStyle}>
                     {items.map((item, i) => {
-                        let colSpan = i < 2 ? 'col-span-3' : 'col-span-2';
+                        let colSpan = "";
+                        if (items.length === 5) {
+                            colSpan = i < 2 ? 'col-span-3' : 'col-span-2';
+                        }
+                        const itemClasses = `relative w-full ${isSquareGrid ? '' : 'h-full'} overflow-hidden border-[4px] border-[#23201D] shadow-[4px_4px_0_0_#23201D] bg-white`;
                         return (
                             <div key={item.id || i} className={`${colSpan} ${itemClasses}`} style={itemStyle}>
                                 <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" style={imgStyle} />
@@ -137,18 +141,8 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         );
                     })}
                 </div>
-            );
-        } else {
-            return (
-                <div className={`${gridClasses} grid-cols-2 grid-rows-2`} style={gridStyle}>
-                    {items.map((item, i) => (
-                        <div key={item.id || i} className={itemClasses} style={itemStyle}>
-                            <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" style={imgStyle} />
-                        </div>
-                    ))}
-                </div>
-            );
-        }
+            </div>
+        );
     };
     
     // Absolute layout coordinates for Swiss minimalist style
@@ -316,6 +310,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                                 crossOrigin="anonymous" 
                                                 className="w-full h-full object-cover grayscale-[15%] contrast-110 sepia-[5%]" 
                                                 alt={`Img ${i+1}`}
+                                                style={{ borderRadius: `${Math.max(0, imageRadius - 4)}px` }}
                                             />
                                         </div>
                                     </div>

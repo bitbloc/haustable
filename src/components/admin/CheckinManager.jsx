@@ -885,6 +885,7 @@ const decodeHTMLEntities = (text) => {
                                 <option value="instagram">Instagram Tag</option>
                                 <option value="facebook">Facebook Check-in</option>
                                 <option value="google">Google Maps Review</option>
+                                <option value="shop">Shop Official Photo</option>
                             </select>
                         </div>
 
