@@ -31,6 +31,7 @@ export default function SlipModal({ booking, type, onClose }) {
         return 'billing'
     }
     const [activeTab, setActiveTab] = useState(getInitialTab)
+    const isKitchenTab = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
 
     const getIsAutoPrintingInitial = () => {
         try {
@@ -181,24 +182,22 @@ export default function SlipModal({ booking, type, onClose }) {
     // Fetch Options mapping, QR settings, and execute SUNMI Auto Print
     useEffect(() => {
         const initAndAutoPrint = async () => {
-            // 1. Fetch options mapping
+            // 1. Fetch options mapping and app settings in parallel for speed
             let currentOptionMap = {};
             let loadedConfig = {};
             try {
-                const { data } = await supabase.from('option_choices').select('id, name')
-                if (data) {
-                    currentOptionMap = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {})
-                    setOptionMap(currentOptionMap)
-                }
-            } catch (err) {
-                console.error("Failed to load options:", err)
-            }
+                const [optionsRes, settingsRes] = await Promise.all([
+                    supabase.from('option_choices').select('id, name'),
+                    supabase.from('app_settings').select('*')
+                ]);
 
-            // 2. Fetch all app settings (QR Code, Receipt Info)
-            try {
-                const { data } = await supabase.from('app_settings').select('*');
-                if (data) {
-                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                if (optionsRes.data) {
+                    currentOptionMap = optionsRes.data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {});
+                    setOptionMap(currentOptionMap);
+                }
+
+                if (settingsRes.data) {
+                    const settingsMap = settingsRes.data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                     if (settingsMap.payment_qr_url) setQrCodeUrl(settingsMap.payment_qr_url);
                     if (settingsMap.receipt_shop_name) setReceiptShopName(settingsMap.receipt_shop_name);
                     if (settingsMap.receipt_shop_address) setReceiptShopAddress(settingsMap.receipt_shop_address);
@@ -228,7 +227,7 @@ export default function SlipModal({ booking, type, onClose }) {
                     };
                 }
             } catch (err) {
-                console.error("Failed to load app settings:", err);
+                console.error("Failed to load options/settings:", err);
             }
 
             // 3. Check printer configuration
@@ -253,8 +252,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 hasAutoPrintedRef.current = true;
 
                 setIsAutoPrinting(true);
-                // Wait 400ms for stable render state
-                await new Promise(resolve => setTimeout(resolve, 400));
+                // No artificial delay needed for Sunmi ESC/POS encoding
                 try {
                     let activePaperSize = '80mm';
                     if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
@@ -491,6 +489,10 @@ export default function SlipModal({ booking, type, onClose }) {
         }
 
         // Check category: Online Pickup vs Online Table Booking vs Walk-in Pickup vs IN HAUS Dine-In
+        const remarkLower = (booking.staff_remark || '').toLowerCase();
+        const noteLower = (booking.customer_note || '').toLowerCase();
+        const sourceLower = (booking.source || '').toLowerCase();
+
         const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url;
         const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr');
         

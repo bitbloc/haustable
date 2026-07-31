@@ -285,6 +285,14 @@ const decodeHTMLEntities = (text) => {
         }
 
         if (!json || json.status !== 'success' || !json.data) {
+            if (source === 'google') {
+                return {
+                    title: 'Google Maps Review',
+                    description: 'รีวิวระดับ 5 ดาวจาก Google Maps',
+                    author: 'Google Reviewer',
+                    url: cleanUrl
+                }
+            }
             throw new Error('ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบลิงก์อีกครั้ง หรือเพิ่มด้วยตนเอง')
         }
 
