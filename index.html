@@ -36,7 +36,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Inter:wght@400;500;600;700&family=League+Gothic&family=Press+Start+2P&family=Prompt:wght@400;500;600&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     
-    <script defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script async defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=AW-11227095880"></script>
@@ -93,7 +93,7 @@
       window.addEventListener('DOMContentLoaded', () => {
           if (window.location.pathname.startsWith('/staff') || window.location.search.includes('mode=staff')) {
               var script = document.createElement('script');
-              script.src = "//cdn.jsdelivr.net/npm/eruda";
+              script.src = "https://cdn.jsdelivr.net/npm/eruda";
               document.body.appendChild(script);
               script.onload = function () { eruda.init(); }
           }

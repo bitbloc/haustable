@@ -6,11 +6,20 @@
     "androidScheme": "http"
   },
   "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "launchAutoHide": true,
+      "backgroundColor": "#ECECE9",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
     "SunmiPrinter": {
       "bindOnLoad": false
     },
     "CapacitorUpdater": {
-      "autoUpdate": true
+      "autoUpdate": false
     }
   }
 }

@@ -1,53 +1,59 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useNavigate } from 'react-router-dom'
-import { Capacitor } from '@capacitor/core' // Added Capacitor import
+import { Capacitor } from '@capacitor/core'
 import { supabase } from './lib/supabaseClient'
 import PublicLayout from './components/layout/PublicLayout'
 import AdminLayout from './components/AdminLayout'
 import StaffAuthLayout from './components/layout/StaffAuthLayout'
-// import { ToastProvider } from './context/ToastContext' -> Removed
 import { BookingProvider } from './context/BookingContext'
-import { Toaster } from 'sonner' // Added
+import { Toaster } from 'sonner'
 
-// Pages
-import Home from './Home'
-import QnAPage from './QnAPage'
-import BookingPage from './BookingPage'
-import PickupPage from './PickupPage'
-import AdsLandingPage from './AdsLandingPage' // NEW
-import AdminDashboard from './AdminDashboard'
-import AdminFinancialDashboard from './components/admin/AdminFinancialDashboard' // NEW: Financial Dashboard
-import AdminSettings from './AdminSettings'
-import AdminTableEditor from './AdminTableEditor'
-import AdminMenu from './admin/AdminMenuPage'
-import AdminBookings from './AdminBookings'
-import AdminMembers from './AdminMembers'
-import AdminPromotions from './components/admin/AdminPromotions' // NEW
-import AdminTableManager from './admin/AdminTableManager' // NEW
-import AdminArcade from './components/admin/AdminArcade' // NEW
-
-import LoginPage from './LoginPage' // NEW
-import MemberCard from './pages/MemberCard' // NEW
-import StaffDashboard from './StaffDashboard'
-import StaffLiveOrders from './StaffLiveOrders' // Was StaffOrderPage
-import StockPage from './StockPage' // NEW
-import MenuCostPage from './components/admin/MenuCostPage' // NEW
-import RecipeLabPage from './components/admin/RecipeLabPage' // NEW
-import SOPEditorPage from './components/admin/SOPEditorPage' // NEW: SOP
-import TrackingPage from './TrackingPage'
-import BarSOPPage from './components/sop/BarSOPPage' // NEW: SOP
+// Eagerly load instant startup pages for POS & Login
 import POSDashboard from './pos/POSDashboard'
-import CustomerOrderLanding from './pos/CustomerOrderLanding'
-import CustomerOrderStatus from './pos/CustomerOrderStatus'
-import SongRequestPage from './pages/SongRequestPage'
-import AdminSongRequests from './pages/AdminSongRequests'
-import HausCheckinPage from './pages/HausCheckinPage'
+import LoginPage from './LoginPage'
+import Home from './Home'
 import RequireAuthLayout from './components/layout/RequireAuthLayout'
-import POSCustomerDisplay from './pos/POSCustomerDisplay' // NEW
-import { Suspense, lazy } from 'react'
 
+// Lazy load non-critical and heavy sub-pages for maximum launch speed
+const QnAPage = lazy(() => import('./QnAPage'))
+const BookingPage = lazy(() => import('./BookingPage'))
+const PickupPage = lazy(() => import('./PickupPage'))
+const AdsLandingPage = lazy(() => import('./AdsLandingPage'))
+const AdminDashboard = lazy(() => import('./AdminDashboard'))
+const AdminFinancialDashboard = lazy(() => import('./components/admin/AdminFinancialDashboard'))
+const AdminSettings = lazy(() => import('./AdminSettings'))
+const AdminTableEditor = lazy(() => import('./AdminTableEditor'))
+const AdminMenu = lazy(() => import('./admin/AdminMenuPage'))
+const AdminBookings = lazy(() => import('./AdminBookings'))
+const AdminMembers = lazy(() => import('./AdminMembers'))
+const AdminPromotions = lazy(() => import('./components/admin/AdminPromotions'))
+const AdminTableManager = lazy(() => import('./admin/AdminTableManager'))
+const AdminArcade = lazy(() => import('./components/admin/AdminArcade'))
+
+const MemberCard = lazy(() => import('./pages/MemberCard'))
+const StaffDashboard = lazy(() => import('./StaffDashboard'))
+const StaffLiveOrders = lazy(() => import('./StaffLiveOrders'))
+const StockPage = lazy(() => import('./StockPage'))
+const MenuCostPage = lazy(() => import('./components/admin/MenuCostPage'))
+const RecipeLabPage = lazy(() => import('./components/admin/RecipeLabPage'))
+const SOPEditorPage = lazy(() => import('./components/admin/SOPEditorPage'))
+const TrackingPage = lazy(() => import('./TrackingPage'))
+const BarSOPPage = lazy(() => import('./components/sop/BarSOPPage'))
+const CustomerOrderLanding = lazy(() => import('./pos/CustomerOrderLanding'))
+const CustomerOrderStatus = lazy(() => import('./pos/CustomerOrderStatus'))
+const SongRequestPage = lazy(() => import('./pages/SongRequestPage'))
+const AdminSongRequests = lazy(() => import('./pages/AdminSongRequests'))
+const HausCheckinPage = lazy(() => import('./pages/HausCheckinPage'))
+const POSCustomerDisplay = lazy(() => import('./pos/POSCustomerDisplay'))
 const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
 const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
+
+const FallbackLoader = () => (
+  <div className="min-h-screen bg-[#ECECE9] flex flex-col items-center justify-center text-[#181815] font-mono text-xs uppercase tracking-widest gap-3 select-none">
+    <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
+    <span>LOADING MODULE...</span>
+  </div>
+)
 
 function BookingProviderLayout() {
   const navigate = useNavigate()
@@ -68,7 +74,6 @@ function BookingProviderLayout() {
   )
 }
 
-
 function App() {
   const [session, setSession] = useState(null)
 
@@ -81,33 +86,16 @@ function App() {
         setSession(session)
 
         if (event === 'SIGNED_IN' && session?.user) {
-            // Check for LINE Provider
             const identities = session.user.identities || []
             const lineIdentity = identities.find(id => id.provider === 'line')
             
-            // If log in via LINE, we want to ensure profile exists and has the line_user_id
             if (lineIdentity) {
-                const lineUserId = lineIdentity.id // This is the Provider User ID (Uxxxxxxxx...)
-                const { error } = await supabase.from('profiles').upsert({
-                    id: session.user.id,
-                    line_user_id: lineUserId,
-                    // We only update these if they are null, or just upsert blindly? 
-                    // Let's rely on standard profile creation, but ensure LINE ID is patched.
-                    // Actually, if it's a new user, 'profiles' might be empty.
-                    // For simplicity, we just patch the line_user_id.
-                }, { onConflict: 'id' }) // This requires the row to exist? No, Upsert creates if not.
-                
-                // Note: If profile doesn't exist (because trigger didn't run or we do client side creation),
-                // we should probably fetch first.
-                // But simplified: Just update the line_user_id if mapped.
-               
-                // Actually, let's do a smarter upsert that preserves existing data but sets ID
+                const lineUserId = lineIdentity.id
                 const { data: existing } = await supabase.from('profiles').select('id').eq('id', session.user.id).single()
                 
                 if (existing) {
                      await supabase.from('profiles').update({ line_user_id: lineUserId }).eq('id', session.user.id)
                 } else {
-                    // Create new profile with basic info from metadata
                     const metadata = session.user.user_metadata
                     await supabase.from('profiles').insert({
                         id: session.user.id,
@@ -131,93 +119,77 @@ function App() {
     <div className="app-container">
       <Toaster position="top-center" richColors closeButton />
       <Router>
-        <Routes>
-          {/* Standalone Pages (No Booking Context for fast loading) */}
-          <Route path="/link" element={<AdsLandingPage />} />
-          <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
-          <Route path="/qa" element={<QnAPage />} />
-          <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
-          <Route path="/pos" element={<POSDashboard />} />
-          <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
+        <Suspense fallback={<FallbackLoader />}>
+          <Routes>
+            {/* Standalone Pages (Fast Eager / Dynamic Routes) */}
+            <Route path="/link" element={<AdsLandingPage />} />
+            <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
+            <Route path="/qa" element={<QnAPage />} />
+            <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
+            <Route path="/pos" element={<POSDashboard />} />
+            <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
-          <Route path="/arcade" element={
-            <Suspense fallback={
-              <div className="min-h-screen bg-[#f2f2ec] flex flex-col items-center justify-center text-zinc-800 font-mono text-xs uppercase tracking-widest gap-3 select-none">
-                <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
-                <span>LOADING PLAYGROUND...</span>
-              </div>
-            }>
-              <ArcadeLobby />
-            </Suspense>
-          } />
-          <Route path="/arcade/claim" element={
-            <Suspense fallback={
-              <div className="min-h-screen bg-[#f2f2ec] flex flex-col items-center justify-center text-zinc-800 font-mono text-xs uppercase tracking-widest gap-3 select-none">
-                <div className="w-6 h-6 rounded-full border-2 border-zinc-300 border-t-zinc-800 animate-spin" />
-                <span>LOADING CLAIM PORTAL...</span>
-              </div>
-            }>
-              <ArcadeClaim />
-            </Suspense>
-          } />
+            <Route path="/arcade" element={<ArcadeLobby />} />
+            <Route path="/arcade/claim" element={<ArcadeClaim />} />
 
-          {/* Routes requiring Booking Context */}
-          <Route element={<BookingProviderLayout />}>
-            {/* Home Page */}
-            <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Home session={session} />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/staff/login" element={<LoginPage />} />
+            {/* Routes requiring Booking Context */}
+            <Route element={<BookingProviderLayout />}>
+              {/* Home & Auth */}
+              <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Home session={session} />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/staff/login" element={<LoginPage />} />
 
-            {/* Song Request (Login Required) */}
-            <Route element={<RequireAuthLayout />}>
-              <Route path="/songs" element={<SongRequestPage />} />
-              <Route path="/song" element={<SongRequestPage />} />
+              {/* Song Request (Login Required) */}
+              <Route element={<RequireAuthLayout />}>
+                <Route path="/songs" element={<SongRequestPage />} />
+                <Route path="/song" element={<SongRequestPage />} />
+              </Route>
+
+              {/* Public Routes */}
+              <Route element={<PublicLayout session={session} />}>
+                <Route path="/booking" element={<BookingPage />} />
+                <Route path="/pickup" element={<PickupPage />} />
+                <Route path="/tracking/:token" element={<TrackingPage />} />
+                <Route path="/t/:token" element={<TrackingPage />} />
+              </Route>
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="financial" element={<AdminFinancialDashboard />} />
+                <Route path="bookings" element={<AdminBookings />} />
+                <Route path="members" element={<AdminMembers />} />
+                <Route path="menu" element={<AdminMenu />} />
+                <Route path="costing" element={<MenuCostPage />} />
+                <Route path="lab" element={<RecipeLabPage />} />
+                <Route path="promotions" element={<AdminPromotions defaultTab="promo" />} />
+                <Route path="rewards" element={<AdminPromotions defaultTab="rewards" />} />
+                <Route path="arcade" element={<AdminArcade />} />
+                <Route path="tables" element={<AdminTableManager />} />
+                <Route path="editor" element={<AdminTableEditor />} />
+                <Route path="sop" element={<SOPEditorPage />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="songs" element={<AdminSongRequests />} />
+              </Route>
+
+              {/* Customer Table Ordering */}
+              <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
+              <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
+              <Route path="/member-card" element={<MemberCard />} />
+              
+              {/* Staff/Kitchen Route */}
+              <Route element={<StaffAuthLayout />}>
+                <Route path="/staff" element={<StaffDashboard />} />
+                <Route path="/staff/orders" element={<StaffLiveOrders />} />
+                <Route path="/staff/history" element={<StaffLiveOrders />} />
+                <Route path="/staff/checkin" element={<StaffLiveOrders />} />
+                <Route path="/staff/stock" element={<StockPage />} />
+                <Route path="/staff/sop" element={<BarSOPPage />} />
+              </Route>
             </Route>
 
-            {/* Public Routes (Standard Layout) */}
-            <Route element={<PublicLayout session={session} />}>
-              <Route path="/booking" element={<BookingPage />} />
-              <Route path="/pickup" element={<PickupPage />} />
-              <Route path="/tracking/:token" element={<TrackingPage />} />
-              <Route path="/t/:token" element={<TrackingPage />} />
-            </Route>
-
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="financial" element={<AdminFinancialDashboard />} />
-              <Route path="bookings" element={<AdminBookings />} />
-              <Route path="members" element={<AdminMembers />} />
-              <Route path="menu" element={<AdminMenu />} />
-              <Route path="costing" element={<MenuCostPage />} />
-              <Route path="lab" element={<RecipeLabPage />} />
-              <Route path="promotions" element={<AdminPromotions defaultTab="promo" />} />
-              <Route path="rewards" element={<AdminPromotions defaultTab="rewards" />} />
-              <Route path="arcade" element={<AdminArcade />} />
-              <Route path="tables" element={<AdminTableManager />} />
-              <Route path="editor" element={<AdminTableEditor />} />
-              <Route path="sop" element={<SOPEditorPage />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="songs" element={<AdminSongRequests />} />
-            </Route>
-
-            {/* Customer Table Ordering */}
-            <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
-            <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
-            <Route path="/member-card" element={<MemberCard />} />
-            
-            {/* Staff/Kitchen Route (Protected) */}
-            <Route element={<StaffAuthLayout />}>
-              <Route path="/staff" element={<StaffDashboard />} />
-              <Route path="/staff/orders" element={<StaffLiveOrders />} />
-              <Route path="/staff/history" element={<StaffLiveOrders />} />
-              <Route path="/staff/checkin" element={<StaffLiveOrders />} />
-              <Route path="/staff/stock" element={<StockPage />} />
-              <Route path="/staff/sop" element={<BarSOPPage />} />
-            </Route>
-          </Route>
-
-        </Routes>
+          </Routes>
+        </Suspense>
       </Router>
     </div>
   )
