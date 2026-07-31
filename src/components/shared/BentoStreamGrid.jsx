@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Heart, ArrowUpRight } from 'lucide-react'
+import { Heart, ArrowUpRight, Instagram, Facebook, MapPin, MessageSquare } from 'lucide-react'
 
 const COLORS = [
     'bg-[#B4AEDC]', // Soft Purple
@@ -41,17 +41,36 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
 
     // Badges based on source
     let badgeText = 'SOCIAL POST'
-    if (item.source === 'google') badgeText = 'GOOGLE REVIEW'
-    else if (item.source === 'note') badgeText = 'GUEST NOTE'
-    else if (item.source === 'instagram') badgeText = 'INSTAGRAM'
-    else if (item.source === 'facebook') badgeText = 'FACEBOOK'
+    let BadgeIcon = MessageSquare
+    let badgeColorClass = showFullImage || textColor === 'text-white' ? 'border-white/40 text-white bg-black/20' : 'border-black/20 text-black bg-white/30'
+    
+    if (item.source === 'google') {
+        badgeText = 'GOOGLE REVIEW'
+        BadgeIcon = MapPin
+        badgeColorClass = 'text-[#23201D] bg-[#E9F344]/90 border-[#E9F344]/50'
+    } else if (item.source === 'note') {
+        badgeText = 'GUEST NOTE'
+        BadgeIcon = MessageSquare
+        badgeColorClass = 'text-[#23201D] bg-white/90 border-white/50'
+    } else if (item.source === 'instagram') {
+        badgeText = 'INSTAGRAM'
+        BadgeIcon = Instagram
+        badgeColorClass = 'text-white bg-pink-500/90 border-pink-400/50'
+    } else if (item.source === 'facebook') {
+        badgeText = 'FACEBOOK'
+        BadgeIcon = Facebook
+        badgeColorClass = 'text-white bg-blue-500/90 border-blue-400/50'
+    }
 
     return (
         <motion.div
             layoutId={`card-${item.id}`}
             onClick={() => onItemClick?.(item)}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
             whileHover={{ scale: 0.985 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25, opacity: { duration: 0.4 } }}
             className={`relative group overflow-hidden rounded-[28px] cursor-pointer shadow-sm hover:shadow-lg transition-shadow duration-300 ${bentoSpan} ${showFullImage ? 'bg-[#1a1a1a]' : bgColor} min-h-[280px] flex flex-col border border-black/5`}
         >
             {/* Background Image Layer */}
@@ -74,10 +93,8 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
                 
                 {/* Top Section: Badge & Rating */}
                 <div className="flex justify-between items-start">
-                    <span className={`px-4 py-1.5 text-[10px] font-sans font-extrabold tracking-wide uppercase border rounded-full backdrop-blur-md 
-                        ${showFullImage || textColor === 'text-white' 
-                            ? 'border-white/40 text-white bg-black/20' 
-                            : 'border-black/20 text-black bg-white/30'}`}>
+                    <span className={`px-3 py-1.5 text-[9px] font-sans font-bold tracking-wide uppercase border rounded-full backdrop-blur-md flex items-center gap-1.5 ${badgeColorClass}`}>
+                        <BadgeIcon size={12} />
                         {badgeText}
                     </span>
 
@@ -92,7 +109,7 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
 
                 {/* Middle/Bottom Section: Text & Actions */}
                 <div className={`mt-auto ${showFullImage ? 'text-white' : textColor}`}>
-                    <h3 className={`${bentoSpan.includes('row-span-2') ? 'text-2xl md:text-3xl' : 'text-xl'} font-bold leading-[1.2] mb-4 line-clamp-4`} style={{ fontFamily: "Inter, 'IBM Plex Sans Thai', sans-serif", letterSpacing: "-0.02em" }}>
+                    <h3 className={`${bentoSpan.includes('row-span-2') ? 'text-xl md:text-2xl' : 'text-lg'} font-bold leading-[1.25] mb-4 line-clamp-[5]`} style={{ fontFamily: "Inter, 'IBM Plex Sans Thai', sans-serif", letterSpacing: "-0.01em" }}>
                         {item.text ? `"${item.text}"` : `@${item.user?.name || item.user_name || "Guest"}`}
                     </h3>
 
@@ -142,7 +159,7 @@ export default function BentoStreamGrid({ items, onItemClick, likedIds, onLikeTo
 
     return (
         <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 pt-28 pb-24">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[minmax(280px,auto)]">
+            <div className="grid grid-flow-dense grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[minmax(280px,auto)]">
                 {items.map((item, index) => (
                     <BentoCard 
                         key={item.id || index}

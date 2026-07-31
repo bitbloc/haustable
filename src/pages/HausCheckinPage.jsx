@@ -541,8 +541,23 @@ export default function HausCheckinPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0e0f0a] flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-[var(--color-brand)] border-t-transparent rounded-full animate-spin" />
+            <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] relative overflow-x-hidden pt-28 pb-24 px-4 md:px-6">
+                {/* Top bar placeholder for skeleton so it doesn't look completely empty */}
+                <div className="fixed top-4 left-4 right-4 z-40 bg-[var(--color-paper-2,#F4F1EA)]/90 backdrop-blur-md border border-[var(--color-rule,#E2DDD3)] h-[46px] rounded-xs shadow-sm"></div>
+                
+                <div className="w-full max-w-[1600px] mx-auto mt-4">
+                    <div className="grid grid-flow-dense grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[280px]">
+                        {[...Array(10)].map((_, i) => {
+                            const pattern = i % 10;
+                            let span = 'col-span-1 sm:col-span-1 md:col-span-1 row-span-1';
+                            if (pattern === 0 || pattern === 5) span = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-2';
+                            else if (pattern === 3) span = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-1';
+                            return (
+                                <div key={i} className={`bg-black/5 animate-pulse rounded-[28px] ${span}`} />
+                            )
+                        })}
+                    </div>
+                </div>
             </div>
         )
     }
