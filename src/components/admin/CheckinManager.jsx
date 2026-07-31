@@ -1195,7 +1195,7 @@ const decodeHTMLEntities = (text) => {
             
             {/* FLOATING ACTION BAR FOR COLLAGE EXPORTER */}
             {selectedForCollage.length > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#23201D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-10 fade-in border border-gray-700">
+                <div className="fixed top-28 left-1/2 -translate-x-1/2 bg-[#23201D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-top-10 fade-in border border-gray-700">
                     <div className="flex flex-col">
                         <span className="font-mono text-xs font-bold text-[#E9F344] uppercase tracking-wider">Collage Generator</span>
                         <span className="text-sm font-bold">{selectedForCollage.length} Photos Selected (Max 6)</span>

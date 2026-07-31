@@ -129,7 +129,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                     >
                         {/* Huge Title & Logo (Swiss Grotesk Style) */}
                         <div className="absolute top-[70px] left-[80px] flex flex-col items-start gap-4">
-                            <img src="/logo-staff-dark.png" alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" />
+                            <img src="/receipt-logo.png" alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin="anonymous" />
                             <div className="text-[42px] font-mono font-bold tracking-tighter text-[#1A1A1A] leading-[1]">
                                 people in<br/>the haus.
                             </div>
