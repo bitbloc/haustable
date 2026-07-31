@@ -18,16 +18,21 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
 
     const handlePointerDown = (e) => {
-        dragRef.current.isDragging = true;
+        dragRef.current.isDragging = false; // Reset on down
         dragRef.current.startX = e.clientX;
         dragRef.current.startY = e.clientY;
         dragRef.current.initialX = logoPos.x;
         dragRef.current.initialY = logoPos.y;
-        e.target.setPointerCapture(e.pointerId);
+        try { e.target.setPointerCapture(e.pointerId); } catch(err) {}
     };
 
     const handlePointerMove = (e) => {
+        // Only mark as dragging if moved more than 3px
+        if (Math.abs(e.clientX - dragRef.current.startX) > 3 || Math.abs(e.clientY - dragRef.current.startY) > 3) {
+            dragRef.current.isDragging = true;
+        }
         if (!dragRef.current.isDragging) return;
+        
         setLogoPos({
             x: dragRef.current.initialX + (e.clientX - dragRef.current.startX),
             y: dragRef.current.initialY + (e.clientY - dragRef.current.startY)
@@ -35,17 +40,13 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     };
 
     const handlePointerUp = (e) => {
-        dragRef.current.isDragging = false;
-        e.target.releasePointerCapture(e.pointerId);
-    };
-
-    const handleLogoClick = (e) => {
-        // Prevent click if it was a drag
-        if (Math.abs(e.clientX - dragRef.current.startX) > 5 || Math.abs(e.clientY - dragRef.current.startY) > 5) {
-            e.preventDefault();
-            return;
+        try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
+        
+        // If it was just a click (no drag), trigger upload
+        if (!dragRef.current.isDragging) {
+            fileInputRef.current?.click();
         }
-        fileInputRef.current?.click();
+        dragRef.current.isDragging = false;
     };
 
     const isPortrait = ratio === '4:5';
@@ -108,13 +109,14 @@ export default function HauspeopleExporter({ checkins, onClose }) {
         const itemClasses = "relative w-full h-full overflow-hidden border-[4px] border-[#23201D] shadow-[4px_4px_0_0_#23201D] bg-white";
         const gridStyle = { gap: `${gridGap}px`, padding: `${gridGap}px` };
         const itemStyle = { borderRadius: `${imageRadius}px` };
+        const imgStyle = { borderRadius: `${Math.max(0, imageRadius - 4)}px` };
 
         if (items.length === 6) {
             return (
                 <div className={`${gridClasses} grid-cols-3 grid-rows-2`} style={gridStyle}>
                     {items.map((item, i) => (
                         <div key={item.id || i} className={itemClasses} style={itemStyle}>
-                            <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
+                            <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" style={imgStyle} />
                         </div>
                     ))}
                 </div>
@@ -126,7 +128,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         let colSpan = i < 2 ? 'col-span-3' : 'col-span-2';
                         return (
                             <div key={item.id || i} className={`${colSpan} ${itemClasses}`} style={itemStyle}>
-                                <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
+                                <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" style={imgStyle} />
                             </div>
                         );
                     })}
@@ -137,7 +139,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                 <div className={`${gridClasses} grid-cols-2 grid-rows-2`} style={gridStyle}>
                     {items.map((item, i) => (
                         <div key={item.id || i} className={itemClasses} style={itemStyle}>
-                            <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" />
+                            <img src={getExportImageUrl(item.image_url)} alt="Hausperson" crossOrigin="anonymous" className="w-full h-full object-cover grayscale-[15%] contrast-125" style={imgStyle} />
                         </div>
                     ))}
                 </div>
@@ -258,6 +260,8 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                             style={{ 
                                 width: `${canvasWidth}px`, 
                                 height: `${canvasHeight}px`,
+                                minWidth: `${canvasWidth}px`,
+                                minHeight: `${canvasHeight}px`,
                                 backgroundColor: '#F4F1EA',
                                 backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`
                             }}
@@ -271,7 +275,6 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                     onPointerDown={handlePointerDown}
                                     onPointerMove={handlePointerMove}
                                     onPointerUp={handlePointerUp}
-                                    onClick={handleLogoClick}
                                 >
                                     <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'top left' }} className="transition-transform pointer-events-none">
                                         <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
@@ -327,7 +330,12 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                             ref={exportRef} 
                             id="hauspeople-collage"
                             className="bg-[#FBF9F5] border-[4px] border-[#23201D] flex flex-col relative font-sans transition-all duration-300"
-                            style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
+                            style={{ 
+                                width: `${canvasWidth}px`, 
+                                height: `${canvasHeight}px`,
+                                minWidth: `${canvasWidth}px`,
+                                minHeight: `${canvasHeight}px`
+                            }}
                         >
                             {/* HEADER (h: 120px) */}
                             <div className="h-[120px] border-b-[4px] border-[#23201D] flex w-full bg-[#E9F344] shrink-0">
@@ -339,7 +347,6 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                                         onPointerDown={handlePointerDown}
                                         onPointerMove={handlePointerMove}
                                         onPointerUp={handlePointerUp}
-                                        onClick={handleLogoClick}
                                     >
                                         <div style={{ transform: `scale(${logoScale})`, transformOrigin: 'center' }} className="transition-transform pointer-events-none">
                                             <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
