@@ -1,12 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
-import { X, Download, Loader2, Ratio } from 'lucide-react';
+import { X, Download, Loader2, Ratio, Shuffle, Upload } from 'lucide-react';
 import { getThaiDate } from '../../utils/timeUtils';
 
 export default function HauspeopleExporter({ checkins, onClose }) {
     const exportRef = useRef(null);
     const [exporting, setExporting] = useState(false);
     const [ratio, setRatio] = useState('4:5'); // '1:1' or '4:5'
+    const [items, setItems] = useState(checkins.slice(0, 6));
+    const [customLogo, setCustomLogo] = useState(null);
 
     const isPortrait = ratio === '4:5';
     const canvasWidth = 1080;
@@ -50,7 +52,18 @@ export default function HauspeopleExporter({ checkins, onClose }) {
         return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=webp&q=85`;
     };
 
-    const displayItems = checkins.slice(0, 6);
+    const handleShuffle = () => {
+        setItems(prev => [...prev].sort(() => Math.random() - 0.5));
+    };
+
+    const handleLogoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => setCustomLogo(event.target.result);
+            reader.readAsDataURL(file);
+        }
+    };
     
     // Absolute layout coordinates for Swiss minimalist style
     const LAYOUT_4_5 = [
@@ -78,7 +91,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                 <div className="flex items-center gap-4">
                     <h2 className="font-bold text-lg text-[#23201D]">Collage Exporter (Swiss Style)</h2>
                     <span className="bg-gray-100 text-gray-600 border border-gray-200 px-3 py-1 text-xs font-mono font-bold uppercase rounded-full">
-                        {displayItems.length} Photos
+                        {items.length} Photos
                     </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -98,9 +111,16 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                     </div>
 
                     <button 
+                        onClick={handleShuffle}
+                        className="flex items-center gap-1.5 bg-gray-100 text-[#23201D] px-4 py-2 font-sans font-bold uppercase tracking-wider text-sm hover:bg-gray-200 transition-colors rounded-lg cursor-pointer mr-2"
+                    >
+                        <Shuffle size={14} /> Shuffle
+                    </button>
+
+                    <button 
                         onClick={handleExport}
-                        disabled={exporting || displayItems.length === 0}
-                        className="flex items-center gap-2 bg-[#23201D] text-white px-6 py-2 font-sans font-bold uppercase tracking-wider text-sm hover:bg-black transition-colors cursor-pointer disabled:opacity-50"
+                        disabled={exporting || items.length === 0}
+                        className="flex items-center gap-2 bg-[#23201D] text-white px-6 py-2 font-sans font-bold uppercase tracking-wider text-sm hover:bg-black transition-colors rounded-lg cursor-pointer disabled:opacity-50"
                     >
                         {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                         Export PNG
@@ -128,8 +148,14 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         }}
                     >
                         {/* Huge Title & Logo (Swiss Grotesk Style) */}
-                        <div className="absolute top-[70px] left-[80px] flex flex-col items-start gap-4">
-                            <img src="/receipt-logo.png" alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin="anonymous" />
+                        <div className="absolute top-[70px] left-[80px] flex flex-col items-start gap-4 z-10">
+                            <label className="cursor-pointer group relative block" title="คลิกเพื่ออัปโหลดโลโก้ใหม่ (PNG)">
+                                <img src={customLogo || "/receipt-logo.png"} alt="IN THE HAUS" className="h-10 object-contain mix-blend-multiply opacity-90" crossOrigin={customLogo ? undefined : "anonymous"} />
+                                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
+                                    <Upload size={16} className="text-[#1A1A1A]" />
+                                </div>
+                                <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleLogoUpload} />
+                            </label>
                             <div className="text-[42px] font-mono font-bold tracking-tighter text-[#1A1A1A] leading-[1]">
                                 people in<br/>the haus.
                             </div>
@@ -140,7 +166,7 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         </div>
 
                         {/* Render Images in Absolute Positions */}
-                        {displayItems.map((item, i) => {
+                        {items.map((item, i) => {
                             const config = isPortrait ? LAYOUT_4_5[i] : LAYOUT_1_1[i];
                             if (!config) return null;
                             
@@ -165,10 +191,10 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                         })}
 
                         {/* Bottom Footer Text */}
-                        <div className="absolute bottom-[70px] w-full px-[80px] flex justify-between font-sans text-sm font-bold tracking-widest uppercase text-[#1A1A1A] opacity-80">
-                            <span>NOTICING DETAILS</span>
-                            <span>CAPTURING MOMENTS</span>
-                            <span>IN THE HAUS</span>
+                        <div className="absolute bottom-[70px] w-full px-[80px] flex justify-between font-sans text-sm font-bold tracking-widest uppercase text-[#1A1A1A] opacity-80 z-10">
+                            <span contentEditable suppressContentEditableWarning className="outline-none border-b border-transparent focus:border-gray-400 hover:border-gray-300 transition-colors cursor-text">NOTICING DETAILS</span>
+                            <span contentEditable suppressContentEditableWarning className="outline-none border-b border-transparent focus:border-gray-400 hover:border-gray-300 transition-colors cursor-text">CAPTURING MOMENTS</span>
+                            <span contentEditable suppressContentEditableWarning className="outline-none border-b border-transparent focus:border-gray-400 hover:border-gray-300 transition-colors cursor-text">IN THE HAUS</span>
                         </div>
                     </div>
                     {/* END NODE */}
