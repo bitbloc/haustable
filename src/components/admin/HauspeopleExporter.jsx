@@ -185,8 +185,6 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                             Brutalist Grid
                         </button>
                     </div>
-
-                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex bg-gray-100 rounded-lg p-1 mr-2">
