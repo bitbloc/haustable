@@ -137,6 +137,7 @@ function App() {
           <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
           <Route path="/qa" element={<QnAPage />} />
           <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
+          <Route path="/pos" element={<POSDashboard />} />
           <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
           <Route path="/arcade" element={
@@ -214,9 +215,6 @@ function App() {
               <Route path="/staff/stock" element={<StockPage />} />
               <Route path="/staff/sop" element={<BarSOPPage />} />
             </Route>
-
-            {/* POS Dashboard */}
-            <Route path="/pos" element={<POSDashboard />} />
           </Route>
 
         </Routes>
