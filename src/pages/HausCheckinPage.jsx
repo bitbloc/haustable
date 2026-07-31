@@ -541,9 +541,12 @@ export default function HausCheckinPage() {
 
     if (loading) {
         return (
-            <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] relative overflow-x-hidden pt-28 pb-24 px-4 md:px-6">
-                {/* Top bar placeholder for skeleton so it doesn't look completely empty */}
-                <div className="fixed top-4 left-4 right-4 z-40 bg-[var(--color-paper-2,#F4F1EA)]/90 backdrop-blur-md border border-[var(--color-rule,#E2DDD3)] h-[46px] rounded-xs shadow-sm"></div>
+            <div className="haus-checkin-page min-h-screen bg-[var(--color-paper,#FBF9F5)] relative overflow-x-hidden pt-[112px] pb-24 px-4 md:px-6">
+                {/* Structural Top Header Placeholder */}
+                <div className="fixed top-0 left-0 right-0 z-40 flex flex-col w-full shadow-sm bg-[var(--color-paper,#FBF9F5)]">
+                    <div className="w-full bg-[#E9F344] h-[32px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
+                    <div className="w-full h-[52px] border-b border-[var(--color-rule,#E2DDD3)]"></div>
+                </div>
                 
                 <div className="w-full max-w-[1600px] mx-auto mt-4">
                     <div className="grid grid-flow-dense grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[280px]">
@@ -586,79 +589,55 @@ export default function HausCheckinPage() {
                 )}
             </div>
 
-            {/* ─── TOP CONSOLE BAR (Dieter Rams Light Bezel) ─── */}
-            <div className="fixed top-4 left-4 right-4 z-40 bg-[var(--color-paper-2,#F4F1EA)]/90 backdrop-blur-md border border-[var(--color-rule,#E2DDD3)] px-4 py-2.5 rounded-xs flex items-center justify-between gap-4 shadow-sm select-none">
-                {/* Left section: Back button & Shop title */}
-                <div className="flex items-center gap-3">
-                    <a
-                        href="/link"
-                        className="flex items-center justify-center w-8 h-8 rounded-xs hover:bg-[var(--color-rule,#E2DDD3)]/40 text-[var(--color-neutral,#888279)] hover:text-[var(--color-ink,#23201D)] transition-colors cursor-pointer"
-                        title="BACK TO DIRECTORY"
-                    >
-                        <ArrowLeft size={16} />
-                    </a>
-                    <span className="w-[1px] h-4 bg-[var(--color-rule,#E2DDD3)]" />
-                    <span className="text-[10px] font-mono font-extrabold tracking-widest text-[var(--color-ink,#23201D)] uppercase whitespace-nowrap">
-                        {shopName} STREAM
+            {/* ─── STRUCTURAL TOP HEADER (TAB DESIGN) ─── */}
+            <div className="fixed top-0 left-0 right-0 z-40 flex flex-col w-full select-none shadow-sm">
+                {/* Yellow Marquee / Info Bar */}
+                <div className="w-full bg-[#E9F344] text-[#23201D] flex items-center h-[32px] px-4 overflow-hidden whitespace-nowrap border-b border-[var(--color-rule,#E2DDD3)]">
+                    <span className="font-mono text-[9px] font-extrabold tracking-widest uppercase truncate w-full text-center">
+                        *** TAG @INTHEHAUS OR #INTHEHAUS TO JOIN THE STREAM ***
                     </span>
                 </div>
+                
+                {/* Main Header Bar */}
+                <header className="bg-[var(--color-paper,#FBF9F5)] border-b border-[var(--color-rule,#E2DDD3)] flex h-[52px]">
+                    {/* Logo / Back */}
+                    <a href="/link" className="flex items-center justify-center px-4 md:px-8 border-r border-[var(--color-rule,#E2DDD3)] hover:bg-[var(--color-paper-2,#F4F1EA)] transition-colors cursor-pointer text-[var(--color-ink,#23201D)] flex-shrink-0">
+                        <ArrowLeft size={16} className="mr-2 md:mr-3" />
+                        <span className="font-mono text-[11px] md:text-[12px] font-extrabold tracking-widest uppercase">{shopName}</span>
+                    </a>
 
-                {/* Center section: Simulated Tuner / Online Status */}
-                <div className="hidden md:flex flex-col items-center gap-1 text-[8px] font-mono whitespace-nowrap">
-                    {/* Tuner scale ticks */}
-                    <div className="flex items-center gap-[3px] text-[var(--color-neutral,#888279)] h-1.5 select-none pointer-events-none mb-0.5">
-                        {[...Array(19)].map((_, i) => (
-                            <span key={i} className={`w-[1px] ${i === 9 ? 'h-1.5 bg-[var(--color-accent,#D85436)]' : i % 3 === 0 ? 'h-1 bg-[var(--color-neutral,#888279)]' : 'h-0.5 bg-[var(--color-rule,#E2DDD3)]'}`} />
+                    {/* Filters as Tab Links */}
+                    <div className="flex-1 flex items-center overflow-x-auto scrollbar-hide bg-[var(--color-paper-2,#F4F1EA)]">
+                        {['all', 'instagram', 'facebook', 'google'].map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveFilter(tab)}
+                                className={`h-full px-5 md:px-8 flex items-center justify-center font-mono text-[9px] md:text-[10px] font-bold tracking-widest uppercase border-r border-[var(--color-rule,#E2DDD3)] transition-colors hover:bg-[var(--color-paper,#FBF9F5)] cursor-pointer flex-shrink-0
+                                ${activeFilter === tab ? 'text-[var(--color-ink,#23201D)] bg-[var(--color-paper,#FBF9F5)]' : 'text-[var(--color-neutral,#888279)] bg-transparent'}`}
+                            >
+                                {tab}
+                            </button>
                         ))}
+                        {/* Empty space filler */}
+                        <div className="flex-1 min-w-[20px] h-full"></div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-xs bg-[var(--color-accent,#D85436)] animate-pulse" />
-                        <span className="text-[var(--color-ink,#23201D)] tracking-widest font-bold">// STATUS: ONLINE</span>
-                    </div>
-                </div>
 
-                {/* Right section: Write note action */}
-                <div>
+                    {/* Status */}
+                    <div className="hidden md:flex items-center justify-center px-6 border-l border-[var(--color-rule,#E2DDD3)] flex-shrink-0 bg-[var(--color-paper,#FBF9F5)]">
+                        <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-[var(--color-accent,#D85436)] rounded-full animate-pulse" />
+                            <span className="text-[10px] font-mono font-bold tracking-widest text-[var(--color-ink,#23201D)] uppercase">ONLINE</span>
+                        </div>
+                    </div>
+
+                    {/* CTA */}
                     <button
                         onClick={() => setShowAddTextModal(true)}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xs bg-[var(--color-accent,#D85436)] text-white font-mono text-[9px] font-extrabold tracking-widest uppercase hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-xs border-0"
-                        title="ฝากข้อความบนบอร์ด"
+                        className="flex items-center justify-center px-6 md:px-8 bg-[var(--color-ink,#23201D)] text-[var(--color-paper,#FBF9F5)] hover:bg-black transition-colors font-mono text-[9px] md:text-[10px] font-extrabold tracking-widest uppercase cursor-pointer border-0 flex-shrink-0"
                     >
-                        <Plus size={12} strokeWidth={3} />
-                        <span className="hidden sm:inline">WRITE NOTE / ฝากข้อความ</span>
+                        WRITE NOTE
                     </button>
-                </div>
-            </div>
-
-            {/* ─── BOTTOM CONSOLE BAR (Platform filters & stats) ─── */}
-            <div className="fixed bottom-4 left-4 right-4 z-40 bg-[var(--color-paper-2,#F4F1EA)]/90 backdrop-blur-md border border-[var(--color-rule,#E2DDD3)] px-4 py-2.5 rounded-xs flex items-center justify-between gap-4 shadow-sm select-none">
-                {/* Left section: scroll help */}
-                <div className="hidden lg:flex items-center gap-2 text-[9px] font-mono text-[var(--color-muted,#656058)] uppercase tracking-wider font-semibold">
-                    <span>SCROLL TO EXPLORE</span>
-                </div>
-
-                {/* Center section: filter tabs */}
-                <div className="flex items-center gap-1 p-0.5 bg-[var(--color-paper,#FBF9F5)] rounded-xs border border-[var(--color-rule,#E2DDD3)] mx-auto lg:mx-0">
-                    {[
-                        { id: 'all', label: 'ALL' },
-                        { id: 'instagram', label: 'INSTAGRAM' },
-                        { id: 'facebook', label: 'FACEBOOK' },
-                        { id: 'google', label: 'GOOGLE' }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveFilter(tab.id)}
-                            className={`px-3.5 py-1.5 rounded-xs font-mono text-[9px] font-extrabold tracking-widest cursor-pointer transition-all ${activeFilter === tab.id ? 'bg-[var(--color-accent,#D85436)] text-white shadow-xs font-bold' : 'text-[var(--color-neutral,#888279)] hover:text-[var(--color-ink,#23201D)] bg-transparent hover:bg-[var(--color-paper-2,#F4F1EA)]'}`}
-                        >
-                            <span>{tab.label}</span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Right section: join instruction brief */}
-                <div className="hidden lg:flex items-center text-[9px] font-mono text-[var(--color-muted,#656058)] text-right leading-none max-w-[300px]">
-                    <span>TAG <span className="text-[var(--color-accent,#D85436)] font-bold">@inthehaus</span> OR <span className="text-[var(--color-accent,#D85436)] font-bold">#inthehaus</span> TO JOIN THE STREAM</span>
-                </div>
+                </header>
             </div>
 
             {/* ─── ADD TEXT (POST-IT NOTE) MODAL ─── */}
