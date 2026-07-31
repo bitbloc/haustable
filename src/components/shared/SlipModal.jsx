@@ -832,24 +832,37 @@ export default function SlipModal({ booking, type, onClose }) {
                 }
 
                 if (activeTab === 'kitchen') {
-                    let printedAny = false;
-                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (kitchenBytes) {
-                        await printToSunmiBuiltIn(kitchenBytes);
-                        printedAny = true;
-                    }
-                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (barBytes) {
-                        await printToSunmiBuiltIn(barBytes);
-                        printedAny = true;
-                    }
-                    const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
-                    if (otherBytes) {
-                        await printToSunmiBuiltIn(otherBytes);
-                        printedAny = true;
-                    }
-                    if (!printedAny) {
-                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                    let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
+                    
+                    if (!isSeparateBarPrinterEnabled) {
+                        // Print everything combined if no separate printer
+                        const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (allBytes) {
+                            await printToSunmiBuiltIn(allBytes);
+                        } else {
+                            toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                        }
+                    } else {
+                        // Split into kitchen, bar, other
+                        let printedAny = false;
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (kitchenBytes) {
+                            await printToSunmiBuiltIn(kitchenBytes);
+                            printedAny = true;
+                        }
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (barBytes) {
+                            await printToSunmiBuiltIn(barBytes);
+                            printedAny = true;
+                        }
+                        const otherBytes = encodeReceiptData(booking, 'other', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
+                        if (otherBytes) {
+                            await printToSunmiBuiltIn(otherBytes);
+                            printedAny = true;
+                        }
+                        if (!printedAny) {
+                            toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                        }
                     }
                 } else {
                     const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
@@ -1010,12 +1023,10 @@ export default function SlipModal({ booking, type, onClose }) {
                 }
             } catch (err) {}
 
-            if (!isSunmi) {
-                const timer = setTimeout(() => {
-                    handlePrint();
-                }, 600);
-                return () => clearTimeout(timer);
-            }
+            const timer = setTimeout(() => {
+                handlePrint();
+            }, isSunmi ? 50 : 600);
+            return () => clearTimeout(timer);
         }
     }, [type]);    if (isAutoPrinting) {
         return null;

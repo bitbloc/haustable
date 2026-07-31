@@ -1245,7 +1245,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <div className="p-5 space-y-5 bg-white">
                                 <div className="text-center bg-[#EBEBE9] py-4 rounded-xl border border-[#D1D1CD]">
                                     <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider mb-1">Total Amount</p>
-                                    <p className="text-4xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{netTotal.toFixed(2)}</p>
+                                    <p className="text-4xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{total.toFixed(2)}</p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -1275,7 +1275,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">Cash Received</p>
                                         <input
                                             type="number"
-                                            placeholder={`e.g. ${Math.ceil(netTotal / 100) * 100}`}
+                                            placeholder={`e.g. ${Math.ceil(total / 100) * 100}`}
                                             value={cashReceivedInput}
                                             onChange={(e) => setCashReceivedInput(e.target.value)}
                                             className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-2xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[var(--color-accent)] h-14 placeholder:text-gray-300"
@@ -1294,17 +1294,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             ))}
                                             <button
                                                 type="button"
-                                                onClick={() => setCashReceivedInput(String(Math.ceil(netTotal)))}
+                                                onClick={() => setCashReceivedInput(String(Math.ceil(total)))}
                                                 className="py-2 bg-[#E6F4FF] border border-blue-200 hover:border-blue-400 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider text-blue-700 transition-colors cursor-pointer"
                                             >
                                                 EXACT
                                             </button>
                                         </div>
 
-                                        {parseFloat(cashReceivedInput) > 0 && parseFloat(cashReceivedInput) >= netTotal && (
+                                        {parseFloat(cashReceivedInput) > 0 && parseFloat(cashReceivedInput) >= total && (
                                             <div className="flex justify-between items-center px-4 py-3 bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl mt-3 text-[#1A1A1A]">
                                                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#767673]">Change Due</span>
-                                                <span className="text-xl font-mono font-bold">฿{(parseFloat(cashReceivedInput) - netTotal).toFixed(2)}</span>
+                                                <span className="text-xl font-mono font-bold">฿{(parseFloat(cashReceivedInput) - total).toFixed(2)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -1314,15 +1314,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
                                 <button
                                     type="button"
-                                    disabled={paymentMethod === 'cash' && (parseFloat(cashReceivedInput) < netTotal || !cashReceivedInput)}
+                                    disabled={paymentMethod === 'cash' && (parseFloat(cashReceivedInput) < total || !cashReceivedInput)}
                                     onClick={() => {
                                         if (onCheckout) {
                                             onCheckout(
                                                 booking?.id,
-                                                netTotal,
+                                                total,
                                                 paymentMethod,
-                                                totalDiscount,
-                                                xhausToEarn,
+                                                memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                                                pointsEarned,
                                                 xhausToRedeem,
                                                 xhausDiscount,
                                                 appliedReward?.claim_code || null,
