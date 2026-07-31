@@ -15,26 +15,7 @@ const TEXT_COLORS = [
     'text-[#23201D]', // Dark Ink for Yellow
 ]
 
-// Determine bento spans based on index (Repeating pattern of 6)
-const getBentoClasses = (index) => {
-    const pattern = index % 6
-    switch (pattern) {
-        case 0:
-            return 'md:col-span-1 md:row-span-2' // Tall (Purple)
-        case 1:
-            return 'md:col-span-2 md:row-span-2' // Large wide (Image)
-        case 2:
-            return 'md:col-span-1 md:row-span-2' // Tall (Orange)
-        case 3:
-            return 'md:col-span-1 md:row-span-2' // Tall (Purple with half img)
-        case 4:
-            return 'md:col-span-1 md:row-span-2' // Tall (Green with half img)
-        case 5:
-            return 'md:col-span-3 md:row-span-2 lg:col-span-2' // Large wide (Image) + Yellow in next row... wait, let's keep it simple
-        default:
-            return 'md:col-span-1 md:row-span-2'
-    }
-}
+
 
 const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
     const isLiked = likedIds?.includes(item.id)
@@ -42,37 +23,21 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
     const bgColor = COLORS[colorIndex]
     const textColor = TEXT_COLORS[colorIndex]
     
-    // Customize the pattern specifically for the image reference
-    let bentoSpan = 'md:col-span-1 md:row-span-2' // Default tall
-    let showFullImage = false
-    let showHalfImage = false
-
-    const pattern = index % 6
-    if (pattern === 0) {
-        bentoSpan = 'col-span-1 md:col-span-1 row-span-2'
-    } else if (pattern === 1) {
-        bentoSpan = 'col-span-1 md:col-span-2 row-span-2'
-        showFullImage = true
-    } else if (pattern === 2) {
-        bentoSpan = 'col-span-1 md:col-span-1 row-span-2'
-        showHalfImage = true
+    // Make grid denser and images smaller (more frequent)
+    const pattern = index % 10
+    let bentoSpan = 'col-span-1 sm:col-span-1 md:col-span-1 row-span-1'
+    
+    // Occasionally make some cards larger for bento effect
+    if (pattern === 0 || pattern === 5) {
+        bentoSpan = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-2'
     } else if (pattern === 3) {
-        bentoSpan = 'col-span-1 md:col-span-1 row-span-2'
-        showHalfImage = true
-    } else if (pattern === 4) {
-        bentoSpan = 'col-span-1 md:col-span-1 row-span-2'
-        showHalfImage = true
-    } else if (pattern === 5) {
-        bentoSpan = 'col-span-1 md:col-span-2 row-span-2'
-        showFullImage = true
+        bentoSpan = 'col-span-1 sm:col-span-2 md:col-span-2 row-span-1'
     }
 
     const hasValidImage = item.image_url && item.image_url !== 'text_only'
     
-    if (!hasValidImage) {
-        showFullImage = false
-        showHalfImage = false
-    }
+    // Always emphasize clear pictures with full bleed if an image exists
+    const showFullImage = hasValidImage
 
     // Badges based on source
     let badgeText = 'SOCIAL POST'
@@ -87,19 +52,20 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
             onClick={() => onItemClick?.(item)}
             whileHover={{ scale: 0.985 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`relative group overflow-hidden rounded-[32px] cursor-pointer shadow-sm hover:shadow-lg transition-shadow duration-300 ${bentoSpan} ${showFullImage ? 'bg-[#1a1a1a]' : bgColor} min-h-[420px] flex flex-col border border-black/5`}
+            className={`relative group overflow-hidden rounded-[28px] cursor-pointer shadow-sm hover:shadow-lg transition-shadow duration-300 ${bentoSpan} ${showFullImage ? 'bg-[#1a1a1a]' : bgColor} min-h-[280px] flex flex-col border border-black/5`}
         >
             {/* Background Image Layer */}
             {hasValidImage && (
-                <div className={`absolute inset-0 z-0 ${showFullImage ? 'opacity-100' : (showHalfImage ? 'opacity-100 mt-[45%] rounded-t-[24px] overflow-hidden' : 'hidden')}`}>
+                <div className="absolute inset-0 z-0 opacity-100">
                     <img 
                         src={item.image?.src || item.image_url} 
                         alt={item.text || "Check-in image"} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         crossOrigin="anonymous"
                         loading="lazy"
                     />
-                    {showFullImage && <div className="absolute inset-0 bg-black/30 transition-opacity group-hover:bg-black/40" />}
+                    {/* Dark gradient from bottom to make text readable but keep image very clear at the top */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity group-hover:from-black/90" />
                 </div>
             )}
 
@@ -126,7 +92,7 @@ const BentoCard = ({ item, index, onItemClick, likedIds, onLikeToggle }) => {
 
                 {/* Middle/Bottom Section: Text & Actions */}
                 <div className={`mt-auto ${showFullImage ? 'text-white' : textColor}`}>
-                    <h3 className="text-3xl md:text-[32px] font-bold leading-[1.1] mb-6 line-clamp-4" style={{ fontFamily: "Inter, 'IBM Plex Sans Thai', sans-serif", letterSpacing: "-0.03em" }}>
+                    <h3 className={`${bentoSpan.includes('row-span-2') ? 'text-2xl md:text-3xl' : 'text-xl'} font-bold leading-[1.2] mb-4 line-clamp-4`} style={{ fontFamily: "Inter, 'IBM Plex Sans Thai', sans-serif", letterSpacing: "-0.02em" }}>
                         {item.text ? `"${item.text}"` : `@${item.user?.name || item.user_name || "Guest"}`}
                     </h3>
 
@@ -175,8 +141,8 @@ export default function BentoStreamGrid({ items, onItemClick, likedIds, onLikeTo
     if (!items || items.length === 0) return null
 
     return (
-        <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 pt-32 pb-24">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 auto-rows-[minmax(200px,auto)]">
+        <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 pt-28 pb-24">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 auto-rows-[minmax(280px,auto)]">
                 {items.map((item, index) => (
                     <BentoCard 
                         key={item.id || index}
