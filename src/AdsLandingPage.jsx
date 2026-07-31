@@ -328,37 +328,37 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                             <img
                                 src={optimizeImageUrl(logoUrl, 120)}
                                 alt="IN THE HAUS Logo"
-                                className="w-[52px] h-[52px] object-cover border border-[var(--color-hallmark-ink)] flex-shrink-0"
+                                className="w-14 h-14 object-cover border border-[var(--color-hallmark-ink)] flex-shrink-0"
                             />
                         ) : (
-                            <div className="w-[52px] h-[52px] bg-[var(--color-hallmark-ink)] flex items-center justify-center flex-shrink-0 p-1.5">
+                            <div className="w-14 h-14 bg-[var(--color-hallmark-ink)] flex items-center justify-center flex-shrink-0 p-1.5">
                                 <img src="/logo.png" alt="IN THE HAUS" className="w-full h-full object-contain invert" />
                             </div>
                         )}
                         <div className="flex flex-col justify-center">
-                            <h1 className="text-xl md:text-2xl font-[var(--font-display)] font-bold text-[var(--color-hallmark-ink)] tracking-wider uppercase leading-none">
+                            <h1 className="text-2xl font-[var(--font-display)] font-bold text-[var(--color-hallmark-ink)] tracking-widest uppercase leading-none">
                                 {shopName}
                             </h1>
-                            <p className="text-[var(--color-hallmark-ink-muted)] font-mono font-bold text-[9px] tracking-widest uppercase mt-1.5">{shopNameTh}</p>
+                            <p className="text-[var(--color-hallmark-ink-muted)] font-mono font-bold text-[10px] tracking-widest uppercase mt-2">{shopNameTh}</p>
                         </div>
                     </div>
 
                     {/* Tabular Metadata Grid */}
-                    <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)] font-mono text-[9px] text-[var(--color-hallmark-ink)] uppercase font-bold tracking-wider">
+                    <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)] font-[var(--font-body)] text-[10px] text-[var(--color-hallmark-ink)] uppercase font-semibold tracking-wider">
                         <div className="p-3 flex flex-col gap-1">
-                            <span className="text-[var(--color-hallmark-ink-muted)]">STATUS</span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 bg-emerald-500 animate-pulse border border-[var(--color-hallmark-rule)]" />
+                            <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">STATUS</span>
+                            <span className="flex items-center gap-1.5 text-xs font-bold">
+                                <span className="w-2 h-2 bg-emerald-500 border border-[var(--color-hallmark-rule)]" />
                                 OPEN DAILY
                             </span>
                         </div>
                         <div className="p-3 flex flex-col gap-1">
-                            <span className="text-[var(--color-hallmark-ink-muted)]">HOURS</span>
-                            <span>{hours.replace('เปิดทุกวัน ', '')}</span>
+                            <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">HOURS</span>
+                            <span className="text-xs font-bold">{hours.replace('เปิดทุกวัน ', '')}</span>
                         </div>
                         <div className="p-3 flex flex-col gap-1 col-span-2 border-t border-[var(--color-hallmark-rule)]">
-                            <span className="text-[var(--color-hallmark-ink-muted)]">LOC</span>
-                            <span>{locationText}</span>
+                            <span className="text-[var(--color-hallmark-ink-muted)] font-mono text-[9px]">LOC</span>
+                            <span className="text-xs font-bold">{locationText}</span>
                         </div>
                     </div>
 
@@ -386,24 +386,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 <div className="grid grid-cols-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] sticky top-0 z-30 select-none divide-x divide-[var(--color-hallmark-rule)]">
                     <button
                         onClick={() => setActiveSection('menu')}
-                        className={`py-3.5 flex items-center justify-center gap-2 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-colors ${activeSection === 'menu' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
+                        className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'menu' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'menu' && <span className="text-[var(--color-brand)] font-black">*</span>}
-                        01 / MENU
+                        MENU
                     </button>
                     <button
                         onClick={() => setActiveSection('atmosphere')}
-                        className={`py-3.5 flex items-center justify-center gap-2 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-colors ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
+                        className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'atmosphere' && <span className="text-[var(--color-brand)] font-black">*</span>}
-                        02 / VIBE
+                        VIBE
                     </button>
                     <button
                         onClick={() => setActiveSection('connect')}
-                        className={`py-3.5 flex items-center justify-center gap-2 font-[var(--font-display)] text-[10px] font-bold tracking-wider cursor-pointer transition-colors ${activeSection === 'connect' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
+                        className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'connect' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'connect' && <span className="text-[var(--color-brand)] font-black">*</span>}
-                        03 / CONNECT
+                        CONNECT
                     </button>
                 </div>
 
@@ -415,10 +415,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                         {signatures.length > 0 && (
                             <section className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
-                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        01.1 // SIGNATURE DISHES
+                                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                        SIGNATURE DISHES
                                     </h3>
-                                    <span className="text-[8px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] px-1.5 py-0.5 font-bold uppercase tracking-wider border border-[var(--color-hallmark-ink)]">
+                                    <span className="text-[10px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] px-2 py-0.5 font-bold uppercase tracking-wider border border-[var(--color-hallmark-ink)]">
                                         RECOMMENDED
                                     </span>
                                 </div>
@@ -438,9 +438,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                                     decoding="async"
                                                 />
                                             </div>
-                                            <div className="p-3 flex-grow flex flex-col justify-between">
-                                                <p className="font-[var(--font-body)] font-bold text-[10px] leading-tight text-[var(--color-hallmark-ink)] line-clamp-2">{dish.name}</p>
-                                                <p className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)] mt-1.5">฿{dish.price}</p>
+                                            <div className="p-3 flex-grow flex flex-col justify-between gap-2">
+                                                <p className="font-[var(--font-body)] font-bold text-xs leading-tight text-[var(--color-hallmark-ink)]">{dish.name}</p>
+                                                <p className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)]">฿{dish.price}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -452,10 +452,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                         {featuredMenuItems.length > 0 && (
                             <section className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
-                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        01.2 // SPECIALTIES
+                                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                        SPECIALTIES
                                     </h3>
-                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                    <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                         {featuredMenuItems.length} ITEMS
                                     </span>
                                 </div>
@@ -470,7 +470,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                 <div>
                                     <button
                                         onClick={() => setShowAllMenu(!showAllMenu)}
-                                        className="w-full p-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[9px] font-bold uppercase tracking-wider cursor-pointer"
+                                        className="w-full p-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[11px] font-bold uppercase tracking-widest cursor-pointer"
                                     >
                                         {showAllMenu ? "[-] CLOSE FULL MENU" : "[+] VIEW FULL MENU"}
                                     </button>
@@ -495,10 +495,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                                         return (
                                             <div key={category.id} className="border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] animate-fade-in first:border-t-0">
                                                 <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex justify-between items-center">
-                                                    <span className="font-[var(--font-display)] text-[10px] font-bold tracking-wider text-[var(--color-hallmark-ink)] uppercase">
+                                                    <span className="font-mono text-xs font-bold tracking-widest text-[var(--color-hallmark-ink)] uppercase">
                                                         {category.name}
                                                     </span>
-                                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                                    <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                                         {categoryItems.length} ITEMS
                                                     </span>
                                                 </div>
@@ -546,10 +546,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                         {atmImages.length > 0 && (
                             <div className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
-                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        02.1 // ATMOSPHERE IMAGES
+                                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                        ATMOSPHERE IMAGES
                                     </h3>
-                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">
+                                    <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                         {atmImages.length} VIEWS
                                     </span>
                                 </div>
@@ -578,10 +578,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                         {customerCheckins.length > 0 && (
                             <div className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
-                                    <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                        02.2 // CUSTOMER MOMENTS
+                                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                        CUSTOMER MOMENTS
                                     </h3>
-                                    <span className="font-mono text-[9px] text-white bg-[var(--color-brand)] px-1.5 py-0.5 font-bold uppercase tracking-wider">
+                                    <span className="font-mono text-[10px] text-white bg-[var(--color-brand)] px-2 py-0.5 font-bold uppercase tracking-wider">
                                         LIVE
                                     </span>
                                 </div>
@@ -619,8 +619,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                     <div className="space-y-4 flex-grow animate-fade-in">
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
-                                <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                    03.1 // RESERVATION & DELIVERY
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    RESERVATION & DELIVERY
                                 </h3>
                             </div>
                             
@@ -632,8 +632,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                             />
                             
                             <LinkCard 
-                                href="tel:0948924666" 
-                                title="094-892-4666 // โทรติดต่อร้าน" 
+                                href="tel:0985284217" 
+                                title="098-528-4217 // โทรติดต่อร้าน" 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
                             />
@@ -641,8 +641,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
 
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
-                                <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                    03.2 // SOCIAL MEDIA
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    SOCIAL MEDIA
                                 </h3>
                             </div>
                             
@@ -663,8 +663,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
 
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
-                                <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)]">
-                                    03.3 // LOCATION
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    LOCATION
                                 </h3>
                             </div>
                             
@@ -1100,7 +1100,7 @@ function LinkCard({ href, title, bg, wide = false, internal = false, id, onClick
             onClick={onClick}
             target={internal ? "_self" : "_blank"}
             rel={internal ? undefined : "noopener noreferrer"}
-            className={`${bg} py-4 px-4 flex items-center justify-center transition-colors cursor-pointer ${wide ? 'w-full block text-center' : 'flex-1'} font-mono text-[10px] font-bold tracking-widest`}
+            className={`${bg} py-4 px-4 flex items-center justify-center transition-colors cursor-pointer ${wide ? 'w-full block text-center' : 'flex-1'} font-mono text-xs font-bold tracking-widest`}
         >
             <span className="whitespace-nowrap uppercase">{title}</span>
         </a>
