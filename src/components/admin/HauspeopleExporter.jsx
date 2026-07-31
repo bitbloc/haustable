@@ -14,11 +14,12 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     const [gridGap, setGridGap] = useState(24);
     const [items, setItems] = useState(checkins.slice(0, 6));
     const [customLogo, setCustomLogo] = useState(null);
-    const fileInputRef = useRef();
-    const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
+    const fileInputRef = useRef(null);
+    const dragRef = useRef({ isPointerDown: false, hasMoved: false, startX: 0, startY: 0, initialX: 0, initialY: 0 });
 
     const handlePointerDown = (e) => {
-        dragRef.current.isDragging = false; // Reset on down
+        dragRef.current.isPointerDown = true;
+        dragRef.current.hasMoved = false;
         dragRef.current.startX = e.clientX;
         dragRef.current.startY = e.clientY;
         dragRef.current.initialX = logoPos.x;
@@ -27,26 +28,29 @@ export default function HauspeopleExporter({ checkins, onClose }) {
     };
 
     const handlePointerMove = (e) => {
-        // Only mark as dragging if moved more than 3px
-        if (Math.abs(e.clientX - dragRef.current.startX) > 3 || Math.abs(e.clientY - dragRef.current.startY) > 3) {
-            dragRef.current.isDragging = true;
+        if (!dragRef.current.isPointerDown) return;
+
+        if (!dragRef.current.hasMoved && (Math.abs(e.clientX - dragRef.current.startX) > 3 || Math.abs(e.clientY - dragRef.current.startY) > 3)) {
+            dragRef.current.hasMoved = true;
         }
-        if (!dragRef.current.isDragging) return;
         
-        setLogoPos({
-            x: dragRef.current.initialX + (e.clientX - dragRef.current.startX),
-            y: dragRef.current.initialY + (e.clientY - dragRef.current.startY)
-        });
+        if (dragRef.current.hasMoved) {
+            // account for the 0.55 scale of the canvas preview
+            setLogoPos({
+                x: dragRef.current.initialX + (e.clientX - dragRef.current.startX) / 0.55,
+                y: dragRef.current.initialY + (e.clientY - dragRef.current.startY) / 0.55
+            });
+        }
     };
 
     const handlePointerUp = (e) => {
+        if (!dragRef.current.isPointerDown) return;
+        dragRef.current.isPointerDown = false;
         try { e.target.releasePointerCapture(e.pointerId); } catch(err) {}
         
-        // If it was just a click (no drag), trigger upload
-        if (!dragRef.current.isDragging) {
+        if (!dragRef.current.hasMoved) {
             fileInputRef.current?.click();
         }
-        dragRef.current.isDragging = false;
     };
 
     const isPortrait = ratio === '4:5';
