@@ -267,12 +267,16 @@ export async function syncOfflineQueue(isManual = false) {
 
                 // Sync xhaus points if redeemed/earned
                 if (xhausEarned || xhausRedeemed) {
-                    await supabase.rpc('process_checkout_xhaus', {
-                        p_booking_id: bookingId,
-                        p_xhaus_earned: xhausEarned || 0,
-                        p_xhaus_redeemed: xhausRedeemed || 0,
-                        p_xhaus_discount: xhausDiscount || 0
-                    }).catch(err => console.warn('Failed RPC process_checkout_xhaus during sync:', err));
+                    try {
+                        await supabase.rpc('process_checkout_xhaus', {
+                            p_booking_id: bookingId,
+                            p_xhaus_earned: xhausEarned || 0,
+                            p_xhaus_redeemed: xhausRedeemed || 0,
+                            p_xhaus_discount: xhausDiscount || 0
+                        });
+                    } catch (err) {
+                        console.warn('Failed RPC process_checkout_xhaus during sync:', err);
+                    }
                 }
             }
 

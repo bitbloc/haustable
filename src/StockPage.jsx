@@ -181,13 +181,17 @@ export default function StockPage() {
 
                  // Audit log — quantity_change=0 prevents trigger double-count
                  // even if trigger doesn't skip 'set' type
-                 await supabase.from('stock_transactions').insert({
-                     stock_item_id: itemId,
-                     transaction_type: 'set',
-                     quantity_change: 0,
-                     performed_by: performedBy,
-                     note: `${diagNote} | ${oldQty} → ${roundedChange} (Δ${diff >= 0 ? '+' : ''}${diff})`
-                 }).catch(() => {}); // fire-and-forget audit log
+                 try {
+                     await supabase.from('stock_transactions').insert({
+                         stock_item_id: itemId,
+                         transaction_type: 'set',
+                         quantity_change: 0,
+                         performed_by: performedBy,
+                         note: `${diagNote} | ${oldQty} → ${roundedChange} (Δ${diff >= 0 ? '+' : ''}${diff})`
+                     });
+                 } catch (e) {
+                     // fire-and-forget audit log
+                 }
 
             } else {
                  // Relative Update (In/Out)
