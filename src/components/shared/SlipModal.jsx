@@ -246,7 +246,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 const stored = localStorage.getItem('onhaus_printer_config');
                 if (stored) {
                     const config = JSON.parse(stored);
-                    if (activeTab === 'kitchen') {
+                    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all') {
                         printerType = config.kitchen_printer_type || 'sunmi';
                     } else {
                         printerType = config.cashier_printer_type || 'sunmi';
@@ -256,21 +256,14 @@ export default function SlipModal({ booking, type, onClose }) {
                 console.error("Failed to read printer config:", err);
             }
 
-            // 4. SUNMI Auto Print (Guard with hasAutoPrintedRef to prevent duplicate triggers)
+            // 4. Auto Print (Guard with hasAutoPrintedRef to prevent duplicate triggers)
             if (printerType === 'sunmi') {
                 if (hasAutoPrintedRef.current) return;
                 hasAutoPrintedRef.current = true;
 
                 setIsAutoPrinting(true);
-                // No artificial delay needed for Sunmi ESC/POS encoding
                 try {
-                    let activePaperSize = '80mm';
-                    if (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other') {
-                        activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
-                    } else {
-                        activePaperSize = printerConfig.cashier_paper_size || printerConfig.paper_width || '80mm';
-                    }
-
+                    let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
                     if (activeTab === 'kitchen') {
                         // Always split into kitchen and bar
                         let printedAny = false;
@@ -296,7 +289,6 @@ export default function SlipModal({ booking, type, onClose }) {
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
-                            // QR code ONLY for billing tab (PromptPay before payment). NEVER on receipt tab after payment!
                             const qrToPrint = (activeTab === 'billing') ? (loadedConfig.paymentQrUrl || qrCodeUrl) : null;
                             const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
                             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
@@ -306,6 +298,50 @@ export default function SlipModal({ booking, type, onClose }) {
                 } catch (err) {
                     console.error("SUNMI Auto print failed:", err);
                     alert(`พิมพ์อัตโนมัติผ่าน SUNMI ล้มเหลว: ${err.message || err}\nระบบจะสลับมาแสดงหน้าตัวอย่างเพื่อให้กดยืนยันด้วยตนเอง`);
+                    setIsAutoPrinting(false);
+                }
+            } else if (printerType === 'rawbt') {
+                if (hasAutoPrintedRef.current) return;
+                hasAutoPrintedRef.current = true;
+                setIsAutoPrinting(true);
+                try {
+                    let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
+                    let targetTab = activeTab;
+                    if (activeTab === 'kitchen') {
+                        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
+                        if (!isSeparateBarPrinterEnabled) {
+                            targetTab = 'kitchen_all';
+                        }
+                    }
+                    const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                    if (rawBytes) {
+                        await printToRawBTWebSocket(rawBytes);
+                    }
+                    onClose();
+                } catch (err) {
+                    console.error("RawBT Auto print failed:", err);
+                    setIsAutoPrinting(false);
+                }
+            } else if (printerType === 'bluetooth') {
+                if (hasAutoPrintedRef.current) return;
+                hasAutoPrintedRef.current = true;
+                setIsAutoPrinting(true);
+                try {
+                    let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
+                    let targetTab = activeTab;
+                    if (activeTab === 'kitchen') {
+                        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
+                        if (!isSeparateBarPrinterEnabled) {
+                            targetTab = 'kitchen_all';
+                        }
+                    }
+                    const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                    if (rawBytes) {
+                        await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', rawBytes);
+                    }
+                    onClose();
+                } catch (err) {
+                    console.error("Bluetooth Auto print failed:", err);
                     setIsAutoPrinting(false);
                 }
             }
@@ -795,12 +831,14 @@ export default function SlipModal({ booking, type, onClose }) {
     }
 
     const doPrint = async () => {
-        let printerType = 'sunmi';
-        let btDeviceName = '';
-        let paperSize = '58mm';
-        
-        printerType = 'sunmi';
-        paperSize = '80mm';
+        const isKitchenTabType = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
+        let printerType = isKitchenTabType
+            ? (printerConfig.kitchen_printer_type || 'sunmi')
+            : (printerConfig.cashier_printer_type || 'sunmi');
+        let paperSize = isKitchenTabType
+            ? (printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm')
+            : (printerConfig.cashier_paper_size || printerConfig.paper_width || '80mm');
+        let btDeviceName = printerConfig.bluetooth_device_name || '';
 
         const receiptConfig = {
             shopName: receiptShopName,
@@ -1142,21 +1180,7 @@ export default function SlipModal({ booking, type, onClose }) {
                             <div className="text-[9px] font-black uppercase tracking-widest text-right mb-1 opacity-55">
                                 {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : activeTab === 'other' ? 'OTHER ITEMS' : '01. ITEMS'}
                             </div>
-                            {booking.order_items?.filter(item => {
-                                const categoryId = item.menu_items?.category_id;
-                                const kitchenCatIds = printerConfig.kitchen_categories || [];
-                                const barCatIds = printerConfig.bar_categories || [];
-
-                                if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
-                                    if (activeTab === 'kitchen') return !BAR_CATEGORIES.includes(categoryId);
-                                    if (activeTab === 'bar') return BAR_CATEGORIES.includes(categoryId);
-                                } else {
-                                    if (activeTab === 'kitchen') return kitchenCatIds.includes(categoryId);
-                                    if (activeTab === 'bar') return barCatIds.includes(categoryId);
-                                    if (activeTab === 'other') return !kitchenCatIds.includes(categoryId) && !barCatIds.includes(categoryId);
-                                }
-                                return true;
-                            }).map((item, idx) => {
+                            {selectItemsForTab(booking.order_items || [], activeTab, printerConfig).map((item, idx) => {
                                 let optionsList = []
                                 if (Array.isArray(item.selected_options)) {
                                      optionsList = item.selected_options.map(opt => {
