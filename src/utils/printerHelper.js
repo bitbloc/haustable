@@ -1150,22 +1150,23 @@ function splitPrinterGraphemes(str) {
 // CRITICAL: We use grapheme cluster width for straight visual alignment.
 // To prevent the hardware byte-buffer from overflowing (which causes line wrapping),
 // maxCols must be set lower than the hardware limit (e.g. 40 instead of 48).
-export function getPrinterCellWidth(str) {
+export function getPrinterCellWidth(str, useByteLength = false) {
     if (str === null || str === undefined) return 0;
+    if (useByteLength) return String(str).length;
     const clusters = splitPrinterGraphemes(str);
     return clusters.length;
 }
 
 export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
 export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
@@ -1177,7 +1178,7 @@ export function sliceThai(str, maxPrinterWidth) {
     let result = '';
 
     for (const cluster of clusters) {
-        const clusterWidth = getPrinterCellWidth(cluster);
+        const clusterWidth = getPrinterCellWidth(cluster, true); // ALWAYS use byte length to prevent hardware wrap!
         if (result && currentWidth + clusterWidth > maxPrinterWidth) break;
         if (!result && clusterWidth > maxPrinterWidth) return cluster;
         result += cluster;
@@ -1187,7 +1188,7 @@ export function sliceThai(str, maxPrinterWidth) {
     return result;
 }
 
-// Word/phrase-aware text wrapping using actual TIS-620 grapheme cell width
+// Word/phrase-aware text wrapping using actual TIS-620 byte cell width
 export function wrapTextByWords(str, maxColWidth) {
     if (!str) return [];
     const width = Math.max(1, Number(maxColWidth) || 1);
@@ -1199,7 +1200,8 @@ export function wrapTextByWords(str, maxColWidth) {
             output.push('');
             return;
         }
-        if (getPrinterCellWidth(paragraph) <= width) {
+        // ALWAYS use byte length to prevent hardware wrap
+        if (getPrinterCellWidth(paragraph, true) <= width) {
             output.push(paragraph);
             return;
         }
@@ -1222,7 +1224,7 @@ export function wrapTextByWords(str, maxColWidth) {
         words.forEach(word => {
             if (!currentLine) {
                 currentLine = leadingSpace;
-                if (getPrinterCellWidth(currentLine + word) <= width) {
+                if (getPrinterCellWidth(currentLine + word, true) <= width) {
                     currentLine += word;
                 } else {
                     flushLongWord(currentLine + word);
@@ -1232,14 +1234,14 @@ export function wrapTextByWords(str, maxColWidth) {
             }
 
             const candidate = `${currentLine} ${word}`;
-            if (getPrinterCellWidth(candidate) <= width) {
+            if (getPrinterCellWidth(candidate, true) <= width) {
                 currentLine = candidate;
                 return;
             }
 
             output.push(currentLine);
             currentLine = leadingSpace;
-            if (getPrinterCellWidth(currentLine + word) <= width) {
+            if (getPrinterCellWidth(currentLine + word, true) <= width) {
                 currentLine += word;
             } else {
                 flushLongWord(currentLine + word);
