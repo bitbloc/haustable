@@ -1331,18 +1331,9 @@ export default function POSDashboard() {
         
         let memberDiscount = 0;
         if (currentBooking && currentBooking.profiles) {
-            const role = (currentBooking.profiles.role || 'customer').toLowerCase();
-            const tier = attachedMemberCrm?.current_tier || '';
-            const completedCount = parseInt(currentBooking.profiles.completed_bookings) || 0;
-            let rate = 0;
-            if (role === 'admin' || role === 'vip' || tier === 'Inner Haus') {
-                rate = 0.15;
-            } else if (role === 'gold' || tier === 'Haus People') {
-                rate = 0.10;
-            } else if (role === 'customer' || tier === 'Haus Common') {
-                rate = 0.05;
-            }
-            memberDiscount = subtotal * rate;
+            // Member Tier Auto-Discounts have been disabled as requested.
+            // Only manual discounts, promos, and xhaus redemption are applied.
+            memberDiscount = 0;
         }
 
         const netBeforeTax = subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount;

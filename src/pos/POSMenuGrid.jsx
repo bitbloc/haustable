@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Search, Plus, Layers } from 'lucide-react';
+import { Search, Plus, Layers, RotateCw } from 'lucide-react';
+import { toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
+import { getAllCachedImages, syncAllMenuImages } from '../utils/imageStore';
 
 const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     const [categories, setCategories] = useState([]);
@@ -10,8 +12,18 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedItemForModal, setSelectedItemForModal] = useState(null);
+    const [localImageMap, setLocalImageMap] = useState({});
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncProgress, setSyncProgress] = useState({ completed: 0, total: 0 });
 
     useEffect(() => {
+        // Load IndexedDB cached blob URLs immediately
+        getAllCachedImages().then(cachedMap => {
+            if (cachedMap && Object.keys(cachedMap).length > 0) {
+                setLocalImageMap(cachedMap);
+            }
+        });
+
         // Stale-While-Revalidate: Read local cache immediately if valid
         try {
             const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
@@ -46,12 +58,66 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
 
             setActiveCategory(prev => prev || cats[0]?.id || 'all');
+
+            // Background sync images to IndexedDB on initial online fetch
+            syncAllMenuImages(items).then(result => {
+                if (result.map && Object.keys(result.map).length > 0) {
+                    setLocalImageMap(prev => ({ ...prev, ...result.map }));
+                }
+            });
         } catch (err) {
             console.warn('[Offline Mode] Failed to fetch menu items online, keeping existing cache state:', err);
         } finally {
             setLoading(false);
         }
     };
+
+    // Manual Refresh / Sync Button handler (loads from DB & caches images to local IndexedDB)
+    const handleManualSync = useCallback(async () => {
+        if (isSyncing) return;
+        setIsSyncing(true);
+        setSyncProgress({ completed: 0, total: 0 });
+
+        if (!navigator.onLine) {
+            toast.error('⚠️ ไม่มีสัญญาณอินเทอร์เน็ต ใช้ข้อมูลและรูปภาพที่บันทึกไว้ล่าสุด');
+            setIsSyncing(false);
+            return;
+        }
+
+        try {
+            const [catRes, itemRes] = await Promise.all([
+                supabase.from('menu_categories').select('*').order('display_order'),
+                supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
+            ]);
+
+            if (catRes.error) throw catRes.error;
+            if (itemRes.error) throw itemRes.error;
+
+            const cats = catRes.data || [];
+            const items = itemRes.data || [];
+
+            setCategories(cats);
+            setMenuItems(items);
+            localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
+            localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
+
+            // Sync images locally into IndexedDB with progress callback
+            const { map } = await syncAllMenuImages(items, (completed, total) => {
+                setSyncProgress({ completed, total });
+            });
+
+            if (map && Object.keys(map).length > 0) {
+                setLocalImageMap(prev => ({ ...prev, ...map }));
+            }
+
+            toast.success(`✅ อัพเดทข้อมูลและบันทึกรูปภาพเมนูเรียบร้อยแล้ว (${items.length} รายการ)`);
+        } catch (err) {
+            console.error('Failed manual sync:', err);
+            toast.error('❌ ไม่สามารถเชื่อมต่อฐานข้อมูลได้ ใช้ข้อมูลเมนูในเครื่องล่าสุด');
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [isSyncing]);
 
     const handleItemClick = async (item) => {
         let opts = item.menu_item_options;
@@ -71,10 +137,11 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             }
         }
 
+        const cachedImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
         if (opts && opts.length > 0) {
-            setSelectedItemForModal({ ...item, menu_item_options: opts });
+            setSelectedItemForModal({ ...item, image_url: cachedImg, menu_item_options: opts });
         } else {
-            onAddItem(item);
+            onAddItem({ ...item, image_url: cachedImg });
         }
     };
 
@@ -109,17 +176,36 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
 
     return (
         <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none relative touch-manipulation">
-            {/* Menu Header with Search and Categories */}
+            {/* Menu Header with Search, Categories & Update Button */}
             <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] space-y-3 shadow-sm shrink-0">
-                <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
-                    <input 
-                        type="search" 
-                        placeholder="Search menu items (ค้นหารายการอาหาร/เครื่องดื่ม)..." 
-                        className="w-full bg-white border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[oklch(52%_0.16_28)] font-medium transition-colors touch-manipulation"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+                <div className="flex gap-2 items-center">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
+                        <input 
+                            type="search" 
+                            placeholder="Search menu items (ค้นหารายการอาหาร/เครื่องดื่ม)..." 
+                            className="w-full bg-white border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[oklch(52%_0.16_28)] font-medium transition-colors touch-manipulation shadow-2xs"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleManualSync}
+                        disabled={isSyncing}
+                        title="อัพเดทรายการเมนูและรูปภาพจากฐานข้อมูลลงเครื่อง"
+                        className="h-[46px] px-3.5 bg-white hover:bg-[#F0F0ED] active:scale-[0.97] disabled:opacity-70 border border-[#D1D1CD] rounded-xl flex items-center gap-2 text-xs font-mono font-bold text-[#1A1A1A] uppercase tracking-wider transition-all cursor-pointer shrink-0 touch-manipulation shadow-xs"
+                    >
+                        <RotateCw className={`shrink-0 ${isSyncing ? 'animate-spin text-[oklch(52%_0.16_28)]' : 'text-[#767673]'}`} size={16} />
+                        <span className="hidden sm:inline">
+                            {isSyncing 
+                                ? (syncProgress.total > 0 ? `กำลังอัพเดท (${syncProgress.completed}/${syncProgress.total})` : 'กำลังโหลด...') 
+                                : 'อัพเดทเมนู'}
+                        </span>
+                        <span className="sm:hidden">
+                            {isSyncing ? `${syncProgress.completed}/${syncProgress.total}` : 'อัพเดท'}
+                        </span>
+                    </button>
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
@@ -144,6 +230,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                     {filteredItems.map(item => {
                         const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
+                        const displayImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
                         return (
                             <button
                                 key={item.id}
@@ -151,8 +238,8 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                                 className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.97] transition-transform duration-75 cursor-pointer shadow-sm relative select-none touch-manipulation"
                             >
                                 <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
-                                    {item.image_url ? (
-                                        <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                    {displayImg ? (
+                                        <img src={displayImg} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-2xl uppercase">
                                             {item.name.charAt(0)}

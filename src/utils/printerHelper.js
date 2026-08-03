@@ -490,7 +490,7 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
     const discountCents = Math.round(Number(booking.discount_amount || 0) * 100);
     const netAfterDiscountCents = Math.max(0, subtotalCents - discountCents);
 
-    const vatMode = (receiptConfig.vat_mode || 'none').toLowerCase(); // 'none' | 'inclusive' | 'exclusive'
+    const vatMode = (receiptConfig.vat_mode || cfg.vat_mode || 'none').toLowerCase(); // 'none' | 'inclusive' | 'exclusive'
     let vatCents = 0;
     let totalCents = netAfterDiscountCents;
 
@@ -501,14 +501,9 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
         vatCents = Math.round(netAfterDiscountCents * 0.07);
         totalCents = netAfterDiscountCents + vatCents;
     } else {
-        if (booking.total_amount != null && Number.isFinite(Number(booking.total_amount))) {
-            const bookedCents = Math.round(Number(booking.total_amount) * 100);
-            const diffWithExclusive = Math.abs(bookedCents - Math.round(netAfterDiscountCents * 1.07));
-            if (diffWithExclusive <= 1) {
-                vatCents = Math.round(netAfterDiscountCents * 0.07);
-                totalCents = netAfterDiscountCents + vatCents;
-            }
-        }
+        // When VAT 7% is disabled ('none'), vatCents remains 0
+        vatCents = 0;
+        totalCents = netAfterDiscountCents;
     }
 
     const bookedTotalCents = (booking.total_amount != null && Number.isFinite(Number(booking.total_amount)))
@@ -2085,15 +2080,25 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
 
         if (printerType === 'sunmi') {
             let printed = false;
-            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-            if (kitchenBytes) {
-                await printToSunmiBuiltIn(kitchenBytes);
-                printed = true;
-            }
-            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-            if (barBytes) {
-                await printToSunmiBuiltIn(barBytes);
-                printed = true;
+            let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+            if (!isSeparateBarPrinterEnabled) {
+                const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                if (allBytes) {
+                    await printToSunmiBuiltIn(allBytes);
+                    await printToSunmiBuiltIn(allBytes);
+                    printed = true;
+                }
+            } else {
+                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                if (kitchenBytes) {
+                    await printToSunmiBuiltIn(kitchenBytes);
+                    printed = true;
+                }
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                if (barBytes) {
+                    await printToSunmiBuiltIn(barBytes);
+                    printed = true;
+                }
             }
             return printed;
         } else if (printerType === 'rawbt') {

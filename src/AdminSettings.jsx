@@ -1612,11 +1612,7 @@ export default function AdminSettings() {
                                             onChange={(e) => handleSavePrinter({ ...printerConfig, cashier_printer_type: e.target.value })} 
                                             className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
                                         >
-                                            <option value="universal">Universal System Print (AirPrint / Android Default)</option>
                                             <option value="sunmi">🖨️ SUNMI Built-in Printer (Auto)</option>
-                                            <option value="rawbt">Auto-Print (via RawBT Local Server)</option>
-                                            <option value="lan">Direct LAN / TCP Network Printer (Simulation)</option>
-                                            <option value="bluetooth">Direct Bluetooth Printer (Web Bluetooth)</option>
                                         </select>
                                     </div>
 
@@ -1711,11 +1707,7 @@ export default function AdminSettings() {
                                             onChange={(e) => handleSavePrinter({ ...printerConfig, kitchen_printer_type: e.target.value })} 
                                             className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer"
                                         >
-                                            <option value="universal">Universal System Print (AirPrint / Android Default)</option>
                                             <option value="sunmi">🖨️ SUNMI Built-in Printer (Auto)</option>
-                                            <option value="rawbt">Auto-Print (via RawBT Local Server)</option>
-                                            <option value="lan">Direct LAN / TCP Network Printer (Simulation)</option>
-                                            <option value="bluetooth">Direct Bluetooth Printer (Web Bluetooth)</option>
                                         </select>
                                     </div>
 
@@ -1821,10 +1813,7 @@ export default function AdminSettings() {
                                                     onChange={(e) => handleSavePrinter({ ...printerConfig, bar_printer_type: e.target.value })} 
                                                     className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#ff0000] cursor-pointer"
                                                 >
-                                                    <option value="lan">Direct LAN / Network IP Printer (TCP Socket 9100)</option>
-                                                    <option value="bluetooth">Direct Bluetooth Printer (BT-SPP)</option>
                                                     <option value="sunmi">SUNMI Secondary Printer</option>
-                                                    <option value="rawbt">RawBT Server Printer</option>
                                                 </select>
                                             </div>
 

@@ -262,16 +262,25 @@ export default function SlipModal({ booking, type, onClose }) {
                     }
 
                     if (activeTab === 'kitchen') {
-                        // Print Kitchen slip (KITCHEN ORDER / ใบออเดอร์ครัว)
-                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
-                        if (kitchenBytes) {
-                            await printToSunmiBuiltIn(kitchenBytes);
-                        }
-                        
-                        // Print Bar slip (BAR ORDER / ใบออเดอร์บาร์)
-                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
-                        if (barBytes) {
-                            await printToSunmiBuiltIn(barBytes);
+                        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip || loadedConfig.separate_bar_printer);
+                        if (!isSeparateBarPrinterEnabled) {
+                            // Print 2 copies of single combined order slip (Kitchen + Bar combined)
+                            const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (allBytes) {
+                                await printToSunmiBuiltIn(allBytes);
+                                await printToSunmiBuiltIn(allBytes);
+                            }
+                        } else {
+                            // Print separate kitchen and bar slips
+                            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (kitchenBytes) {
+                                await printToSunmiBuiltIn(kitchenBytes);
+                            }
+                            
+                            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
+                            if (barBytes) {
+                                await printToSunmiBuiltIn(barBytes);
+                            }
                         }
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
@@ -412,22 +421,26 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }).join('') || '<div class="empty">ไม่มีรายการสินค้า</div>'
 
-        const discountHtml = (!isKitchen && booking.discount_amount > 0) ? `
+        const discountVal = Number(booking.discount_amount) || 0;
+        const discountHtml = (!isKitchen && discountVal > 0) ? `
             <div class="row meta-row">
                 <span>ส่วนลด (${booking.promotion_codes?.code || 'โปรโมชั่น'})</span>
-                <span>-${booking.discount_amount.toLocaleString()}</span>
+                <span>-${discountVal.toLocaleString()}</span>
             </div>
         ` : ''
 
         const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
-        const discountVal = booking.discount_amount || 0;
-        const netAfterDiscount = subtotal - discountVal;
+        const netAfterDiscount = Math.max(0, subtotal - discountVal);
 
-        const vatVal = (booking.total_amount && Math.abs(booking.total_amount - (netAfterDiscount * 1.07)) < 1) 
-            ? (netAfterDiscount * 0.07) 
-            : 0;
+        const vatMode = (printerConfig.vat_mode || 'none').toLowerCase();
+        const isVatEnabled = (printerConfig.vat_enabled === true || vatMode === 'inclusive' || vatMode === 'exclusive');
+        const vatVal = (isVatEnabled && vatMode === 'inclusive')
+            ? (netAfterDiscount * 7 / 107)
+            : ((isVatEnabled && vatMode === 'exclusive')
+                ? (netAfterDiscount * 0.07)
+                : 0);
 
-        const vatHtml = vatVal > 0 ? `
+        const vatHtml = (isVatEnabled && vatVal > 0) ? `
             <div class="row"><span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span> <span>${vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
         ` : '';
 
@@ -811,9 +824,10 @@ export default function SlipModal({ booking, type, onClose }) {
                     let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
                     
                     if (!isSeparateBarPrinterEnabled) {
-                        // Print everything combined if no separate printer
+                        // Print everything combined (2 copies)
                         const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                         if (allBytes) {
+                            await printToSunmiBuiltIn(allBytes);
                             await printToSunmiBuiltIn(allBytes);
                         } else {
                             toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
