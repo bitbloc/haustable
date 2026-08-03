@@ -265,7 +265,6 @@ export default function SlipModal({ booking, type, onClose }) {
                 try {
                     let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
                     if (activeTab === 'kitchen') {
-                        // Always split into kitchen and bar
                         let printedAny = false;
                         const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (kitchenBytes) {
@@ -280,7 +279,6 @@ export default function SlipModal({ booking, type, onClose }) {
                         }
 
                         if (!printedAny) {
-                            // fallback just in case there's uncategorized items
                             const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                             if (allBytes) {
                                 await printToSunmiBuiltIn(allBytes);
@@ -306,16 +304,32 @@ export default function SlipModal({ booking, type, onClose }) {
                 setIsAutoPrinting(true);
                 try {
                     let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
-                    let targetTab = activeTab;
                     if (activeTab === 'kitchen') {
+                        let printedAny = false;
                         let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
-                        if (!isSeparateBarPrinterEnabled) {
-                            targetTab = 'kitchen_all';
+                        if (isSeparateBarPrinterEnabled) {
+                            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                            if (kitchenBytes) {
+                                await printToRawBTWebSocket(kitchenBytes);
+                                printedAny = true;
+                            }
+                            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                            if (barBytes) {
+                                await printToRawBTWebSocket(barBytes);
+                                printedAny = true;
+                            }
                         }
-                    }
-                    const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
-                    if (rawBytes) {
-                        await printToRawBTWebSocket(rawBytes);
+                        if (!printedAny) {
+                            const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                            if (allBytes) {
+                                await printToRawBTWebSocket(allBytes);
+                            }
+                        }
+                    } else {
+                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                        if (rawBytes) {
+                            await printToRawBTWebSocket(rawBytes);
+                        }
                     }
                     onClose();
                 } catch (err) {
@@ -328,16 +342,32 @@ export default function SlipModal({ booking, type, onClose }) {
                 setIsAutoPrinting(true);
                 try {
                     let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
-                    let targetTab = activeTab;
                     if (activeTab === 'kitchen') {
+                        let printedAny = false;
                         let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
-                        if (!isSeparateBarPrinterEnabled) {
-                            targetTab = 'kitchen_all';
+                        if (isSeparateBarPrinterEnabled) {
+                            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                            if (kitchenBytes) {
+                                await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', kitchenBytes);
+                                printedAny = true;
+                            }
+                            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                            if (barBytes) {
+                                await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', barBytes);
+                                printedAny = true;
+                            }
                         }
-                    }
-                    const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
-                    if (rawBytes) {
-                        await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', rawBytes);
+                        if (!printedAny) {
+                            const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                            if (allBytes) {
+                                await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', allBytes);
+                            }
+                        }
+                    } else {
+                        const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                        if (rawBytes) {
+                            await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', rawBytes);
+                        }
                     }
                     onClose();
                 } catch (err) {
