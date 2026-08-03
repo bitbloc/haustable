@@ -59,7 +59,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                             PAYMENT METHOD SETTLEMENT
                         </h4>
                         <span className="font-mono text-xs font-black text-[oklch(52%_0.16_28)]">
-                            Total ฿{paymentMethods.reduce((a,b)=>a+b.amount, 0).toLocaleString()}
+                            Total ฿{Math.ceil(paymentMethods.reduce((a,b)=>a+b.amount, 0)).toLocaleString()}
                         </span>
                     </div>
 
@@ -81,7 +81,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     </div>
 
                                     <div className="font-mono text-lg md:text-xl font-black text-[oklch(18%_0.012_28)] leading-none pt-1">
-                                        ฿{pm.amount.toLocaleString()}
+                                        ฿{Math.ceil(pm.amount).toLocaleString()}
                                     </div>
 
                                     <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(42%_0.010_28)] font-bold">
@@ -122,8 +122,8 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                         </div>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <div className="font-mono text-base font-black text-[oklch(18%_0.012_28)]">
-                                            ฿{ch.amount.toLocaleString()}
+                                        <div className="font-mono text-base font-black text-[oklch(18%_0.012_28)] tracking-tight">
+                                            ฿{Math.ceil(ch.amount).toLocaleString()}
                                         </div>
                                         <div className="font-mono text-[11px] text-[oklch(52%_0.16_28)] font-black">
                                             {ch.percent}% of total
@@ -150,33 +150,33 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                     <div className="space-y-2 text-xs font-mono">
                         <div className="flex justify-between py-1 text-[oklch(18%_0.012_28)]">
                             <span className="font-semibold text-[oklch(42%_0.010_28)]">Gross Sales (ยอดขายรวม)</span>
-                            <span className="font-black text-sm">฿{auditReconciliation.grossSales.toLocaleString()}</span>
+                            <span className="font-black text-sm">฿{Math.ceil(auditReconciliation.grossSales).toLocaleString()}</span>
                         </div>
 
                         <div className="flex justify-between py-1 text-rose-800 bg-rose-50 px-2 rounded-lg font-bold">
                             <span>Less: Total Discounts ({auditReconciliation.discountCount} รายการ)</span>
-                            <span className="font-black">฿{auditReconciliation.totalDiscounts.toLocaleString()}</span>
+                            <span className="font-black">฿{Math.ceil(auditReconciliation.totalDiscounts).toLocaleString()}</span>
                         </div>
 
                         <div className="flex justify-between py-1.5 border-t border-[oklch(85%_0.012_28)] font-bold text-[oklch(18%_0.012_28)]">
                             <span>Taxable Subtotal (ฐานภาษี)</span>
-                            <span className="font-black">฿{auditReconciliation.taxableSubtotal.toLocaleString()}</span>
+                            <span className="font-black">฿{Math.ceil(auditReconciliation.taxableSubtotal).toLocaleString()}</span>
                         </div>
 
                         <div className="flex justify-between py-1 text-[oklch(42%_0.010_28)] font-bold">
                             <span>Service Charge (10%)</span>
-                            <span className="font-black">฿{auditReconciliation.serviceCharge10.toLocaleString()}</span>
+                            <span className="font-black">฿{Math.ceil(auditReconciliation.serviceCharge10).toLocaleString()}</span>
                         </div>
 
                         <div className="flex justify-between py-1 text-[oklch(42%_0.010_28)] font-bold">
                             <span>VAT (7%)</span>
-                            <span className="font-black">฿{auditReconciliation.vat7.toLocaleString()}</span>
+                            <span className="font-black">฿{Math.ceil(auditReconciliation.vat7).toLocaleString()}</span>
                         </div>
 
                         <div className="flex justify-between items-center py-3.5 px-3.5 bg-[oklch(18%_0.012_28)] text-white rounded-xl mt-3 shadow-sm">
                             <span className="font-sans font-black text-xs md:text-sm">ยอดรับชำระสุทธิ (NET)</span>
-                            <span className="font-mono text-lg md:text-xl font-black text-[oklch(97%_0.008_28)]">
-                                ฿{auditReconciliation.netPayable.toLocaleString()}
+                            <span className="font-mono text-lg md:text-xl font-black text-[oklch(97%_0.008_28)] tracking-tight">
+                                ฿{Math.ceil(auditReconciliation.netPayable).toLocaleString()}
                             </span>
                         </div>
                     </div>
@@ -196,12 +196,12 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left font-mono text-xs min-w-[500px]">
                             <thead>
-                                <tr className="border-b-2 border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-black uppercase tracking-wider">
-                                    <th className="py-2 px-2">ช่วงเวลา</th>
-                                    <th className="py-2 px-2 text-right">ยอดขาย (฿)</th>
-                                    <th className="py-2 px-2 text-right">บิล</th>
-                                    <th className="py-2 px-2 text-right">เฉลี่ย/บิล</th>
-                                    <th className="py-2 px-2">เมนูขายดีประจำช่วง</th>
+                                <tr className="border-b-2 border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-black uppercase tracking-widest bg-[oklch(94%_0.010_28)]">
+                                    <th className="py-2.5 px-3 border-r border-[oklch(85%_0.012_28)]">ช่วงเวลา</th>
+                                    <th className="py-2.5 px-3 text-right border-r border-[oklch(85%_0.012_28)]">ยอดขาย (฿)</th>
+                                    <th className="py-2.5 px-3 text-right border-r border-[oklch(85%_0.012_28)]">บิล</th>
+                                    <th className="py-2.5 px-3 text-right border-r border-[oklch(85%_0.012_28)]">เฉลี่ย/บิล</th>
+                                    <th className="py-2.5 px-3">เมนูขายดีประจำช่วง</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]">
@@ -213,15 +213,15 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     </tr>
                                 ) : (
                                     hourlyVelocity.map((hv, idx) => (
-                                        <tr key={idx} className="hover:bg-white transition-colors">
-                                            <td className="py-2.5 px-2 font-black text-[oklch(18%_0.012_28)]">{hv.hour}</td>
-                                            <td className="py-2.5 px-2 text-right font-black text-[oklch(52%_0.16_28)] text-sm">
-                                                ฿{hv.gross.toLocaleString()}
+                                        <tr key={idx} className="hover:bg-white transition-colors border-b border-[oklch(85%_0.012_28)]/50">
+                                            <td className="py-2.5 px-3 font-black text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)]/50">{hv.hour}</td>
+                                            <td className="py-2.5 px-3 text-right font-black text-[oklch(52%_0.16_28)] text-sm tracking-tight border-r border-[oklch(85%_0.012_28)]/50">
+                                                ฿{Math.ceil(hv.gross).toLocaleString()}
                                             </td>
-                                            <td className="py-2.5 px-2 text-right font-bold">{hv.bills}</td>
-                                            <td className="py-2.5 px-2 text-right text-[oklch(42%_0.010_28)] font-bold">฿{hv.avgBill}</td>
-                                            <td className="py-2.5 px-2 font-sans truncate max-w-[140px]">
-                                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[11px]">
+                                            <td className="py-2.5 px-3 text-right font-bold border-r border-[oklch(85%_0.012_28)]/50">{hv.bills}</td>
+                                            <td className="py-2.5 px-3 text-right text-[oklch(42%_0.010_28)] font-bold tracking-tight border-r border-[oklch(85%_0.012_28)]/50">฿{Math.ceil(hv.avgBill).toLocaleString()}</td>
+                                            <td className="py-2.5 px-3 font-sans truncate max-w-[140px]">
+                                                <span className="px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-bold text-[11px] uppercase tracking-tight">
                                                     {hv.peakItem}
                                                 </span>
                                             </td>

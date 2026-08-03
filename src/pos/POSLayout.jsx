@@ -21,11 +21,27 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
     const [queueLength, setQueueLength] = useState(getOfflineQueue().length);
     const [activeShift, setActiveShift] = useState(getCurrentShift());
     const [hasSession, setHasSession] = useState(false);
+    const [activeStaff, setActiveStaff] = useState(() => {
+        try {
+            const saved = localStorage.getItem('pos_active_staff');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
 
     useEffect(() => {
         const handleStatus = () => setOnline(isOnline());
         const handleQueue = () => setQueueLength(getOfflineQueue().length);
-        const handleShift = () => setActiveShift(getCurrentShift());
+        const handleShift = () => {
+            setActiveShift(getCurrentShift());
+            try {
+                const saved = localStorage.getItem('pos_active_staff');
+                setActiveStaff(saved ? JSON.parse(saved) : null);
+            } catch {
+                setActiveStaff(null);
+            }
+        };
 
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
@@ -188,33 +204,37 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                         )}
                         
                         {/* Active Shift Employee */}
-                        {activeShift && (
+                        {(activeShift || activeStaff) && (
                             <div className="flex items-center gap-1.5 bg-[#ff0000]/10 border border-[#ff0000]/20 text-[#ff0000] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm">
                                 <Users size={12} />
-                                <span>พนักงาน: {activeShift.staffName}</span>
-                                <button 
-                                    onClick={() => {
-                                        window.dispatchEvent(new Event('pos-trigger-cash-adjustment'));
-                                    }}
-                                    className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
-                                >
-                                    เบิกจ่าย
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        window.dispatchEvent(new Event('pos-trigger-close-shift'));
-                                    }}
-                                    className="ml-1 text-xs uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors touch-manipulation"
-                                >
-                                    ปิดรอบ
-                                </button>
+                                <span>พนักงาน: {activeStaff?.display_name || activeShift?.staffName || 'Staff'}</span>
+                                {activeShift && (
+                                    <>
+                                        <button 
+                                            onClick={() => {
+                                                window.dispatchEvent(new Event('pos-trigger-cash-adjustment'));
+                                            }}
+                                            className="ml-1 text-[10px] uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors"
+                                        >
+                                            เบิกจ่าย
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                window.dispatchEvent(new Event('pos-trigger-close-shift'));
+                                            }}
+                                            className="ml-1 text-xs uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors touch-manipulation"
+                                        >
+                                            ปิดรอบ
+                                        </button>
+                                    </>
+                                )}
                                 <button 
                                     onClick={() => {
                                         window.dispatchEvent(new Event('pos-trigger-lock'));
                                     }}
                                     className="ml-1 text-xs uppercase font-black hover:text-[#c00000] border-l border-[#ff0000]/30 pl-2 cursor-pointer transition-colors touch-manipulation"
                                 >
-                                    ล็อค
+                                    สลับพนักงาน
                                 </button>
                             </div>
                         )}

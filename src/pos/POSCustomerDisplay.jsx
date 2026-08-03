@@ -25,35 +25,51 @@ export default function POSCustomerDisplay() {
     const [slideshowImages, setSlideshowImages] = useState([]);
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [shopLogoUrl, setShopLogoUrl] = useState(null);
+    const [storePromptpayId, setStorePromptpayId] = useState('0812345678');
+    const [paymentQrUrl, setPaymentQrUrl] = useState(null);
 
-    // Fetch shop logo from app_settings with fallback to /assets/logo-script.webp
+    // Fetch shop logo & PromptPay settings from app_settings
     useEffect(() => {
-        const fetchShopLogo = async () => {
+        const fetchShopSettings = async () => {
             try {
                 const { data } = await supabase
                     .from('app_settings')
                     .select('key, value')
-                    .in('key', ['receipt_shop_logo_url', 'shop_logo_url']);
+                    .in('key', ['receipt_shop_logo_url', 'shop_logo_url', 'payment_qr_url', 'promptpay_id', 'phone_number']);
                 
                 if (data && data.length > 0) {
                     const logoObj = data.find(i => (i.key === 'receipt_shop_logo_url' || i.key === 'shop_logo_url') && i.value);
                     if (logoObj && logoObj.value) {
                         setShopLogoUrl(logoObj.value);
                     }
+                    const qrObj = data.find(i => i.key === 'payment_qr_url' && i.value);
+                    if (qrObj && qrObj.value) {
+                        setPaymentQrUrl(qrObj.value);
+                    }
+                    const ppObj = data.find(i => (i.key === 'promptpay_id' || i.key === 'phone_number') && i.value);
+                    if (ppObj && ppObj.value) {
+                        setStorePromptpayId(ppObj.value);
+                    }
                 }
             } catch (err) {
-                console.error("Error fetching CFD shop logo:", err);
+                console.error("Error fetching CFD shop settings:", err);
             }
         };
 
-        fetchShopLogo();
+        fetchShopSettings();
 
         const logoSub = supabase
             .channel('cfd_logo_updates')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
-                if (payload.new && (payload.new.key === 'receipt_shop_logo_url' || payload.new.key === 'shop_logo_url')) {
-                    if (payload.new.value) {
-                        setShopLogoUrl(payload.new.value);
+                if (payload.new) {
+                    if (payload.new.key === 'receipt_shop_logo_url' || payload.new.key === 'shop_logo_url') {
+                        if (payload.new.value) setShopLogoUrl(payload.new.value);
+                    }
+                    if (payload.new.key === 'payment_qr_url' && payload.new.value) {
+                        setPaymentQrUrl(payload.new.value);
+                    }
+                    if ((payload.new.key === 'promptpay_id' || payload.new.key === 'phone_number') && payload.new.value) {
+                        setStorePromptpayId(payload.new.value);
                     }
                 }
             })
@@ -175,7 +191,7 @@ export default function POSCustomerDisplay() {
                     
                     // Generate PromptPay QR if total exists
                     const totalAmt = parseFloat(payload.total || payload.orderData?.total || 0);
-                    const promptpayId = payload.promptpayId || '0812345678';
+                    const promptpayId = payload.promptpayId || storePromptpayId || '0812345678';
                     if (totalAmt > 0) {
                         try {
                             const qr = generatePayload(promptpayId, { amount: totalAmt });
@@ -545,37 +561,66 @@ export default function POSCustomerDisplay() {
 
             {/* Right Column: PromptPay QR / Cash Status */}
             <div className="w-1/2 h-full flex flex-col items-center justify-center p-6 bg-[oklch(18%_0.012_28)] text-center">
-                <div className="bg-white text-[oklch(18%_0.012_28)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
-                    <VenueLogo className="h-8 max-w-[140px] object-contain mb-3" />
-                    {/* PromptPay Header */}
-                    <div className="w-full bg-[#003D7A] text-white py-2 font-bold text-xs font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
-                        <QrCode size={16} />
-                        <span>PROMPTPAY QR PAYMENT</span>
-                    </div>
-
-                    <div className="p-2.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-3">
-                        {qrPayload ? (
-                            <QRCodeSVG value={qrPayload} size={170} level="M" />
-                        ) : (
-                            <div className="w-[170px] h-[170px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
-                                Generating PromptPay QR...
+                {orderData.paymentMethod === 'cash' ? (
+                    <div className="bg-white text-[oklch(18%_0.012_28)] p-6 rounded-2xl w-full max-w-[300px] flex flex-col items-center shadow-xl border border-white/20">
+                        <VenueLogo className="h-8 max-w-[140px] object-contain mb-4" />
+                        <div className="w-full bg-[oklch(18%_0.012_28)] text-white py-2 font-bold text-xs font-mono tracking-wider uppercase mb-4 flex items-center justify-center gap-1.5 rounded-md">
+                            <span>CASH PAYMENT / ชำระเงินสด</span>
+                        </div>
+                        <div className="w-full space-y-3 font-mono text-center">
+                            <div className="bg-[oklch(94%_0.010_28)] p-3.5 rounded-xl border border-[oklch(85%_0.012_28)]">
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block font-bold mb-0.5">ยอดรวมชำระ</span>
+                                <span className="text-3xl font-black text-[oklch(52%_0.16_28)]">฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
                             </div>
-                        )}
+                            {orderData.cashReceived > 0 && (
+                                <div className="space-y-2 pt-1">
+                                    <div className="flex justify-between text-xs font-bold text-[oklch(18%_0.012_28)] px-1">
+                                        <span>รับเงินสดมา:</span>
+                                        <span>฿{orderData.cashReceived.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm font-black text-emerald-700 bg-emerald-50 p-3 rounded-lg border border-emerald-200 shadow-2xs">
+                                        <span>เงินทอน (Change):</span>
+                                        <span>฿{(orderData.changeDue || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
+                ) : (
+                    <div className="bg-white text-[oklch(18%_0.012_28)] p-5 rounded-2xl w-full max-w-[280px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
+                        <VenueLogo className="h-8 max-w-[140px] object-contain mb-3" />
+                        {/* PromptPay Header */}
+                        <div className="w-full bg-[#003D7A] text-white py-2 font-bold text-xs font-mono tracking-wider uppercase mb-3 flex items-center justify-center gap-1.5 rounded-md">
+                            <QrCode size={16} />
+                            <span>PROMPTPAY QR PAYMENT</span>
+                        </div>
 
-                    <div className="space-y-0.5">
-                        <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest">
-                            SCAN WITH MOBILE BANKING APP
-                        </span>
-                        <p className="text-2xl font-mono font-black text-[oklch(52%_0.16_28)]">
-                            ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </p>
+                        <div className="p-2.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-3">
+                            {qrPayload ? (
+                                <QRCodeSVG value={qrPayload} size={170} level="M" />
+                            ) : paymentQrUrl || orderData.paymentQrUrl ? (
+                                <img src={paymentQrUrl || orderData.paymentQrUrl} alt="PromptPay QR" className="w-[170px] h-[170px] object-contain" />
+                            ) : (
+                                <div className="w-[170px] h-[170px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
+                                    Generating PromptPay QR...
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-0.5">
+                            <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest">
+                                SCAN WITH MOBILE BANKING APP
+                            </span>
+                            <p className="text-2xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                                ฿{(orderData.total || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="mt-4 flex items-center gap-2 text-[oklch(55%_0.010_28)] text-[11px] font-mono uppercase tracking-wider">
                     <Smartphone size={16} className="text-[oklch(52%_0.16_28)] shrink-0" />
-                    <span>กรุณาแสดงสลิปการโอนเงินต่อพนักงาน</span>
+                    <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'กรุณาแสดงสลิปการโอนเงินต่อพนักงาน'}</span>
                 </div>
             </div>
         </div>

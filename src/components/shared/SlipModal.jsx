@@ -186,6 +186,8 @@ export default function SlipModal({ booking, type, onClose }) {
             // 1. Fetch options mapping and app settings in parallel for speed
             let currentOptionMap = {};
             let loadedConfig = {};
+            let qrUrlForBilling = null;
+
             try {
                 const [optionsRes, settingsRes] = await Promise.all([
                     supabase.from('option_choices').select('id, name'),
@@ -199,7 +201,14 @@ export default function SlipModal({ booking, type, onClose }) {
 
                 if (settingsRes.data) {
                     const settingsMap = settingsRes.data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
-                    if (settingsMap.payment_qr_url) setQrCodeUrl(settingsMap.payment_qr_url);
+                    
+                    if (activeTab === 'billing') {
+                        qrUrlForBilling = await resolveBillingQrCode(booking, settingsMap);
+                        if (qrUrlForBilling) setQrCodeUrl(qrUrlForBilling);
+                    } else if (settingsMap.payment_qr_url) {
+                        setQrCodeUrl(settingsMap.payment_qr_url);
+                    }
+
                     if (settingsMap.receipt_shop_name) setReceiptShopName(settingsMap.receipt_shop_name);
                     if (settingsMap.receipt_shop_address) setReceiptShopAddress(settingsMap.receipt_shop_address);
                     if (settingsMap.receipt_shop_phone) setReceiptShopPhone(settingsMap.receipt_shop_phone);
@@ -220,7 +229,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         shopVat: settingsMap.receipt_shop_vat,
                         shopLogoUrl: settingsMap.receipt_shop_logo_url,
                         shopFooter: settingsMap.receipt_shop_footer,
-                        paymentQrUrl: settingsMap.payment_qr_url,
+                        paymentQrUrl: qrUrlForBilling || settingsMap.payment_qr_url,
                         divider_style: currentPrinterConfig.divider_style || printerConfig.divider_style || 'dashed',
                         footer_ascii_art: currentPrinterConfig.footer_ascii_art || printerConfig.footer_ascii_art || '',
                         kitchen_categories: currentPrinterConfig.kitchen_categories || printerConfig.kitchen_categories || [],
@@ -288,7 +297,7 @@ export default function SlipModal({ booking, type, onClose }) {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
                             // QR code ONLY for billing tab (PromptPay before payment). NEVER on receipt tab after payment!
-                            const qrToPrint = (activeTab === 'billing') ? loadedConfig.paymentQrUrl : null;
+                            const qrToPrint = (activeTab === 'billing') ? (loadedConfig.paymentQrUrl || qrCodeUrl) : null;
                             const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
                             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                         }
@@ -443,7 +452,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 : 0);
 
         const vatHtml = (isVatEnabled && vatVal > 0) ? `
-            <div class="row"><span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span> <span>${vatVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+            <div class="row"><span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span> <span>${Math.ceil(vatVal).toLocaleString()}</span></div>
         ` : '';
 
         const totalQty = booking.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
@@ -457,7 +466,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 <div style="text-align: center; margin: 4px 0;">${generateDivider(printerConfig.divider_style || 'dashed', 32)}</div>
                 <div class="row total-row" style="font-size: 15px; padding-top: 2px;">
                     <span>ยอดรวมทั้งสิ้น (TOTAL)</span>
-                    <span>${booking.total_amount?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <span>${Math.ceil(booking.total_amount || 0).toLocaleString()}</span>
                 </div>
             </div>
         ` : ''
@@ -543,8 +552,8 @@ export default function SlipModal({ booking, type, onClose }) {
             
             let cashChangeHtml = ''
             if (paymentMethod === 'cash') {
-                const cashRecvVal = parseFloat(localStorage.getItem('last_cash_received')).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                const cashChangeVal = parseFloat(localStorage.getItem('last_cash_change')).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const cashRecvVal = Math.ceil(parseFloat(localStorage.getItem('last_cash_received') || 0)).toLocaleString();
+                const cashChangeVal = Math.ceil(parseFloat(localStorage.getItem('last_cash_change') || 0)).toLocaleString();
                 if (cashRecvVal !== 'NaN' && cashChangeVal !== 'NaN') {
                     cashChangeHtml = `
                         <div style="font-size: 10px; margin-top: 6px; text-align: left; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px dashed black; padding-bottom: 4px; margin-bottom: 4px;">
@@ -753,8 +762,8 @@ export default function SlipModal({ booking, type, onClose }) {
                         <!-- Proof Deposit Details -->
                         ${(!isKitchenTab && depositAmt > 0) ? `
                             <div style="border-top: 1px dashed black; margin-top: 6px; padding-top: 6px;">
-                                <div class="row" style="font-weight: bold; color: #000;"><span>ยอดโอนมัดจำแล้ว:</span> <span>฿${depositAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-                                <div class="row" style="font-weight: bold; color: #d00000;"><span>ยอดคงเหลือชำระเพิ่ม:</span> <span>฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                                <div class="row" style="font-weight: bold; color: #000;"><span>ยอดโอนมัดจำแล้ว:</span> <span>฿${Math.ceil(depositAmt).toLocaleString()}</span></div>
+                                <div class="row" style="font-weight: bold; color: #d00000;"><span>ยอดคงเหลือชำระเพิ่ม:</span> <span>฿${Math.ceil(balanceDue).toLocaleString()}</span></div>
                             </div>
                         ` : ''}
                     </div>
@@ -857,7 +866,7 @@ export default function SlipModal({ booking, type, onClose }) {
                     const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, activePaperSize, receiptConfig, 'sunmi');
                     if (rawBytes) {
                         const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (receiptConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
-                        const qrToPrint = (activeTab === 'billing') ? qrCodeUrl : null;
+                        const qrToPrint = (activeTab === 'billing') ? (qrCodeUrl || receiptConfig.paymentQrUrl) : null;
                         await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     } else {
                         toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");

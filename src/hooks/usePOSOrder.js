@@ -76,7 +76,7 @@ export function usePOSOrder() {
                 staffRemark: mockBooking.staff_remark
             });
 
-            toast.warning('⚠️ ออฟไลน์: บันทึกข้อมูลโต๊ะในเครื่องแล้ว');
+            toast.info('เปิดโต๊ะเรียบร้อยแล้ว (โหมดออฟไลน์)');
             return mockBooking;
         }
 
@@ -130,7 +130,7 @@ export function usePOSOrder() {
                 staffRemark: mockBooking.staff_remark
             });
 
-            toast.warning('⚠️ บันทึกข้อมูลเข้าคิวออฟไลน์');
+            toast.info('เปิดโต๊ะเรียบร้อยแล้ว (โหมดออฟไลน์)');
             return mockBooking;
         }
     };
@@ -261,6 +261,36 @@ export function usePOSOrder() {
     const submitOrderItems = async (bookingId, items) => {
         if (!items || items.length === 0) return true;
 
+        // If booking is a local temporary booking but network is available, attempt to sync booking online first
+        if (typeof bookingId === 'string' && bookingId.startsWith('local_') && isOnline()) {
+            try {
+                const bookings = posCache.getBookings();
+                const localBooking = bookings.find(b => b.id === bookingId);
+                if (localBooking) {
+                    const { data: newBooking, error: createErr } = await supabase
+                        .from('bookings')
+                        .insert({
+                            table_id: localBooking.table_id || null,
+                            status: localBooking.status || 'seated',
+                            booking_type: localBooking.booking_type || 'walk_in',
+                            source: 'pos',
+                            booking_time: localBooking.booking_time || new Date().toISOString(),
+                            pax: localBooking.pax || 2,
+                            user_id: localBooking.user_id || null,
+                            staff_remark: localBooking.staff_remark || 'Walk-in Guest'
+                        })
+                        .select('*, tables_layout(*)')
+                        .single();
+                        
+                    if (!createErr && newBooking) {
+                        bookingId = newBooking.id;
+                    }
+                }
+            } catch (syncErr) {
+                console.warn("[submitOrderItems] Could not auto-sync local booking before inserting items:", syncErr);
+            }
+        }
+
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Submitting items to offline queue');
             // Save order items inside booking cache for local UI consistency
@@ -288,7 +318,7 @@ export function usePOSOrder() {
             }
 
             addToOfflineQueue('submit_items', { bookingId, items });
-            toast.warning('⚠️ ออฟไลน์: บันทึกรายการอาหารในเครื่องแล้ว');
+            toast.info('บันทึกรายการอาหารเข้าคิวเรียบร้อยแล้ว (โหมดออฟไลน์)');
             return true;
         }
 
@@ -338,7 +368,7 @@ export function usePOSOrder() {
             }
 
             addToOfflineQueue('submit_items', { bookingId, items });
-            toast.warning('⚠️ บันทึกรายการอาหารเข้าคิวออฟไลน์');
+            toast.info('บันทึกรายการอาหารเข้าคิวเรียบร้อยแล้ว (โหมดออฟไลน์)');
             return true;
         }
     };
@@ -563,7 +593,7 @@ export function usePOSOrder() {
             posCache.setBookings(updated);
 
             addToOfflineQueue('attach_customer', { bookingId, userId });
-            toast.warning('⚠️ ออฟไลน์: บันทึกการผูกสิทธิ์สมาชิกในเครื่องแล้ว');
+            toast.success('ผูกสมาชิกกับออเดอร์เรียบร้อยแล้ว');
             return true;
         }
         try {
@@ -572,7 +602,7 @@ export function usePOSOrder() {
                 .update({ user_id: userId })
                 .eq('id', bookingId);
             if (error) throw error;
-            toast.success(userId ? 'Attached customer profile successfully' : 'Detached customer profile successfully');
+            toast.success(userId ? 'ผูกสมาชิกเรียบร้อยแล้ว' : 'ยกเลิกการผูกสมาชิกเรียบร้อยแล้ว');
             return true;
         } catch (err) {
             console.error(err);

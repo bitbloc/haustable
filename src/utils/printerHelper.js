@@ -396,15 +396,6 @@ export function resolveStaffDisplayName(booking = {}, shiftObj = null) {
     if (booking.staff_name) raw = booking.staff_name;
     else if (booking.staff?.display_name) raw = booking.staff.display_name;
     else if (booking.staff && typeof booking.staff === 'string') raw = booking.staff;
-    else if (booking.profiles?.display_name) raw = booking.profiles.display_name;
-
-    if (!raw) {
-        let shift = shiftObj;
-        if (!shift) {
-            try { shift = JSON.parse(localStorage.getItem('pos_current_shift')); } catch (e) {}
-        }
-        if (shift && shift.staffName) raw = shift.staffName;
-    }
 
     if (!raw) {
         try {
@@ -416,6 +407,14 @@ export function resolveStaffDisplayName(booking = {}, shiftObj = null) {
         } catch (e) {}
     }
 
+    if (!raw) {
+        let shift = shiftObj;
+        if (!shift) {
+            try { shift = JSON.parse(localStorage.getItem('pos_current_shift')); } catch (e) {}
+        }
+        if (shift && shift.staffName) raw = shift.staffName;
+    }
+
     if (!raw) return '';
 
     const isUuidOrId = /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(raw) || /^[0-9a-f]{16,}$/i.test(raw) || /^usr_/i.test(raw) || /^default_/i.test(raw);
@@ -425,8 +424,6 @@ export function resolveStaffDisplayName(booking = {}, shiftObj = null) {
             const found = cachedStaff.find(s => s.id === raw || s.user_id === raw);
             if (found && found.display_name) return found.display_name;
         } catch (e) {}
-
-        if (booking.profiles?.display_name) return booking.profiles.display_name;
     }
 
     return raw;
@@ -885,19 +882,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (isKitchenTab) {
         const renderKitchenGroup = (groupItems) => {
             groupItems.forEach((item) => {
-                const qtyColWidth = 4;
-                const qtyStr = padStartPrinter(`${item.quantity}x`, qtyColWidth);
+                const qtyColWidth = 3;
+                const qtyStr = padEndPrinter(`${item.quantity}x`, qtyColWidth);
                 const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
                 
                 const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
-                const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth - 1);
+                const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
                 
                 const nameLines = wrapTextByWords(name, nameColWidth);
                 if (nameLines.length === 0) nameLines.push('');
                 
-                const kitchenItemLines = [`${qtyStr} ${nameLines[0]}`];
+                const kitchenItemLines = [`${qtyStr}${nameLines[0]}`];
                 for (let i = 1; i < nameLines.length; i++) {
-                    kitchenItemLines.push(`${' '.repeat(qtyColWidth + 1)}${nameLines[i]}`);
+                    kitchenItemLines.push(`${' '.repeat(qtyColWidth)}${nameLines[i]}`);
                 }
                 
                 encoder.bold(true).size(1, 1);
@@ -934,8 +931,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
                     optionsList.forEach(opt => {
                         const optLine = `> ${String(opt).toUpperCase()}`;
-                        wrapTextByWords(optLine, maxCols - 4).forEach(l => {
-                            encoder.bold(true).line(`    ${l}`).bold(false);
+                        wrapTextByWords(optLine, maxCols - 2).forEach(l => {
+                            encoder.bold(true).line(`  ${l}`).bold(false);
                         });
                     });
                 }
@@ -1189,6 +1186,11 @@ export function wrapTextByWords(str, maxColWidth) {
     const paragraphs = String(str).replace(/\r/g, '').split('\n');
     const output = [];
 
+    let segmenter;
+    try {
+        segmenter = new Intl.Segmenter('th', { granularity: 'word' });
+    } catch(e) {}
+
     paragraphs.forEach((paragraph, paragraphIndex) => {
         if (!paragraph) {
             output.push('');
@@ -1202,7 +1204,14 @@ export function wrapTextByWords(str, maxColWidth) {
 
         const match = paragraph.match(/^(\s+)/);
         const leadingSpace = match ? match[1] : '';
-        const words = paragraph.split(/\s+/).filter(Boolean);
+        
+        let words = [];
+        if (segmenter) {
+            words = Array.from(segmenter.segment(paragraph)).map(s => s.segment);
+        } else {
+            words = paragraph.split(/(\s+)/).filter(Boolean);
+        }
+
         let currentLine = '';
 
         const flushLongWord = (word) => {
@@ -1227,9 +1236,14 @@ export function wrapTextByWords(str, maxColWidth) {
                 return;
             }
 
-            const candidate = `${currentLine} ${word}`;
+            const candidate = currentLine + word;
             if (getPrinterCellWidth(candidate, true) <= width) {
                 currentLine = candidate;
+                return;
+            }
+
+            if (word.trim() === '') {
+                // Ignore trailing spaces when wrapping to a new line
                 return;
             }
 
@@ -2190,6 +2204,50 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
  * Returns true if successfully printed silently (so the caller doesn't need to show a modal).
  * Returns false if it fails or if the printer type doesn't support silent printing (e.g. browser).
  */
+export async function resolveBillingQrCode(booking, config = {}) {
+    if (!booking) return null;
+    let qrUrl = config.payment_qr_url || config.paymentQrUrl;
+    if (!qrUrl && typeof window !== 'undefined') {
+        qrUrl = localStorage.getItem('payment_qr_url') || localStorage.getItem('receipt_payment_qr_url');
+    }
+    
+    if (qrUrl) return qrUrl;
+
+    try {
+        const { supabase } = await import('../lib/supabaseClient');
+        const { data } = await supabase
+            .from('app_settings')
+            .select('key, value')
+            .in('key', ['payment_qr_url', 'promptpay_id', 'phone_number']);
+            
+        let promptpayId = '0812345678';
+        if (data && data.length > 0) {
+            const qrObj = data.find(i => i.key === 'payment_qr_url' && i.value);
+            if (qrObj && qrObj.value) {
+                return qrObj.value;
+            }
+            const ppObj = data.find(i => (i.key === 'promptpay_id' || i.key === 'phone_number') && i.value);
+            if (ppObj && ppObj.value) {
+                promptpayId = ppObj.value;
+            }
+        }
+
+        // Generate dynamic PromptPay QR code Data URL for this booking total
+        const generatePayload = (await import('promptpay-qr')).default;
+        const QRCode = (await import('qrcode')).default;
+
+        const items = booking.order_items || booking.items || [];
+        const total = booking.total_amount ? parseFloat(booking.total_amount) : items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
+
+        const payload = generatePayload(promptpayId, { amount: total > 0 ? total : undefined });
+        const dataUrl = await QRCode.toDataURL(payload, { width: 250, margin: 1 });
+        return dataUrl;
+    } catch (err) {
+        console.error('[PrinterHelper] Failed to resolve billing QR code:', err);
+        return null;
+    }
+}
+
 export async function silentPrintSlip(booking, slipType = 'receipt', optionMap = {}) {
     if (!booking) return false;
     try {
@@ -2249,7 +2307,7 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
             } else {
                 const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, 'sunmi');
                 if (rawBytes) {
-                    const qrToPrint = (slipType === 'billing') ? config.payment_qr_url : null;
+                    const qrToPrint = (slipType === 'billing') ? await resolveBillingQrCode(booking, config) : null;
                     const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
                     const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
                     await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);

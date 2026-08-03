@@ -29,11 +29,34 @@ export default function POSDashboard() {
         note: ''
     });
 
+    const [activeStaff, setActiveStaff] = useState(() => {
+        try {
+            const saved = localStorage.getItem('pos_active_staff');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    });
+
     const handlePinLogin = async (staff) => {
         setSelectedStaffForLogin(staff);
+        localStorage.setItem('pos_active_staff', JSON.stringify(staff));
+        setActiveStaff(staff);
+
         const existingShift = await checkAndRestoreActiveShift();
         if (existingShift) {
-            setActiveShift(existingShift);
+            if (existingShift.staffName !== staff.display_name) {
+                const updatedShift = {
+                    ...existingShift,
+                    staffName: staff.display_name
+                };
+                localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
+                setActiveShift(updatedShift);
+                syncShiftToCloud(updatedShift);
+                window.dispatchEvent(new Event('pos-shift-changed'));
+            } else {
+                setActiveShift(existingShift);
+            }
             setIsPinVerified(true);
             toast.success(`ยินดีต้อนรับ: ${staff.display_name} (เข้าสู่กะปัจจุบัน)`);
             setPinInput('');
@@ -74,9 +97,13 @@ export default function POSDashboard() {
     const [pinInput, setPinInput] = useState('');
     const [showOpeningFloatModal, setShowOpeningFloatModal] = useState(false);
     const [showCashAdjustmentModal, setShowCashAdjustmentModal] = useState(false);
-    // isPinVerified: NEVER persisted — starts false on every page load/refresh
-    // Forces PIN entry even when an active shift exists in cloud/local
-    const [isPinVerified, setIsPinVerified] = useState(false);
+    // isPinVerified: Persisted when pos_active_staff exists & pos_is_locked !== 'true'
+    // Requires PIN re-entry ONLY when screen is locked or shift is closed/new shift started
+    const [isPinVerified, setIsPinVerified] = useState(() => {
+        const savedStaff = localStorage.getItem('pos_active_staff');
+        const isLocked = localStorage.getItem('pos_is_locked') === 'true';
+        return !!savedStaff && !isLocked;
+    });
     const [isLocked, setIsLocked] = useState(() => {
         return localStorage.getItem('pos_is_locked') === 'true';
     });
@@ -86,8 +113,10 @@ export default function POSDashboard() {
 
     const lockScreen = () => {
         setIsLocked(true);
-        setIsPinVerified(false); // Force PIN re-entry on unlock
+        setIsPinVerified(false); // Force PIN re-entry on unlock / switch staff
         localStorage.setItem('pos_is_locked', 'true');
+        localStorage.removeItem('pos_active_staff');
+        setActiveStaff(null);
         setLockPinInput('');
         setSelectedStaffForUnlock(null);
     };
@@ -110,6 +139,7 @@ export default function POSDashboard() {
     const [crmSearchTerm, setCrmSearchTerm] = useState('');
     const [crmMembers, setCrmMembers] = useState([]);
     const [crmLoading, setCrmLoading] = useState(false);
+    const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
@@ -483,6 +513,11 @@ export default function POSDashboard() {
             
             // 5. Close shift locally & cloud
             closeShift(actual, summary);
+            localStorage.removeItem('pos_active_staff');
+            setActiveStaff(null);
+            setIsPinVerified(false);
+            localStorage.removeItem('pos_is_locked');
+            setIsLocked(false);
             setShowCloseShiftModal(false);
             setCloseShiftForm({ actualCash: '' });
             
@@ -498,6 +533,11 @@ export default function POSDashboard() {
             // Fallback close shift locally in case of error
             try {
                 closeShift(actual, summary);
+                localStorage.removeItem('pos_active_staff');
+                setActiveStaff(null);
+                setIsPinVerified(false);
+                localStorage.removeItem('pos_is_locked');
+                setIsLocked(false);
                 setShowCloseShiftModal(false);
                 setCloseShiftForm({ actualCash: '' });
                 toast.success('ปิดรอบการทำงานสำเร็จ (เกิดข้อผิดพลาดในการดึงข้อมูลพิมพ์)');
@@ -942,7 +982,10 @@ export default function POSDashboard() {
     }, []);
 
     const handleSaveAndOpenSlip = async (type) => {
-        if (currentOrder.items.length === 0 && !activeBooking) {
+        if (isSubmittingOrder) return;
+        setIsSubmittingOrder(true);
+        try {
+            if (currentOrder.items.length === 0 && !activeBooking) {
             toast.error("No items in order to print");
             return;
         }
@@ -1002,12 +1045,15 @@ export default function POSDashboard() {
                 items: updatedItems
             }));
             
-            // 4. Open the Slip Modal
-            setActiveSlipBooking(updatedBooking);
-            setActiveSlipType(type);
+            const targetBooking = updatedBooking || currentBooking;
+            toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+            openSlipOrSilentPrint(targetBooking, type);
         } else {
-            setActiveSlipBooking(currentBooking);
-            setActiveSlipType(type);
+            toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+            openSlipOrSilentPrint(currentBooking, type);
+        }
+        } finally {
+            setIsSubmittingOrder(false);
         }
     };
 
@@ -1322,9 +1368,11 @@ export default function POSDashboard() {
         rewardCode = null,
         rewardId = null
     ) => {
+        if (isSubmittingOrder) return;
         if (currentOrder.items.length === 0) return;
-
-        let bookingId = activeBooking?.id;
+        setIsSubmittingOrder(true);
+        try {
+            let bookingId = activeBooking?.id;
         let currentBooking = activeBooking;
 
         // 1. Create walk-in if no active booking
@@ -1380,6 +1428,19 @@ export default function POSDashboard() {
                 console.error("Error fetching completed booking for receipt:", err);
             }
 
+            // Broadcast PAYMENT_SUCCESS to CFD screen
+            window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', {
+                detail: {
+                    type: 'PAYMENT_SUCCESS',
+                    payload: {
+                        total: finalTotal,
+                        pointsEarned,
+                        tableName: selectedTable?.table_name || currentBooking?.tables_layout?.table_name || null,
+                        customer: currentBooking?.customer_name || 'Walk-in Guest'
+                    }
+                }
+            }));
+
             openSlipOrSilentPrint(completedBooking || currentBooking, 'receipt');
 
             // Clear the cart state after successful checkout
@@ -1388,6 +1449,9 @@ export default function POSDashboard() {
             setSelectedTable(null);
             setAttachedMemberCrm(null);
             setView('tables');
+        }
+        } finally {
+            setIsSubmittingOrder(false);
         }
     };
 
@@ -1707,14 +1771,18 @@ export default function POSDashboard() {
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
+                            isSubmitting={isSubmittingOrder}
                             attachedMemberCrm={attachedMemberCrm}
                             onUpdateQuantity={handleUpdateQuantity}
                             onUpdateItemNote={handleUpdateItemNote}
                             onClear={handleClearOrderOrTable}
                             onCheckout={handleCheckout}
                             onAcceptOrder={async () => {
-                                if (activeBooking) {
-                                    const success = await acceptOrder(activeBooking.id);
+                                if (isSubmittingOrder) return;
+                                setIsSubmittingOrder(true);
+                                try {
+                                    if (activeBooking) {
+                                        const success = await acceptOrder(activeBooking.id);
                                     if (success) {
                                         let updatedBooking = null;
                                         if (selectedTable) {
@@ -1733,8 +1801,11 @@ export default function POSDashboard() {
                                         // Try silent print first for Kitchen
                                         openSlipOrSilentPrint(finalBooking, 'kitchen');
                                         
-                                        checkPendingOrders();
+                                            checkPendingOrders();
+                                        }
                                     }
+                                } finally {
+                                    setIsSubmittingOrder(false);
                                 }
                             }}
                             onOpenSlip={handleSaveAndOpenSlip}
@@ -1743,6 +1814,7 @@ export default function POSDashboard() {
                             onMergeBill={handleOpenMergeModal}
                             onAttachCustomer={async (member) => {
                                 if (!member?.id) return;
+                                setAttachedMemberCrm(member);
                                 let bookingId = activeBooking?.id;
 
                                 if (!bookingId) {
@@ -1750,13 +1822,13 @@ export default function POSDashboard() {
                                         const newBooking = await createWalkIn(selectedTable);
                                         if (newBooking) {
                                             bookingId = newBooking.id;
-                                            setActiveBooking(newBooking);
+                                            setActiveBooking({ ...newBooking, user_id: member.id, profiles: member });
                                         }
                                     } else {
                                         const newBooking = await createWalkInPickup('Walk-in Customer');
                                         if (newBooking) {
                                             bookingId = newBooking.id;
-                                            setActiveBooking(newBooking);
+                                            setActiveBooking({ ...newBooking, user_id: member.id, profiles: member });
                                         }
                                     }
                                 }
@@ -1771,7 +1843,7 @@ export default function POSDashboard() {
                                     let updatedBooking = null;
                                     if (selectedTable?.id) {
                                         updatedBooking = await getActiveBooking(selectedTable.id);
-                                    } else {
+                                    } else if (!String(bookingId).startsWith('local_')) {
                                         const { data } = await supabase
                                             .from('bookings')
                                             .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
@@ -1780,24 +1852,30 @@ export default function POSDashboard() {
                                         updatedBooking = data;
                                     }
                                     if (updatedBooking) {
-                                        setActiveBooking(updatedBooking);
+                                        setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
+                                    } else {
+                                        setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
                                     }
                                 }
                             }}
                             onDetachCustomer={async () => {
+                                setAttachedMemberCrm(null);
                                 if (activeBooking) {
                                     const success = await attachCustomerToBooking(activeBooking.id, null);
                                     if (success) {
                                         if (selectedTable?.id) {
                                             const updatedBooking = await getActiveBooking(selectedTable.id);
-                                            setActiveBooking(updatedBooking);
-                                        } else {
+                                            setActiveBooking(updatedBooking ? { ...updatedBooking, user_id: null, profiles: null } : null);
+                                        } else if (!String(activeBooking.id).startsWith('local_')) {
                                             const { data } = await supabase
                                                 .from('bookings')
                                                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
                                                 .eq('id', activeBooking.id)
                                                 .maybeSingle();
-                                            if (data) setActiveBooking(data);
+                                            if (data) setActiveBooking({ ...data, user_id: null, profiles: null });
+                                            else setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : null);
+                                        } else {
+                                            setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : null);
                                         }
                                     }
                                 }
@@ -2686,7 +2764,7 @@ function SplitPaymentModalInner({ order, activeBooking, includeTax, onClose, onC
             return;
         }
 
-        const changeVal = paymentMethod === 'cash' ? Math.max(0, (parseFloat(cashReceived) || 0) - splitTotal).toFixed(2) : '0.00';
+        const changeVal = paymentMethod === 'cash' ? Math.ceil(Math.max(0, (parseFloat(cashReceived) || 0) - splitTotal)).toLocaleString() : '0';
         onConfirmSplit(selectedItems, splitTotal, paymentMethod, parseFloat(cashReceived) || 0, changeVal);
     };
 
@@ -2753,7 +2831,7 @@ function SplitPaymentModalInner({ order, activeBooking, includeTax, onClose, onC
             <div className="border-t border-[#D1D1CD] pt-3.5 space-y-3">
                 <div className="flex justify-between items-center text-xs font-bold">
                     <span>ยอดที่เลือกจ่ายรอบนี้ (Selected Total)</span>
-                    <span className="text-xl font-black text-[var(--color-accent)]">฿{splitTotal.toFixed(2)}</span>
+                    <span className="text-xl font-black text-[var(--color-accent)]">฿{Math.ceil(splitTotal).toLocaleString()}</span>
                 </div>
 
                 <div className="flex bg-[#E0E0DC] p-1 rounded-xl border border-[#D1D1CD] w-full font-mono text-xs font-bold uppercase tracking-wider gap-1 h-11">
@@ -2791,8 +2869,8 @@ function SplitPaymentModalInner({ order, activeBooking, includeTax, onClose, onC
                             <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
                             <span className={`font-mono font-bold text-sm ${parseFloat(cashReceived) >= splitTotal ? 'text-green-600' : 'text-[#ff0000]'}`}>
                                 {parseFloat(cashReceived) >= splitTotal 
-                                    ? `฿${(parseFloat(cashReceived) - splitTotal).toFixed(2)}` 
-                                    : cashReceived ? `ขาดอีก ฿${(splitTotal - parseFloat(cashReceived)).toFixed(2)}` : '฿0.00'}
+                                    ? `฿${Math.ceil(parseFloat(cashReceived) - splitTotal).toLocaleString()}` 
+                                    : cashReceived ? `ขาดอีก ฿${Math.ceil(splitTotal - parseFloat(cashReceived)).toLocaleString()}` : '฿0'}
                             </span>
                         </div>
                     </div>

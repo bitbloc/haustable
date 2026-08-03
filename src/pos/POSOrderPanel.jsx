@@ -10,6 +10,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     order, 
     booking, 
     attachedMemberCrm,
+    isSubmitting = false,
     onUpdateQuantity, 
     onClear, 
     onCheckout, 
@@ -326,12 +327,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     // 4. xhaus Coins Discount Calculation
     const xhausDiscount = xhausToRedeem * (crmSettings.crm_redeem_rate_xhaus || 1.0);
     
-    // Net total calculations (including reward discount)
-    const netBeforeTax = Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount);
-    const tax = includeTax ? netBeforeTax * 0.07 : 0;
+    const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount));
+    const tax = includeTax ? Math.ceil(netBeforeTax * 0.07) : 0;
     
-    const depositPaid = booking?.deposit_amount ? parseFloat(booking.deposit_amount) : 0;
-    const total = Math.max(0, netBeforeTax + tax - depositPaid);
+    const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
+    const total = Math.ceil(Math.max(0, netBeforeTax + tax - depositPaid));
     
     // xhaus points earned
     const pointsMultiplier = attachedMemberCrm ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
@@ -369,7 +369,54 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     };
 
     React.useEffect(() => {
-        if (order.items && order.items.length > 0) {
+        const handleCfdCustomEvent = (e) => {
+            if (e.detail) {
+                broadcastCFD(e.detail);
+            }
+        };
+        window.addEventListener('pos-cfd-broadcast', handleCfdCustomEvent);
+        return () => {
+            window.removeEventListener('pos-cfd-broadcast', handleCfdCustomEvent);
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (activeModal === 'checkout') {
+            if (paymentMethod === 'qr') {
+                broadcastCFD({
+                    type: 'SHOW_QR',
+                    payload: {
+                        items: order.items,
+                        subtotal,
+                        discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                        tax,
+                        total,
+                        customer: order.customer || booking?.customer_name || 'Walk-in Guest',
+                        memberProfile: attachedMemberCrm || booking?.profiles || null,
+                        tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
+                        paymentMethod: 'qr'
+                    }
+                });
+            } else {
+                const received = parseFloat(cashReceivedInput) || 0;
+                broadcastCFD({
+                    type: 'SHOW_CHECKOUT',
+                    payload: {
+                        items: order.items,
+                        subtotal,
+                        discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                        tax,
+                        total,
+                        customer: order.customer || booking?.customer_name || 'Walk-in Guest',
+                        memberProfile: attachedMemberCrm || booking?.profiles || null,
+                        tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
+                        paymentMethod: 'cash',
+                        cashReceived: received,
+                        changeDue: Math.max(0, received - total)
+                    }
+                });
+            }
+        } else if (order.items && order.items.length > 0) {
             broadcastCFD({
                 type: 'UPDATE_CART',
                 payload: {
@@ -386,7 +433,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         } else {
             broadcastCFD({ type: 'IDLE' });
         }
-    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, attachedMemberCrm, booking]);
+    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, attachedMemberCrm, booking, activeModal, paymentMethod, cashReceivedInput]);
     
     const hasNewItems = order.items.some(item => !item.db_id);
 
@@ -448,10 +495,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     </div>
                     <p className="text-[9px] text-amber-800/80 font-medium">Order submitted by customer. Awaiting confirmation.</p>
                     <button 
+                        disabled={isSubmitting}
                         onClick={onAcceptOrder}
-                        className="w-full bg-[#FFAA00] hover:bg-[#E5A900] text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                        className="w-full bg-[#FFAA00] hover:bg-[#E5A900] disabled:opacity-50 disabled:cursor-not-allowed text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                     >
-                        <Check size={10} /> Accept & Print Slip
+                        {isSubmitting ? <RefreshCw size={10} className="animate-spin" /> : <Check size={10} />} 
+                        {isSubmitting ? 'Processing...' : 'Accept & Print Slip'}
                     </button>
                 </div>
             )}
@@ -536,17 +585,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Customer CRM Summary Header */}
             <div className="px-3.5 py-2 shrink-0 border-b border-[#D1D1CD]/50 bg-white/40 touch-manipulation select-none">
-                {booking?.profiles ? (
+                {(attachedMemberCrm || booking?.profiles) ? (
                     <div className="flex items-center justify-between py-1">
                         <div className="flex items-center gap-2.5 min-w-0">
                             <span className="w-3 h-3 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
                             <div className="text-left min-w-0">
                                 <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider block">Attached Customer</span>
                                 <p className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate uppercase">
-                                    {booking.profiles.display_name || 'Anonymous User'} 
-                                    {attachedMemberCrm && (
+                                    {attachedMemberCrm?.display_name || booking?.profiles?.display_name || 'Anonymous User'} 
+                                    {(attachedMemberCrm?.current_tier || booking?.profiles?.current_tier) && (
                                         <span className="ml-1.5 px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-mono font-bold rounded uppercase">
-                                            {attachedMemberCrm.current_tier}
+                                            {attachedMemberCrm?.current_tier || booking?.profiles?.current_tier}
                                         </span>
                                     )}
                                 </p>
@@ -599,7 +648,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 <div className="space-y-1.5 font-mono text-xs font-bold uppercase tracking-wider text-[#767673]">
                     <div className="flex justify-between items-center text-sm">
                         <span>SUBTOTAL</span>
-                        <span className="text-[#1A1A1A]">฿{subtotal.toFixed(2)}</span>
+                        <span className="text-[#1A1A1A]">฿{subtotal.toLocaleString()}</span>
                     </div>
 
                     {(memberDiscount > 0 || promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
@@ -607,28 +656,28 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             {promoDiscount > 0 && (
                                 <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
                                     <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
-                                    <span>-฿{promoDiscount.toFixed(2)}</span>
+                                    <span>-฿{Math.ceil(promoDiscount).toLocaleString()}</span>
                                 </div>
                             )}
 
                             {manualDiscount > 0 && (
                                 <div className="flex justify-between items-center text-blue-600 font-bold py-0.5">
                                     <span>MANUAL DISCOUNT</span>
-                                    <span>-฿{manualDiscount.toFixed(2)}</span>
+                                    <span>-฿{Math.ceil(manualDiscount).toLocaleString()}</span>
                                 </div>
                             )}
 
                             {xhausDiscount > 0 && (
                                 <div className="flex justify-between items-center text-amber-700 font-bold py-0.5">
                                     <span>xhaus REDEEMED</span>
-                                    <span>-฿{xhausDiscount.toFixed(2)}</span>
+                                    <span>-฿{Math.ceil(xhausDiscount).toLocaleString()}</span>
                                 </div>
                             )}
                             
                             {rewardDiscount > 0 && (
                                 <div className="flex justify-between items-center text-blue-600 font-bold py-0.5">
                                     <span>REWARD DISCOUNT</span>
-                                    <span>-฿{rewardDiscount.toFixed(2)}</span>
+                                    <span>-฿{Math.ceil(rewardDiscount).toLocaleString()}</span>
                                 </div>
                             )}
                         </div>
@@ -646,20 +695,20 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             </button>
                         </div>
                         <span className={`font-bold ${includeTax ? 'text-[#1A1A1A]' : 'text-gray-400 line-through'}`}>
-                            ฿{(netBeforeTax * 0.07).toFixed(2)}
+                            ฿{Math.ceil(netBeforeTax * 0.07).toLocaleString()}
                         </span>
                     </div>
 
                     {depositPaid > 0 && (
                         <div className="flex justify-between items-center text-orange-600 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1 text-xs">
                             <span>DEPOSIT PAID (โอนมัดจำแล้ว)</span>
-                            <span>-฿{depositPaid.toFixed(2)}</span>
+                            <span>-฿{Math.ceil(depositPaid).toLocaleString()}</span>
                         </div>
                     )}
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-2">
                         <span className="text-xs font-bold pb-1 text-[#767673]">NET TOTAL</span>
-                        <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">฿{total.toFixed(2)}</span>
+                        <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">฿{total.toLocaleString()}</span>
                     </div>
                 </div>
 
@@ -684,10 +733,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             {/* Pay / Checkout Trigger */}
                             {hasNewItems ? (
                                 <button 
-                                    onClick={() => onOpenSlip && onOpenSlip('kitchen')}
-                                    className="w-full bg-[#00CC44] hover:bg-[#00B33C] border border-[#009933] text-white py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] cursor-pointer touch-manipulation font-bold text-sm"
+                                    disabled={isSubmitting}
+                                    onClick={() => !isSubmitting && onOpenSlip && onOpenSlip('kitchen')}
+                                    className="w-full bg-[#00CC44] hover:bg-[#00B33C] disabled:opacity-50 disabled:cursor-not-allowed border border-[#009933] text-white py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] cursor-pointer touch-manipulation font-bold text-sm"
                                 >
-                                    <Send size={16} /> Send to Kitchen
+                                    {isSubmitting ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                                    {isSubmitting ? 'Sending...' : 'Send to Kitchen'}
                                 </button>
                             ) : (
                                 <button
@@ -870,7 +921,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                             <span className="text-amber-700/80 font-medium">✉️ No Email</span>
                                                         )}
                                                         {booking.profiles.xhaus_balance !== undefined && (
-                                                            <span className="text-amber-800 font-bold text-sm mt-1">🪙 {parseFloat(booking.profiles.xhaus_balance).toFixed(2)} xhaus</span>
+                                                            <span className="text-amber-800 font-bold text-sm mt-1">🪙 {Math.ceil(parseFloat(booking.profiles.xhaus_balance || 0)).toLocaleString()} xhaus</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -920,7 +971,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                                             {xhausToRedeem > 0 ? (
                                                 <div className="bg-white border border-amber-300 rounded-xl p-3 flex justify-between items-center text-sm">
-                                                    <span className="font-bold text-amber-950">Redeemed {xhausToRedeem} xhaus (-฿{xhausDiscount.toFixed(2)})</span>
+                                                    <span className="font-bold text-amber-950">Redeemed {xhausToRedeem} xhaus (-฿{Math.ceil(xhausDiscount).toLocaleString()})</span>
                                                     <button 
                                                         onClick={() => {
                                                             setXhausToRedeem(0);
@@ -951,7 +1002,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 return;
                                                             }
                                                             if (points > maxBalance) {
-                                                                toast.error(`คะแนนคงเหลือมีเพียง ${maxBalance.toFixed(2)} xhaus ครับ`);
+                                                                toast.error(`คะแนนคงเหลือมีเพียง ${Math.ceil(maxBalance).toLocaleString()} xhaus ครับ`);
                                                                 return;
                                                             }
                                                             if (points > total) {
@@ -959,7 +1010,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 return;
                                                             }
                                                             setXhausToRedeem(points);
-                                                            toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toFixed(2)}`);
+                                                            toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${Math.ceil(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toLocaleString()}`);
                                                         }}
                                                         className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-xs font-bold uppercase rounded-xl px-5 h-11 cursor-pointer transition-all active:scale-95 shadow-sm"
                                                     >
@@ -1037,7 +1088,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         key={m.id}
                                                         onClick={async () => {
                                                             await onAttachCustomer?.(m);
-                                                            setActiveModal('crm');
+                                                            setActiveModal(null);
                                                         }}
                                                         className="w-full text-left bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] hover:border-[#B0B0AC] p-3.5 rounded-xl transition-all cursor-pointer flex items-center justify-between group shadow-sm active:scale-99"
                                                     >
@@ -1247,7 +1298,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             <div className="p-5 space-y-5 bg-white">
                                 <div className="text-center bg-[#EBEBE9] py-4 rounded-xl border border-[#D1D1CD]">
                                     <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider mb-1">Total Amount</p>
-                                    <p className="text-4xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{total.toFixed(2)}</p>
+                                    <p className="text-4xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{Math.ceil(total).toLocaleString()}</p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -1306,7 +1357,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         {parseFloat(cashReceivedInput) > 0 && parseFloat(cashReceivedInput) >= total && (
                                             <div className="flex justify-between items-center px-4 py-3 bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl mt-3 text-[#1A1A1A]">
                                                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#767673]">Change Due</span>
-                                                <span className="text-xl font-mono font-bold">฿{(parseFloat(cashReceivedInput) - total).toFixed(2)}</span>
+                                                <span className="text-xl font-mono font-bold">฿{Math.ceil(Math.max(0, parseFloat(cashReceivedInput || 0) - total)).toLocaleString()}</span>
                                             </div>
                                         )}
                                     </div>
