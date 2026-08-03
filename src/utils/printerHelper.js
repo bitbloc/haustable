@@ -439,7 +439,7 @@ export const selectItemsForTab = (orderItems = [], activeTab = 'receipt', receip
         items = items.filter(item => item.status !== 'void' && item.status !== 'cancelled');
     }
 
-    if (activeTab === 'kitchen_all' || activeTab === 'receipt') {
+    if (activeTab === 'kitchen_all' || activeTab === 'receipt' || activeTab === 'billing') {
         return items;
     }
 
@@ -515,7 +515,7 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
         totalCents = netAfterDiscountCents;
     }
 
-    const bookedTotalCents = (booking.total_amount != null && Number.isFinite(Number(booking.total_amount)))
+    const bookedTotalCents = (booking.total_amount != null && Number.isFinite(Number(booking.total_amount)) && Number(booking.total_amount) > 0)
         ? Math.round(Number(booking.total_amount) * 100)
         : totalCents;
 
@@ -622,20 +622,31 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         return this;
     };
 
+    const is80mm = String(paperSize ?? '').toLowerCase().includes('80');
+    // If maxCols is 42 and hardware is 48, offset is 3 spaces to physically center the block
+    const globalLeftMargin = is80mm ? '   ' : '';
+
     const originalLine = encoder.line.bind(encoder);
     encoder.line = function(value) {
         let str = String(value ?? '');
         const targetCols = currentSizeW === 1 ? Math.floor(maxCols / 2) : maxCols;
-        const width = getPrinterCellWidth(str);
+        
+        // Handle multiline strings (e.g. from formatItemLine)
+        const lines = str.split('\n');
+        const processedLines = lines.map(line => {
+            let processedLine = line;
+            const width = getPrinterCellWidth(processedLine);
+            if (currentAlign === 'center' && width < targetCols) {
+                const padding = Math.floor((targetCols - width) / 2);
+                processedLine = ' '.repeat(padding) + processedLine;
+            } else if (currentAlign === 'right' && width < targetCols) {
+                const padding = targetCols - width;
+                processedLine = ' '.repeat(padding) + processedLine;
+            }
+            return globalLeftMargin + processedLine;
+        });
 
-        if (currentAlign === 'center' && width < targetCols) {
-            const padding = Math.floor((targetCols - width) / 2);
-            str = ' '.repeat(padding) + str;
-        } else if (currentAlign === 'right' && width < targetCols) {
-            const padding = targetCols - width;
-            str = ' '.repeat(padding) + str;
-        }
-        originalLine(str);
+        originalLine(processedLines.join('\n'));
         return this;
     };
 
