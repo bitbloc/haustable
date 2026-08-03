@@ -1059,7 +1059,9 @@ export default function POSDashboard() {
 
         // 1. Create walk-in if no active booking
         if (!bookingId) {
-            const newBooking = await createWalkIn(selectedTable);
+            const newBooking = selectedTable 
+                ? await createWalkIn(selectedTable)
+                : await createWalkInPickup('Walk-in Customer');
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
@@ -1132,7 +1134,13 @@ export default function POSDashboard() {
             }));
             
             toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
-            openSlipOrSilentPrint(targetBooking, type);
+            
+            // For kitchen slips, ONLY print the newly inserted items if they exist
+            let printBooking = targetBooking;
+            if (type === 'kitchen' && newlyInsertedRows.length > 0) {
+                printBooking = { ...targetBooking, order_items: newlyInsertedRows };
+            }
+            openSlipOrSilentPrint(printBooking, type);
         }
         } finally {
             setIsSubmittingOrder(false);
@@ -1482,7 +1490,9 @@ export default function POSDashboard() {
 
         // 1. Create walk-in if no active booking
         if (!bookingId) {
-            const newBooking = await createWalkIn(selectedTable);
+            const newBooking = selectedTable 
+                ? await createWalkIn(selectedTable)
+                : await createWalkInPickup('Walk-in Customer');
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
