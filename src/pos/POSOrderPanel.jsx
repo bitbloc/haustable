@@ -1337,13 +1337,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     onClick={() => {
                                         if (onCheckout) {
                                             onCheckout(
-                                                booking?.id,
-                                                total,
                                                 paymentMethod,
-                                                memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                                                includeTax,
                                                 pointsEarned,
                                                 xhausToRedeem,
                                                 xhausDiscount,
+                                                promoDiscount + rewardDiscount,
+                                                manualDiscount,
                                                 appliedReward?.claim_code || null,
                                                 appliedReward?.id || null
                                             );

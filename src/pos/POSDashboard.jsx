@@ -1381,6 +1381,13 @@ export default function POSDashboard() {
             }
 
             openSlipOrSilentPrint(completedBooking || currentBooking, 'receipt');
+
+            // Clear the cart state after successful checkout
+            setCurrentOrder({ items: [], customer: null, table: null });
+            setActiveBooking(null);
+            setSelectedTable(null);
+            setAttachedMemberCrm(null);
+            setView('tables');
         }
     };
 

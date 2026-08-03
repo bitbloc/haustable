@@ -2250,7 +2250,8 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
                 const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, 'sunmi');
                 if (rawBytes) {
                     const qrToPrint = (slipType === 'billing') ? config.payment_qr_url : null;
-                    const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.receipt_shop_logo_url || `${window.location.origin}/logo.png`) : null;
+                    const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
+                    const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.receipt_shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
                     await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     printed = true;
                 }
