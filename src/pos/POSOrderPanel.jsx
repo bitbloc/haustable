@@ -209,19 +209,21 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         fetchActivePromotions();
     }, []);
 
-    // Reset points & discount settings when switching tables/bookings
+    // Reset points & discount settings when switching tables/bookings or when cart is cleared
     React.useEffect(() => {
-        setXhausToRedeem(0);
-        setShowRedeemInput(false);
-        setRedeemInputVal('');
-        setManualDiscountVal('');
-        setManualDiscountType('amount');
-        setSelectedPromo(null);
-        setRewardCodeInput('');
-        setAppliedReward(null);
-        setRewardDiscount(0);
-        setCashReceivedInput('');
-    }, [booking?.id]);
+        if (!booking || !booking.id || order.items.length === 0) {
+            setXhausToRedeem(0);
+            setShowRedeemInput(false);
+            setRedeemInputVal('');
+            setManualDiscountVal('');
+            setManualDiscountType('amount');
+            setSelectedPromo(null);
+            setRewardCodeInput('');
+            setAppliedReward(null);
+            setRewardDiscount(0);
+            setCashReceivedInput('');
+        }
+    }, [booking?.id, order.items.length]);
 
     const handleApplyRewardCode = async () => {
         if (!rewardCodeInput) return;

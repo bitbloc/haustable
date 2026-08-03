@@ -137,7 +137,7 @@ export function usePOSOrder() {
 
     const updateGuestCount = async (bookingId, newPax) => {
         const paxNum = parseInt(newPax) || 1;
-        if (!isOnline()) {
+        if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             const bookings = posCache.getBookings();
             const idx = bookings.findIndex(b => b.id === bookingId);
             if (idx !== -1) {
@@ -233,7 +233,7 @@ export function usePOSOrder() {
             const mockBooking = {
                 id: tempId,
                 table_id: null,
-                status: 'pending',
+                status: 'seated',
                 booking_type: 'pickup',
                 booking_time: new Date().toISOString(),
                 pax: 1,
@@ -249,7 +249,7 @@ export function usePOSOrder() {
             addToOfflineQueue('create_pickup', {
                 tempBookingId: tempId,
                 customerNote: note,
-                status: 'pending',
+                status: 'seated',
                 bookingTime: mockBooking.booking_time
             });
 
@@ -261,7 +261,7 @@ export function usePOSOrder() {
     const submitOrderItems = async (bookingId, items) => {
         if (!items || items.length === 0) return true;
 
-        if (!isOnline()) {
+        if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Submitting items to offline queue');
             // Save order items inside booking cache for local UI consistency
             const bookings = posCache.getBookings();
@@ -356,7 +356,7 @@ export function usePOSOrder() {
     ) => {
         setLoading(true);
         
-        if (!isOnline()) {
+        if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Checking out table offline');
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
@@ -486,7 +486,7 @@ export function usePOSOrder() {
 
     const acceptOrder = async (bookingId) => {
         setLoading(true);
-        if (!isOnline()) {
+        if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Accepting order offline');
             const bookings = posCache.getBookings();
             const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
@@ -556,7 +556,7 @@ export function usePOSOrder() {
         }
     };
     const attachCustomerToBooking = async (bookingId, userId) => {
-        if (!isOnline()) {
+        if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Attaching customer profile to local booking cache');
             const bookings = posCache.getBookings();
             const updated = bookings.map(b => b.id === bookingId ? { ...b, user_id: userId } : b);

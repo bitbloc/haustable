@@ -1153,14 +1153,14 @@ export function getPrinterCellWidth(str, useByteLength = false) {
 
 export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
 export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
@@ -2251,7 +2251,7 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
                 if (rawBytes) {
                     const qrToPrint = (slipType === 'billing') ? config.payment_qr_url : null;
                     const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
-                    const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.receipt_shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
+                    const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.shop_logo_url || storedLogo || `${window.location.origin}/logo.png`) : null;
                     await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                     printed = true;
                 }
