@@ -332,11 +332,11 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         normalized === '58' ||
         Number(paperSize) === 58
     );
-    // CRITICAL: We use 40 (for 80mm) and 28 (for 58mm) to leave buffer room for Thai vowels.
+    // CRITICAL: We use 42 (for 80mm) and 30 (for 58mm) to leave buffer room for Thai vowels.
     // ESC/POS TIS-620 buffers count bytes, not physical width. 
     // By keeping the software maxCols lower than the hardware maxCols (48 / 32), 
     // the extra bytes from padded Thai vowels won't overflow the hardware buffer and wrap the line!
-    return is58mm ? 28 : 40;
+    return is58mm ? 30 : 42;
 }
 
 // Classifier helper to categorize menu items into kitchen, bar, or other
@@ -598,6 +598,47 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
+    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols);
+
+    // CRITICAL TIS-620 CENTERING INTERCEPTOR:
+    // To ensure headers and body align perfectly, we intercept align() and size() calls.
+    // Instead of using hardware centering (which centers based on 48 columns),
+    // we manually pad spaces to center within the software 'maxCols' (e.g. 42 columns).
+    // This makes the entire receipt block perfectly unified and left-aligned on the paper.
+    let currentAlign = 'left';
+    let currentSizeW = 0;
+
+    const originalAlign = encoder.align.bind(encoder);
+    encoder.align = function(type) {
+        currentAlign = type;
+        originalAlign('left'); // Force hardware to always be left-aligned
+        return this;
+    };
+
+    const originalSize = encoder.size.bind(encoder);
+    encoder.size = function(width, height) {
+        currentSizeW = width;
+        originalSize(width, height);
+        return this;
+    };
+
+    const originalLine = encoder.line.bind(encoder);
+    encoder.line = function(value) {
+        let str = String(value ?? '');
+        const targetCols = currentSizeW === 1 ? Math.floor(maxCols / 2) : maxCols;
+        const width = getPrinterCellWidth(str);
+
+        if (currentAlign === 'center' && width < targetCols) {
+            const padding = Math.floor((targetCols - width) / 2);
+            str = ' '.repeat(padding) + str;
+        } else if (currentAlign === 'right' && width < targetCols) {
+            const padding = targetCols - width;
+            str = ' '.repeat(padding) + str;
+        }
+        originalLine(str);
+        return this;
+    };
+
     if (activeTab === 'receipt' && paymentMethod === 'cash') {
         encoder.kickDrawer();
     }
@@ -606,8 +647,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         ? booking.tracking_token 
         : (booking.id ? String(booking.id).slice(0, 4) : '0000');
     const dateStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
-
-    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols);
 
     let cfg = {};
     try {
