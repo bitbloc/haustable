@@ -363,22 +363,39 @@ export default function POSCustomerDisplay() {
                     </div>
 
                     {/* Member Profile Banner if attached */}
-                    {orderData.memberProfile || orderData.customer ? (
-                        <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/30 rounded-xl p-4 space-y-1.5">
+                    {orderData.memberProfile ? (
+                        <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/30 rounded-xl p-4 space-y-2 shadow-2xs">
                             <div className="flex items-center justify-between">
                                 <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)] flex items-center gap-1">
                                     <ShieldCheck size={12} />
                                     VIP MEMBER ATTACHED
                                 </span>
-                                <span className="text-[9px] font-mono font-bold bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded">
-                                    {orderData.memberProfile?.current_tier || 'MEMBER'}
+                                <span className="text-[10px] font-mono font-bold bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 rounded uppercase">
+                                    {orderData.memberProfile.current_tier || orderData.memberProfile.tier || 'MEMBER'}
                                 </span>
                             </div>
-                            <h2 className="text-xl font-bold text-[oklch(18%_0.012_28)] line-clamp-1">
-                                {orderData.memberProfile?.display_name || orderData.customer}
+                            <div>
+                                <h2 className="text-xl font-bold text-[oklch(18%_0.012_28)] line-clamp-1">
+                                    {orderData.memberProfile.display_name || orderData.memberProfile.name || orderData.memberProfile.customer_name || orderData.customer}
+                                </h2>
+                            </div>
+                            <div className="flex items-center justify-between border-t border-[oklch(52%_0.16_28)]/20 pt-2 text-xs font-mono">
+                                <span className="text-[oklch(55%_0.010_28)]">สะสมแต้มคงเหลือ:</span>
+                                <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                    {(orderData.memberProfile.points_balance ?? orderData.memberProfile.xhaus_points ?? orderData.memberProfile.points ?? 0).toLocaleString()} POINTS
+                                </span>
+                            </div>
+                        </div>
+                    ) : orderData.customer && orderData.customer !== 'Walk-in Guest' && orderData.customer !== 'Walk-in Pick-up' ? (
+                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-1 shadow-2xs">
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[oklch(55%_0.010_28)]">
+                                CUSTOMER
+                            </span>
+                            <h2 className="text-lg font-bold text-[oklch(18%_0.012_28)]">
+                                {orderData.customer}
                             </h2>
-                            <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">
-                                สิทธิพิเศษส่วนลดสมาชิกถูกคำนวณในบิลแล้ว
+                            <p className="text-[11px] text-[oklch(55%_0.010_28)] font-sans leading-relaxed pt-1">
+                                สั่งอาหารกับแคชเชียร์ / สามารถแจ้งเบอร์เพื่อสะสมแต้มสมาชิก XHAUS ได้
                             </p>
                         </div>
                     ) : (
@@ -509,9 +526,20 @@ export default function POSCustomerDisplay() {
                         </span>
                         <VenueLogo className="h-6 max-w-[100px] object-contain" />
                     </div>
-                    <h2 className="text-xl font-bold uppercase tracking-tight mt-0.5 mb-3">
+                    <h2 className="text-xl font-bold uppercase tracking-tight mt-0.5 mb-2">
                         สรุปรายการชำระเงิน
                     </h2>
+
+                    {orderData.memberProfile && (
+                        <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/20 p-2.5 rounded-lg flex items-center justify-between text-xs font-mono mb-3">
+                            <span className="font-bold text-[oklch(18%_0.012_28)] block">
+                                {orderData.memberProfile.display_name || orderData.memberProfile.name || orderData.customer}
+                            </span>
+                            <span className="text-[9px] font-bold bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 rounded uppercase">
+                                {orderData.memberProfile.current_tier || orderData.memberProfile.tier || 'MEMBER'}
+                            </span>
+                        </div>
+                    )}
 
                     <div className="max-h-[260px] overflow-y-auto space-y-1.5 pr-1">
                         {orderData.items?.map((item, idx) => (
