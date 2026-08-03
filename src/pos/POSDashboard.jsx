@@ -1708,11 +1708,24 @@ export default function POSDashboard() {
                                         
                                         if (updatedBooking) {
                                             setActiveBooking(updatedBooking);
-                                            setActiveSlipBooking(updatedBooking);
-                                        } else {
-                                            setActiveSlipBooking(activeBooking);
                                         }
-                                        setActiveSlipType('kitchen');
+                                        
+                                        const finalBooking = updatedBooking || activeBooking;
+                                        
+                                        // Try silent print first for Kitchen
+                                        try {
+                                            const silentSuccess = await autoPrintQROrder(finalBooking);
+                                            if (!silentSuccess) {
+                                                // Fallback to modal if silent print is not supported/failed
+                                                setActiveSlipBooking(finalBooking);
+                                                setActiveSlipType('kitchen');
+                                            }
+                                        } catch (err) {
+                                            console.error("Silent auto print failed:", err);
+                                            setActiveSlipBooking(finalBooking);
+                                            setActiveSlipType('kitchen');
+                                        }
+                                        
                                         checkPendingOrders();
                                     }
                                 }

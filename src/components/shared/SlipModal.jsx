@@ -1002,25 +1002,7 @@ export default function SlipModal({ booking, type, onClose }) {
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
 
-    useEffect(() => {
-        if (type === 'kitchen') {
-            let isSunmi = false;
-            try {
-                const stored = localStorage.getItem('onhaus_printer_config');
-                if (stored) {
-                    const config = JSON.parse(stored);
-                    if (config.kitchen_printer_type === 'sunmi') {
-                        isSunmi = true;
-                    }
-                }
-            } catch (err) {}
-
-            const timer = setTimeout(() => {
-                handlePrint();
-            }, isSunmi ? 50 : 600);
-            return () => clearTimeout(timer);
-        }
-    }, [type]);    if (isAutoPrinting) {
+    if (isAutoPrinting) {
         return null;
     }
 
