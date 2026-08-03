@@ -1067,10 +1067,14 @@ export default function POSDashboard() {
 
         // 2. Submit items
         const newItems = currentOrder.items.filter(i => !i.db_id);
+        let newlyInsertedRows = [];
         if (newItems.length > 0) {
             const result = await submitOrderItems(bookingId, newItems);
             if (!result) return;
-            if (typeof result === 'string') {
+            if (typeof result === 'object' && result.bookingId) {
+                bookingId = result.bookingId;
+                newlyInsertedRows = result.insertedItems || [];
+            } else if (typeof result === 'string') {
                 bookingId = result;
             }
         }
@@ -1095,10 +1099,24 @@ export default function POSDashboard() {
             }
         }
 
-        if (updatedBooking) {
-            setActiveBooking(updatedBooking);
+        let targetBooking = updatedBooking || currentBooking;
+
+        if (newlyInsertedRows.length > 0 && targetBooking) {
+            const existingOrderItems = targetBooking.order_items || [];
+            const existingIds = new Set(existingOrderItems.map(i => i.id));
+            const mergedItems = [...existingOrderItems];
+            newlyInsertedRows.forEach(row => {
+                if (!existingIds.has(row.id)) {
+                    mergedItems.push(row);
+                }
+            });
+            targetBooking = { ...targetBooking, order_items: mergedItems };
+        }
+
+        if (targetBooking) {
+            setActiveBooking(targetBooking);
             // Update currentOrder item db_ids so they don't get re-submitted
-            const updatedItems = (updatedBooking.order_items || []).map(oi => ({
+            const updatedItems = (targetBooking.order_items || []).map(oi => ({
                 id: oi.menu_item_id,
                 name: oi.menu_items?.name || oi.name || 'Item',
                 price: oi.price_at_time,
@@ -1113,12 +1131,8 @@ export default function POSDashboard() {
                 items: updatedItems
             }));
             
-            const targetBooking = updatedBooking || currentBooking;
             toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
             openSlipOrSilentPrint(targetBooking, type);
-        } else {
-            toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
-            openSlipOrSilentPrint(currentBooking, type);
         }
         } finally {
             setIsSubmittingOrder(false);
@@ -1195,6 +1209,7 @@ export default function POSDashboard() {
 
     const handleSelectTable = async (table) => {
         setSelectedTable(table);
+        setAttachedMemberCrm(null); // Clear stale attached member immediately on table change
         if (table?.id) {
             localStorage.setItem('pos_active_table_id', table.id);
         }
@@ -1258,8 +1273,23 @@ export default function POSDashboard() {
     };
 
     const handleSelectPickupOrder = async (booking) => {
+        setAttachedMemberCrm(null); // Clear stale member profile immediately
         setActiveBooking(booking);
         setSelectedTable(null); 
+        localStorage.removeItem('pos_active_table_id');
+        
+        if (booking?.user_id) {
+            try {
+                const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: booking.user_id });
+                if (!error && data && data.length > 0) {
+                    setAttachedMemberCrm(data[0]);
+                } else if (booking.profiles) {
+                    setAttachedMemberCrm(booking.profiles);
+                }
+            } catch (err) {
+                if (booking.profiles) setAttachedMemberCrm(booking.profiles);
+            }
+        }
         
         const existingItems = booking.order_items ? booking.order_items.map(oi => ({
             id: oi.menu_item_id,
@@ -1267,11 +1297,13 @@ export default function POSDashboard() {
             price: oi.price_at_time,
             quantity: oi.quantity,
             db_id: oi.id,
-            selected_options: oi.selected_options
+            selected_options: oi.selected_options,
+            category_id: oi.menu_items?.category_id || oi.category_id,
+            category_name: oi.menu_items?.menu_categories?.name || oi.category_name
         })) : [];
         setCurrentOrder({
             items: existingItems,
-            customer: booking.pickup_contact_name || booking.customer_note || 'Walk-in Pick-up',
+            customer: booking.pickup_contact_name || booking.customer_name || booking.customer_note || 'Walk-in Pick-up',
             table: null
         });
         setView('menu');
@@ -1327,6 +1359,7 @@ export default function POSDashboard() {
         setSelectedTable(null);
         setActiveBooking(null);
         setCurrentOrder({ items: [], customer: null, table: null });
+        setAttachedMemberCrm(null);
     };
 
     const handleAddToOrder = useCallback((item) => {

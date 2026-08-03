@@ -386,7 +386,7 @@ export default function POSCustomerDisplay() {
                                 </span>
                             </div>
                         </div>
-                    ) : orderData.customer && orderData.customer !== 'Walk-in Guest' && orderData.customer !== 'Walk-in Pick-up' ? (
+                    ) : orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer) ? (
                         <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-1 shadow-2xs">
                             <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[oklch(55%_0.010_28)]">
                                 CUSTOMER

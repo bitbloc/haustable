@@ -346,9 +346,12 @@ export function usePOSOrder() {
                 };
             });
 
-            const { error } = await supabase.from('order_items').insert(itemsToInsert);
+            const { data: insertedData, error } = await supabase
+                .from('order_items')
+                .insert(itemsToInsert)
+                .select('*, menu_items(name, category_id, menu_categories(name))');
             if (error) throw error;
-            return bookingId;
+            return { bookingId, insertedItems: insertedData || [] };
         } catch (err) {
             console.error('Failed to submit items online, fallback to offline queue:', err);
             

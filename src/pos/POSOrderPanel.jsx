@@ -380,6 +380,19 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         };
     }, []);
 
+    const currentMemberProfile = (() => {
+        if (booking?.user_id) {
+            if (attachedMemberCrm && (attachedMemberCrm.id === booking.user_id || attachedMemberCrm.user_id === booking.user_id)) {
+                return attachedMemberCrm;
+            }
+            if (booking.profiles) {
+                return booking.profiles;
+            }
+            return null;
+        }
+        return attachedMemberCrm || null;
+    })();
+
     React.useEffect(() => {
         if (activeModal === 'checkout') {
             if (paymentMethod === 'qr') {
@@ -392,7 +405,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         tax,
                         total,
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
-                        memberProfile: attachedMemberCrm || booking?.profiles || null,
+                        memberProfile: currentMemberProfile,
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'qr'
                     }
@@ -408,7 +421,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         tax,
                         total,
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
-                        memberProfile: attachedMemberCrm || booking?.profiles || null,
+                        memberProfile: currentMemberProfile,
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'cash',
                         cashReceived: received,
@@ -426,14 +439,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     tax,
                     total,
                     customer: order.customer || booking?.customer_name || 'Walk-in Guest',
-                    memberProfile: attachedMemberCrm || booking?.profiles || null,
+                    memberProfile: currentMemberProfile,
                     tableName: order.table?.table_name || booking?.tables_layout?.table_name || null
                 }
             });
         } else {
             broadcastCFD({ type: 'IDLE' });
         }
-    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, attachedMemberCrm, booking, activeModal, paymentMethod, cashReceivedInput]);
+    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, activeModal, paymentMethod, cashReceivedInput]);
     
     const hasNewItems = order.items.some(item => !item.db_id);
 
