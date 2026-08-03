@@ -708,7 +708,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-2">
                         <span className="text-xs font-bold pb-1 text-[#767673]">NET TOTAL</span>
-                        <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">฿{total.toLocaleString()}</span>
+                        <div className="flex items-center gap-2">
+                            {depositPaid >= (netBeforeTax + tax) && (netBeforeTax + tax) > 0 && (
+                                <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded tracking-wider">
+                                    [ PAID ]
+                                </span>
+                            )}
+                            <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">฿{total.toLocaleString()}</span>
+                        </div>
                     </div>
                 </div>
 

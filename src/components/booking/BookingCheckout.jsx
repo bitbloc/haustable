@@ -28,7 +28,7 @@ export default function BookingCheckout() {
     // Calculate Final Total & Deposit
     const discountAmount = appliedPromo?.discountAmount || 0
     const finalTotal = Math.max(0, cartTotal - discountAmount)
-    const depositAmount = finalTotal * 0.5
+    const depositAmount = Math.ceil(finalTotal * 0.5)
 
     // Revalidate when cartTotal changes
     React.useEffect(() => {

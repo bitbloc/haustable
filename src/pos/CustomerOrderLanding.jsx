@@ -563,15 +563,6 @@ export default function CustomerOrderLanding() {
 
             if (itemsError) throw itemsError;
 
-            // 3. ATOMIC RECALCULATION of total_amount from database items
-            // This prevents race conditions when 10 guests at the same table order concurrently!
-            const { data: allItems } = await supabase
-                .from('order_items')
-                .select('price_at_time, quantity')
-                .eq('booking_id', currentBooking.id);
-
-            const recalculatedTotal = (allItems || []).reduce((sum, i) => sum + (Number(i.price_at_time) * Number(i.quantity)), 0);
-
             let updatedRemark = currentBooking.staff_remark || 'QR Walk-in Guest';
             if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
                 updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
@@ -579,7 +570,7 @@ export default function CustomerOrderLanding() {
 
             const updateData = {
                 status: 'seated', // Auto-accepted; triggers auto-print on POS
-                total_amount: recalculatedTotal,
+                // total_amount is dynamically calculated on the POS side and Status page to avoid concurrent race conditions
                 staff_remark: updatedRemark
             };
             if (memberProfile?.id && !currentBooking.user_id) {

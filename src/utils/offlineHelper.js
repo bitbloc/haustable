@@ -156,6 +156,14 @@ export async function syncOfflineQueue(isManual = false) {
                 // Save mapping
                 idMapping[tempBookingId] = data.id;
                 console.log(`[Offline Sync] Mapped booking local ID ${tempBookingId} -> remote ID ${data.id}`);
+                
+                // Replace in posCache
+                const bookings = posCache.getBookings();
+                const idx = bookings.findIndex(b => b.id === tempBookingId);
+                if (idx !== -1) {
+                    bookings[idx] = { ...bookings[idx], ...data };
+                    posCache.setBookings(bookings);
+                }
             }
 
             else if (action.type === 'create_pickup') {
@@ -180,6 +188,14 @@ export async function syncOfflineQueue(isManual = false) {
 
                 idMapping[tempBookingId] = data.id;
                 console.log(`[Offline Sync] Mapped pickup local ID ${tempBookingId} -> remote ID ${data.id}`);
+                
+                // Replace in posCache
+                const bookings = posCache.getBookings();
+                const idx = bookings.findIndex(b => b.id === tempBookingId);
+                if (idx !== -1) {
+                    bookings[idx] = { ...bookings[idx], ...data };
+                    posCache.setBookings(bookings);
+                }
             }
 
             else if (action.type === 'update_pax') {

@@ -18,7 +18,7 @@ import {
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { toast } from 'sonner';
 
-const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey }) {
+const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -267,6 +267,20 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                     >
                         <LayoutGrid size={14} /> REGISTRY LIST
                     </button>
+                    {onOpenNotifDrawer && (
+                        <button 
+                            type="button"
+                            onClick={onOpenNotifDrawer} 
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer touch-manipulation bg-white text-[#1A1A1A] border border-[#D1D1CD] hover:bg-[#F5F5F2] font-mono text-xs font-bold uppercase tracking-wider relative ml-1"
+                        >
+                            NOTIFS
+                            {unreadNotifCount > 0 && (
+                                <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full leading-none animate-pulse">
+                                    {unreadNotifCount}
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -439,6 +453,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                                                                             <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
                                                                                 ⚠️ บิลค้าง &gt;2วัน
                                                                             </span>
+                                                                        ) : isPending && startMins >= 10 ? (
+                                                                            <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                                                                                OVERDUE {startMins}M
+                                                                            </span>
                                                                         ) : isLongDwell ? (
                                                                             <span className="mt-0.5 bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
                                                                                 🔥 นั่งแช่ {Math.floor(startMins / 60)}h{startMins % 60}m
@@ -509,20 +527,23 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                                         >
                                             {/* Top row: Status LEDs */}
                                             <div className="flex justify-between items-center w-full">
-                                                <div className="flex gap-1 items-center">
-                                                    {hasOrder && (
-                                                        <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">ORDER</span>
-                                                    )}
-                                                    {hasCallStaff && (
-                                                        <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
-                                                    )}
-                                                    {hasCallBill && (
-                                                        <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">BILL</span>
-                                                    )}
-                                                    {hasSlip && (
-                                                        <span className="bg-[#00CC44] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
-                                                    )}
-                                                </div>
+                                                <div className="flex gap-1 items-center flex-wrap">
+                                                     {hasOrder && (
+                                                         <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">ORDER</span>
+                                                     )}
+                                                     {isPending && table.booking?.booking_time && (Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000) >= 10) && (
+                                                         <span className="bg-red-700 text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">OVERDUE</span>
+                                                     )}
+                                                     {hasCallStaff && (
+                                                         <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
+                                                     )}
+                                                     {hasCallBill && (
+                                                         <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">BILL</span>
+                                                     )}
+                                                     {hasSlip && (
+                                                         <span className="bg-[#00CC44] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
+                                                     )}
+                                                 </div>
                                                 <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
                                             </div>
                                             

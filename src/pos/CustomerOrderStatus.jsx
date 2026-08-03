@@ -211,6 +211,10 @@ export default function CustomerOrderStatus() {
 
     const activeStep = getActiveStepIndex();
 
+    const dynamicTotal = orderItems.reduce((sum, item) => sum + (Number(item.price_at_time) * Number(item.quantity)), 0);
+    const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
+    const remainingBalance = Math.max(0, dynamicTotal - depositPaid);
+
     return (
         <div className="min-h-screen w-full bg-[#F0F0EC] text-[#1A1A1A] font-sans flex flex-col pb-10 selection:bg-[#ff0000] selection:text-white select-none">
             <Toaster position="top-center" richColors />
@@ -384,9 +388,23 @@ export default function CustomerOrderStatus() {
                             </div>
                         )}
 
-                        <div className="border-t border-[#D1D1CD] pt-3.5 mt-2 flex justify-between items-baseline">
-                            <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหารสุทธิ</span>
-                            <span className="text-lg font-black text-[#ff0000] font-mono">฿{booking.total_amount?.toLocaleString()}.-</span>
+                        <div className="border-t border-[#D1D1CD] pt-3.5 mt-2 space-y-1.5">
+                            <div className="flex justify-between items-baseline">
+                                <span className="text-[10px] text-[#767673] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหาร (Total)</span>
+                                <span className="text-sm font-bold text-[#1A1A1A] font-mono">฿{dynamicTotal.toLocaleString()}.-</span>
+                            </div>
+                            
+                            {depositPaid > 0 && (
+                                <div className="flex justify-between items-baseline text-[#00CC44]">
+                                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider">หักมัดจำ (Paid Deposit)</span>
+                                    <span className="text-sm font-bold font-mono">-฿{depositPaid.toLocaleString()}.-</span>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-baseline pt-2 border-t border-[#D1D1CD]/50">
+                                <span className="text-[10px] text-[#ff0000] font-mono font-bold uppercase tracking-wider">ยอดที่ต้องชำระ (Remaining)</span>
+                                <span className="text-xl font-black text-[#ff0000] font-mono">฿{remainingBalance.toLocaleString()}.-</span>
+                            </div>
                         </div>
                     </div>
                 </section>

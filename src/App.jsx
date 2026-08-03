@@ -117,7 +117,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <Toaster position="top-center" richColors closeButton />
+      <Toaster position="top-center" maxToasts={3} visibleToasts={3} closeButton />
       <Router>
         <Suspense fallback={<FallbackLoader />}>
           <Routes>

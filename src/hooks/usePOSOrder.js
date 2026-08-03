@@ -283,6 +283,15 @@ export function usePOSOrder() {
                         .single();
                         
                     if (!createErr && newBooking) {
+                        // Replace the local booking in posCache with the new online booking
+                        const idx = bookings.findIndex(b => b.id === bookingId);
+                        if (idx !== -1) {
+                            bookings[idx] = newBooking;
+                            posCache.setBookings(bookings);
+                        } else {
+                            bookings.push(newBooking);
+                            posCache.setBookings(bookings);
+                        }
                         bookingId = newBooking.id;
                     }
                 }
@@ -319,7 +328,7 @@ export function usePOSOrder() {
 
             addToOfflineQueue('submit_items', { bookingId, items });
             toast.info('บันทึกรายการอาหารเข้าคิวเรียบร้อยแล้ว (โหมดออฟไลน์)');
-            return true;
+            return bookingId;
         }
 
         try {
@@ -339,7 +348,7 @@ export function usePOSOrder() {
 
             const { error } = await supabase.from('order_items').insert(itemsToInsert);
             if (error) throw error;
-            return true;
+            return bookingId;
         } catch (err) {
             console.error('Failed to submit items online, fallback to offline queue:', err);
             
@@ -369,7 +378,7 @@ export function usePOSOrder() {
 
             addToOfflineQueue('submit_items', { bookingId, items });
             toast.info('บันทึกรายการอาหารเข้าคิวเรียบร้อยแล้ว (โหมดออฟไลน์)');
-            return true;
+            return bookingId;
         }
     };
 

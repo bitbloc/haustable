@@ -84,6 +84,24 @@ export default function POSDashboard() {
     const activeNotificationsRef = useRef(new Set());
     const lastPlayedSoundTimeRef = useRef(0);
 
+    // Notification History Drawer State
+    const [notificationHistory, setNotificationHistory] = useState([]);
+    const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+    const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+    const pushNotifHistory = (type, title, message, tableId) => {
+        const item = {
+            id: Date.now() + Math.random(),
+            type,
+            title,
+            message,
+            tableId,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setNotificationHistory(prev => [item, ...prev].slice(0, 30));
+        setUnreadNotifCount(prev => prev + 1);
+    };
+
     // Shift Management States
     const [activeShift, setActiveShift] = useState(getCurrentShift());
     const [realtimeShiftSummary, setRealtimeShiftSummary] = useState(null);
@@ -594,13 +612,29 @@ export default function POSDashboard() {
                 fullBooking.status = 'seated';
             }
 
-            const printKey = `qr_${bookingId}_${fullBooking.total_amount}_${fullBooking.order_items.length}`;
+            // Get already printed items for this booking
+            const storageKey = `qr_printed_items_${bookingId}`;
+            let printedItems = [];
+            try {
+                printedItems = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            } catch (e) {}
 
-            if (!autoPrintedQrKeysRef.current.has(printKey)) {
-                markQrKeyAsPrinted(printKey);
+            // Find new items that haven't been printed yet
+            const unprintedItems = fullBooking.order_items.filter(item => !printedItems.includes(item.id));
+
+            if (unprintedItems.length > 0) {
+                // Update tracker immediately to prevent duplicate fires
+                const newPrintedItems = [...printedItems, ...unprintedItems.map(i => i.id)];
+                localStorage.setItem(storageKey, JSON.stringify(newPrintedItems));
+                
+                // Construct a temporary booking object that ONLY contains the unprinted items for the printer
+                const partialBooking = {
+                    ...fullBooking,
+                    order_items: unprintedItems
+                };
 
                 const displayTable = fullBooking.tables_layout?.table_name || tableNameHint;
-                toast.success(`🛎️ ออเดอร์ QR โต๊ะ ${displayTable} (฿${fullBooking.total_amount}) - รับออเดอร์และพิมพ์ใบครัวอัตโนมัติแล้ว`, {
+                toast.success(`🛎️ ออเดอร์ QR โต๊ะ ${displayTable} - เพิ่ม ${unprintedItems.length} รายการ (พิมพ์ใบครัวอัตโนมัติแล้ว)`, {
                     duration: 10000,
                     action: {
                         label: 'ดูรายการ',
@@ -613,7 +647,7 @@ export default function POSDashboard() {
                 });
                 playSystemAlertSound();
 
-                await autoPrintQROrder(fullBooking);
+                await autoPrintQROrder(partialBooking);
             }
         } catch (err) {
             console.error("Auto print QR order error:", err);
@@ -841,17 +875,21 @@ export default function POSDashboard() {
                     if (newRow.status === 'pending') {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
-                            toast.success(`🛎️ ออเดอร์ใหม่! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
-                                duration: 10000,
-                                action: {
-                                    label: 'ดูรายการ',
-                                    onClick: () => {
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                    toast.dismiss(t);
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }}>
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">New Order</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} สั่งอาหารเข้าห้องครัวแล้ว</div>
+                                </div>
+                            ), { id: pendingOrderKey, duration: 10000 });
+                            pushNotifHistory('ORDER', 'New Order', `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
                             playSystemAlertSound();
                         }
                     }
@@ -863,17 +901,21 @@ export default function POSDashboard() {
                     if (newRow?.status === 'pending') {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
-                            toast.success(`🛎️ ออเดอร์เพิ่มเติม! โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, {
-                                duration: 10000,
-                                action: {
-                                    label: 'ดูรายการ',
-                                    onClick: () => {
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                    toast.dismiss(t);
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }}>
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Add Order</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} สั่งอาหารเพิ่มเติม</div>
+                                </div>
+                            ), { id: pendingOrderKey, duration: 10000 });
+                            pushNotifHistory('ADD_ORDER', 'Add Order', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`, tableId);
                             playSystemAlertSound();
                         }
                     } else {
@@ -885,17 +927,21 @@ export default function POSDashboard() {
                     if (newRemark.includes('[CALL_BILL]')) {
                         if (!activeNotificationsRef.current.has(callBillKey)) {
                             activeNotificationsRef.current.add(callBillKey);
-                            toast.warning(`💵 โต๊ะ ${tableName} เรียกเช็คบิล!`, {
-                                duration: 10000,
-                                action: {
-                                    label: 'เช็คบิล',
-                                    onClick: () => {
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                    toast.dismiss(t);
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }}>
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Call Bill</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} เรียกเช็คบิล</div>
+                                </div>
+                            ), { id: callBillKey, duration: 10000 });
+                            pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tableName} เรียกเช็คบิล`, tableId);
                             playSystemAlertSound();
                         }
                     } else {
@@ -908,10 +954,15 @@ export default function POSDashboard() {
                     if (newRow?.status === 'cancelled' && payload.old?.status !== 'cancelled') {
                         if (!activeNotificationsRef.current.has(cancelKey)) {
                             activeNotificationsRef.current.add(cancelKey);
-                            toast.error(`❌ ลูกค้ายกเลิกการจอง: โต๊ะ ${tableName} ยกเลิกออเดอร์แล้ว`, {
-                                duration: 15000,
-                                style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #F87171' }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px]">
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Cancelled</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#1A1A1A]" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">ลูกค้ายกเลิกการจอง: โต๊ะ {tableName}</div>
+                                </div>
+                            ), { id: cancelKey, duration: 15000 });
                             playSystemAlertSound();
                         }
                     }
@@ -922,10 +973,15 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(arrivedKey)) {
                             activeNotificationsRef.current.add(arrivedKey);
                             const customerName = newRow?.pickup_contact_name || newRow?.customer_name || 'ลูกค้า';
-                            toast.info(`📍 ลูกค้า ${customerName} (ออเดอร์ #${newRow?.short_id || ''}) มาถึงหน้าร้านแล้ว!`, {
-                                duration: 15000,
-                                style: { background: '#F0FDF4', color: '#166534', border: '1px solid #86EFAC' }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px]">
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Customer Arrived</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">ลูกค้า {customerName} มาถึงหน้าร้านแล้ว</div>
+                                </div>
+                            ), { id: arrivedKey, duration: 15000 });
                             playSystemAlertSound();
                         }
                     }
@@ -934,17 +990,21 @@ export default function POSDashboard() {
                     if (newRemark.includes('[CALL_STAFF]')) {
                         if (!activeNotificationsRef.current.has(callStaffKey)) {
                             activeNotificationsRef.current.add(callStaffKey);
-                            toast.warning(`🔔 โต๊ะ ${tableName} เรียกพนักงาน!`, {
-                                duration: 10000,
-                                action: {
-                                    label: 'ดูรายการ',
-                                    onClick: () => {
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                    toast.dismiss(t);
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }}>
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Call Staff</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} เรียกพนักงาน</div>
+                                </div>
+                            ), { id: callStaffKey, duration: 10000 });
+                            pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
                             playSystemAlertSound();
                         }
                     } else {
@@ -956,17 +1016,21 @@ export default function POSDashboard() {
                     if (newSlip) {
                         if (!activeNotificationsRef.current.has(slipReceivedKey)) {
                             activeNotificationsRef.current.add(slipReceivedKey);
-                            toast.success(`📸 โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว!`, {
-                                duration: 10000,
-                                action: {
-                                    label: 'ตรวจสลิป',
-                                    onClick: () => {
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            });
+                            toast.custom((t) => (
+                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                    toast.dismiss(t);
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }}>
+                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Payment Uploaded</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    </div>
+                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} ส่งหลักฐานโอนเงินแล้ว</div>
+                                </div>
+                            ), { id: slipReceivedKey, duration: 10000 });
+                            pushNotifHistory('SLIP', 'Payment Uploaded', `โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว`, tableId);
                             playSystemAlertSound();
                         }
                     } else {
@@ -1004,8 +1068,11 @@ export default function POSDashboard() {
         // 2. Submit items
         const newItems = currentOrder.items.filter(i => !i.db_id);
         if (newItems.length > 0) {
-            const success = await submitOrderItems(bookingId, newItems);
-            if (!success) return;
+            const result = await submitOrderItems(bookingId, newItems);
+            if (!result) return;
+            if (typeof result === 'string') {
+                bookingId = result;
+            }
         }
 
         // 3. Reload the booking to get updated order_items and references
@@ -1120,6 +1187,10 @@ export default function POSDashboard() {
 
     const [openTableModalData, setOpenTableModalData] = useState(null);
     const [openTablePaxInput, setOpenTablePaxInput] = useState('2');
+
+    // Walk-in Pickup Modal State
+    const [showPickupModal, setShowPickupModal] = useState(false);
+    const [pickupNoteInput, setPickupNoteInput] = useState('');
 
     const handleSelectTable = async (table) => {
         setSelectedTable(table);
@@ -1386,8 +1457,11 @@ export default function POSDashboard() {
         // 2. Submit items
         const newItems = currentOrder.items.filter(i => !i.db_id);
         if (newItems.length > 0) {
-            const success = await submitOrderItems(bookingId, newItems);
-            if (!success) return;
+            const result = await submitOrderItems(bookingId, newItems);
+            if (!result) return;
+            if (typeof result === 'string') {
+                bookingId = result;
+            }
         }
 
         // 3. Complete Checkout
@@ -1729,7 +1803,16 @@ export default function POSDashboard() {
                     <div className="flex-1 h-full overflow-hidden relative">
                         {/* Core views kept mounted for instant switching */}
                         <div className={view === 'tables' ? 'h-full' : 'hidden'}>
-                            <POSTableGrid onSelectTable={handleSelectTable} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
+                            <POSTableGrid 
+                                onSelectTable={handleSelectTable} 
+                                hasPendingOrders={hasPendingOrders} 
+                                refreshKey={refreshKey}
+                                onOpenNotifDrawer={() => {
+                                    setShowNotifDrawer(true);
+                                    setUnreadNotifCount(0);
+                                }}
+                                unreadNotifCount={unreadNotifCount}
+                            />
                         </div>
                         <div className={view === 'menu' ? 'h-full' : 'hidden'}>
                             <POSMenuGrid onAddItem={handleAddToOrder} />
@@ -1900,6 +1983,106 @@ export default function POSDashboard() {
                 </div>
             </POSLayout>
 
+            {/* Walk-in Pickup Modal */}
+            {showPickupModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm shadow-2xl font-sans text-[#1A1A1A] animate-in fade-in zoom-in duration-200">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                            <div>
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">New Walk-in Pickup</h3>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5">รับกลับบ้าน (สั่งหน้าร้าน)</p>
+                            </div>
+                            <button onClick={() => setShowPickupModal(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg text-[#767673]">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase mb-1.5">
+                                Customer Name / Note (Optional)
+                            </label>
+                            <input 
+                                type="text"
+                                placeholder="Walk-in Pick-up"
+                                value={pickupNoteInput}
+                                onChange={(e) => setPickupNoteInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') confirmNewWalkInPickup();
+                                }}
+                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A]"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-2">
+                            <button
+                                onClick={() => setShowPickupModal(false)}
+                                className="flex-1 bg-white border border-[#D1D1CD] text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#F5F5F2] transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmNewWalkInPickup}
+                                className="flex-1 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-colors shadow-md"
+                            >
+                                Create Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notification History Drawer Modal */}
+            {showNotifDrawer && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
+                    <div className="bg-[#F5F5F2] border-l border-[#D1D1CD] w-full max-w-md h-full shadow-2xl font-sans text-[#1A1A1A] flex flex-col animate-in slide-in-from-right duration-200">
+                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
+                            <div>
+                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">Notification History</h3>
+                                <p className="text-[10px] text-[#767673] font-mono mt-0.5">ประวัติการแจ้งเตือนล่าสุด (30 รายการ)</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setNotificationHistory([])} 
+                                    className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] hover:text-[#1A1A1A] px-2 py-1 border border-[#D1D1CD] rounded-lg"
+                                >
+                                    Clear
+                                </button>
+                                <button onClick={() => setShowNotifDrawer(false)} className="p-1 hover:bg-[#EAEAE6] rounded-lg text-[#767673]">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+                            {notificationHistory.length === 0 ? (
+                                <div className="text-center py-12 text-[#767673] font-mono text-xs uppercase">
+                                    No Recent Notifications
+                                </div>
+                            ) : (
+                                notificationHistory.map(n => (
+                                    <div 
+                                        key={n.id} 
+                                        onClick={() => {
+                                            if (n.tableId) {
+                                                setShowNotifDrawer(false);
+                                                supabase.from('tables_layout').select('*').eq('id', n.tableId).single().then(({ data }) => {
+                                                    if (data) handleSelectTable(data);
+                                                });
+                                            }
+                                        }}
+                                        className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 shadow-sm flex flex-col gap-1 hover:border-[#1A1A1A] cursor-pointer transition-all"
+                                    >
+                                        <div className="flex justify-between items-center border-b border-[#E0E0DC] pb-1.5">
+                                            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[#767673]">{n.title}</span>
+                                            <span className="text-[9px] font-mono text-[#767673]">{n.time}</span>
+                                        </div>
+                                        <div className="text-xs font-bold text-[#1A1A1A] pt-0.5">{n.message}</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeSlipBooking && (
                 <SlipModal 
                     booking={activeSlipBooking}
@@ -2063,6 +2246,11 @@ export default function POSDashboard() {
                                                     }`}>
                                                         {isPickup ? 'PICKUP (รับกลับบ้าน)' : 'DINE-IN (จองโต๊ะ)'}
                                                     </span>
+                                                    {item.deposit_amount >= item.total_amount && item.total_amount > 0 && (
+                                                        <span className="bg-emerald-100 text-emerald-900 border-emerald-200 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block">
+                                                            [ PAID ]
+                                                        </span>
+                                                    )}
                                                     <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
                                                         QUEUE #{item.id?.slice(-4) || (idx + 1)}
                                                     </span>

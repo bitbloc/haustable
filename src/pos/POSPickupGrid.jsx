@@ -165,6 +165,11 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                                     [ IN-HAUS ]
                                                 </span>
                                             )}
+                                            {order.deposit_amount >= order.total_amount && order.total_amount > 0 && (
+                                                <span className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[9px] font-mono font-bold px-2 py-0.5 rounded tracking-widest uppercase">
+                                                    [ PAID ]
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">
