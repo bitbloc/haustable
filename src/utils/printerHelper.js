@@ -332,7 +332,11 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         normalized === '58' ||
         Number(paperSize) === 58
     );
-    return is58mm ? 26 : 36;
+    // CRITICAL: We use 40 (for 80mm) and 28 (for 58mm) to leave buffer room for Thai vowels.
+    // ESC/POS TIS-620 buffers count bytes, not physical width. 
+    // By keeping the software maxCols lower than the hardware maxCols (48 / 32), 
+    // the extra bytes from padded Thai vowels won't overflow the hardware buffer and wrap the line!
+    return is58mm ? 28 : 40;
 }
 
 // Classifier helper to categorize menu items into kitchen, bar, or other
@@ -1088,6 +1092,9 @@ function splitPrinterGraphemes(str) {
 }
 
 // Measure string cell width for ESC/POS printing (TIS-620 grapheme cluster width)
+// CRITICAL: We use grapheme cluster width for straight visual alignment.
+// To prevent the hardware byte-buffer from overflowing (which causes line wrapping),
+// maxCols must be set lower than the hardware limit (e.g. 40 instead of 48).
 export function getPrinterCellWidth(str) {
     if (str === null || str === undefined) return 0;
     const clusters = splitPrinterGraphemes(str);
