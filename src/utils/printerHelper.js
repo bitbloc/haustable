@@ -711,11 +711,14 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (!isKitchenTab) {
         encoder.align('center')
                .line(doubleDivider)
-               .size(1, 1)
                .bold(true)
-               .line(shopName)
+               .size(1, 1)
+               .line(orderBannerTitle)
                .size(0, 0)
-               .bold(false);
+               .bold(true)
+               .line(orderBannerSub)
+               .bold(false)
+               .line(doubleDivider);
 
         if (shopAddress) {
             encoder.line(shopAddress.toUpperCase());
@@ -726,16 +729,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         if (shopVat) {
             encoder.line(`TAX ID: ${shopVat}`);
         }
-        encoder.line(doubleDivider)
-               .align('center')
-               .bold(true)
-               .size(1, 1)
-               .line(orderBannerTitle)
-               .size(0, 0)
-               .bold(true)
-               .line(orderBannerSub)
-               .bold(false)
-               .line(doubleDivider);
+        encoder.line(doubleDivider);
     } else if (activeTab === 'kitchen' || activeTab === 'kitchen_all') {
         encoder.align('center')
                .line(doubleDivider)

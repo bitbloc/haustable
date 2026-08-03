@@ -716,18 +716,6 @@ export default function SlipModal({ booking, type, onClose }) {
                         </div>
                     ` : ''}
 
-                    <div class="brand">${docHeader}</div>
-                    <div class="tagline">TASTE YOUR SCENT.</div>
-
-                    <!-- Shop metadata rendering if customer receipt -->
-                    ${(activeTab !== 'kitchen' && activeTab !== 'bar' && (receiptShopAddress || receiptShopPhone || receiptShopVat)) ? `
-                        <div style="text-align: center; font-size: 8px; line-height: 1.3; margin-bottom: 12px; border-bottom: 1px dashed black; padding-bottom: 8px; text-transform: uppercase;">
-                            ${receiptShopAddress ? `<div style="margin-bottom: 2px;">${receiptShopAddress}</div>` : ''}
-                            ${receiptShopPhone ? `<div style="margin-bottom: 2px;">Tel: ${receiptShopPhone}</div>` : ''}
-                            ${receiptShopVat ? `<div>Tax ID: ${receiptShopVat}</div>` : ''}
-                        </div>
-                    ` : ''}
-                    
                     <div class="ticket-title">${docTitle}</div>
 
                     <!-- Distinct Order Banner -->
@@ -735,6 +723,15 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">${orderBannerTitle}</div>
                         <div style="font-size: 10px; font-weight: bold; color: #333; margin-top: 2px;">${orderBannerSub}</div>
                     </div>
+
+                    <!-- Shop metadata rendering if customer receipt -->
+                    ${(activeTab !== 'kitchen' && activeTab !== 'bar' && (receiptShopAddress || receiptShopPhone || receiptShopVat)) ? `
+                        <div style="text-align: center; font-size: 8px; line-height: 1.3; margin-bottom: 12px; border-bottom: 1px dashed black; padding-bottom: 8px; border-top: 1px dashed black; padding-top: 8px; text-transform: uppercase;">
+                            ${receiptShopAddress ? `<div style="margin-bottom: 2px;">${receiptShopAddress}</div>` : ''}
+                            ${receiptShopPhone ? `<div style="margin-bottom: 2px;">Tel: ${receiptShopPhone}</div>` : ''}
+                            ${receiptShopVat ? `<div>Tax ID: ${receiptShopVat}</div>` : ''}
+                        </div>
+                    ` : ''}
 
                     <div class="center-flex" style="margin-top: 10px;">
                         <div class="queue-box">
