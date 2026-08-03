@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName, selectItemsForTab } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -328,22 +328,7 @@ export default function SlipModal({ booking, type, onClose }) {
         
         let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
 
-        let filteredItems = booking.order_items || [];
-        if (activeTab === 'kitchen_all' || (activeTab === 'kitchen' && !isSeparateBarPrinterEnabled)) {
-            filteredItems = booking.order_items || [];
-        } else if (kitchenCatIds.length === 0 && barCatIds.length === 0) {
-            if (activeTab === 'kitchen') {
-                filteredItems = filteredItems.filter(item => !BAR_CATEGORIES.includes(item.menu_items?.category_id));
-            } else if (activeTab === 'bar') {
-                filteredItems = filteredItems.filter(item => BAR_CATEGORIES.includes(item.menu_items?.category_id));
-            }
-        } else {
-            if (activeTab === 'kitchen') {
-                filteredItems = filteredItems.filter(item => !barCatIds.includes(item.menu_items?.category_id));
-            } else if (activeTab === 'bar') {
-                filteredItems = filteredItems.filter(item => barCatIds.includes(item.menu_items?.category_id));
-            }
-        }
+        let filteredItems = selectItemsForTab(booking.order_items || [], activeTab, printerConfig);
 
         const isKitchen = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
 

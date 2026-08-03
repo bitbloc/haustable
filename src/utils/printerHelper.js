@@ -378,7 +378,16 @@ export const classifyItem = (item, receiptConfig = {}) => {
     const categoryMap = cachedCategories.reduce((acc, cat) => { if (cat.id) acc[cat.id] = cat; return acc; }, {});
 
     const catObj = categoryMap[catId];
-    const catName = (catObj?.name || item.menu_items?.categories?.name || item.menu_items?.menu_categories?.name || item.category_name || item.category || '').toLowerCase();
+    const catName = (
+        catObj?.name || 
+        item.category_name || 
+        item.menu_items?.menu_categories?.name || 
+        item.menu_items?.categories?.name || 
+        item.category || 
+        ''
+    ).toLowerCase();
+
+    const itemName = (item.menu_items?.name || item.name || '').toLowerCase();
     
     const BAR_KEYWORDS = [
         'บาร์', 'บาร์น้ำ', 'เครื่องดื่ม', 'น้ำ', 'กาแฟ', 'ชา', 'เหล้า', 'เบียร์', 'ค็อกเทล', 
@@ -386,7 +395,7 @@ export const classifyItem = (item, receiptConfig = {}) => {
         'bar', 'drink', 'beverage', 'coffee', 'tea', 'beer', 'wine', 'cocktail', 'mocktail', 'alcohol', 'soda', 'smoothie'
     ];
 
-    if (BAR_KEYWORDS.some(kw => catName.includes(kw))) return 'bar';
+    if (BAR_KEYWORDS.some(kw => catName.includes(kw) || itemName.includes(kw))) return 'bar';
 
     return 'kitchen';
 };

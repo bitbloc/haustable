@@ -1085,7 +1085,7 @@ export default function POSDashboard() {
             if (isOnline()) {
                 const { data } = await supabase
                     .from('bookings')
-                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, menu_categories(name)))')
                     .eq('id', bookingId)
                     .maybeSingle();
                 updatedBooking = data;
@@ -1105,7 +1105,8 @@ export default function POSDashboard() {
                 quantity: oi.quantity,
                 db_id: oi.id,
                 selected_options: oi.selected_options,
-                category_id: oi.menu_items?.category_id || oi.category_id
+                category_id: oi.menu_items?.category_id || oi.category_id,
+                category_name: oi.menu_items?.menu_categories?.name || oi.category_name
             }));
             setCurrentOrder(prev => ({
                 ...prev,
