@@ -372,30 +372,8 @@ export const classifyItem = (item, receiptConfig = {}) => {
     ];
     if (DEFAULT_BAR_CATS.includes(catId)) return 'bar';
 
-    const cachedCategories = (() => {
-        try { return JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || []; } catch (e) { return []; }
-    })();
-    const categoryMap = cachedCategories.reduce((acc, cat) => { if (cat.id) acc[cat.id] = cat; return acc; }, {});
+    // Rely purely on backend configuration or exact UUID matching, no string heuristics
 
-    const catObj = categoryMap[catId];
-    const catName = (
-        catObj?.name || 
-        item.category_name || 
-        item.menu_items?.menu_categories?.name || 
-        item.menu_items?.categories?.name || 
-        item.category || 
-        ''
-    ).toLowerCase();
-
-    const itemName = (item.menu_items?.name || item.name || '').toLowerCase();
-    
-    const BAR_KEYWORDS = [
-        'บาร์', 'บาร์น้ำ', 'เครื่องดื่ม', 'น้ำ', 'กาแฟ', 'ชา', 'เหล้า', 'เบียร์', 'ค็อกเทล', 
-        'ม็อกเทล', 'โซดา', 'ไวน์', 'ชง', 'ปั่น', 'ดริ้ง', 'น้ำอัดลม',
-        'bar', 'drink', 'beverage', 'coffee', 'tea', 'beer', 'wine', 'cocktail', 'mocktail', 'alcohol', 'soda', 'smoothie'
-    ];
-
-    if (BAR_KEYWORDS.some(kw => catName.includes(kw) || itemName.includes(kw))) return 'bar';
 
     return 'kitchen';
 };
