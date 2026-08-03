@@ -494,6 +494,11 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
     const discountCents = Math.round(Number(booking.discount_amount || 0) * 100);
     const netAfterDiscountCents = Math.max(0, subtotalCents - discountCents);
 
+    let cfg = {};
+    try {
+        cfg = getPrinterConfig() || {};
+    } catch (e) {}
+
     const vatMode = (receiptConfig.vat_mode || cfg.vat_mode || 'none').toLowerCase(); // 'none' | 'inclusive' | 'exclusive'
     let vatCents = 0;
     let totalCents = netAfterDiscountCents;
