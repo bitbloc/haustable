@@ -17,7 +17,7 @@ import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
 export default function POSDashboard() {
@@ -1011,6 +1011,22 @@ export default function POSDashboard() {
         }
     };
 
+    const openSlipOrSilentPrint = async (booking, slipType) => {
+        if (!booking) return;
+        try {
+            const silentSuccess = await silentPrintSlip(booking, slipType);
+            if (!silentSuccess) {
+                setActiveSlipBooking(booking);
+                setActiveSlipType(slipType);
+            }
+        } catch (err) {
+            console.error("Silent print failed:", err);
+            setActiveSlipBooking(booking);
+            setActiveSlipType(slipType);
+        }
+    };
+
+
     const handleSelectOpenBill = async (booking) => {
         if (!booking) return;
 
@@ -1364,8 +1380,7 @@ export default function POSDashboard() {
                 console.error("Error fetching completed booking for receipt:", err);
             }
 
-            setActiveSlipBooking(completedBooking || currentBooking);
-            setActiveSlipType('receipt');
+            openSlipOrSilentPrint(completedBooking || currentBooking, 'receipt');
         }
     };
 
@@ -1595,8 +1610,7 @@ export default function POSDashboard() {
 
             toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายสำเร็จ!`, { id: toastId });
             setShowSplitModal(false);
-            setActiveSlipBooking(mockSplitBooking);
-            setActiveSlipType('receipt');
+            openSlipOrSilentPrint(mockSplitBooking, 'receipt');
             setRefreshKey(prev => prev + 1);
             return;
         }
@@ -1622,8 +1636,7 @@ export default function POSDashboard() {
 
             toast.success('แบ่งจ่ายสำเร็จ!', { id: toastId });
             setShowSplitModal(false);
-            setActiveSlipBooking(mockSplitBooking);
-            setActiveSlipType('receipt');
+            openSlipOrSilentPrint(mockSplitBooking, 'receipt');
             setRefreshKey(prev => prev + 1);
         } catch (err) {
             console.error("Split payment failed:", err);
@@ -1656,8 +1669,7 @@ export default function POSDashboard() {
                             <POSOpenBillsGrid 
                                 onSelectOrder={handleSelectOpenBill} 
                                 onOpenSlip={(booking, slipType) => {
-                                    setActiveSlipBooking(booking);
-                                    setActiveSlipType(slipType);
+                                    openSlipOrSilentPrint(booking, slipType);
                                 }} 
                                 refreshKey={refreshKey} 
                             />
@@ -1675,8 +1687,7 @@ export default function POSDashboard() {
                             <POSOnlineHub 
                                 activeShift={activeShift} 
                                 onOpenSlipModal={(booking, slipType) => {
-                                    setActiveSlipBooking(booking);
-                                    setActiveSlipType(slipType);
+                                    openSlipOrSilentPrint(booking, slipType);
                                 }}
                                 onViewSlipImage={(url) => setViewSlipImageUrl(url)}
                                 refreshKey={refreshKey}
@@ -1713,18 +1724,7 @@ export default function POSDashboard() {
                                         const finalBooking = updatedBooking || activeBooking;
                                         
                                         // Try silent print first for Kitchen
-                                        try {
-                                            const silentSuccess = await autoPrintQROrder(finalBooking);
-                                            if (!silentSuccess) {
-                                                // Fallback to modal if silent print is not supported/failed
-                                                setActiveSlipBooking(finalBooking);
-                                                setActiveSlipType('kitchen');
-                                            }
-                                        } catch (err) {
-                                            console.error("Silent auto print failed:", err);
-                                            setActiveSlipBooking(finalBooking);
-                                            setActiveSlipType('kitchen');
-                                        }
+                                        openSlipOrSilentPrint(finalBooking, 'kitchen');
                                         
                                         checkPendingOrders();
                                     }

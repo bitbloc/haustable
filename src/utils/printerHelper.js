@@ -2122,8 +2122,129 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
             return true;
         }
     } catch (err) {
-        console.error("autoPrintQROrder failed:", err);
+        console.error("Auto print QR order failed:", err);
+        return false;
     }
-    return false;
 }
 
+/**
+ * Generic silent print for ANY slip type (kitchen, receipt, billing).
+ * Returns true if successfully printed silently (so the caller doesn't need to show a modal).
+ * Returns false if it fails or if the printer type doesn't support silent printing (e.g. browser).
+ */
+export async function silentPrintSlip(booking, slipType = 'receipt', optionMap = {}) {
+    if (!booking) return false;
+    try {
+        if (Object.keys(optionMap).length === 0) {
+            try {
+                const { supabase } = await import('../lib/supabaseClient');
+                const { data } = await supabase.from('option_choices').select('id, name');
+                if (data) {
+                    optionMap = data.reduce((acc, opt) => ({ ...acc, [opt.id]: opt.name }), {});
+                }
+            } catch(e) {}
+        }
+        
+        const config = getPrinterConfig() || {};
+        let printerType = 'sunmi';
+        
+        if (slipType === 'kitchen' || slipType === 'bar') {
+            printerType = config.kitchen_printer_type || 'sunmi';
+        } else {
+            printerType = config.cashier_printer_type || 'sunmi';
+        }
+        
+        if (printerType === 'browser' || printerType === 'none' || !printerType) {
+            return false;
+        }
+
+        let activePaperSize = '80mm';
+        if (slipType === 'kitchen' || slipType === 'bar' || slipType === 'kitchen_all') {
+            activePaperSize = config.kitchen_paper_size || config.paper_width || '80mm';
+        } else {
+            activePaperSize = config.cashier_paper_size || config.paper_width || '80mm';
+        }
+
+        const paymentMethod = booking.payment_method || 'cash';
+        let printed = false;
+
+        if (printerType === 'sunmi') {
+            if (slipType === 'kitchen') {
+                // Split kitchen and bar for SUNMI
+                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                if (kitchenBytes) {
+                    await printToSunmiBuiltIn(kitchenBytes);
+                    printed = true;
+                }
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                if (barBytes) {
+                    await printToSunmiBuiltIn(barBytes);
+                    printed = true;
+                }
+                if (!kitchenBytes && !barBytes) {
+                    const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                    if (allBytes) {
+                        await printToSunmiBuiltIn(allBytes);
+                        printed = true;
+                    }
+                }
+            } else {
+                const rawBytes = encodeReceiptData(booking, slipType, paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+                if (rawBytes) {
+                    const qrToPrint = (slipType === 'billing') ? config.payment_qr_url : null;
+                    const logoToPrint = (slipType !== 'kitchen' && slipType !== 'bar' && slipType !== 'kitchen_all') ? (config.receipt_shop_logo_url || `${window.location.origin}/logo.png`) : null;
+                    await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
+                    printed = true;
+                }
+            }
+            return printed;
+        } else if (printerType === 'rawbt') {
+            let targetTab = slipType;
+            let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+            
+            if (slipType === 'kitchen' && !isSeparateBarPrinterEnabled) {
+                targetTab = 'kitchen_all';
+            }
+            
+            const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+            if (rawBytes) {
+                await printToRawBTWebSocket(rawBytes);
+                printed = true;
+            }
+            if (slipType === 'kitchen' && isSeparateBarPrinterEnabled) {
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+                if (barBytes) {
+                    await printToRawBTWebSocket(barBytes);
+                    printed = true;
+                }
+            }
+            return printed;
+        } else if (printerType === 'bluetooth') {
+            let targetTab = slipType;
+            let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
+            
+            if (slipType === 'kitchen' && !isSeparateBarPrinterEnabled) {
+                targetTab = 'kitchen_all';
+            }
+            
+            const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+            if (rawBytes) {
+                await printToBluetoothDirect(rawBytes);
+                printed = true;
+            }
+            if (slipType === 'kitchen' && isSeparateBarPrinterEnabled) {
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+                if (barBytes) {
+                    await printToBluetoothDirect(barBytes);
+                    printed = true;
+                }
+            }
+            return printed;
+        }
+        
+        return false;
+    } catch (err) {
+        console.error("Silent print failed:", err);
+        return false;
+    }
+}
