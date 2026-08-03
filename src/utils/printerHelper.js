@@ -2080,23 +2080,22 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
 
         if (printerType === 'sunmi') {
             let printed = false;
-            let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-            if (!isSeparateBarPrinterEnabled) {
+            // Always split kitchen and bar for SUNMI so they come out as 2 distinct slips
+            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+            if (kitchenBytes) {
+                await printToSunmiBuiltIn(kitchenBytes);
+                printed = true;
+            }
+            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
+            if (barBytes) {
+                await printToSunmiBuiltIn(barBytes);
+                printed = true;
+            }
+            if (!kitchenBytes && !barBytes) {
+                // Fallback in case there are uncategorized items
                 const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
                 if (allBytes) {
                     await printToSunmiBuiltIn(allBytes);
-                    await printToSunmiBuiltIn(allBytes);
-                    printed = true;
-                }
-            } else {
-                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                if (kitchenBytes) {
-                    await printToSunmiBuiltIn(kitchenBytes);
-                    printed = true;
-                }
-                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'sunmi');
-                if (barBytes) {
-                    await printToSunmiBuiltIn(barBytes);
                     printed = true;
                 }
             }
