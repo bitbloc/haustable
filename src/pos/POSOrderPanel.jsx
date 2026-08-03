@@ -1309,6 +1309,25 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         )}
                                     </div>
                                 )}
+
+                                {paymentMethod === 'qr' && (
+                                    <div className="space-y-3 mt-1 animate-in fade-in duration-200 border-t border-[#D1D1CD] pt-4">
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                if (onOpenSlip) {
+                                                    onOpenSlip('billing');
+                                                }
+                                            }}
+                                            className="w-full bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] font-mono font-bold text-sm uppercase tracking-wider cursor-pointer"
+                                        >
+                                            <Printer size={16} /> Print Bill & QR
+                                        </button>
+                                        <p className="text-center text-[11px] text-[#767673] font-medium px-2 leading-relaxed">
+                                            พิมพ์ใบแจ้งยอดให้ลูกค้าสแกนจ่าย ก่อนกด Confirm Payment<br/>(พิมพ์ออกแบบ Silent Print)
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
