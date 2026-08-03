@@ -1313,8 +1313,8 @@ export default function SlipModal({ booking, type, onClose }) {
 
                 {/* Actions */}
                 <div className="p-4 bg-[#F5F5F2] flex gap-3 border-t border-[#D1D1CD]">
-                    <button onClick={handlePrint} className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-                        <PrinterIcon size={14} /> Print Ticket
+                    <button onClick={handlePrint} disabled={isPrinting || isAutoPrinting} className={`flex-1 ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#ff0000] hover:bg-[#c00000] cursor-pointer'} text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}>
+                        <PrinterIcon size={14} /> {isPrinting || isAutoPrinting ? 'Printing...' : 'Print Ticket'}
                     </button>
                     <button onClick={handleSaveImage} className="flex-grow bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
                         {saving ? 'Saving...' : <><Download size={14} /> Save Image</>}
