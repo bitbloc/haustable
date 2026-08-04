@@ -241,7 +241,7 @@ function StaffLiveOrdersContent() {
                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'kds' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                         >
                             <List className="w-4 h-4" /> KDS
-                            {todayOrders.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{todayOrders.length}</span>}
+                            {todaySchedule.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{todaySchedule.length}</span>}
                         </button>
                         <button 
                             onClick={() => setActiveTab('schedule')}
@@ -300,7 +300,7 @@ function StaffLiveOrdersContent() {
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === 'kds' && (
                     <OrderList 
-                        orders={todayOrders} 
+                        orders={todaySchedule} 
                         loading={loading} 
                         emptyMessage="No Pending Orders"
                         onUpdateStatus={handleUpdateStatus}
