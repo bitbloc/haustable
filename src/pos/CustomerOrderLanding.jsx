@@ -278,6 +278,7 @@ export default function CustomerOrderLanding() {
                 .from('profiles')
                 .select('*')
                 .eq('phone_number', cleanPhone)
+                .limit(1)
                 .maybeSingle();
 
             if (error) throw error;
