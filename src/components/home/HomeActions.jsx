@@ -62,8 +62,8 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                                 {/* Braun Dial Indicator knob */}
                                 <div className="relative flex items-center justify-center w-9 h-9 rounded-full border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex-shrink-0 transition-transform group-hover:scale-105">
                                     <div className="w-3 h-3 rounded-full" style={{
-                                        backgroundColor: act.isOpen ? 'var(--color-brand)' : 'oklch(60% 0.005 70)',
-                                        boxShadow: act.isOpen ? '0 0 8px var(--color-brand)' : 'none'
+                                        backgroundColor: act.isOpen ? 'var(--color-accent-green)' : 'oklch(60% 0.005 70)',
+                                        boxShadow: act.isOpen ? '0 0 8px var(--color-accent-green)' : 'none'
                                     }} />
                                     {/* Small dial indicator mark */}
                                     <div className="absolute top-1 w-0.5 h-1.5 bg-[var(--color-hallmark-ink-muted)] rounded-full transform origin-bottom" style={{
