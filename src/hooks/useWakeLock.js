@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
   const [isLocked, setIsLocked] = useState(false);
-  const [wakeLock, setWakeLock] = useState(null);
+  const wakeLockRef = useRef(null);
 
   const isSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 
@@ -12,13 +12,13 @@ export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
     }
     try {
       const lock = await navigator.wakeLock.request('screen');
-      setWakeLock(lock);
+      wakeLockRef.current = lock;
       setIsLocked(true);
       if (onRequest) onRequest();
 
       lock.addEventListener('release', () => {
         setIsLocked(false);
-        setWakeLock(null);
+        wakeLockRef.current = null;
         if (onRelease) onRelease();
       });
     } catch (err) {
@@ -28,12 +28,12 @@ export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
   }, [isSupported, onRequest, onRelease, onError]);
 
   const release = useCallback(async () => {
-    if (wakeLock) {
-      await wakeLock.release();
-      setWakeLock(null);
+    if (wakeLockRef.current) {
+      await wakeLockRef.current.release();
+      wakeLockRef.current = null;
       setIsLocked(false);
     }
-  }, [wakeLock]);
+  }, []);
 
   // Re-request lock if visibility changes (e.g. user switches tabs and comes back)
   useEffect(() => {

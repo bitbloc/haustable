@@ -112,7 +112,7 @@ export function OrderProvider({ children }) {
     useEffect(() => { stateRef.current = state }, [state])
 
     // --- Realtime Logic ---
-    const fetchAndAddOrder = async (orderId, isNew, triggerAlertCallback) => {
+    const fetchAndAddOrder = useCallback(async (orderId, isNew, triggerAlertCallback) => {
         const { data: fullOrder } = await supabase
             .from('bookings')
             .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
@@ -130,9 +130,9 @@ export function OrderProvider({ children }) {
         if (isNew && fullOrder.status === 'pending' && triggerAlertCallback) {
              triggerAlertCallback(fullOrder)
         }
-    }
+    }, [fetchScheduleOrders])
 
-    const subscribeRealtime = (triggerAlertCallback) => {
+    const subscribeRealtime = useCallback((triggerAlertCallback) => {
         const channel = supabase
            .channel('staff-orders')
            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, 
@@ -178,7 +178,7 @@ export function OrderProvider({ children }) {
                else dispatch({ type: 'SET_CONNECTED', payload: false })
            })
         return channel
-    }
+    }, [fetchAndAddOrder, fetchScheduleOrders])
 
     const performUpdateStatus = async (id, newStatus) => {
         try {
