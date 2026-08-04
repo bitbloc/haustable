@@ -303,32 +303,41 @@ export function usePOSOrder() {
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Submitting items to offline queue');
             // Save order items inside booking cache for local UI consistency
+            const newOrderItems = items.map((item, i) => {
+                const finalOpts = [...(item.selected_options || [])];
+                if (item.item_note) {
+                    finalOpts.push({ name: `Note: ${item.item_note}` });
+                }
+                return {
+                    id: `local_item_${Date.now()}_${i}`,
+                    booking_id: bookingId,
+                    menu_item_id: item.id || item.menu_item_id,
+                    quantity: item.quantity,
+                    price_at_time: item.price,
+                    selected_options: finalOpts,
+                    name: item.name || 'Item',
+                    category_id: item.category_id || '',
+                    category_name: item.category_name || '',
+                    item_note: item.item_note || '',
+                    menu_items: { 
+                        name: item.name || 'Item',
+                        category_id: item.category_id || '',
+                        menu_categories: { name: item.category_name || '' }
+                    }
+                };
+            });
+
             const bookings = posCache.getBookings();
             const idx = bookings.findIndex(b => b.id === bookingId);
             if (idx !== -1) {
                 const existingOrderItems = bookings[idx].order_items || [];
-                const newOrderItems = items.map((item, i) => {
-                    const finalOpts = [...(item.selected_options || [])];
-                    if (item.item_note) {
-                        finalOpts.push({ name: `Note: ${item.item_note}` });
-                    }
-                    return {
-                        id: `local_item_${Date.now()}_${i}`,
-                        booking_id: bookingId,
-                        menu_item_id: item.id,
-                        quantity: item.quantity,
-                        price_at_time: item.price,
-                        selected_options: finalOpts,
-                        menu_items: { name: item.name } // simulate relation join
-                    };
-                });
                 bookings[idx].order_items = [...existingOrderItems, ...newOrderItems];
                 posCache.setBookings(bookings);
             }
 
             addToOfflineQueue('submit_items', { bookingId, items });
             toast.info('บันทึกรายการอาหารเข้าคิวเรียบร้อยแล้ว (โหมดออฟไลน์)');
-            return bookingId;
+            return { bookingId, insertedItems: newOrderItems };
         }
 
         try {
@@ -339,7 +348,7 @@ export function usePOSOrder() {
                 }
                 return {
                     booking_id: bookingId,
-                    menu_item_id: item.id,
+                    menu_item_id: item.id || item.menu_item_id,
                     quantity: item.quantity,
                     price_at_time: item.price,
                     selected_options: finalOpts
@@ -351,37 +360,65 @@ export function usePOSOrder() {
                 .insert(itemsToInsert)
                 .select('*, menu_items(name, category_id, menu_categories(name))');
             if (error) throw error;
-            return { bookingId, insertedItems: insertedData || [] };
+
+            const enrichedInserted = (insertedData || []).map((row, index) => {
+                const sourceItem = items[index] || {};
+                const menuItemsObj = row.menu_items || {
+                    name: sourceItem.name || 'Item',
+                    category_id: sourceItem.category_id || '',
+                    menu_categories: { name: sourceItem.category_name || '' }
+                };
+                return {
+                    ...row,
+                    name: row.name || menuItemsObj.name || sourceItem.name || 'Item',
+                    category_id: row.category_id || menuItemsObj.category_id || sourceItem.category_id || '',
+                    category_name: row.category_name || menuItemsObj.menu_categories?.name || sourceItem.category_name || '',
+                    menu_items: menuItemsObj,
+                    selected_options: row.selected_options || sourceItem.selected_options || [],
+                    item_note: sourceItem.item_note || ''
+                };
+            });
+
+            return { bookingId, insertedItems: enrichedInserted };
         } catch (err) {
             console.error('Failed to submit items online, fallback to offline queue:', err);
             
+            const newOrderItems = items.map((item, i) => {
+                const finalOpts = [...(item.selected_options || [])];
+                if (item.item_note) {
+                    finalOpts.push({ name: `Note: ${item.item_note}` });
+                }
+                return {
+                    id: `local_item_${Date.now()}_${i}`,
+                    booking_id: bookingId,
+                    menu_item_id: item.id || item.menu_item_id,
+                    quantity: item.quantity,
+                    price_at_time: item.price,
+                    selected_options: finalOpts,
+                    name: item.name || 'Item',
+                    category_id: item.category_id || '',
+                    category_name: item.category_name || '',
+                    item_note: item.item_note || '',
+                    menu_items: { 
+                        name: item.name || 'Item', 
+                        category_id: item.category_id || '',
+                        menu_categories: { name: item.category_name || '' }
+                    }
+                };
+            });
+
             // Local cache update
             const bookings = posCache.getBookings();
             const idx = bookings.findIndex(b => b.id === bookingId);
             if (idx !== -1) {
                 const existingOrderItems = bookings[idx].order_items || [];
-                const newOrderItems = items.map((item, i) => {
-                    const finalOpts = [...(item.selected_options || [])];
-                    if (item.item_note) {
-                        finalOpts.push({ name: `Note: ${item.item_note}` });
-                    }
-                    return {
-                        id: `local_item_${Date.now()}_${i}`,
-                        booking_id: bookingId,
-                        menu_item_id: item.id,
-                        quantity: item.quantity,
-                        price_at_time: item.price,
-                        selected_options: finalOpts,
-                        menu_items: { name: item.name }
-                    };
-                });
                 bookings[idx].order_items = [...existingOrderItems, ...newOrderItems];
                 posCache.setBookings(bookings);
             }
 
             addToOfflineQueue('submit_items', { bookingId, items });
             toast.info('บันทึกรายการอาหารเข้าคิวเรียบร้อยแล้ว (โหมดออฟไลน์)');
-            return bookingId;
+            return { bookingId, insertedItems: newOrderItems };
         }
     };
 

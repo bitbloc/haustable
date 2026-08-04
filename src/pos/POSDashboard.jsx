@@ -1119,14 +1119,14 @@ export default function POSDashboard() {
             setActiveBooking(targetBooking);
             // Update currentOrder item db_ids so they don't get re-submitted
             const updatedItems = (targetBooking.order_items || []).map(oi => ({
-                id: oi.menu_item_id,
-                name: oi.menu_items?.name || oi.name || 'Item',
-                price: oi.price_at_time,
+                id: oi.menu_item_id || oi.id,
+                name: oi.name || oi.menu_items?.name || 'Item',
+                price: oi.price_at_time ?? oi.price,
                 quantity: oi.quantity,
                 db_id: oi.id,
                 selected_options: oi.selected_options,
-                category_id: oi.menu_items?.category_id || oi.category_id,
-                category_name: oi.menu_items?.menu_categories?.name || oi.category_name
+                category_id: oi.category_id || oi.menu_items?.category_id || '',
+                category_name: oi.category_name || oi.menu_items?.menu_categories?.name || ''
             }));
             setCurrentOrder(prev => ({
                 ...prev,
