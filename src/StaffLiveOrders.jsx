@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
-import { List, Calendar, History as HistoryIcon, LayoutGrid } from 'lucide-react'
+import { List, Calendar, History as HistoryIcon, LayoutGrid, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Context & Hooks
@@ -57,6 +57,19 @@ function StaffLiveOrdersContent() {
     const activeSoundUrl = kdsSoundUrl || soundUrl; // Fallback to POS sound if KDS sound not uploaded yet
     const { play, stop, isPlaying } = useAudioAlert(activeSoundUrl)
     const { requestPermission: requestPush, triggerNotification, isSubscribed } = usePushNotifications()
+
+    // --- Helper ---
+    const isToday = (dateString) => {
+        if (!dateString) return false;
+        const bookingDate = new Date(dateString);
+        const today = new Date();
+        return bookingDate.getDate() === today.getDate() &&
+               bookingDate.getMonth() === today.getMonth() &&
+               bookingDate.getFullYear() === today.getFullYear();
+    }
+
+    const todayOrders = orders.filter(o => isToday(o.booking_time))
+    const todaySchedule = scheduleOrders.filter(o => isToday(o.booking_time))
 
     // --- Tab Logic ---
     useEffect(() => {
@@ -211,48 +224,83 @@ function StaffLiveOrdersContent() {
                  />
             )}
 
-            <StaffHeader 
-                title={activeTab === 'kds' ? "Kitchen Display System" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                isConnected={isConnected}
-                notificationsEnabled={isSubscribed}
-                onRequestNotifications={requestPush}
-                onLogout={handleLogout}
-            />
+            {activeTab !== 'kds' && (
+                <>
+                    <StaffHeader 
+                        title={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                        isConnected={isConnected}
+                        notificationsEnabled={isSubscribed}
+                        onRequestNotifications={requestPush}
+                        onLogout={handleLogout}
+                    />
 
-            {/* TAB NAV */}
-             <div className="flex bg-gray-200 p-1 rounded-xl mb-4 sticky top-[72px] z-10">
-                <button 
-                    onClick={() => switchTab('kds')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'kds' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
-                >
-                    <List className="w-4 h-4" /> KDS
-                    {orders.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{orders.length}</span>}
-                </button>
-                 <button 
-                    onClick={() => setActiveTab('schedule')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'schedule' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
-                >
-                    <Calendar className="w-4 h-4" /> Schedule
-                </button>
-                <button 
-                    onClick={() => switchTab('history')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'history' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
-                >
-                    <HistoryIcon className="w-4 h-4" /> History
-                </button>
-                <button 
-                    onClick={() => switchTab('tables')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'tables' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
-                >
-                    <LayoutGrid className="w-4 h-4" /> Tables
-                </button>
-             </div>
+                    {/* TAB NAV */}
+                    <div className="flex bg-gray-200 p-1 rounded-xl mb-4 sticky top-[72px] z-10">
+                        <button 
+                            onClick={() => switchTab('kds')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'kds' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                        >
+                            <List className="w-4 h-4" /> KDS
+                            {todayOrders.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{todayOrders.length}</span>}
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('schedule')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'schedule' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                        >
+                            <Calendar className="w-4 h-4" /> Schedule
+                        </button>
+                        <button 
+                            onClick={() => switchTab('history')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'history' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                        >
+                            <HistoryIcon className="w-4 h-4" /> History
+                        </button>
+                        <button 
+                            onClick={() => switchTab('tables')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'tables' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                        >
+                            <LayoutGrid className="w-4 h-4" /> Tables
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {activeTab === 'kds' && (
+                <div className="flex items-center justify-between bg-white border-b border-[var(--color-rule)] px-6 py-4 mb-6 -mx-4 -mt-4 sticky top-0 z-20 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => navigate('/staff')} 
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+                        >
+                            <ArrowLeft className="w-6 h-6" />
+                        </button>
+                        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)] uppercase font-mono">Kitchen Display</h1>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        {isConnected ? (
+                            <span className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> LIVE
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">
+                                <span className="w-2 h-2 rounded-full bg-red-500" /> OFFLINE
+                            </span>
+                        )}
+                        <button 
+                            onClick={() => switchTab('schedule')} 
+                            className="text-xs font-bold text-gray-500 hover:text-[#1A1A1A] underline underline-offset-4"
+                        >
+                            Exit KDS Viewer
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* CONTENT */}
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === 'kds' && (
                     <OrderList 
-                        orders={orders} 
+                        orders={todayOrders} 
                         loading={loading} 
                         emptyMessage="No Pending Orders"
                         onUpdateStatus={handleUpdateStatus}
@@ -264,7 +312,7 @@ function StaffLiveOrdersContent() {
                 
                 {activeTab === 'schedule' && (
                      <OrderList 
-                        orders={scheduleOrders} 
+                        orders={todaySchedule} 
                         loading={loading}
                         emptyMessage="No Active Schedule"
                         onUpdateStatus={handleUpdateStatus}

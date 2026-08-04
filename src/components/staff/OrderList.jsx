@@ -24,9 +24,9 @@ export default function OrderList({ orders, loading, emptyMessage = "No Active O
     }
 
     return (
-        <div className={`pb-20 ${isKDS ? 'flex flex-row overflow-x-auto gap-4 snap-x pb-4' : 'space-y-4'}`}>
+        <div className={`pb-20 ${isKDS ? 'grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 items-start' : 'space-y-4'}`}>
             {orders.map(order => (
-                <div key={order.id} className={isKDS ? 'snap-start shrink-0 w-80 sm:w-96' : ''}>
+                <div key={order.id} className={isKDS ? 'w-full' : ''}>
                     <OrderCard 
                         order={order} 
                         onUpdateStatus={onUpdateStatus}

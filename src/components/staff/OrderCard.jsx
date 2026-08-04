@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Clock, Phone, Printer, ImageIcon, Check, X, ChefHat, LogOut, ChevronDown, ChevronUp, Users, AlertCircle, Receipt, Square, CheckSquare, Timer } from 'lucide-react'
+import { Clock, Phone, Printer, Check, X, ChefHat, LogOut, Users, AlertCircle, Receipt, Square, CheckSquare, Timer } from 'lucide-react'
 import { formatThaiTimeOnly, formatThaiDateLong } from '../../utils/timeUtils'
 import { useOrderContext } from '../../context/OrderContext'
 
@@ -19,19 +19,16 @@ const OrderTimer = ({ createdAt }) => {
 
     const minutes = Math.floor(elapsed / 60)
     
-    // Color logic
-    let colorClass = "text-gray-500 bg-gray-100" // Default < 10 mins
-    let badgeColor = "bg-gray-200"
+    // Rams Style Urgency Logic (Pure typography / Minimal accents)
+    let colorClass = "text-[oklch(55%_0.010_28)]" // Default neutral
     if (minutes >= 20) {
-        colorClass = "text-red-700 bg-red-100 font-black animate-pulse"
-        badgeColor = "bg-red-500"
+        colorClass = "text-[oklch(52%_0.16_28)] font-bold animate-pulse" // Red/Terracotta Accent
     } else if (minutes >= 10) {
-        colorClass = "text-orange-700 bg-orange-100 font-bold"
-        badgeColor = "bg-orange-400"
+        colorClass = "text-[oklch(60%_0.15_28)] font-medium" // Focus highlight
     }
 
     return (
-        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors ${colorClass}`}>
+        <div className={`flex items-center gap-1.5 px-2 py-1 font-mono text-xs ${colorClass}`}>
             <Timer size={12} />
             <span>{minutes}m</span>
         </div>
@@ -62,8 +59,8 @@ const renderOptions = (item) => {
     
     if (opts.length === 0) return null
     return (
-        <div className="mt-1 text-xs text-[#ff0000] font-bold space-y-0.5 ml-4">
-            {opts.map((o, i) => <div key={i}>▶ {o}</div>)}
+        <div className="mt-1 text-xs text-[oklch(55%_0.010_28)] font-mono space-y-0.5 ml-6">
+            {opts.map((o, i) => <div key={i}>— {o}</div>)}
         </div>
     )
 }
@@ -107,34 +104,33 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
     }
 
     // Determine urgency level for KDS
-    let urgencyBorder = ''
+    let urgencyBorder = 'border-[oklch(85%_0.012_28)]' // default rule color
     if (isKDS) {
         const elapsedMins = Math.floor((new Date().getTime() - new Date(order.created_at).getTime()) / 60000)
-        if (elapsedMins >= 20) urgencyBorder = 'border-l-4 border-l-red-500'
-        else if (elapsedMins >= 10) urgencyBorder = 'border-l-4 border-l-orange-400'
-        else urgencyBorder = 'border-l-4 border-l-gray-300'
+        if (elapsedMins >= 20) urgencyBorder = 'border-[oklch(52%_0.16_28)] border-2' // Red/Terracotta
+        else if (elapsedMins >= 10) urgencyBorder = 'border-[oklch(60%_0.15_28)] border-2' // Highlight
     }
 
     const renderItemRow = (item, idx, showCheckbox) => (
         <div 
             key={idx} 
-            className={`flex items-start gap-3 ${isKDS && showCheckbox ? 'cursor-pointer active:scale-[0.98] transition-transform select-none' : ''}`}
+            className={`flex items-start gap-2 py-2 border-b border-[oklch(85%_0.012_28)] last:border-b-0 ${isKDS && showCheckbox ? 'cursor-pointer select-none group/item' : ''}`}
             onClick={() => showCheckbox && handleToggleCheck(item)}
         >
             {isKDS && showCheckbox && (
-                <div className="mt-0.5 shrink-0">
+                <div className="mt-0.5 shrink-0 transition-opacity">
                     {item.is_checked ? (
-                        <CheckSquare size={18} className="text-[#1A1A1A] fill-[#DFFF00]" />
+                        <CheckSquare size={16} className="text-[oklch(18%_0.012_28)]" />
                     ) : (
-                        <Square size={18} className="text-gray-300" />
+                        <Square size={16} className="text-[oklch(55%_0.010_28)] group-hover/item:text-[oklch(18%_0.012_28)]" />
                     )}
                 </div>
             )}
-            <div className={`text-xs font-bold min-w-[1.5rem] ${item.is_checked && showCheckbox ? 'text-gray-400' : 'text-[#1A1A1A]'}`}>
-                {item.quantity}x
+            <div className={`font-mono text-xs mt-0.5 w-6 ${item.is_checked && showCheckbox ? 'text-[oklch(55%_0.010_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
+                {item.quantity}
             </div>
             <div className="flex-1">
-                <div className={`text-sm font-medium leading-tight ${item.is_checked && showCheckbox ? 'text-gray-400 line-through' : 'text-[#1A1A1A]'}`}>
+                <div className={`text-base tracking-tight ${item.is_checked && showCheckbox ? 'text-[oklch(55%_0.010_28)] line-through' : 'text-[oklch(18%_0.012_28)] font-medium'}`}>
                     {item.menu_items?.name}
                 </div>
                 <div className={item.is_checked && showCheckbox ? 'opacity-50' : ''}>
@@ -146,54 +142,43 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
 
     return (
         <div className={`
-            bg-white rounded-2xl p-5 transition-all duration-300 relative group overflow-hidden flex flex-col h-full
-            ${isPending ? 'shadow-lg shadow-orange-500/10 border border-orange-100' : 'shadow-sm border border-gray-100 hover:border-gray-300'}
-            ${urgencyBorder}
+            bg-[oklch(97%_0.008_28)] 
+            flex flex-col h-full 
+            border ${urgencyBorder}
+            transition-colors duration-300
         `}>
-            {isPending && !isKDS && <div className="absolute top-0 left-0 w-1 h-full bg-[#DFFF00]" />}
-
-            {/* Header: Compact Row */}
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex flex-col gap-1">
-                     <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-[#1A1A1A] leading-none">
+            {/* Header: Tabular Block */}
+            <div className="flex justify-between items-stretch border-b border-[oklch(85%_0.012_28)]">
+                <div className="flex flex-col gap-1 p-4 flex-1 border-r border-[oklch(85%_0.012_28)]">
+                     <div className="flex items-center gap-3">
+                        <span className="text-2xl font-normal tracking-tight text-[oklch(18%_0.012_28)] uppercase leading-none">
                             {order.tables_layout?.table_name || 'Pickup'}
                         </span>
                         
-                        {/* Pax: Show only if NOT pickup and > 0 */}
                         {!isPickup && pax > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                                <Users size={10} /> {pax}
+                            <span className="flex items-center gap-1 font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase border border-[oklch(85%_0.012_28)] px-1.5 py-0.5">
+                                PAX {pax}
                             </span>
                         )}
-                        <span className="text-[10px] font-mono text-gray-300 bg-gray-50 px-1.5 py-0.5 rounded-full">
-                            #{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : String(order.id).slice(0,4)}
+                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase border border-[oklch(85%_0.012_28)] px-1.5 py-0.5">
+                            ID {order.tracking_token ? order.tracking_token.slice(-4) : String(order.id).slice(0,4)}
                         </span>
                      </div>
-
-                     <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                        <span>{customerName}</span>
-                         {customerPhone && (
-                            <>
-                                <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                <a href={`tel:${customerPhone}`} className="text-blue-600 hover:underline flex items-center gap-1">
-                                   <Phone size={10} /> {customerPhone}
-                                </a>
-                            </>
-                        )}
+                     <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase mt-1">
+                        {customerName}
                      </div>
                 </div>
                 
-                <div className="text-right flex flex-col items-end gap-1">
+                <div className="flex flex-col items-center justify-center px-4 bg-[oklch(94%_0.010_28)] min-w-[80px]">
                     {isKDS ? (
                         <OrderTimer createdAt={order.created_at} />
                     ) : (
                         <>
-                            <div className="text-sm font-bold text-[#1A1A1A]">
+                            <div className="font-mono text-sm text-[oklch(18%_0.012_28)]">
                                 {formatThaiTimeOnly(order.booking_time)}
                             </div>
-                            <div className="text-[10px] text-gray-400">
-                                Ordered {new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                ORDERED
                             </div>
                         </>
                     )}
@@ -201,28 +186,24 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
             </div>
 
             {/* Items (Grouped) */}
-            <div className="space-y-4 mb-4 flex-1">
+            <div className="flex-1 p-4">
                 {kitchenItems.length > 0 && (
-                    <div className="space-y-2">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-[#1A1A1A] bg-gray-100 px-2 py-1 rounded w-max">
-                            Kitchen / ครัว
+                    <div className="mb-6 last:mb-0">
+                        <div className="font-mono text-[10px] uppercase tracking-widest text-[oklch(55%_0.010_28)] mb-2 pb-1 border-b border-[oklch(85%_0.012_28)]">
+                            Kitchen Order
                         </div>
-                        <div className="space-y-3 pl-1">
+                        <div className="flex flex-col">
                             {kitchenItems.map((item, idx) => renderItemRow(item, idx, true))}
                         </div>
                     </div>
                 )}
                 
-                {kitchenItems.length > 0 && barItems.length > 0 && (
-                    <div className="h-px bg-gray-100 w-full my-2" />
-                )}
-
                 {barItems.length > 0 && (
-                    <div className="space-y-2">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-white bg-[#1A1A1A] px-2 py-1 rounded w-max">
-                            Bar / บาร์
+                    <div className="mb-6 last:mb-0">
+                        <div className="font-mono text-[10px] uppercase tracking-widest text-[oklch(55%_0.010_28)] mb-2 pb-1 border-b border-[oklch(85%_0.012_28)]">
+                            Bar Order
                         </div>
-                        <div className="space-y-3 pl-1">
+                        <div className="flex flex-col">
                             {barItems.map((item, idx) => renderItemRow(item, idx, true))}
                         </div>
                     </div>
@@ -231,47 +212,49 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
             
             {/* Customer Note Preview */}
             {order.customer_note && (
-                 <div className="mb-4 bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 flex gap-2">
-                    <AlertCircle size={14} className="text-orange-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-900 font-medium line-clamp-2">
+                 <div className="px-4 py-3 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex gap-2">
+                    <AlertCircle size={14} className="text-[oklch(55%_0.010_28)] shrink-0 mt-0.5" />
+                    <p className="font-mono text-[10px] text-[oklch(18%_0.012_28)] uppercase leading-relaxed">
                         {order.customer_note}
                     </p>
                  </div>
             )}
 
-            {/* Actions Footer - Clean */}
-            <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                <div className="flex gap-2">
-                    {/* Verify Payment Button */}
-                    {order.payment_slip_url ? (
+            {/* Actions Footer - Rams Tabular Grid */}
+            <div className="grid grid-cols-2 border-t border-[oklch(85%_0.012_28)]">
+                {/* Left Side Action */}
+                <div className="border-r border-[oklch(85%_0.012_28)]">
+                    {!isKDS && order.payment_slip_url ? (
                         <button 
                             onClick={() => onVerifyPayment(order)} 
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                            className="w-full h-full flex items-center justify-center gap-2 py-3 font-mono text-[10px] uppercase text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
                         >
-                            <Receipt size={14} /> 
-                            Verify Payment
+                            <Receipt size={14} /> Verify Slip
                         </button>
                     ) : (
-                         <span className="text-[10px] text-gray-400 font-medium py-2 px-1">No Slip</span>
+                        <button 
+                            onClick={() => onPrint(order)} 
+                            className="w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
+                        >
+                            <Printer size={14} /> Print
+                        </button>
                     )}
                 </div>
 
-                <div className="flex gap-2">
-                    <button onClick={() => onPrint(order)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#1A1A1A] transition-colors" title="Print Ticket">
-                        <Printer size={16} />
-                    </button>
-
-                    {/* Status Actions */}
+                {/* Right Side Action */}
+                <div>
                     {order.status === 'pending' && (
-                        <>
-                            <button onClick={() => onUpdateStatus(order.id, 'cancelled')} className="px-3 py-2 rounded-lg text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors">Reject</button>
-                            <button onClick={() => onUpdateStatus(order.id, 'confirmed')} className="px-4 py-2 rounded-lg text-xs font-bold bg-[#1A1A1A] text-white hover:bg-black transition-transform active:scale-95 shadow-lg shadow-black/10">Accept</button>
-                        </>
+                        <div className="grid grid-cols-2 h-full">
+                            <button onClick={() => onUpdateStatus(order.id, 'cancelled')} className="flex items-center justify-center font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] border-r border-[oklch(85%_0.012_28)] transition-colors">Reject</button>
+                            <button onClick={() => onUpdateStatus(order.id, 'confirmed')} className="flex items-center justify-center font-mono text-[10px] uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black transition-colors">Accept</button>
+                        </div>
                     )}
                     
                     {order.status === 'confirmed' && (
-                        <button onClick={() => onUpdateStatus(order.id, order.booking_type === 'pickup' ? 'ready' : 'seated')} className="px-4 py-2 rounded-lg text-xs font-bold bg-white border border-gray-200 text-[#1A1A1A] hover:bg-gray-50 transition-colors flex items-center gap-2">
-                             {order.booking_type === 'pickup' ? <ChefHat size={14} /> : <Check size={14} />}
+                        <button 
+                            onClick={() => onUpdateStatus(order.id, order.booking_type === 'pickup' ? 'ready' : 'seated')} 
+                            className="w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
+                        >
                              {order.booking_type === 'pickup' ? 'Ready' : 'Check-in'}
                         </button>
                     )}
@@ -280,14 +263,14 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                         <button 
                             onClick={() => onUpdateStatus(order.id, 'completed')} 
                             disabled={!allItemsChecked}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm transition-all
+                            className={`w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase transition-colors
                                 ${allItemsChecked 
-                                    ? 'bg-[#DFFF00] text-[#1A1A1A] hover:bg-[#ccff00]' 
-                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer' 
+                                    : 'text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] cursor-not-allowed'
                                 }
                             `}
                         >
-                             <LogOut size={14} /> Complete
+                             Complete
                         </button>
                     )}
                 </div>
