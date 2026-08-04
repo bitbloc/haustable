@@ -210,7 +210,8 @@ export default function StepTableSelection() {
                 {previewImage && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-ink/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-[100] bg-ink/95 flex items-center justify-center p-4 cursor-pointer"
                         onClick={() => setPreviewImage(null)}
                     >
                         <motion.div
@@ -258,7 +259,8 @@ export default function StepTableSelection() {
                     {selectedTable && (
                         <motion.div
                             initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
-                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 bg-paper backdrop-blur-md p-4 rounded-rams border border-ink z-30"
+                            transition={{ type: "tween", duration: 0.2 }}
+                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 bg-paper p-4 rounded-rams border border-ink z-30 shadow-lg"
                         >
                             <div className="flex gap-4">
                                 <div

@@ -1,6 +1,26 @@
 import { supabase } from '../lib/supabaseClient'
 
-export const fetchAndSortMenu = async () => {
+let cachedMenu = null;
+let cachedCategories = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export const optimizeImageUrl = (url, width = 400) => {
+    if (!url) return null;
+    // ปิดการใช้ Supabase Image Transformation เพื่อประหยัดโควต้า
+    // เปลี่ยนมาใช้บริการ Public CDN ฟรี (wsrv.nl) สำหรับ Resize & Convert เป็น webp แทน
+    if (url.startsWith('http')) {
+        return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&q=80`;
+    }
+    return url;
+}
+
+export const fetchAndSortMenu = async (forceRefresh = false) => {
+    const now = Date.now();
+    if (!forceRefresh && cachedMenu && cachedCategories && (now - lastFetchTime < CACHE_TTL)) {
+        return { menuItems: cachedMenu, categories: cachedCategories };
+    }
+
     const [
         { data: menuRaw, error: menuError },
         { data: categories, error: catError }
@@ -18,7 +38,10 @@ export const fetchAndSortMenu = async () => {
         return acc
     }, {})
 
-    const sortedMenu = (menuRaw || []).sort((a, b) => {
+    const sortedMenu = (menuRaw || []).map(item => ({
+        ...item,
+        image_url: optimizeImageUrl(item.image_url) // Optimize images for performance
+    })).sort((a, b) => {
         // 1. Recommended First (Top Priority)
         // is_recommended might be boolean or null. Treat true as highest priority.
         const recA = a.is_recommended === true;
@@ -39,7 +62,12 @@ export const fetchAndSortMenu = async () => {
         return a.name.localeCompare(b.name)
     })
 
-    return { menuItems: sortedMenu, categories: categories || [] }
+    // Update Cache
+    cachedMenu = sortedMenu;
+    cachedCategories = categories || [];
+    lastFetchTime = Date.now();
+
+    return { menuItems: cachedMenu, categories: cachedCategories }
 }
 
 export const formatOptionName = (name) => {

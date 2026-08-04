@@ -116,7 +116,7 @@ export default function BookingMenu() {
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
                         className="fixed bottom-0 left-0 right-0 bg-paper/90 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50"
                     >
                         <div className="max-w-lg mx-auto flex items-center justify-between gap-4">

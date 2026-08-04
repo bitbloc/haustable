@@ -167,4 +167,4 @@ const MenuCard = ({ item, mode, onAdd, onRemove, qty, t, sideDishes, sideDishEna
     )
 }
 
-export default MenuCard
+export default React.memo(MenuCard)

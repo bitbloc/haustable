@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useBookingContext } from '../context/BookingContext'
 import { supabase } from '../lib/supabaseClient'
 import { toThaiISO } from '../utils/timeUtils'
@@ -8,35 +9,36 @@ export function useBooking() {
     const { submitOrder } = useOrderSubmission()
 
     // --- Actions ---
-    const setStep = (step) => dispatch({ type: 'GO_TO_STEP', payload: step })
-    const nextStep = () => dispatch({ type: 'NEXT_STEP' })
-    const prevStep = () => dispatch({ type: 'PREV_STEP' })
+    const setStep = useCallback((step) => dispatch({ type: 'GO_TO_STEP', payload: step }), [dispatch])
+    const nextStep = useCallback(() => dispatch({ type: 'NEXT_STEP' }), [dispatch])
+    const prevStep = useCallback(() => dispatch({ type: 'PREV_STEP' }), [dispatch])
 
-    const setDate = (date) => dispatch({ type: 'SET_DATE', payload: date })
-    const setTime = (time) => dispatch({ type: 'SET_TIME', payload: time })
-    const setPax = (pax) => dispatch({ type: 'SET_PAX', payload: pax })
+    const setDate = useCallback((date) => dispatch({ type: 'SET_DATE', payload: date }), [dispatch])
+    const setTime = useCallback((time) => dispatch({ type: 'SET_TIME', payload: time }), [dispatch])
+    const setPax = useCallback((pax) => dispatch({ type: 'SET_PAX', payload: pax }), [dispatch])
 
-    const selectTable = (table) => dispatch({ type: 'SELECT_TABLE', payload: table })
+    const selectTable = useCallback((table) => dispatch({ type: 'SELECT_TABLE', payload: table }), [dispatch])
 
     // Cart Actions
-    const addToCart = (item) => {
+    const addToCart = useCallback((item) => {
         if (item.menu_item_options && item.menu_item_options.length > 0) {
             dispatch({ type: 'OPEN_OPTION_MODAL', payload: item })
         } else {
             dispatch({ type: 'ADD_TO_CART', payload: item })
         }
-    }
-    const removeFromCart = (item) => dispatch({ type: 'REMOVE_FROM_CART', payload: item })
-    const openOptionModal = (item) => dispatch({ type: 'OPEN_OPTION_MODAL', payload: item })
-    const closeOptionModal = () => dispatch({ type: 'CLOSE_OPTION_MODAL' })
-    const confirmOptionSelection = (item) => {
+    }, [dispatch])
+    
+    const removeFromCart = useCallback((item) => dispatch({ type: 'REMOVE_FROM_CART', payload: item }), [dispatch])
+    const openOptionModal = useCallback((item) => dispatch({ type: 'OPEN_OPTION_MODAL', payload: item }), [dispatch])
+    const closeOptionModal = useCallback(() => dispatch({ type: 'CLOSE_OPTION_MODAL' }), [dispatch])
+    const confirmOptionSelection = useCallback((item) => {
         dispatch({ type: 'ADD_CUSTOM_ITEM', payload: item })
         closeOptionModal()
-    }
+    }, [dispatch, closeOptionModal])
 
-    const setCheckoutMode = (isCheckout) => dispatch({ type: 'SET_CHECKOUT_MODE', payload: isCheckout })
+    const setCheckoutMode = useCallback((isCheckout) => dispatch({ type: 'SET_CHECKOUT_MODE', payload: isCheckout }), [dispatch])
 
-    const updateForm = (field, value) => dispatch({ type: 'UPDATE_FORM', payload: { field, value } })
+    const updateForm = useCallback((field, value) => dispatch({ type: 'UPDATE_FORM', payload: { field, value } }), [dispatch])
 
     // --- Side Effects (Business Logic) ---
 
