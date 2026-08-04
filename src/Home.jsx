@@ -92,8 +92,8 @@ export default function Home({ session }) {
                                 ease: "linear"
                             }}
                         >
-                            {Array(4).fill(
-                                <div className="flex items-center gap-4">
+                            {Array.from({ length: 10 }).map((_, i) => (
+                                <div key={i} className="flex items-center gap-4">
                                     <span className="text-[var(--color-brand)] font-bold">
                                         // {settings?.announcement_headline || "INFO"}
                                     </span>
@@ -102,7 +102,7 @@ export default function Home({ session }) {
                                     </span>
                                     <span className="w-1 h-1 bg-[var(--color-brand)] rounded-full mx-4" />
                                 </div>
-                            )}
+                            ))}
                         </motion.div>
                     </div>
                 </div>
