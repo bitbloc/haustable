@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Search, Shield, User, Phone, Clock, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getShortBookingId } from '../utils/printerHelper';
 
 export default function POSCRMPanel() {
     const [members, setMembers] = useState([]);
@@ -248,7 +249,7 @@ export default function POSCRMPanel() {
                                         memberHistory.map((h, i) => (
                                             <div key={i} className="bg-white border border-[#D1D1CD] rounded-lg p-3 space-y-1.5 shadow-sm text-[10px] font-mono">
                                                 <div className="flex justify-between items-center font-bold text-[#1A1A1A]">
-                                                    <span className="uppercase text-[9px]">VISIT #{h.tracking_token ? h.tracking_token.slice(-4).toUpperCase() : String(h.id).slice(0, 4)}</span>
+                                                    <span className="uppercase text-[9px]">VISIT #{getShortBookingId(h)}</span>
                                                     <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase ${
                                                         h.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                                                     }`}>

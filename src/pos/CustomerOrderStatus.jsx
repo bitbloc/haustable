@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Clock, CheckCircle, Receipt, ArrowLeft, Upload, FileText, Smartphone, Users, Edit, Check, X, Gamepad2, Crown, Sparkles, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
+import { getShortBookingId } from '../utils/printerHelper';
 
 export default function CustomerOrderStatus() {
     const { tableId } = useParams();
@@ -242,7 +243,7 @@ export default function CustomerOrderStatus() {
                             })()}
                         </h1>
                         <p className="text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold mt-0.5">
-                            Table {booking.tables_layout?.table_name} · Queue #{booking.tracking_token ? booking.tracking_token.slice(0, 4) : String(booking.id).slice(0, 4)}
+                            Table {booking.tables_layout?.table_name} · Queue #{getShortBookingId(booking)}
                         </p>
                     </div>
                 </div>

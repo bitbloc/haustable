@@ -5,6 +5,7 @@ import { Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, ShieldCheck
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
+import { getShortBookingId } from '../utils/printerHelper';
 
 // Haversine Distance Formula
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -1126,7 +1127,7 @@ export default function CustomerOrderLanding() {
                                     <div>
                                         <h3 className="text-sm font-sans font-black uppercase tracking-wider text-[#1A1A1A]">ติดตามสถานะออเดอร์</h3>
                                         <p className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-widest mt-1">
-                                            Table {table?.table_name} · Queue #{activeBooking.tracking_token ? activeBooking.tracking_token.slice(0, 4) : String(activeBooking.id).slice(0, 4)}
+                                            Table {table?.table_name} · Queue #{getShortBookingId(activeBooking)}
                                         </p>
                                     </div>
                                     <button 

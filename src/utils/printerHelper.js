@@ -31,6 +31,20 @@ export const getPrinterConfig = () => {
     };
 };
 
+export function getShortBookingId(booking) {
+    if (!booking) return '0000';
+    if (booking.tracking_token && String(booking.tracking_token).length <= 8) {
+        return String(booking.tracking_token).toUpperCase();
+    }
+    const rawId = String(booking.id || '');
+    if (rawId.startsWith('local')) {
+        const digits = rawId.replace(/[^0-9]/g, '');
+        return digits.length >= 4 ? digits.slice(-4) : (digits || '0000');
+    }
+    const cleanUuid = rawId.replace(/-/g, '');
+    return cleanUuid ? cleanUuid.slice(0, 4).toUpperCase() : '0000';
+}
+
 export const fetchPrinterConfigOnline = async () => {
     try {
         const { data } = await supabase
@@ -638,9 +652,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.kickDrawer();
     }
 
-    const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) 
-        ? booking.tracking_token 
-        : (booking.id ? String(booking.id).slice(0, 4) : '0000');
+    const queueNo = getShortBookingId(booking);
     const dateStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
 
     let cfg = {};

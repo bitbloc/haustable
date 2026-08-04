@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName, selectItemsForTab } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -624,7 +624,7 @@ export default function SlipModal({ booking, type, onClose }) {
             `
         }
 
-        const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : String(booking.id).slice(0, 4)
+        const queueNo = getShortBookingId(booking)
 
         return `
             <html>
@@ -968,7 +968,7 @@ export default function SlipModal({ booking, type, onClose }) {
         if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Printer')) {
             try {
                 await Printer.printHtml({
-                    name: `Receipt-${booking.tracking_token || String(booking.id).slice(0, 4)}`,
+                    name: `Receipt-${getShortBookingId(booking)}`,
                     html: htmlContent
                 })
             } catch (err) {
@@ -1057,7 +1057,7 @@ export default function SlipModal({ booking, type, onClose }) {
         }
     `
 
-    const queueNo = (booking.tracking_token && booking.tracking_token.length <= 8) ? booking.tracking_token : String(booking.id).slice(0, 4)
+    const queueNo = getShortBookingId(booking)
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
 

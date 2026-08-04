@@ -24,7 +24,7 @@ import { Capacitor } from '@capacitor/core';
 import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
-import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData } from '../utils/printerHelper';
+import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData, getShortBookingId } from '../utils/printerHelper';
 import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction } from '../utils/shiftHelper';
 
 export default function POSReportsPanel() {
@@ -1023,7 +1023,7 @@ iframe.contentDocument.write(htmlContent);
                                             return (
                                                 <tr key={b.id} className="hover:bg-[#F5F5F2] transition-colors">
                                                     <td className="py-2.5 px-3 font-mono font-bold text-[#767673]">
-                                                        #{b.tracking_token ? b.tracking_token.slice(-4).toUpperCase() : String(b.id).slice(0, 4)}
+                                                        #{getShortBookingId(b)}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-mono text-[#767673]">{timeStr}</td>
                                                     <td className="py-2.5 px-3 font-mono font-bold text-center text-[#ff0000]">
