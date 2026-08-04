@@ -787,7 +787,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 {booking && (
                                     <button 
                                         type="button"
-                                        onClick={() => onOpenSplitPayment?.()}
+                                        onClick={() => onOpenSplitPayment?.(includeTax)}
                                         className="flex items-center justify-center gap-2 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-2.5 rounded-xl text-[#1A1A1A] transition-all shadow-sm cursor-pointer touch-manipulation"
                                     >
                                         <Coins size={14} /> Split Payment

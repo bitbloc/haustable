@@ -293,6 +293,7 @@ export function getCleanStaffRemark(remark) {
         lower === 'offline walk-in' ||
         lower.includes('walk-in guest (offline') ||
         lower === 'walk-in pick-up (offline sync)' ||
+        lower === 'walk-in pick-up (offline fallback)' ||
         lower === '[call_staff]' ||
         lower === '[call_bill]' ||
         lower.startsWith('merged into table') ||
@@ -726,45 +727,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             encoder.line(`TAX ID: ${shopVat}`);
         }
         encoder.line(doubleDivider);
-    } else if (activeTab === 'kitchen' || activeTab === 'kitchen_all') {
-        encoder.align('center')
-               .line(doubleDivider)
-               .bold(true)
-               .size(1, 1)
-               .line('KITCHEN ORDER')
-               .line(orderBannerTitle)
-               .size(0, 0)
-               .bold(true)
-               .line('(ใบออเดอร์ครัว)')
-               .line(orderBannerSub)
-               .bold(false)
-               .line(doubleDivider);
-    } else if (activeTab === 'bar') {
-        encoder.align('center')
-               .line(doubleDivider)
-               .bold(true)
-               .size(1, 1)
-               .line('BAR ORDER')
-               .line(orderBannerTitle)
-               .size(0, 0)
-               .bold(true)
-               .line('(ใบออเดอร์บาร์)')
-               .line(orderBannerSub)
-               .bold(false)
-               .line(doubleDivider);
-    } else if (activeTab === 'other') {
-        encoder.align('center')
-               .line(doubleDivider)
-               .bold(true)
-               .size(1, 1)
-               .line('OTHER ORDER')
-               .line(orderBannerTitle)
-               .size(0, 0)
-               .bold(true)
-               .line('(ใบออเดอร์ทั่วไป)')
-               .line(orderBannerSub)
-               .bold(false)
-               .line(doubleDivider);
     }
 
     // Table Name & Queue Number
@@ -799,7 +761,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .align('left')
                .bold(true)
                .line(`บริการ: ${serviceType}`)
-               .line(`ลูกค้า: ${customerName}`)
                .line(`พนักงานรับ: ${staffName ? staffName.toUpperCase() : 'SYSTEM'}`)
                .line(`เวลาสั่ง: ${dateStr}`);
 
@@ -1052,7 +1013,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     // Notes
     const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
     const combinedNotes = [];
-    if (booking.customer_note?.trim()) combinedNotes.push(`ลูกค้า: ${booking.customer_note.trim()}`);
+    if (booking.customer_note?.trim()) {
+        const cNote = booking.customer_note.trim();
+        if (cNote.toLowerCase() !== 'walk-in customer') {
+            combinedNotes.push(`ลูกค้า: ${cNote}`);
+        }
+    }
     if (cleanStaffNote) combinedNotes.push(`พนักงาน: ${cleanStaffNote}`);
 
     if (combinedNotes.length > 0) {

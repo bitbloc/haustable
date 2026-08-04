@@ -73,6 +73,7 @@ export default function POSDashboard() {
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [showMergeModal, setShowMergeModal] = useState(false);
     const [showSplitModal, setShowSplitModal] = useState(false);
+    const [splitIncludeTax, setSplitIncludeTax] = useState(true);
     const [availableTables, setAvailableTables] = useState([]);
 
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
@@ -1967,7 +1968,7 @@ export default function POSDashboard() {
                                 }
                             }}
                             onOpenSlip={handleSaveAndOpenSlip}
-                            onOpenSplitPayment={() => setShowSplitModal(true)}
+                            onOpenSplitPayment={(tax) => { setSplitIncludeTax(tax ?? true); setShowSplitModal(true); }}
                             onMoveTable={handleOpenMoveModal}
                             onMergeBill={handleOpenMergeModal}
                             onAttachCustomer={async (member) => {
@@ -2527,7 +2528,7 @@ export default function POSDashboard() {
                     <SplitPaymentModalInner 
                         order={currentOrder}
                         activeBooking={activeBooking}
-                        includeTax={includeTax}
+                        includeTax={splitIncludeTax}
                         onClose={() => setShowSplitModal(false)}
                         onConfirmSplit={handleExecuteSplitPayment}
                     />

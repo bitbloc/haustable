@@ -1163,15 +1163,7 @@ export default function SlipModal({ booking, type, onClose }) {
                                     TASTE YOUR SCENT.
                                 </p>
                             </div>
-                        ) : activeTab === 'kitchen' ? (
-                            <div className="text-center mb-5 bg-black text-white py-2 font-bold text-sm tracking-widest">
-                                KITCHEN ORDER / ใบสั่งอาหาร
-                            </div>
-                        ) : (
-                            <div className="text-center mb-5 bg-black text-white py-2 font-bold text-sm tracking-widest">
-                                BAR ORDER / ใบสั่งเครื่องดื่ม
-                            </div>
-                        )}
+                        ) : null}
 
                         {/* Prominent Table Name */}
                         <div className="text-center mb-5">
