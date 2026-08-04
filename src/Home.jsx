@@ -68,8 +68,8 @@ export default function Home({ session }) {
 
     return (
         <CasualLayout backgroundImage={settings?.home_background_url}>
-            
-            <div className="haus-home-page w-full flex flex-col text-[var(--color-hallmark-ink)] pt-12 pb-28">
+            <div className="haus-home-page min-h-screen w-full relative flex flex-col">
+                <div className="w-full flex flex-col text-[var(--color-hallmark-ink)] pt-12 pb-28 flex-grow">
                 
                 <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
@@ -84,7 +84,7 @@ export default function Home({ session }) {
                 <div className="fixed top-0 left-0 w-full z-[60] bg-[var(--color-hallmark-paper-dark)] border-b border-[var(--color-hallmark-rule)] h-10 flex items-center overflow-hidden">
                     <div className="relative w-full flex items-center">
                         <motion.div
-                            className="whitespace-nowrap flex gap-12 font-mono text-[9px] uppercase tracking-widest text-[var(--color-hallmark-ink)]"
+                            className="whitespace-nowrap flex gap-12 font-mono text-[9px] uppercase tracking-normal text-[var(--color-hallmark-ink)]"
                             animate={{ x: ["0%", "-50%"] }}
                             transition={{
                                 repeat: Infinity,
@@ -123,19 +123,19 @@ export default function Home({ session }) {
 
                     <div className="flex flex-col gap-2 font-mono text-[12px] text-[var(--color-hallmark-ink)]">
                         <div className="flex items-center justify-between">
-                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
+                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                                 [ TIME ]
                             </span>
                             <span className="font-bold">{settings?.link_hours || "เปิดทุกวัน 11:30 - 23:30 น."}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
+                        <div className="flex items-start justify-between">
+                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap mt-0.5">
                                 [ LOC ]
                             </span>
-                            <span className="font-bold text-right pl-4">{settings?.link_location_text || "ริมแม่น้ำโขง · นครพนม"}</span>
+                            <span className="font-bold text-right pl-4 leading-relaxed">{settings?.link_location_text || "ริมแม่น้ำโขง · นครพนม"}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
+                            <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
                                 [ TEL ]
                             </span>
                             <span className="font-bold">098-528-4217</span>
@@ -281,15 +281,15 @@ export default function Home({ session }) {
             </div>
 
             {/* 8. Bottom Navigation (Floating) */}
-            <HomeNavigation 
-                session={session}
-                userRole={userRole}
-                history={history}
-                setShowAuthModal={setShowAuthModal}
-                setIsHistoryOpen={setIsHistoryOpen}
-                handleLogout={handleLogout}
-            />
-
+                <HomeNavigation 
+                    session={session}
+                    userRole={userRole}
+                    history={history}
+                    setShowAuthModal={setShowAuthModal}
+                    setIsHistoryOpen={setIsHistoryOpen}
+                    handleLogout={handleLogout}
+                />
+            </div>
         </CasualLayout>
     )
 }

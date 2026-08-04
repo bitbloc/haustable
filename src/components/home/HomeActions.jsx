@@ -75,7 +75,7 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                                     <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
                                         {act.num} / {act.labelEn}
                                     </span>
-                                    <span className="font-bold text-[16px] text-[var(--color-hallmark-ink)] leading-tight mt-1">
+                                    <span className="font-bold text-[16px] text-[var(--color-hallmark-ink)] leading-snug mt-1">
                                         {act.label}
                                     </span>
                                     <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-none mt-1.5">

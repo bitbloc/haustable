@@ -40,7 +40,7 @@ export default function HomeHeader({ t, status }) {
             </div>
 
             {/* Main Script Logo Display */}
-            <div className="w-full py-2 flex items-center justify-center">
+            <div className="w-full pt-8 pb-12 flex items-center justify-center">
                 <div className="w-full max-w-[280px] flex justify-center">
                     <img 
                         src="/assets/logo-script.webp" 
