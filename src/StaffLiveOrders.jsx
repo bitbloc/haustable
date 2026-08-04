@@ -42,7 +42,7 @@ function StaffLiveOrdersContent() {
     } = useOrderContext()
 
     // Local State
-    const [activeTab, setActiveTab] = useState('live')
+    const [activeTab, setActiveTab] = useState('kds')
     const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0])
     const [systemReady, setSystemReady] = useState(false) // Replaces isSoundChecked
 
@@ -62,13 +62,13 @@ function StaffLiveOrdersContent() {
         const path = location.pathname
         if (path.includes('/staff/history')) setActiveTab('history')
         else if (path.includes('/staff/checkin')) setActiveTab('tables')
-        else setActiveTab('live')
+        else setActiveTab('kds')
     }, [location.pathname])
 
     const switchTab = (tab) => {
-        if (tab === 'live') {
+        if (tab === 'kds') {
             navigate('/staff/orders')
-            setActiveTab('live') 
+            setActiveTab('kds') 
         }
         else if (tab === 'history') {
             navigate('/staff/history')
@@ -211,7 +211,7 @@ function StaffLiveOrdersContent() {
             )}
 
             <StaffHeader 
-                title={activeTab === 'live' ? "Live Orders" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                title={activeTab === 'kds' ? "Kitchen Display System" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                 isConnected={isConnected}
                 notificationsEnabled={isSubscribed}
                 onRequestNotifications={requestPush}
@@ -221,10 +221,10 @@ function StaffLiveOrdersContent() {
             {/* TAB NAV */}
              <div className="flex bg-gray-200 p-1 rounded-xl mb-4 sticky top-[72px] z-10">
                 <button 
-                    onClick={() => switchTab('live')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'live' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
+                    onClick={() => switchTab('kds')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all ${activeTab === 'kds' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-gray-500 hover:text-[#1A1A1A]'}`}
                 >
-                    <List className="w-4 h-4" /> Live
+                    <List className="w-4 h-4" /> KDS
                     {orders.length > 0 && <span className="bg-[#1A1A1A] text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{orders.length}</span>}
                 </button>
                  <button 
@@ -249,7 +249,7 @@ function StaffLiveOrdersContent() {
 
             {/* CONTENT */}
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {activeTab === 'live' && (
+                {activeTab === 'kds' && (
                     <OrderList 
                         orders={orders} 
                         loading={loading} 
@@ -257,6 +257,7 @@ function StaffLiveOrdersContent() {
                         onUpdateStatus={handleUpdateStatus}
                         onVerifyPayment={setVerifyingOrder}
                         onPrint={(b) => setPrintModal({ isOpen: true, booking: b })}
+                        isKDS={true}
                     />
                 )}
                 

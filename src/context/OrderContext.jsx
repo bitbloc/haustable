@@ -49,7 +49,7 @@ export function OrderProvider({ children }) {
         try {
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
                 .eq('status', 'pending')
                 .order('booking_time', { ascending: true })
             
@@ -67,7 +67,7 @@ export function OrderProvider({ children }) {
         try {
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
                 .in('status', ['confirmed', 'ready', 'seated'])
                 .order('booking_time', { ascending: true })
             
@@ -90,7 +90,7 @@ export function OrderProvider({ children }) {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select(`*, promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+                .select(`*, promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
                 .in('status', ['completed', 'cancelled', 'void']) // Include COMPLETED as requested
                 .gte('booking_time', start)
                 .lte('booking_time', end)
@@ -110,7 +110,7 @@ export function OrderProvider({ children }) {
     const fetchAndAddOrder = async (orderId, isNew, triggerAlertCallback) => {
         const { data: fullOrder } = await supabase
             .from('bookings')
-            .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), order_items (quantity, selected_options, price_at_time, menu_items (name))`)
+            .select(`*, tracking_token, tables_layout (table_name), promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
             .eq('id', orderId)
             .single()
 
@@ -199,6 +199,17 @@ export function OrderProvider({ children }) {
         }
     }
 
+    const updateOrderItemCheck = async (itemId, isChecked) => {
+        try {
+            const { error } = await supabase.from('order_items').update({ is_checked: isChecked }).eq('id', itemId)
+            if (error) throw error
+            return { success: true }
+        } catch (error) {
+            console.error(error)
+            return { success: false, error: error.message }
+        }
+    }
+
     return (
         <OrderContext.Provider value={{
             ...state,
@@ -206,7 +217,8 @@ export function OrderProvider({ children }) {
             fetchScheduleOrders,
             fetchHistoryOrders,
             subscribeRealtime,
-            updateStatus: performUpdateStatus
+            updateStatus: performUpdateStatus,
+            updateOrderItemCheck
         }}>
             {children}
         </OrderContext.Provider>

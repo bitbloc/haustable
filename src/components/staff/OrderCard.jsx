@@ -1,6 +1,42 @@
-import { useState } from 'react'
-import { Clock, Phone, Printer, ImageIcon, Check, X, ChefHat, LogOut, ChevronDown, ChevronUp, Users, AlertCircle, Receipt } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Clock, Phone, Printer, ImageIcon, Check, X, ChefHat, LogOut, ChevronDown, ChevronUp, Users, AlertCircle, Receipt, Square, CheckSquare, Timer } from 'lucide-react'
 import { formatThaiTimeOnly, formatThaiDateLong } from '../../utils/timeUtils'
+import { useOrderContext } from '../../context/OrderContext'
+
+const OrderTimer = ({ createdAt }) => {
+    const [elapsed, setElapsed] = useState(0)
+
+    useEffect(() => {
+        const orderTime = new Date(createdAt).getTime()
+        const update = () => {
+            const now = new Date().getTime()
+            setElapsed(Math.max(0, Math.floor((now - orderTime) / 1000)))
+        }
+        update()
+        const interval = setInterval(update, 10000) // Update every 10s
+        return () => clearInterval(interval)
+    }, [createdAt])
+
+    const minutes = Math.floor(elapsed / 60)
+    
+    // Color logic
+    let colorClass = "text-gray-500 bg-gray-100" // Default < 10 mins
+    let badgeColor = "bg-gray-200"
+    if (minutes >= 20) {
+        colorClass = "text-red-700 bg-red-100 font-black animate-pulse"
+        badgeColor = "bg-red-500"
+    } else if (minutes >= 10) {
+        colorClass = "text-orange-700 bg-orange-100 font-bold"
+        badgeColor = "bg-orange-400"
+    }
+
+    return (
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors ${colorClass}`}>
+            <Timer size={12} />
+            <span>{minutes}m</span>
+        </div>
+    )
+}
 
 const renderOptions = (item) => {
     if (!item.selected_options) return null
@@ -32,7 +68,18 @@ const renderOptions = (item) => {
     )
 }
 
-export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPrint, isSchedule = false }) {
+const BAR_CATEGORIES = [
+    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+];
+
+export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPrint, isSchedule = false, isKDS = false }) {
+    const { updateOrderItemCheck } = useOrderContext()
     const isPending = order.status === 'pending'
     const isPickup = (order.booking_type === 'pickup') || (!order.tables_layout) // Fallback if type not set
     
@@ -40,12 +87,70 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
     const customerName = order.profiles?.display_name || order.pickup_contact_name || 'Guest'
     const pax = order.pax || 0
 
+    const barItems = []
+    const kitchenItems = []
+    
+    order.order_items?.forEach(item => {
+        if (BAR_CATEGORIES.includes(item.menu_items?.category_id)) {
+            barItems.push(item)
+        } else {
+            kitchenItems.push(item)
+        }
+    })
+
+    const allItemsChecked = order.order_items?.length > 0 ? order.order_items.every(item => item.is_checked) : true
+
+    const handleToggleCheck = async (item) => {
+        if (!isKDS) return
+        const newStatus = !item.is_checked
+        await updateOrderItemCheck(item.id, newStatus)
+    }
+
+    // Determine urgency level for KDS
+    let urgencyBorder = ''
+    if (isKDS) {
+        const elapsedMins = Math.floor((new Date().getTime() - new Date(order.created_at).getTime()) / 60000)
+        if (elapsedMins >= 20) urgencyBorder = 'border-l-4 border-l-red-500'
+        else if (elapsedMins >= 10) urgencyBorder = 'border-l-4 border-l-orange-400'
+        else urgencyBorder = 'border-l-4 border-l-gray-300'
+    }
+
+    const renderItemRow = (item, idx, showCheckbox) => (
+        <div 
+            key={idx} 
+            className={`flex items-start gap-3 ${isKDS && showCheckbox ? 'cursor-pointer active:scale-[0.98] transition-transform select-none' : ''}`}
+            onClick={() => showCheckbox && handleToggleCheck(item)}
+        >
+            {isKDS && showCheckbox && (
+                <div className="mt-0.5 shrink-0">
+                    {item.is_checked ? (
+                        <CheckSquare size={18} className="text-[#1A1A1A] fill-[#DFFF00]" />
+                    ) : (
+                        <Square size={18} className="text-gray-300" />
+                    )}
+                </div>
+            )}
+            <div className={`text-xs font-bold min-w-[1.5rem] ${item.is_checked && showCheckbox ? 'text-gray-400' : 'text-[#1A1A1A]'}`}>
+                {item.quantity}x
+            </div>
+            <div className="flex-1">
+                <div className={`text-sm font-medium leading-tight ${item.is_checked && showCheckbox ? 'text-gray-400 line-through' : 'text-[#1A1A1A]'}`}>
+                    {item.menu_items?.name}
+                </div>
+                <div className={item.is_checked && showCheckbox ? 'opacity-50' : ''}>
+                    {renderOptions(item)}
+                </div>
+            </div>
+        </div>
+    )
+
     return (
         <div className={`
-            bg-white rounded-2xl p-5 transition-all duration-300 relative group overflow-hidden
+            bg-white rounded-2xl p-5 transition-all duration-300 relative group overflow-hidden flex flex-col h-full
             ${isPending ? 'shadow-lg shadow-orange-500/10 border border-orange-100' : 'shadow-sm border border-gray-100 hover:border-gray-300'}
+            ${urgencyBorder}
         `}>
-            {isPending && <div className="absolute top-0 left-0 w-1 h-full bg-[#DFFF00]" />}
+            {isPending && !isKDS && <div className="absolute top-0 left-0 w-1 h-full bg-[#DFFF00]" />}
 
             {/* Header: Compact Row */}
             <div className="flex justify-between items-start mb-4">
@@ -79,31 +184,49 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                      </div>
                 </div>
                 
-                <div className="text-right">
-                    <div className="text-sm font-bold text-[#1A1A1A]">
-                        {formatThaiTimeOnly(order.booking_time)}
-                    </div>
-                    <div className="text-[10px] text-gray-400">
-                        Ordered {new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
+                <div className="text-right flex flex-col items-end gap-1">
+                    {isKDS ? (
+                        <OrderTimer createdAt={order.created_at} />
+                    ) : (
+                        <>
+                            <div className="text-sm font-bold text-[#1A1A1A]">
+                                {formatThaiTimeOnly(order.booking_time)}
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                                Ordered {new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Items (Compact) */}
-            <div className="space-y-3 mb-4">
-                {order.order_items?.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                        <div className="text-xs font-bold text-[#1A1A1A] min-w-[1.5rem]">
-                            {item.quantity}x
+            {/* Items (Grouped) */}
+            <div className="space-y-4 mb-4 flex-1">
+                {kitchenItems.length > 0 && (
+                    <div className="space-y-2">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-[#1A1A1A] bg-gray-100 px-2 py-1 rounded w-max">
+                            Kitchen / ครัว
                         </div>
-                        <div className="flex-1">
-                            <div className="text-sm font-medium text-[#1A1A1A] leading-tight">
-                                {item.menu_items?.name}
-                            </div>
-                            {renderOptions(item)}
+                        <div className="space-y-3 pl-1">
+                            {kitchenItems.map((item, idx) => renderItemRow(item, idx, true))}
                         </div>
                     </div>
-                ))}
+                )}
+                
+                {kitchenItems.length > 0 && barItems.length > 0 && (
+                    <div className="h-px bg-gray-100 w-full my-2" />
+                )}
+
+                {barItems.length > 0 && (
+                    <div className="space-y-2">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-white bg-[#1A1A1A] px-2 py-1 rounded w-max">
+                            Bar / บาร์
+                        </div>
+                        <div className="space-y-3 pl-1">
+                            {barItems.map((item, idx) => renderItemRow(item, idx, true))}
+                        </div>
+                    </div>
+                )}
             </div>
             
             {/* Customer Note Preview */}
@@ -154,7 +277,16 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                     )}
 
                      {(order.status === 'ready' || order.status === 'seated') && (
-                        <button onClick={() => onUpdateStatus(order.id, 'completed')} className="px-4 py-2 rounded-lg text-xs font-bold bg-[#DFFF00] text-[#1A1A1A] hover:bg-[#ccff00] shadow-sm flex items-center gap-2">
+                        <button 
+                            onClick={() => onUpdateStatus(order.id, 'completed')} 
+                            disabled={!allItemsChecked}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-sm transition-all
+                                ${allItemsChecked 
+                                    ? 'bg-[#DFFF00] text-[#1A1A1A] hover:bg-[#ccff00]' 
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                }
+                            `}
+                        >
                              <LogOut size={14} /> Complete
                         </button>
                     )}
