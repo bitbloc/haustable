@@ -45,12 +45,15 @@ export default function usePushNotifications() {
     }
 
     try {
+      const wasGranted = Notification.permission === 'granted';
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
 
       if (permissionResult === 'granted') {
         setIsSubscribed(true);
-        toast.success("Notifications enabled!");
+        if (!wasGranted) {
+          toast.success("Notifications enabled!");
+        }
         
         // Get the service worker registration
         const registration = await navigator.serviceWorker.ready;
