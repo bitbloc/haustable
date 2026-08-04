@@ -1149,14 +1149,17 @@ export function getPrinterCellWidth(str, useByteLength = false) {
 
 export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
+    // CRITICAL: Use visual width (false) for padding to ensure grid alignment!
+    // Thai vowels do not take horizontal space.
+    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
 export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
+    // CRITICAL: Use visual width (false) for padding to ensure grid alignment!
+    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
@@ -1685,7 +1688,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
             }
         });
         
-        encoder.line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols));
+        encoder.bold(true).line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols)).bold(false);
         
         const vatVal = Number(reportData.totalVat || 0);
         const preVatVal = netSales - vatVal;
@@ -1697,7 +1700,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
             encoder.line(formatTwoCols('ยอดก่อนภาษี (VAT)', formatReceiptMoney(preVatVal), maxCols));
             encoder.line(formatTwoCols('ภาษี (VAT)', formatReceiptMoney(vatVal), maxCols));
         }
-        encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
+        encoder.bold(true).line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols)).bold(false);
         encoder.line(formatTwoCols('จำนวนลูกค้า (Pax)', (reportData.totalGuests || 0).toString(), maxCols));
         encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อบิล', formatReceiptMoney(reportData.averageSalesPerBill), maxCols));
         encoder.line(formatTwoCols('ยอดขายเฉลี่ยต่อหัว', formatReceiptMoney(reportData.averageSalesPerGuest), maxCols));
@@ -1754,7 +1757,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
             }
         }
         
-        encoder.line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols));
+        encoder.bold(true).line(formatTwoCols('ยอดขายสุทธิ', formatReceiptMoney(netSales), maxCols)).bold(false);
     } else {
         // Fallback
         encoder.bold(true).line('REVENUE BY METHOD').bold(false);
@@ -1807,11 +1810,15 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         encoder.line(formatTwoCols('เงินเข้า/เงินออก', formatReceiptMoney(netCashFlow), maxCols));
     }
     
-    encoder.line(formatTwoCols('เงินที่ควรมีในลิ้นชัก', formatReceiptMoney(reportData.expectedCash), maxCols));
+    encoder.bold(true).line(formatTwoCols('เงินที่ควรมีในลิ้นชัก', formatReceiptMoney(reportData.expectedCash), maxCols)).bold(false);
     
     if (reportData.closedAt) {
-        encoder.line(formatTwoCols('จำนวนจริงในลิ้นชัก', formatReceiptMoney(reportData.actualCash), maxCols));
-        encoder.line(formatTwoCols('ส่วนต่าง', formatReceiptMoney(reportData.difference), maxCols));
+        encoder.bold(true).line(formatTwoCols('จำนวนจริงในลิ้นชัก', formatReceiptMoney(reportData.actualCash), maxCols)).bold(false);
+        
+        const isDiff = reportData.difference !== 0;
+        if (isDiff) encoder.bold(true);
+        encoder.line(formatTwoCols(isDiff ? '>> ส่วนต่าง' : 'ส่วนต่าง', formatReceiptMoney(reportData.difference), maxCols));
+        if (isDiff) encoder.bold(false);
     }
     
     encoder.line(formatTwoCols('บิลทั้งหมด', (reportData.totalBookings || 0).toString(), maxCols));

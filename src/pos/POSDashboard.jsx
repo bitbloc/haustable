@@ -1103,17 +1103,46 @@ export default function POSDashboard() {
 
         let targetBooking = updatedBooking || currentBooking;
 
-        if (newlyInsertedRows.length > 0 && targetBooking) {
-            const existingOrderItems = targetBooking.order_items || [];
-            const existingIds = new Set(existingOrderItems.map(i => i.id));
-            const mergedItems = [...existingOrderItems];
-            newlyInsertedRows.forEach(row => {
-                if (!existingIds.has(row.id)) {
-                    mergedItems.push(row);
-                }
-            });
-            targetBooking = { ...targetBooking, order_items: mergedItems };
-        }
+        // Construct cart fallback items from currentOrder.items in case order_items from DB is missing or empty
+        const cartFallbackOrderItems = (currentOrder.items || []).map((ci, idx) => ({
+            id: ci.db_id || ci.id || `cart_item_${idx}`,
+            booking_id: bookingId,
+            menu_item_id: ci.id || ci.menu_item_id,
+            quantity: Number(ci.quantity) || 1,
+            price_at_time: Number(ci.price) || 0,
+            price: Number(ci.price) || 0,
+            selected_options: ci.selected_options || [],
+            item_note: ci.item_note || '',
+            name: ci.name || 'Item',
+            category_id: ci.category_id || '',
+            category_name: ci.category_name || '',
+            menu_items: {
+                name: ci.name || 'Item',
+                category_id: ci.category_id || '',
+                menu_categories: { name: ci.category_name || '' }
+            }
+        }));
+
+        const existingOrderItems = targetBooking?.order_items || [];
+        const existingIds = new Set(existingOrderItems.map(i => i.id || i.menu_item_id));
+        const mergedItems = [...existingOrderItems];
+
+        newlyInsertedRows.forEach(row => {
+            const rowKey = row.id || row.menu_item_id;
+            if (!existingIds.has(rowKey)) {
+                mergedItems.push(row);
+                existingIds.add(rowKey);
+            }
+        });
+
+        // Ensure order_items is never empty if cart has items
+        const finalOrderItems = mergedItems.length > 0 ? mergedItems : cartFallbackOrderItems;
+
+        targetBooking = {
+            ...(targetBooking || {}),
+            id: bookingId,
+            order_items: finalOrderItems
+        };
 
         if (targetBooking) {
             setActiveBooking(targetBooking);
@@ -1133,7 +1162,9 @@ export default function POSDashboard() {
                 items: updatedItems
             }));
             
-            toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+            if (newItems.length > 0) {
+                toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+            }
             
             // For kitchen slips, ONLY print the newly inserted items if they exist
             let printBooking = targetBooking;
