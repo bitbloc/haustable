@@ -49,26 +49,26 @@ export default function BookingMenu() {
     return (
         <div className="flex-1 flex flex-col min-h-0">
             {/* Sticky Header: Search & Categories */}
-            <div className="sticky top-0 bg-[#F8F8F8] z-30 pt-1 pb-4 space-y-3 shrink-0">
+            <div className="sticky top-0 bg-canvas z-30 pt-1 pb-4 space-y-3 shrink-0">
                 <div className="flex gap-2">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-subInk" size={16} />
                         <input
                             type="text"
                             placeholder={t('searchMenu')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white pl-9 pr-4 py-2.5 rounded-xl border border-gray-100 shadow-sm focus:ring-1 focus:ring-black outline-none text-sm"
+                            className="w-full bg-paper pl-9 pr-4 py-2.5 rounded-rams border border-[var(--color-rule)] focus:border-ink outline-none text-sm transition-colors"
                         />
                     </div>
                     <ViewToggle mode={viewMode} setMode={setViewMode} />
                 </div>
 
                 {/* Category Tabs */}
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-2 px-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-2 px-2 border-b border-[var(--color-rule)]">
                     <button
                         onClick={() => setActiveCategory('All')}
-                        className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === 'All' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                        className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono font-bold transition-all border ${activeCategory === 'All' ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}
                     >
                         All
                     </button>
@@ -76,7 +76,7 @@ export default function BookingMenu() {
                         <button
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.name)}
-                            className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat.name ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                            className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono font-bold transition-all border ${activeCategory === cat.name ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}
                         >
                             {cat.name}
                         </button>
@@ -117,18 +117,18 @@ export default function BookingMenu() {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 pb-8 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.1)]"
+                        className="fixed bottom-0 left-0 right-0 bg-paper/90 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50"
                     >
                         <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
                             {/* Left: Info */}
                             <div className="flex flex-col">
-                                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
+                                <div className="text-xs font-mono font-bold text-subInk uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
                                 <div className="flex items-end gap-2">
-                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
+                                    <span className="font-mono text-sm bg-ink text-paper px-2 py-0.5 border border-[var(--color-rule)]">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
                                     <motion.span
                                         key={cartTotal}
-                                        initial={{ scale: 1.2, color: '#DFFF00' }}
-                                        animate={{ scale: 1, color: '#000000' }}
+                                        initial={{ scale: 1.2, color: 'var(--color-accent)' }}
+                                        animate={{ scale: 1, color: 'var(--color-ink)' }}
                                         className="font-mono font-bold text-2xl leading-none"
                                     >
                                         ฿{cartTotal}
@@ -139,7 +139,7 @@ export default function BookingMenu() {
                             {/* Right: Action */}
                             <button
                                 onClick={handleNext}
-                                className="bg-black text-[#DFFF00] px-8 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-gray-900 transition-transform active:scale-95 shadow-lg"
+                                className="bg-brand text-ink border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper transition-all active:scale-95 uppercase tracking-widest font-mono"
                             >
                                 {t('next')} <ArrowRight size={18} />
                             </button>
@@ -150,10 +150,10 @@ export default function BookingMenu() {
 
             {/* Skip Button (Only specific cases, mainly hidden if cart has items generally, but keeping for logic) */}
             {cart.length === 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200 shrink-0 text-center">
+                <div className="mt-4 pt-4 border-t border-[var(--color-rule)] shrink-0 text-center">
                     <button
                         onClick={handleNext}
-                        className="text-xs text-gray-400 hover:text-black"
+                        className="text-xs font-mono font-bold text-subInk hover:text-ink uppercase"
                     >
                         {t('payOnly')}
                     </button>

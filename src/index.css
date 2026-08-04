@@ -59,11 +59,9 @@ html {
 }
 
 body {
-  background-color: #FFFFFF;
-  /* Pure White Background */
-  color: #1A1A1A;
-  /* Text Dark */
-  font-family: 'Inter', sans-serif;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none; /* Prevent elastic pull-to-refresh */
 }

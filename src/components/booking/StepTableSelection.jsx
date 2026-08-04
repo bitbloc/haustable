@@ -175,15 +175,21 @@ export default function StepTableSelection() {
         <div className="h-full flex flex-col relative">
             {/* Top Controls Overlay */}
             <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
-                <div className="bg-white/90 backdrop-blur-xl p-4 rounded-2xl shadow-lg border border-white/50 pointer-events-auto">
-                    <h2 className="text-lg font-bold text-black leading-none">{t('selectTable')}</h2>
-                    <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">
-                        <span className="bg-gray-100 px-2 py-1 rounded-md">{date}</span>
-                        <span className="bg-gray-100 px-2 py-1 rounded-md">{time}</span>
-                        <span className="bg-black text-white px-2 py-1 rounded-md">{pax} {t('guests')}</span>
+                <div className="bg-paper p-4 rounded-rams border border-ink pointer-events-auto">
+                    <h2 className="text-lg font-bold text-ink leading-none">{t('selectTable')}</h2>
+                    <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-subInk font-medium whitespace-nowrap">
+                        <span className="bg-paper border border-[var(--color-rule)] px-2 py-1 rounded-rams">{date}</span>
+                        <span className="bg-paper border border-[var(--color-rule)] px-2 py-1 rounded-rams">{time}</span>
+                        <span className="bg-ink text-paper px-2 py-1 rounded-rams">{pax} {t('guests')}</span>
+                    </div>
+                    {/* Legend */}
+                    <div className="flex justify-center gap-6 mt-4 mb-2">
+                        <div className="flex items-center gap-2 text-xs font-mono text-subInk font-bold"><div className="w-3 h-3 bg-[#4CAF50] rounded-none"></div>{t('available')}</div>
+                        <div className="flex items-center gap-2 text-xs font-mono text-subInk font-bold"><div className="w-3 h-3 bg-brand rounded-none border border-ink"></div>{t('selected')}</div>
+                        <div className="flex items-center gap-2 text-xs font-mono text-subInk font-bold"><div className="w-3 h-3 bg-[var(--color-rule)] rounded-none"></div>{t('unavailable')}</div>
                     </div>
                 </div>
-                <button onClick={toggleExpanded} className="bg-white p-3 rounded-full shadow-lg text-black pointer-events-auto hover:bg-gray-50 transition-colors">
+                <button onClick={toggleExpanded} className="bg-paper p-3 rounded-rams border border-ink text-ink pointer-events-auto hover:bg-paper transition-colors">
                     {isExpanded ? <Minimize size={20} /> : <Maximize size={20} />}
                 </button>
             </div>
@@ -191,11 +197,11 @@ export default function StepTableSelection() {
             {/* Tooltip */}
             {availabilityTooltip && (
                 <div
-                    className="fixed z-50 bg-black text-white text-xs px-3 py-1 rounded-full shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
+                    className="fixed z-50 bg-ink text-paper text-xs px-3 py-1 rounded-rams pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
                     style={{ left: availabilityTooltip.x, top: availabilityTooltip.y }}
                 >
                     {availabilityTooltip.text}
-                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
+                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-ink rotate-45"></div>
                 </div>
             )}
 
@@ -204,7 +210,7 @@ export default function StepTableSelection() {
                 {previewImage && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+                        className="fixed inset-0 z-[100] bg-ink/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
                         onClick={() => setPreviewImage(null)}
                     >
                         <motion.div
@@ -212,27 +218,27 @@ export default function StepTableSelection() {
                             className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center"
                             onClick={e => e.stopPropagation()}
                         >
-                            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md z-10">
+                            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-paper/20 hover:bg-paper/40 text-paper p-2 rounded-rams backdrop-blur-md z-10">
                                 <X size={24} />
                             </button>
-                            <img src={previewImage} className="w-full h-full object-contain rounded-lg shadow-2xl" alt="Table Preview" />
+                            <img src={previewImage} className="w-full h-full object-contain rounded-rams" alt="Table Preview" />
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className={`flex-1 overflow-hidden relative rounded-3xl border-2 border-gray-100 bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''} `}>
+            <div className={`flex-1 overflow-hidden relative rounded-rams border border-ink bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''} `}>
                 <TransformWrapper initialScale={0.9} minScale={0.2} maxScale={4} centerOnInit={true} limitToBounds={false}>
                     {({ zoomIn, zoomOut, resetTransform }) => (
                         <>
                             <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
-                                <button onClick={() => zoomIn()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50 active:scale-90 transition-transform"><ZoomIn size={20} /></button>
-                                <button onClick={() => zoomOut()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50 active:scale-90 transition-transform"><ZoomOut size={20} /></button>
-                                <button onClick={() => resetTransform()} className="bg-white p-2 rounded-lg shadow-sm hover:bg-gray-50 active:scale-90 transition-transform"><RotateCw size={20} /></button>
+                                <button onClick={() => zoomIn()} className="bg-paper p-2 rounded-rams border border-ink hover:bg-gray-50 active:scale-90 transition-transform"><ZoomIn size={20} /></button>
+                                <button onClick={() => zoomOut()} className="bg-paper p-2 rounded-rams border border-ink hover:bg-gray-50 active:scale-90 transition-transform"><ZoomOut size={20} /></button>
+                                <button onClick={() => resetTransform()} className="bg-paper p-2 rounded-rams border border-ink hover:bg-gray-50 active:scale-90 transition-transform"><RotateCw size={20} /></button>
                             </div>
                             <TransformComponent wrapperClass="w-full h-full flex items-center justify-center bg-[#f0f0f0]" contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div
-                                    className="relative w-[1000px] aspect-video bg-white shadow-2xl origin-center"
+                                    className="relative w-[1000px] aspect-video bg-paper border border-[var(--color-rule)] origin-center"
                                     style={{
                                         backgroundImage: settings.floorplanUrl ? `url(${settings.floorplanUrl})` : undefined,
                                         backgroundSize: '100% 100%',
@@ -252,11 +258,11 @@ export default function StepTableSelection() {
                     {selectedTable && (
                         <motion.div
                             initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
-                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/50 z-30"
+                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 bg-paper backdrop-blur-md p-4 rounded-rams border border-ink z-30"
                         >
                             <div className="flex gap-4">
                                 <div
-                                    className="w-20 h-20 rounded-lg bg-gray-100 overflow-hidden cursor-zoom-in shrink-0 relative group"
+                                    className="w-20 h-20 rounded-rams bg-paper border border-[var(--color-rule)] overflow-hidden cursor-zoom-in shrink-0 relative group"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (selectedTable.image_url) setPreviewImage(selectedTable.image_url);

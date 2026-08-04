@@ -50,7 +50,7 @@ export default function StepDateSelection() {
             <div className="space-y-6 flex-1 overflow-y-auto px-1 py-1">
                 {/* Custom Calendar */}
                 <div className="animate-fade-in-up">
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-4 px-2">{t('date')}</label>
+                    <label className="block text-xs font-mono font-bold text-subInk uppercase mb-4 px-2">{t('date')}</label>
                     <CustomCalendar
                         value={date}
                         onChange={(newDate) => {
@@ -62,10 +62,10 @@ export default function StepDateSelection() {
                 </div>
 
                 {/* Time */}
-                <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity duration-300 ${!date ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className={`bg-paper p-6 border border-[var(--color-rule)] rounded-rams transition-opacity duration-300 ${!date ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex justify-between items-center mb-4">
-                        <label className="text-xs font-bold text-gray-400 uppercase">{t('timeSlot')}</label>
-                        {!date && <span className="text-xs text-red-400 font-bold">{t('selectDateFirst')}</span>}
+                        <label className="text-xs font-mono font-bold text-subInk uppercase">{t('timeSlot')}</label>
+                        {!date && <span className="text-xs font-mono text-error font-bold">{t('selectDateFirst')}</span>}
                     </div>
 
                     <div className="grid grid-cols-4 gap-3">
@@ -85,7 +85,7 @@ export default function StepDateSelection() {
                                     key={tm}
                                     onClick={() => !isDisabled && setTime(tm)}
                                     disabled={isDisabled}
-                                    className={`py-2 rounded-lg text-sm font-bold transition-all active:scale-95 ${time === tm ? 'bg-black text-white' : (isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-50 text-gray-500 hover:bg-gray-100')} `}
+                                    className={`py-2 rounded-none font-mono text-sm font-bold transition-all border ${time === tm ? 'bg-ink text-paper border-ink' : (isDisabled ? 'bg-canvas text-subInk border-[var(--color-rule)] cursor-not-allowed' : 'bg-transparent text-ink border-[var(--color-rule)] hover:bg-paper')} `}
                                 >
                                     {tm}
                                 </button>
@@ -95,17 +95,17 @@ export default function StepDateSelection() {
                 </div>
 
                 {/* Pax */}
-                <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 transition-opacity duration-300 ${!time ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-4">{t('guests')}</label>
+                <div className={`bg-paper p-6 border border-[var(--color-rule)] rounded-rams transition-opacity duration-300 ${!time ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <label className="block text-xs font-mono font-bold text-subInk uppercase mb-4">{t('guests')}</label>
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 active:scale-90 transition-transform">-</button>
-                        <span className="text-2xl font-bold w-10 text-center">{pax}</span>
+                        <button onClick={() => setPax(Math.max(1, pax - 1))} className="w-10 h-10 border border-[var(--color-rule)] bg-canvas flex items-center justify-center font-bold hover:bg-paper active:scale-95 transition-transform">-</button>
+                        <span className="text-2xl font-mono font-bold w-10 text-center">{pax}</span>
                         <button
                             onClick={() => {
                                 if (pax >= 10) setShowLargeGroupModal(true)
                                 else setPax(pax + 1)
                             }}
-                            className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold hover:bg-gray-800 active:scale-90 transition-transform"
+                            className="w-10 h-10 border border-ink bg-ink text-paper flex items-center justify-center font-bold hover:bg-paper hover:text-ink active:scale-95 transition-colors"
                         >
                             +
                         </button>
@@ -123,31 +123,31 @@ export default function StepDateSelection() {
                     >
                         <motion.div
                             initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-                            className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center space-y-4"
+                            className="bg-paper p-6 border border-[var(--color-rule)] max-w-sm w-full text-center space-y-4 rounded-rams"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <div className="w-12 h-12 bg-canvas border border-[var(--color-rule)] flex items-center justify-center mx-auto mb-2 rounded-rams">
                                 <span className="text-2xl">👨‍👩‍👧‍👦</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900">{t('largeGroupTitle')}</h3>
-                            <p className="text-gray-500 text-sm">
+                            <h3 className="text-xl font-display font-bold text-ink">{t('largeGroupTitle')}</h3>
+                            <p className="text-subInk text-sm font-mono">
                                 {t('largeGroupDesc')}
                             </p>
                             <div className="flex flex-col gap-2 pt-2">
-                                <a href="tel:0985284217" className="bg-black text-white py-2.5 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                                <a href="tel:0985284217" className="bg-ink text-paper py-2.5 rounded-none font-bold hover:bg-paper hover:text-ink border border-ink transition-colors flex items-center justify-center gap-1.5 text-sm font-mono uppercase">
                                     📞 {t('call')} 098-528-4217
                                 </a>
-                                <a href="https://www.facebook.com/inthehausth" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-2.5 rounded-xl font-bold hover:bg-[#166fe5] transition-colors flex items-center justify-center gap-1.5 text-sm">
+                                <a href="https://www.facebook.com/inthehausth" target="_blank" rel="noreferrer" className="bg-[#1877F2] text-white py-2.5 rounded-none font-bold hover:bg-[#166fe5] border border-[#1877F2] transition-colors flex items-center justify-center gap-1.5 text-sm font-mono uppercase">
                                     FB: ร้านในบ้าน นครพนม
                                 </a>
                             </div>
-                            <button onClick={() => setShowLargeGroupModal(false)} className="text-gray-400 text-xs hover:text-black mt-2">{t('close')}</button>
+                            <button onClick={() => setShowLargeGroupModal(false)} className="text-subInk text-xs hover:text-ink mt-2 font-mono uppercase">{t('close')}</button>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <button onClick={nextStep} disabled={!date || !time} className="w-full bg-black text-white py-4 rounded-xl font-bold mt-8 shadow-lg disabled:opacity-20 transition-all flex justify-center items-center gap-2 active:scale-95">
+            <button onClick={nextStep} disabled={!date || !time} className="w-full bg-ink text-paper border border-ink py-4 rounded-none font-mono font-bold mt-8 hover:bg-paper hover:text-ink disabled:bg-canvas disabled:border-[var(--color-rule)] disabled:text-subInk transition-colors flex justify-center items-center gap-2 uppercase tracking-widest">
                 {t('selectTable')} <ArrowRight size={18} />
             </button>
         </div>

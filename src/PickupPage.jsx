@@ -242,15 +242,15 @@ export default function PickupPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F9F9F9] flex flex-col p-6 font-sans text-black">
+        <div className="min-h-screen bg-canvas flex flex-col p-6 font-sans text-ink">
             {/* Nav */}
-            <div className="flex justify-between items-center mb-6">
-                <button onClick={() => step === 1 ? navigate('/') : setStep(1)} className="p-2 hover:bg-white rounded-full transition-colors">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--color-rule)]">
+                <button onClick={() => step === 1 ? navigate('/') : setStep(1)} className="p-2 hover:bg-paper rounded-rams transition-colors border border-[var(--color-rule)]">
                     <ArrowLeft size={20} />
                 </button>
                 <div className="flex gap-1">
-                    <div className={`h-1 w-8 rounded-full transition-all ${step >= 1 ? 'bg-black' : 'bg-gray-200'}`} />
-                    <div className={`h-1 w-8 rounded-full transition-all ${step >= 2 ? 'bg-black' : 'bg-gray-200'}`} />
+                    <div className={`h-1 w-8 transition-all ${step >= 1 ? 'bg-ink' : 'bg-[var(--color-rule)]'}`} />
+                    <div className={`h-1 w-8 transition-all ${step >= 2 ? 'bg-ink' : 'bg-[var(--color-rule)]'}`} />
                 </div>
             </div>
 
@@ -261,22 +261,22 @@ export default function PickupPage() {
                     {step === 1 && (
                         <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col h-full">
                             <div className="mb-6">
-                                <h1 className="text-3xl font-bold tracking-tight">{t('orderFood')}</h1>
-                                <p className="text-gray-500 text-sm uppercase tracking-widest">{t('pickup')}</p>
+                                <h1 className="text-3xl font-display font-bold tracking-tight">{t('orderFood')}</h1>
+                                <p className="text-subInk text-sm uppercase tracking-widest font-mono">{t('pickup')}</p>
                             </div>
 
                             <div className="flex justify-between items-end mb-4 shrink-0">
                                 <div className="relative flex-1 mr-4">
-                                    <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                                    <input type="text" placeholder={t('searchMenu')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:border-black" />
+                                    <Search className="absolute left-3 top-2.5 text-subInk w-4 h-4" />
+                                    <input type="text" placeholder={t('searchMenu')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-paper border border-[var(--color-rule)] pl-9 pr-4 py-2 rounded-rams text-sm focus:outline-none focus:border-ink transition-colors" />
                                 </div>
                                 <ViewToggle mode={viewMode} setMode={setViewMode} />
                             </div>
 
-                            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-2">
-                                <button onClick={() => setActiveCategory('All')} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === 'All' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>All</button>
+                            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-2 border-b border-[var(--color-rule)]">
+                                <button onClick={() => setActiveCategory('All')} className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono transition-all border ${activeCategory === 'All' ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}>All</button>
                                 {categories.map(cat => (
-                                    <button key={cat.id} onClick={() => setActiveCategory(cat.name)} className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeCategory === cat.name ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>{cat.name}</button>
+                                    <button key={cat.id} onClick={() => setActiveCategory(cat.name)} className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono transition-all border ${activeCategory === cat.name ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}>{cat.name}</button>
                                 ))}
                             </div>
 
@@ -290,16 +290,16 @@ export default function PickupPage() {
 
                             <AnimatePresence>
                                 {cart.length > 0 && (
-                                    <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 p-4 pb-8 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
+                                    <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed bottom-0 left-0 right-0 bg-paper/90 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50">
                                         <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
                                             <div className="flex flex-col">
-                                                <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
+                                                <div className="text-xs font-mono text-subInk uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
                                                 <div className="flex items-end gap-2">
-                                                    <span className="font-bold text-sm bg-black text-white px-2 py-0.5 rounded-full">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
+                                                    <span className="font-mono text-sm bg-ink text-paper px-2 py-0.5 border border-[var(--color-rule)]">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
                                                     <span className="font-mono font-bold text-2xl leading-none">฿{cartTotal}</span>
                                                 </div>
                                             </div>
-                                            <button onClick={() => setStep(2)} className="bg-black text-[#DFFF00] px-8 py-3 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-gray-900 transition-transform active:scale-95 shadow-lg">
+                                            <button onClick={() => setStep(2)} className="bg-brand text-ink border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper transition-all active:scale-95">
                                                 {t('next')} <ArrowRight size={18} />
                                             </button>
                                         </div>
@@ -319,37 +319,38 @@ export default function PickupPage() {
                     {step === 2 && (
                         <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex-1 flex flex-col h-full overflow-y-auto">
                             <div className="mb-6">
-                                <h1 className="text-3xl font-bold tracking-tight">{t('confirmOrder')}</h1>
-                                <p className="text-gray-500 text-sm uppercase tracking-widest">{t('checkout')}</p>
+                                <h1 className="text-3xl font-display font-bold tracking-tight">{t('confirmOrder')}</h1>
+                                <p className="text-subInk font-mono text-sm uppercase tracking-widest">{t('checkout')}</p>
                             </div>
 
                             <div className="space-y-4 pb-20">
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase">{t('contactInfo')}</h3>
-                                    <input type="text" placeholder={t('yourName')} value={contactName} onChange={e => setContactName(e.target.value)} className="w-full bg-gray-50 border-b border-gray-200 py-2 focus:border-black outline-none" />
-                                    <input type="tel" placeholder={t('phoneNumber')} value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full bg-gray-50 border-b border-gray-200 py-2 focus:border-black outline-none" />
+                                <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
+                                    <h3 className="text-xs font-mono text-subInk uppercase">{t('contactInfo')}</h3>
+                                    <input type="text" placeholder={t('yourName')} value={contactName} onChange={e => setContactName(e.target.value)} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none transition-colors" />
+                                    <input type="tel" placeholder={t('phoneNumber')} value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none transition-colors" />
                                 </div>
 
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-3">{t('specialRequest')}</label>
-                                    <textarea value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} placeholder={t('specialRequestPlaceholder')} className="w-full bg-transparent border-b border-gray-200 py-2 focus:border-black outline-none resize-none text-sm" rows={2} />
+                                <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
+                                    <label className="text-xs font-mono text-subInk uppercase block mb-3">{t('specialRequest')}</label>
+                                    <textarea value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} placeholder={t('specialRequestPlaceholder')} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none resize-none text-sm transition-colors" rows={2} />
                                 </div>
 
                                 {/* Pickup Time Dropdown */}
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-3">{t('pickupTime')}</label>
+                                <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
+                                    <label className="text-xs font-mono text-subInk uppercase block mb-3">{t('pickupTime')}</label>
                                     
-                                    <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
-                                        <button onClick={() => { setPickupDate('today'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'today' ? 'bg-white shadow text-black' : 'text-gray-400'}`}>{t('today')}</button>
-                                        <button onClick={() => { setPickupDate('tomorrow'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${pickupDate === 'tomorrow' ? 'bg-white shadow text-black' : 'text-gray-400'}`}>{t('tomorrow')}</button>
+                                    <div className="flex border border-[var(--color-rule)] mb-4 rounded-rams overflow-hidden">
+                                        <button onClick={() => { setPickupDate('today'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold transition-all ${pickupDate === 'today' ? 'bg-ink text-paper' : 'bg-transparent text-subInk hover:bg-canvas'}`}>{t('today')}</button>
+                                        <div className="w-px bg-[var(--color-rule)]"></div>
+                                        <button onClick={() => { setPickupDate('tomorrow'); setPickupTime(''); }} className={`flex-1 py-2 text-sm font-bold transition-all ${pickupDate === 'tomorrow' ? 'bg-ink text-paper' : 'bg-transparent text-subInk hover:bg-canvas'}`}>{t('tomorrow')}</button>
                                     </div>
 
                                     <div className="relative">
-                                        <Clock className="absolute left-3 top-3 text-gray-400 w-5 h-5 pointer-events-none" />
+                                        <Clock className="absolute left-3 top-3 text-subInk w-5 h-5 pointer-events-none" />
                                         <select 
                                             value={pickupTime} 
                                             onChange={(e) => setPickupTime(e.target.value)} 
-                                            className="w-full bg-gray-50 border border-gray-200 text-black font-bold p-3 pl-10 rounded-xl outline-none focus:border-black appearance-none"
+                                            className="w-full bg-canvas border border-[var(--color-rule)] text-ink font-mono font-bold p-3 pl-10 rounded-rams outline-none focus:border-ink appearance-none transition-colors"
                                         >
                                             <option value="" disabled selected>{t('selectPickupTime')}</option>
                                             {availableTimeSlots().length === 0 ? (
@@ -361,25 +362,25 @@ export default function PickupPage() {
                                             )}
                                         </select>
                                         {/* Custom chevron */}
-                                        <div className="absolute right-4 top-4 w-2 h-2 border-r-2 border-b-2 border-gray-400 rotate-45 pointer-events-none"></div>
+                                        <div className="absolute right-4 top-4 w-2 h-2 border-r-2 border-b-2 border-subInk rotate-45 pointer-events-none"></div>
                                     </div>
-                                    <p className="text-xs text-gray-400 mt-2">*{t('advanceBooking')}: {minAdvanceHours} {t('hours')}.</p>
+                                    <p className="text-xs font-mono text-subInk mt-2">*{t('advanceBooking')}: {minAdvanceHours} {t('hours')}.</p>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">{t('orderSummary')}</h3>
+                                <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
+                                    <h3 className="text-xs font-mono text-subInk uppercase mb-3">{t('orderSummary')}</h3>
                                     {cart.map((item, index) => (
-                                        <div key={index} className="flex justify-between text-sm mb-3 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+                                        <div key={index} className="flex justify-between text-sm mb-3 border-b border-[var(--color-rule)] pb-2 last:border-0 last:pb-0">
                                             <div>
-                                                <div className="text-gray-900 font-bold">{item.name} <span className="text-gray-400 text-xs">x{item.qty}</span></div>
-                                                {item.optionsSummary?.map((opt, i) => <div key={i} className="text-xs text-gray-500">+ {opt.name} ({opt.price})</div>)}
-                                                {item.specialRequest && <div className="text-xs text-brand">{t('note')}: {item.specialRequest}</div>}
+                                                <div className="text-ink font-bold">{item.name} <span className="text-subInk text-xs font-mono">x{item.qty}</span></div>
+                                                {item.optionsSummary?.map((opt, i) => <div key={i} className="text-xs font-mono text-subInk">+ {opt.name} ({opt.price})</div>)}
+                                                {item.specialRequest && <div className="text-xs font-mono text-brand">{t('note')}: {item.specialRequest}</div>}
                                             </div>
-                                            <span className="font-bold font-mono text-gray-900">{item.totalPricePerUnit * item.qty}.-</span>
+                                            <span className="font-bold font-mono text-ink">{item.totalPricePerUnit * item.qty}.-</span>
                                         </div>
                                     ))}
-                                    <div className="border-t border-gray-100 mt-2 pt-2 space-y-1">
-                                         <div className="flex justify-between text-base text-gray-500"><span>{t('subtotal')}</span><span>{cartTotal}.-</span></div>
+                                    <div className="border-t border-[var(--color-rule)] mt-2 pt-2 space-y-1">
+                                         <div className="flex justify-between font-mono text-base text-subInk"><span>{t('subtotal')}</span><span>{cartTotal}.-</span></div>
                                          
                                          {/* PROMO INPUT */}
                                          <div className="py-2">
@@ -390,17 +391,17 @@ export default function PickupPage() {
                                                     value={promoCode}
                                                     onChange={e => setPromoCode(e.target.value.toUpperCase())}
                                                     disabled={!!appliedPromo}
-                                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold uppercase placeholder:normal-case outline-none focus:border-black disabled:bg-gray-100 disabled:text-gray-400"
+                                                    className="flex-1 bg-canvas border border-[var(--color-rule)] rounded-none px-3 py-2 text-sm font-mono font-bold uppercase placeholder:normal-case outline-none focus:border-ink disabled:bg-[var(--color-rule)] disabled:text-subInk"
                                                 />
                                                 {appliedPromo ? (
-                                                    <button onClick={removePromo} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg font-bold text-xs border border-red-100 hover:bg-red-100">
+                                                    <button onClick={removePromo} className="bg-canvas text-error px-3 py-2 rounded-none font-mono font-bold text-xs border border-[var(--color-rule)] hover:bg-error hover:text-paper">
                                                         Remove
                                                     </button>
                                                 ) : (
                                                     <button 
                                                         onClick={handleApplyCode} 
                                                         disabled={!promoCode || isValidating}
-                                                        className="bg-black text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50"
+                                                        className="bg-ink text-paper px-4 py-2 rounded-none font-mono font-bold text-xs disabled:opacity-50"
                                                     >
                                                         {isValidating ? '...' : 'Apply'}
                                                     </button>
@@ -408,54 +409,54 @@ export default function PickupPage() {
                                             </div>
                                              {/* Error Message */}
                                             {promoError && (
-                                                <p className="text-red-500 text-xs font-bold flex items-center gap-1 mt-1">
+                                                <p className="text-error text-xs font-mono font-bold flex items-center gap-1 mt-1">
                                                     <AlertCircle size={12} /> {promoError}
                                                 </p>
                                             )}
                                             {/* Valid Message */}
                                             {appliedPromo && (
-                                                <div className="flex items-center gap-2 text-green-600 text-xs font-bold bg-green-50 p-2 rounded border border-green-100 mt-2">
+                                                <div className="flex items-center gap-2 text-ink text-xs font-mono font-bold bg-[var(--color-rule)] p-2 rounded-none mt-2">
                                                     <Tag size={12} /> Code {appliedPromo.code} applied!
                                                 </div>
                                             )}
                                          </div>
 
                                          {appliedPromo && (
-                                            <div className="flex justify-between text-base text-green-600 font-bold">
+                                            <div className="flex justify-between font-mono text-base text-ink font-bold">
                                                 <span>
                                                     {t('discount')}
-                                                    {appliedPromo.discountType === 'percent' && <span className="ml-2 text-xs bg-green-100 px-1.5 py-0.5 rounded-md align-middle">{appliedPromo.discountValue}%</span>}
+                                                    {appliedPromo.discountType === 'percent' && <span className="ml-2 text-xs bg-[var(--color-rule)] px-1.5 py-0.5 align-middle">{appliedPromo.discountValue}%</span>}
                                                 </span>
                                                 <span>- {discountAmount}.-</span>
                                             </div>
                                          )}
 
-                                         <div className="flex justify-between font-bold text-xl pt-2 border-t border-gray-100">
+                                         <div className="flex justify-between font-mono font-bold text-xl pt-2 border-t border-[var(--color-rule)]">
                                             <span>{t('total')}</span>
                                             <span>{finalTotal}.-</span>
                                          </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 text-xs leading-relaxed">
-                                    <p className="font-bold mb-2 text-sm">เงื่อนไขการสั่งกลับบ้าน (100% Payment)</p>
-                                    {qrCodeUrl && <div className="mb-4 flex justify-center bg-white p-2 rounded-lg border border-red-200"><img src={qrCodeUrl} alt="Payment QR" className="w-48 h-auto object-contain" /></div>}
-                                    <p className="opacity-90 font-medium text-xs mb-3 border-b border-red-200/50 pb-3 leading-relaxed">
+                                <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] text-ink text-xs leading-relaxed">
+                                    <p className="font-mono font-bold mb-2 text-sm uppercase">100% Payment Required</p>
+                                    {qrCodeUrl && <div className="mb-4 flex justify-center bg-paper p-2 border border-[var(--color-rule)]"><img src={qrCodeUrl} alt="Payment QR" className="w-48 h-auto object-contain mix-blend-multiply" /></div>}
+                                    <p className="opacity-90 font-medium text-xs mb-3 border-b border-[var(--color-rule)] pb-3 leading-relaxed">
                                         • ต้องโอนชำระเงินเต็มจำนวน 100% เท่านั้น<br/>
                                         • ไม่สามารถยกเลิกออเดอร์และขอคืนเงินได้ทุกกรณีหลังยืนยันการชำระเงิน
                                     </p>
                                     <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                                        <input type="checkbox" checked={isAgreed} onChange={e => setIsAgreed(e.target.checked)} className="accent-black w-4 h-4" />
-                                        <span className="font-bold">{t('agreeTerms')}</span>
+                                        <input type="checkbox" checked={isAgreed} onChange={e => setIsAgreed(e.target.checked)} className="accent-ink w-4 h-4" />
+                                        <span className="font-mono font-bold">{t('agreeTerms')}</span>
                                     </label>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('uploadSlip')}</label>
-                                    <input type="file" accept="image/*" onChange={e => setSlipFile(e.target.files[0])} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-black file:text-white hover:file:bg-gray-800 transition-colors cursor-pointer" />
+                                    <label className="block text-xs font-mono font-bold text-subInk uppercase mb-2">{t('uploadSlip')}</label>
+                                    <input type="file" accept="image/*" onChange={e => setSlipFile(e.target.files[0])} className="block w-full text-sm text-subInk file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer" />
                                 </div>
 
-                                <button onClick={handleSubmit} disabled={submitting || !isAgreed || !pickupTime || !slipFile} className="w-full bg-[#DFFF00] text-black py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-[#cce600] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all mt-4">
+                                <button onClick={handleSubmit} disabled={submitting || !isAgreed || !pickupTime || !slipFile} className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-bold text-lg hover:bg-paper disabled:bg-canvas disabled:text-subInk disabled:border-[var(--color-rule)] disabled:cursor-not-allowed transition-all mt-4 font-mono uppercase tracking-widest">
                                     {submitting ? t('processing') : `${t('confirmOrder')} ${finalTotal}.-`}
                                 </button>
                             </div>

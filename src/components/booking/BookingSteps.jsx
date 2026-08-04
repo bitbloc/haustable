@@ -41,15 +41,15 @@ export default function BookingSteps() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F9F9F9] flex flex-col p-6 font-sans text-black">
+        <div className="min-h-screen bg-canvas flex flex-col p-6 font-sans text-ink">
             {/* Top Nav */}
-            <div className="flex justify-between items-center mb-6">
-                <button onClick={handleBack} className="p-2 hover:bg-white rounded-full transition-colors">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--color-rule)]">
+                <button onClick={handleBack} className="p-2 hover:bg-paper rounded-rams transition-colors border border-[var(--color-rule)]">
                     <ArrowLeft size={20} />
                 </button>
                 <div className="flex gap-1">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className={`h-1 w-8 rounded-full transition-all duration-500 ${i <= step ? 'bg-black' : 'bg-gray-200'} `} />
+                        <div key={i} className={`h-1 w-8 transition-all duration-500 ${i <= step ? 'bg-ink' : 'bg-[var(--color-rule)]'} `} />
                     ))}
                 </div>
             </div>
