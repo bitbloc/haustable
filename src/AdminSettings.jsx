@@ -90,6 +90,7 @@ export default function AdminSettings() {
         booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00',
         is_menu_system_enabled: 'true',
         alert_sound_url: null,
+        kds_alert_sound_url: null,
         sms_api_key: '',
         sms_api_secret: '',
         admin_phone_contact: '',
@@ -123,6 +124,7 @@ export default function AdminSettings() {
     const [uploadingQr, setUploadingQr] = useState(false)
     const [uploadingFloor, setUploadingFloor] = useState(false)
     const [uploadingSound, setUploadingSound] = useState(false)
+    const [uploadingKdsSound, setUploadingKdsSound] = useState(false)
     const [uploadingHomeBg, setUploadingHomeBg] = useState(false)
     const [uploadingLogo, setUploadingLogo] = useState(false)
     const [crmQrUrl, setCrmQrUrl] = useState('')
@@ -1232,6 +1234,54 @@ export default function AdminSettings() {
                                 cursor-pointer"
                             />
                             <p className="mt-2 text-xs text-gray-400">{uploadingSound ? 'Uploading...' : 'Recommended: Short loopable sound'}</p>
+                        </div>
+                        
+                        {/* KDS Sound Alert Settings */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="flex-1 bg-canvas rounded-xl p-4 flex items-center justify-between border border-gray-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                            <Bell size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-ink">KDS Alert Sound</p>
+                                            <p className="text-xs text-subInk">
+                                                {settings.kds_alert_sound_url ? 'Custom File Uploaded' : 'System Default (Same as POS)'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {settings.kds_alert_sound_url && (
+                                        <audio controls src={settings.kds_alert_sound_url} className="h-8 w-32" />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-subInk uppercase mb-2">
+                                    Upload KDS Sound (Max 1MB, .mp3/.wav)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept=".mp3,audio/mpeg,audio/wav"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0]
+                                        if (file) {
+                                            if (file.size > 1024 * 1024) return alert("File size exceeds 1MB")
+                                            handleUpload(file, 'kds_alert_sound_url', setUploadingKdsSound)
+                                        }
+                                    }}
+                                    disabled={uploadingKdsSound}
+                                    className="block w-full text-sm text-subInk
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-xs file:font-semibold
+                                    file:bg-orange-100 file:text-orange-700
+                                    hover:file:bg-orange-200
+                                    cursor-pointer"
+                                />
+                                <p className="mt-2 text-xs text-gray-400">{uploadingKdsSound ? 'Uploading...' : 'Recommended: Short loopable sound'}</p>
+                            </div>
                         </div>
                     </div>
 

@@ -37,7 +37,7 @@ function StaffLiveOrdersContent() {
     
     // Global State
     const { 
-        orders, scheduleOrders, historyOrders, loading, isConnected, soundUrl,
+        orders, scheduleOrders, historyOrders, loading, isConnected, soundUrl, kdsSoundUrl,
         fetchLiveOrders, fetchScheduleOrders, fetchHistoryOrders, subscribeRealtime, updateStatus
     } = useOrderContext()
 
@@ -54,7 +54,8 @@ function StaffLiveOrdersContent() {
 
     // Hooks
     const { request, release } = useWakeLock()
-    const { play, stop, isPlaying } = useAudioAlert(soundUrl)
+    const activeSoundUrl = kdsSoundUrl || soundUrl; // Fallback to POS sound if KDS sound not uploaded yet
+    const { play, stop, isPlaying } = useAudioAlert(activeSoundUrl)
     const { requestPermission: requestPush, triggerNotification, isSubscribed } = usePushNotifications()
 
     // --- Tab Logic ---
@@ -92,8 +93,8 @@ function StaffLiveOrdersContent() {
     // Combined "Sound Check" and "Start"
     const startSystem = useCallback(async () => {
         setSystemReady(true)
-        if (soundUrl) {
-             const audio = new Audio(soundUrl)
+        if (activeSoundUrl) {
+             const audio = new Audio(activeSoundUrl)
              audio.play().catch(() => {}) // Pre-load interaction
         }
         await requestPush()
@@ -122,7 +123,7 @@ function StaffLiveOrdersContent() {
             stop()
         }
 
-    }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, request, release, play, stop, soundUrl, requestPush, triggerNotification])
+    }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, request, release, play, stop, activeSoundUrl, requestPush, triggerNotification])
 
     // Auto-start system on mount without requiring tap
     useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 
@@ -16,7 +16,29 @@ export default function usePushNotifications() {
     }
   }, []);
 
-  const requestPermission = async () => {
+  const saveTokenToDatabase = useCallback(async (token) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Save to 'profiles' table. Ensure 'fcm_token' column exists.
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        fcm_token: token,
+        updated_at: new Date()
+      })
+      .eq('id', user.id);
+
+    if (error) {
+        console.error("Error saving token to profiles:", error);
+        // Fallback: If simple update fails, try upsert if row might not exist (though profiles should exist for users)
+        // or just log it for now.
+    } else {
+        console.log("Token saved to DB");
+    }
+  }, []);
+
+  const requestPermission = useCallback(async () => {
     if (typeof Notification === 'undefined') {
       toast.error("Notifications not supported in this browser.");
       return;
@@ -59,35 +81,13 @@ export default function usePushNotifications() {
       console.error('An error occurred while retrieving token. ', error);
       toast.error("Error enabling notifications.");
     }
-  };
-
-  const saveTokenToDatabase = async (token) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Save to 'profiles' table. Ensure 'fcm_token' column exists.
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        fcm_token: token,
-        updated_at: new Date()
-      })
-      .eq('id', user.id);
-
-    if (error) {
-        console.error("Error saving token to profiles:", error);
-        // Fallback: If simple update fails, try upsert if row might not exist (though profiles should exist for users)
-        // or just log it for now.
-    } else {
-        console.log("Token saved to DB");
-    }
-  };
+  }, [saveTokenToDatabase]);
 
   /**
    * Triggers a system notification (Desktop style)
    * Uses Service Worker if available -> "Desktop" feel in PWA
    */
-  const triggerNotification = (title, options = {}) => {
+  const triggerNotification = useCallback((title, options = {}) => {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
     const defaultOptions = {
@@ -104,7 +104,7 @@ export default function usePushNotifications() {
     } else {
         new Notification(title, defaultOptions);
     }
-  };
+  }, []);
 
   // Listen for foreground messages
   useEffect(() => {

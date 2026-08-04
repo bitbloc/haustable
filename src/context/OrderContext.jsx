@@ -10,7 +10,8 @@ const initialState = {
     historyOrders: [],
     loading: true,
     isConnected: false,
-    soundUrl: null
+    soundUrl: null,
+    kdsSoundUrl: null
 }
 
 function orderReducer(state, action) {
@@ -20,7 +21,7 @@ function orderReducer(state, action) {
         case 'SET_HISTORY': return { ...state, historyOrders: action.payload }
         case 'SET_LOADING': return { ...state, loading: action.payload }
         case 'SET_CONNECTED': return { ...state, isConnected: action.payload }
-        case 'SET_SOUND_URL': return { ...state, soundUrl: action.payload }
+        case 'SET_SOUND_URL': return { ...state, soundUrl: action.payload.pos, kdsSoundUrl: action.payload.kds }
         case 'UPDATE_ORDER_STATUS': {
             const { id, status } = action.payload
             // Simple optimistic update helper if needed, but we usually fetch fresh
@@ -34,11 +35,15 @@ export function OrderProvider({ children }) {
     const [state, dispatch] = useReducer(orderReducer, initialState)
     const fetchDebounceRef = useRef({})
 
-    // Init Sound URL
+    // Init Sound URLs
     useEffect(() => {
         const init = async () => {
-            const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
-            if (data?.value) dispatch({ type: 'SET_SOUND_URL', payload: data.value })
+            const { data } = await supabase.from('app_settings').select('key, value').in('key', ['alert_sound_url', 'kds_alert_sound_url'])
+            if (data) {
+                const posSound = data.find(d => d.key === 'alert_sound_url')?.value
+                const kdsSound = data.find(d => d.key === 'kds_alert_sound_url')?.value
+                dispatch({ type: 'SET_SOUND_URL', payload: { pos: posSound, kds: kdsSound } })
+            }
         }
         init()
     }, [])
