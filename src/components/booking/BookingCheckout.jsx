@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Upload, X, Tag, AlertCircle } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
@@ -35,7 +35,7 @@ export default function BookingCheckout() {
     const depositAmount = Math.ceil(finalTotal * 0.5)
 
     // Revalidate when cartTotal changes
-    React.useEffect(() => {
+    useEffect(() => {
         if (appliedPromo) {
             revalidatePromo(cartTotal, 'booking')
         }

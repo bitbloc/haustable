@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 import { Maximize, Minimize, ZoomIn, ZoomOut, RotateCw, X, Image } from 'lucide-react'
@@ -22,10 +22,10 @@ export default function StepTableSelection() {
     const [previewImage, setPreviewImage] = useState(null)
     const [availabilityTooltip, setAvailabilityTooltip] = useState(null)
     const [lockedTableIds, setLockedTableIds] = useState([]) // From Presence
-    const channelRef = React.useRef(null)
+    const channelRef = useRef(null)
     
     // Unique ID for this browser session's presence
-    const sessionId = React.useMemo(() => crypto.randomUUID(), [])
+    const sessionId = useMemo(() => crypto.randomUUID(), [])
 
     // Fetch availability on mount (or whenever entering this step)
     useEffect(() => {
