@@ -9,7 +9,7 @@ import HomeActions from './components/home/HomeActions'
 import HomeNavigation from './components/home/HomeNavigation'
 import AuthModal from './components/AuthModal'
 import HistoryModal from './components/history/HistoryModal'
-import { HelpCircle, ChevronDown, CheckCircle, Info, Phone, MapPin, Clock, ExternalLink } from 'lucide-react'
+
 
 export default function Home({ session }) {
     // 1. Logic
@@ -69,7 +69,7 @@ export default function Home({ session }) {
     return (
         <CasualLayout backgroundImage={settings?.home_background_url}>
             
-            <div className="haus-home-page w-full flex flex-col gap-6 text-[var(--color-hallmark-ink)] pt-12 pb-28">
+            <div className="haus-home-page w-full flex flex-col text-[var(--color-hallmark-ink)] pt-12 pb-28">
                 
                 <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
 
@@ -111,7 +111,7 @@ export default function Home({ session }) {
                 <HomeHeader t={t} status={status} />
 
                 {/* 3. Braun Info Instrument Panel */}
-                <div className="w-full glass-card p-4 flex flex-col gap-3 font-[var(--font-body)]">
+                <div className="w-full bg-[var(--color-hallmark-paper)] border-b border-[var(--color-hallmark-rule)] p-4 flex flex-col gap-3 font-[var(--font-body)]">
                     <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                         <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                             [ INSTRUMENT PANEL // DETAILS ]
@@ -124,19 +124,19 @@ export default function Home({ session }) {
                     <div className="flex flex-col gap-2 font-mono text-[12px] text-[var(--color-hallmark-ink)]">
                         <div className="flex items-center justify-between">
                             <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
-                                <Clock size={12} /> HOURS:
+                                [ TIME ]
                             </span>
                             <span className="font-bold">{settings?.link_hours || "เปิดทุกวัน 11:30 - 23:30 น."}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
-                                <MapPin size={12} /> LOCATION:
+                                [ LOC ]
                             </span>
                             <span className="font-bold text-right pl-4">{settings?.link_location_text || "ริมแม่น้ำโขง · นครพนม"}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-[var(--color-hallmark-ink-muted)] flex items-center gap-1.5">
-                                <Phone size={12} /> TEL:
+                                [ TEL ]
                             </span>
                             <span className="font-bold">098-528-4217</span>
                         </div>
@@ -144,7 +144,7 @@ export default function Home({ session }) {
                 </div>
 
                 {/* 4. Action Buttons (Grid Layout) */}
-                <div className="w-full">
+                <div className="w-full bg-[var(--color-hallmark-paper)] border-b border-[var(--color-hallmark-rule)]">
                     <HomeActions 
                         settings={settings}
                         checkStatus={checkServiceStatus}
@@ -156,7 +156,7 @@ export default function Home({ session }) {
 
                 {/* 5. Signature Menu Section */}
                 {featuredItems.length > 0 && (
-                    <div className="w-full glass-card p-4 flex flex-col gap-3">
+                    <div className="w-full bg-[var(--color-hallmark-paper)] border-b border-[var(--color-hallmark-rule)] p-4 flex flex-col gap-3">
                         <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                             <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                                 [ 01 // SIGNATURE DISHES ]
@@ -168,7 +168,7 @@ export default function Home({ session }) {
 
                         <div className="grid grid-cols-2 gap-3">
                             {featuredItems.map((item) => (
-                                <div key={item.id} className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm overflow-hidden flex flex-col">
+                                <div key={item.id} className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-none overflow-hidden flex flex-col">
                                     <div className="aspect-[4/3] w-full bg-neutral-200 dark:bg-neutral-800 relative overflow-hidden border-b border-[var(--color-hallmark-rule)]">
                                         <img 
                                             src={item.image_url || '/logo.png'} 
@@ -197,7 +197,7 @@ export default function Home({ session }) {
                 )}
 
                 {/* 6. How-It-Works Guide (Timeline) */}
-                <div className="w-full glass-card p-4 flex flex-col gap-3">
+                <div className="w-full bg-[var(--color-hallmark-paper)] border-b border-[var(--color-hallmark-rule)] p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                         <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                             [ 02 // HOW TO ENGAGE ]
@@ -215,7 +215,7 @@ export default function Home({ session }) {
                             { step: '04', title: 'ติดตามสถานะออเดอร์', desc: 'ตรวจสอบสถานะอาหารและประวัติการสั่งได้ผ่านระบบแจ้งเตือน' }
                         ].map((item, idx) => (
                             <div key={idx} className="flex gap-3 items-start">
-                                <span className="font-mono text-[11px] font-bold text-[var(--color-brand)] bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] w-6 h-6 flex items-center justify-center rounded-full flex-shrink-0 mt-0.5">
+                                <span className="font-mono text-[10px] font-bold text-[var(--color-brand)] bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">
                                     {item.step}
                                 </span>
                                 <div className="flex flex-col text-left">
@@ -232,7 +232,7 @@ export default function Home({ session }) {
                 </div>
 
                 {/* 7. FAQ Accordion */}
-                <div className="w-full glass-card p-4 flex flex-col gap-3">
+                <div className="w-full bg-[var(--color-hallmark-paper)] border-b border-[var(--color-hallmark-rule)] p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                         <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink-muted)] uppercase tracking-wider">
                             [ 03 // FREQUENTLY ASKED ]
@@ -252,7 +252,9 @@ export default function Home({ session }) {
                                         className="w-full flex items-center justify-between text-left py-1 text-[13px] font-bold text-[var(--color-hallmark-ink)] cursor-pointer"
                                     >
                                         <span>{item.q}</span>
-                                        <ChevronDown size={14} className={`transform transition-transform duration-200 text-[var(--color-hallmark-ink-muted)] ${isOpen ? 'rotate-180' : ''}`} />
+                                        <span className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)]">
+                                            {isOpen ? '[ - ]' : '[ + ]'}
+                                        </span>
                                     </button>
                                     
                                     <AnimatePresence initial={false}>

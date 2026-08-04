@@ -29,8 +29,8 @@ export default function HomeHeader({ t, status }) {
                     <div className="relative w-2 h-2 flex items-center justify-center">
                         <span className={`absolute inset-0 rounded-full ${
                             status.isOpen 
-                                ? 'bg-emerald-500 shadow-[0_0_8px_oklch(64%_0.22_140)] animate-pulse' 
-                                : 'bg-red-500 shadow-[0_0_8px_oklch(62%_0.22_25)]'
+                                ? 'bg-[var(--color-accent-green)] shadow-[0_0_8px_var(--color-accent-green)] animate-pulse' 
+                                : 'bg-[var(--color-accent-red)] shadow-[0_0_8px_var(--color-accent-red)]'
                         }`} />
                     </div>
                     <span className="font-mono text-[9px] font-bold tracking-widest text-[var(--color-hallmark-ink)]">

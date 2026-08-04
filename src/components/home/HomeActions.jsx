@@ -1,5 +1,4 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, ShoppingBag, ChefHat, Music, ArrowRight, Lock } from 'lucide-react'
 
 export default function HomeActions({ settings, checkStatus, t, user, setShowAuthModal }) {
     const navigate = useNavigate();
@@ -19,7 +18,6 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
             path: '/booking',
             statusText: tableStatus.isOpen ? 'เปิดจองออฟไลน์/ออนไลน์' : 'ปิดให้บริการชั่วคราว',
             isOpen: tableStatus.isOpen,
-            icon: <Calendar size={18} />,
             accentColor: 'var(--color-brand)'
         },
         {
@@ -30,7 +28,6 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
             path: '/pickup',
             statusText: pickupStatus.isOpen ? 'สั่งล่วงหน้ารับหน้าร้าน' : 'บริการปิดชั่วคราว',
             isOpen: pickupStatus.isOpen,
-            icon: <ShoppingBag size={18} />,
             accentColor: 'var(--color-brand)'
         }
     ];
@@ -89,13 +86,15 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
 
                             <div className="flex items-center gap-2">
                                 {!user ? (
-                                    <div className="p-2 border border-dashed border-[var(--color-hallmark-rule)] rounded-sm text-[var(--color-hallmark-ink-muted)]">
-                                        <Lock size={14} />
-                                    </div>
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)] border border-dashed border-[var(--color-hallmark-rule)] px-2 py-1">
+                                        [ LOCKED ]
+                                    </span>
                                 ) : act.isOpen ? (
-                                    <ArrowRight size={16} className="text-[var(--color-hallmark-ink-muted)] group-hover:translate-x-1 transition-transform" />
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink)] group-hover:translate-x-1 transition-transform inline-block">
+                                        [ ENGAGE ]
+                                    </span>
                                 ) : (
-                                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-red-100 text-red-700 rounded-sm">
+                                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[var(--color-accent-red)] text-white rounded-none">
                                         OFFLINE
                                     </span>
                                 )}
@@ -108,7 +107,7 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
                             key={act.id}
                             to={act.isOpen ? act.path : '#'}
                             onClick={(e) => handleActionClick(e, act)}
-                            className={`group w-full flex flex-col justify-center rounded-lg border bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-all duration-200 border-[var(--color-hallmark-rule)] shadow-sm focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] ${
+                            className={`group w-full flex flex-col justify-center rounded-none border-b border-[var(--color-hallmark-rule)] last:border-b-0 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-all duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] ${
                                 !act.isOpen ? 'opacity-65 cursor-not-allowed' : 'cursor-pointer'
                             }`}
                         >
