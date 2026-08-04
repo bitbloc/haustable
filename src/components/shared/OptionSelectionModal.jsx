@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { X, Plus, Minus } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 
 export default function OptionSelectionModal({ item, onClose, onConfirm }) {
@@ -52,34 +52,34 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
             // Check if already selected - if so, deselect it unless it is required
             if (currentSelections.includes(choiceId)) {
                 if (!group.is_required) {
-                    setSelectedOptions({
-                        ...selectedOptions,
+                    setSelectedOptions(prev => ({
+                        ...prev,
                         [group.id]: []
-                    })
+                    }))
                 }
             } else {
-                setSelectedOptions({
-                    ...selectedOptions,
+                setSelectedOptions(prev => ({
+                    ...prev,
                     [group.id]: [choiceId]
-                })
+                }))
             }
         } else {
             // Multiple
             if (currentSelections.includes(choiceId)) {
-                setSelectedOptions({
-                    ...selectedOptions,
+                setSelectedOptions(prev => ({
+                    ...prev,
                     [group.id]: currentSelections.filter(id => id !== choiceId)
-                })
+                }))
             } else {
                 // Check max selection
                 if (group.max_selection > 0 && currentSelections.length >= group.max_selection) {
                     toast.error(`เลือกได้สูงสุด ${group.max_selection} รายการ`)
                     return
                 }
-                setSelectedOptions({
-                    ...selectedOptions,
+                setSelectedOptions(prev => ({
+                    ...prev,
                     [group.id]: [...currentSelections, choiceId]
-                })
+                }))
             }
         }
     }
@@ -151,68 +151,67 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
 
     return (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pointer-events-none">
-            {/* Backdrop */}
+            {/* Backdrop - Removed blur for performance */}
             <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 bg-[var(--color-ink)]/40 pointer-events-auto"
                 onClick={onClose}
             />
 
-            {/* Modal Card */}
+            {/* Modal Card - Dieter Rams tabular layout */}
             <motion.div
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-0 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[90vh]"
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full max-w-md bg-[var(--color-paper)] border-t sm:border border-[var(--color-rule)] sm:rounded-sm z-10 pointer-events-auto flex flex-col max-h-[90vh] shadow-xl will-change-transform"
             >
-                {/* Header Image */}
-                <div className="relative h-48 bg-gray-100 shrink-0">
-                    {item.image_url ? (
-                        <img src={item.image_url} className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">No Image</div>
-                    )}
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md shadow-lg z-20">
-                        <X size={24} />
-                    </button>
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                        <h3 className="text-xl font-bold text-white pr-12">{item.name}</h3>
-                        <p className="text-gray-300 text-sm">{item.description}</p>
+                {/* Header (Text only, no heavy image gradient) */}
+                <div className="flex items-start justify-between p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)] shrink-0">
+                    <div className="pr-4">
+                        <h3 className="text-xl font-bold text-[var(--color-ink)] leading-tight">{item.name}</h3>
+                        {item.description && <p className="text-[var(--color-neutral)] text-sm mt-1">{item.description}</p>}
                     </div>
+                    <button onClick={onClose} className="shrink-0 p-2 text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] border border-[var(--color-rule)] touch-manipulation">
+                        <X size={20} />
+                    </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="flex-1 overflow-y-auto bg-[var(--color-paper-2)]">
                     {item.menu_item_options?.sort((a, b) => a.display_order - b.display_order).map(rel => {
                         const group = rel.option_groups
                         const currentSelections = selectedOptions[group.id] || []
-                        const isSatisfied = (!group.is_required) || (currentSelections.length >= group.min_selection)
-
+                        
                         return (
-                            <div key={group.id} className="space-y-3">
-                                <div className="flex justify-between items-baseline border-b border-gray-100 pb-1">
-                                    <h4 className="font-bold text-lg text-zinc-900">{group.name}</h4>
-                                    <div className="text-xs text-zinc-500">
-                                        {group.is_required && <span className="text-red-500 font-bold mr-1">*Required</span>}
-                                        {group.selection_type === 'single' ? 'Select 1' : `Select up to ${group.max_selection}`}
+                            <div key={group.id} className="mb-2 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
+                                <div className="flex justify-between items-baseline p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
+                                    <h4 className="font-bold text-base text-[var(--color-ink)]">{group.name}</h4>
+                                    <div className="text-xs text-[var(--color-neutral)] font-mono">
+                                        {group.is_required && <span className="text-[var(--color-accent)] font-bold mr-1">*REQ</span>}
+                                        {group.selection_type === 'single' ? 'SEL 1' : `MAX ${group.max_selection}`}
                                     </div>
                                 </div>
 
-                                <div className="space-y-2.5">
-                                    {group.option_choices?.sort((a, b) => a.display_order - b.display_order).map(choice => {
+                                <div className="flex flex-col">
+                                    {group.option_choices?.sort((a, b) => a.display_order - b.display_order).map((choice, index) => {
                                         const isSelected = currentSelections.includes(choice.id)
+                                        const isLast = index === group.option_choices.length - 1;
                                         return (
                                             <div
                                                 key={choice.id}
                                                 onClick={() => handleOptionToggle(group, choice.id)}
-                                                className={`flex justify-between items-center p-3.5 rounded-xl border cursor-pointer active:scale-[0.98] transition-all select-none touch-manipulation min-h-[48px] ${isSelected ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)] text-white shadow-md' : 'border-gray-200 bg-white hover:bg-gray-50 text-zinc-900'}`}
+                                                className={`flex justify-between items-center p-4 cursor-pointer active:bg-[var(--color-paper-2)] select-none touch-manipulation ${!isLast ? 'border-b border-[var(--color-rule)]' : ''}`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'border-white' : 'border-gray-300'}`}>
-                                                        {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full" />}
+                                                    <div className={`w-5 h-5 flex items-center justify-center shrink-0 ${group.selection_type === 'single' ? 'rounded-full' : 'rounded-sm'} border ${isSelected ? 'border-[var(--color-ink)]' : 'border-[var(--color-rule)]'}`}>
+                                                        {isSelected && <div className={`w-2.5 h-2.5 bg-[var(--color-ink)] ${group.selection_type === 'single' ? 'rounded-full' : 'rounded-sm'}`} />}
                                                     </div>
-                                                    <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-zinc-900'}`}>{choice.name}</span>
+                                                    <span className={`text-base ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{choice.name}</span>
                                                 </div>
                                                 {Number(choice.price_modifier) > 0 && (
-                                                    <span className={`font-mono text-sm font-bold ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>+{Number(choice.price_modifier)}</span>
+                                                    <span className={`font-mono text-sm ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
+                                                        +{Number(choice.price_modifier)}
+                                                    </span>
                                                 )}
                                             </div>
                                         )
@@ -222,38 +221,40 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                         )
                     })}
 
-                    {/* Special Note / Kitchen Instructions */}
-                    <div className="space-y-2 pt-3 border-t border-gray-100">
-                        <label className="block font-bold text-base text-zinc-900 flex items-center justify-between">
-                            <span>📝 หมายเหตุเพิ่มเติมถึงครัว (Special Note)</span>
-                            <span className="text-xs text-zinc-400 font-normal">ไม่บังคับ</span>
+                    {/* Special Note */}
+                    <div className="bg-[var(--color-paper)] border-b border-[var(--color-rule)] mb-8">
+                        <label className="flex items-center justify-between p-4 border-b border-[var(--color-rule)]">
+                            <span className="font-bold text-base text-[var(--color-ink)]">Special Note</span>
+                            <span className="text-xs text-[var(--color-neutral)] font-mono">OPTIONAL</span>
                         </label>
-                        <input
-                            type="text"
-                            placeholder="เช่น เผ็ดน้อย, แยกน้ำซุป, ไม่ใส่ผักชี"
-                            value={itemNote}
-                            onChange={(e) => setItemNote(e.target.value)}
-                            className="w-full bg-zinc-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-[oklch(52%_0.16_28)] focus:bg-white transition-all font-medium touch-manipulation"
-                        />
+                        <div className="p-4">
+                            <input
+                                type="text"
+                                placeholder="E.g. Less spicy, no cilantro"
+                                value={itemNote}
+                                onChange={(e) => setItemNote(e.target.value)}
+                                className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-4 py-3 text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-ink)] touch-manipulation"
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* Footer Controls */}
-                <div className="p-4 border-t border-gray-100 bg-white safe-area-bottom text-zinc-950 touch-manipulation select-none">
-                    <div className="flex items-center justify-between gap-4 mb-4">
-                        <span className="font-bold text-zinc-500 text-xs font-mono uppercase">Quantity</span>
-                        <div className="flex items-center gap-4 bg-zinc-100 rounded-full px-3 py-1.5">
-                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-xs disabled:opacity-50 text-zinc-800 hover:bg-zinc-50 cursor-pointer touch-manipulation active:scale-95 transition-transform" disabled={quantity <= 1}><Minus size={18} /></button>
-                            <span className="font-mono font-bold w-6 text-center text-lg text-zinc-900">{quantity}</span>
-                            <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-xs text-zinc-800 hover:bg-zinc-50 cursor-pointer touch-manipulation active:scale-95 transition-transform"><Plus size={18} /></button>
+                <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper)] safe-area-bottom shrink-0 touch-manipulation select-none flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <span className="font-bold text-[var(--color-neutral)] text-sm font-mono uppercase">Quantity</span>
+                        <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper)]">
+                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-12 flex items-center justify-center text-[var(--color-ink)] disabled:opacity-30 active:bg-[var(--color-paper-2)] touch-manipulation" disabled={quantity <= 1}><Minus size={18} /></button>
+                            <span className="font-mono font-bold w-10 text-center text-lg text-[var(--color-ink)]">{quantity}</span>
+                            <button onClick={() => setQuantity(quantity + 1)} className="w-12 h-12 flex items-center justify-center text-[var(--color-ink)] active:bg-[var(--color-paper-2)] touch-manipulation border-l border-[var(--color-rule)]"><Plus size={18} /></button>
                         </div>
                     </div>
 
                     <button
                         onClick={handleConfirm}
-                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-4 rounded-xl font-bold shadow-lg active:scale-98 transition-transform flex justify-between px-6 text-base cursor-pointer touch-manipulation"
+                        className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-4 font-bold flex justify-between px-6 text-base cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
                     >
-                        <span>Add to Order</span>
+                        <span>ADD TO ORDER</span>
                         <span className="font-mono">{currentTotal}.-</span>
                     </button>
                 </div>
