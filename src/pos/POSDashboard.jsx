@@ -597,7 +597,7 @@ export default function POSDashboard() {
         try {
             const { data: fullBooking } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_kitchen, is_bar, printer_target))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
                 .eq('id', bookingId)
                 .maybeSingle();
 
