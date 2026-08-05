@@ -1039,6 +1039,21 @@ export default function POSDashboard() {
                     }
                 }
             })
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'order_items'
+            }, (payload) => {
+                const bookingId = payload.new?.booking_id;
+                if (bookingId) {
+                    if (window.autoPrintDebounceTimer) {
+                        clearTimeout(window.autoPrintDebounceTimer);
+                    }
+                    window.autoPrintDebounceTimer = setTimeout(() => {
+                        handleAutoPrintQROrder(bookingId);
+                    }, 800); // Debounce bulk inserts
+                }
+            })
             .subscribe();
 
         return () => {
