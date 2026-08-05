@@ -111,6 +111,7 @@ serve(async (req) => {
       booking_type: booking.booking_type || 'dine_in',
       customer_name: safeName,
       phone: maskedPhone,
+      created_at: booking.created_at,
       booking_time: booking.booking_time,
       pax: booking.pax,
       items: items,

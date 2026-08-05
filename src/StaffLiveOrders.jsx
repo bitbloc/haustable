@@ -45,6 +45,11 @@ function StaffLiveOrdersContent() {
     const [activeTab, setActiveTab] = useState('kds')
     const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0])
     const [systemReady, setSystemReady] = useState(false) // Replaces isSoundChecked
+    const [hiddenKdsOrders, setHiddenKdsOrders] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('kds_hidden_orders') || '[]')
+        } catch { return [] }
+    })
 
     // Modals
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
@@ -70,6 +75,7 @@ function StaffLiveOrdersContent() {
 
     const todayOrders = orders.filter(o => isToday(o.booking_time))
     const todaySchedule = scheduleOrders.filter(o => isToday(o.booking_time))
+    const visibleKdsOrders = todaySchedule.filter(o => !hiddenKdsOrders.includes(o.id))
 
     // --- Tab Logic ---
     useEffect(() => {
@@ -170,6 +176,13 @@ function StaffLiveOrdersContent() {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }))
             }
         })
+    }
+
+    const handleHideKds = (id) => {
+        const newHidden = [...hiddenKdsOrders, id]
+        setHiddenKdsOrders(newHidden)
+        localStorage.setItem('kds_hidden_orders', JSON.stringify(newHidden))
+        toast.success("QC Done. Order hidden from KDS.")
     }
     
     const handleVerifyPayment = async (orderId, status) => {
@@ -300,12 +313,13 @@ function StaffLiveOrdersContent() {
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === 'kds' && (
                     <OrderList 
-                        orders={todaySchedule} 
+                        orders={visibleKdsOrders} 
                         loading={loading} 
                         emptyMessage="No Pending Orders"
                         onUpdateStatus={handleUpdateStatus}
                         onVerifyPayment={setVerifyingOrder}
                         onPrint={(b) => setPrintModal({ isOpen: true, booking: b })}
+                        onHideKds={handleHideKds}
                         isKDS={true}
                     />
                 )}

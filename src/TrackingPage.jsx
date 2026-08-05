@@ -311,14 +311,20 @@ export default function TrackingPage() {
                 )}
 
                 {/* Date & Time */}
-                <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-100">
-                    <div>
-                        <span className="block text-xs text-gray-400 mb-1">{isPickup ? t('pickupDate') : t('dateDate')}</span>
-                        <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
+                <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-gray-100">
+                    <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <span className="block text-xs font-bold text-gray-500">{isPickup ? 'วันที่ทำรายการ (Order Date)' : 'วันที่จอง (Booking Made)'}</span>
+                        <div className="text-right">
+                             <span className="block text-sm font-bold text-gray-900">{new Date(data.created_at || data.booking_time).toLocaleDateString('th-TH')}</span>
+                             <span className="block text-[10px] text-gray-500">{new Date(data.created_at || data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.</span>
+                        </div>
                     </div>
-                    <div className="text-right">
-                         <span className="block text-xs text-gray-400 mb-1">{isPickup ? t('pickupTime') : t('dateTime')}</span>
-                         <span className="font-bold text-gray-900">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</span>
+                    <div className="flex justify-between items-center bg-[oklch(97%_0.008_28)] p-3 rounded-xl border border-[oklch(85%_0.012_28)]">
+                        <span className="block text-xs font-bold text-[oklch(18%_0.012_28)]">{isPickup ? 'เวลารับของ (Pickup Time)' : 'เวลานัดหมาย (Reservation)'}</span>
+                        <div className="text-right">
+                             <span className="block text-sm font-bold text-[oklch(52%_0.16_28)]">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
+                             <span className="block text-[10px] text-[oklch(52%_0.16_28)] font-bold">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.</span>
+                        </div>
                     </div>
                 </div>
 

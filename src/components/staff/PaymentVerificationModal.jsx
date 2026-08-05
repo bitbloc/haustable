@@ -110,7 +110,7 @@ export default function PaymentVerificationModal({ order, onClose, onVerify }) {
                                 <h2 className="text-xl font-black text-[#1A1A1A] leading-tight">
                                     {order.tables_layout?.table_name || 'Pickup'}
                                 </h2>
-                                <p className="text-sm text-gray-500 font-medium">#{order.tracking_token ? order.tracking_token.slice(0,8) : String(order.id).slice(0,8)}</p>
+                                <p className="text-sm text-gray-500 font-medium">#{order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : String(order.id).slice(-4).toUpperCase()}</p>
                             </div>
                             <button onClick={onClose} className="hidden md:block p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">
                                 <X size={20} />

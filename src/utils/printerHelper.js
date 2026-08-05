@@ -33,8 +33,8 @@ export const getPrinterConfig = () => {
 
 export function getShortBookingId(booking) {
     if (!booking) return '0000';
-    if (booking.tracking_token && String(booking.tracking_token).length <= 8) {
-        return String(booking.tracking_token).toUpperCase();
+    if (booking.tracking_token) {
+        return String(booking.tracking_token).slice(-4).toUpperCase();
     }
     const rawId = String(booking.id || '');
     if (rawId.startsWith('local')) {

@@ -2373,7 +2373,7 @@ export default function POSDashboard() {
                                                         </span>
                                                     )}
                                                     <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
-                                                        QUEUE #{item.id?.slice(-4) || (idx + 1)}
+                                                        QUEUE #{item.tracking_token ? item.tracking_token.slice(-4).toUpperCase() : (item.id?.slice(-4).toUpperCase() || (idx + 1))}
                                                     </span>
                                                 </div>
 

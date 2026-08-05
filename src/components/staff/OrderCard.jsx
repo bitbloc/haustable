@@ -75,7 +75,7 @@ const BAR_CATEGORIES = [
     '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
 ];
 
-export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPrint, isSchedule = false, isKDS = false }) {
+export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPrint, onHideKds, isSchedule = false, isKDS = false }) {
     const { updateOrderItemCheck } = useOrderContext()
     const isPending = order.status === 'pending'
     const isPickup = (order.booking_type === 'pickup') || (!order.tables_layout) // Fallback if type not set
@@ -170,7 +170,7 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                             </span>
                         )}
                         <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase border border-[oklch(85%_0.012_28)] px-1.5 py-0.5">
-                            ID {order.tracking_token ? order.tracking_token.slice(-4) : String(order.id).slice(0,4)}
+                            ID {order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : String(order.id).slice(-4).toUpperCase()}
                         </span>
                      </div>
                      <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase mt-1">
@@ -270,19 +270,34 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                         </button>
                     )}
 
-                     {(order.status === 'ready' || order.status === 'seated') && (
-                        <button 
-                            onClick={() => onUpdateStatus(order.id, 'completed')} 
-                            disabled={!allItemsChecked}
-                            className={`w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase transition-colors
-                                ${allItemsChecked 
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer' 
-                                    : 'text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] cursor-not-allowed'
-                                }
-                            `}
-                        >
-                             Complete
-                        </button>
+                    {(order.status === 'ready' || order.status === 'seated') && (
+                        isKDS ? (
+                            <button 
+                                onClick={() => onHideKds && onHideKds(order.id)} 
+                                disabled={!allItemsChecked}
+                                className={`w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase transition-colors
+                                    ${allItemsChecked 
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer' 
+                                        : 'text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] cursor-not-allowed'
+                                    }
+                                `}
+                            >
+                                 QC DONE (Hide)
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => onUpdateStatus(order.id, 'completed')} 
+                                disabled={!allItemsChecked}
+                                className={`w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase transition-colors
+                                    ${allItemsChecked 
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-black cursor-pointer' 
+                                        : 'text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] cursor-not-allowed'
+                                    }
+                                `}
+                            >
+                                 Complete
+                            </button>
+                        )
                     )}
                 </div>
             </div>
