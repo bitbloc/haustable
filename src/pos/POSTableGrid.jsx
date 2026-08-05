@@ -214,7 +214,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                             onClick={() => setStatusFilter('all')}
                             className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${statusFilter === 'all' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
-                            ALL
+                            ทั้งหมด
                         </button>
                         <button 
                             type="button"
@@ -222,7 +222,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                             className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'free' ? 'bg-white text-emerald-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
                             <span className="w-2 h-2 rounded-full bg-[#00CC44]"></span>
-                            VACANT
+                            ว่าง
                         </button>
                         <button 
                             type="button"
@@ -230,7 +230,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                             className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'occupied' ? 'bg-white text-red-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
                             <span className="w-2 h-2 rounded-full bg-[#FF3300]"></span>
-                            OCCUPIED
+                            มีลูกค้า
                         </button>
                         <button 
                             type="button"
@@ -238,7 +238,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                             className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
                         >
                             <span className="w-2 h-2 rounded-full bg-[#FFAA00] animate-pulse"></span>
-                            PENDING
+                            รอรับออเดอร์
                         </button>
                     </div>
                 </div>
@@ -290,22 +290,22 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                     <div className="flex-1 w-full h-full relative">
                         {/* Status Legend Overlay */}
                         <div className="absolute bottom-4 left-4 z-20 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-4 rounded-xl shadow-md backdrop-blur-md flex flex-col gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] select-none">
-                            <span className="text-[#1A1A1A] border-b border-[#D1D1CD] pb-1.5 mb-1">TABLE STATUS INDICATORS</span>
+                            <span className="text-[#1A1A1A] border-b border-[#D1D1CD] pb-1.5 mb-1">คำอธิบายสถานะโต๊ะ (TABLE STATUS)</span>
                             <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span>
-                                <span>VACANT (ว่าง)</span>
+                                <span>ว่าง (VACANT)</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#FF3300] border border-black/10"></span>
-                                <span>OCCUPIED (มีลูกค้า)</span>
+                                <span>มีลูกค้า (OCCUPIED)</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#FFAA00] animate-pulse border border-black/10"></span>
-                                <span>PENDING (รอยืนยัน)</span>
+                                <span>รอรับออเดอร์ (PENDING)</span>
                             </div>
                             <div className="border-t border-[#D1D1CD] pt-2 mt-1 flex items-center gap-2">
                                 <span className="bg-[#1A1A1A] text-white text-[8px] font-black px-1 py-0.5 rounded tracking-normal">SLIP</span>
-                                <span>SLIP ATTACHED</span>
+                                <span>แนบสลิปแล้ว</span>
                             </div>
                         </div>
 
@@ -360,8 +360,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                                                 let ledColor = 'bg-[#00CC44]';
                                                 
                                                 if (isOccupied || isPending) {
-                                                    tableBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
-                                                    ledColor = 'bg-[#767673]';
+                                                    tableBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
+                                                    ledColor = 'bg-white';
                                                     
                                                     if (hasCallStaff) {
                                                         tableBgClass = 'animate-pos-blink-blue border-2 shadow-md';
@@ -502,8 +502,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                                     let ledColor = 'bg-[#00CC44]';
                                     
                                     if (isOccupied || isPending) {
-                                        cellBgClass = 'bg-[#3C3D40] border-[#2A2B2D] text-white shadow-sm';
-                                        ledColor = 'bg-[#767673]';
+                                        cellBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
+                                        ledColor = 'bg-white';
                                         
                                         if (hasCallStaff) {
                                             cellBgClass = 'animate-pos-blink-blue border-2 shadow-md';

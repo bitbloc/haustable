@@ -254,13 +254,13 @@ export default function TableManager({ isStaffView = false }) {
             {/* Header / Instructions */}
             <div className="absolute top-4 left-4 z-10 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-3 rounded-lg shadow-sm backdrop-blur-md font-mono text-[9px] font-bold uppercase tracking-wider text-[#767673]">
                 <div className="flex flex-wrap items-center gap-3 mb-1 text-[#1A1A1A]">
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span> VACANT</div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF5500] border border-black/10"></span> WALK-IN</div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#3C3D40] border border-black/10"></span> ONLINE</div>
-                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FFAA00] animate-pulse border border-black/10"></span> UPCOMING</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span> ว่าง</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF5500] border border-black/10"></span> ลูกค้าหน้าร้าน</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#3C3D40] border border-black/10"></span> ลูกค้าออนไลน์</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FFAA00] animate-pulse border border-black/10"></span> คิวจองใกล้ถึง</div>
                 </div>
                 <div className="text-[8px] border-t border-[#D1D1CD] pt-1.5 mt-1.5 leading-normal">
-                    TAP VACANT TO QUICK-BLOCK (2HR). TAP OCCUPIED TO VIEW/RELEASE.
+                    กดโต๊ะว่างเพื่อบล็อกโต๊ะ (2 ชม.) กดโต๊ะมีลูกค้าเพื่อดูหรือคืนโต๊ะ
                 </div>
             </div>
 
