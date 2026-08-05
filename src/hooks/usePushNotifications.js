@@ -38,9 +38,11 @@ export default function usePushNotifications() {
     }
   }, []);
 
-  const requestPermission = useCallback(async () => {
+  const requestPermission = useCallback(async (isManual = false) => {
     if (typeof Notification === 'undefined') {
-      toast.error("Notifications not supported in this browser.");
+      if (isManual) {
+        toast.error("Notifications not supported in this browser.");
+      }
       return;
     }
 

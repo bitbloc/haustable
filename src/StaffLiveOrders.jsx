@@ -230,7 +230,7 @@ function StaffLiveOrdersContent() {
                         title={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                         isConnected={isConnected}
                         notificationsEnabled={isSubscribed}
-                        onRequestNotifications={requestPush}
+                        onRequestNotifications={() => requestPush(true)}
                         onLogout={handleLogout}
                     />
 

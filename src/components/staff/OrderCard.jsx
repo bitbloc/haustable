@@ -111,34 +111,43 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
         else if (elapsedMins >= 10) urgencyBorder = 'border-[oklch(60%_0.15_28)] border-2' // Highlight
     }
 
-    const renderItemRow = (item, idx, showCheckbox) => (
-        <div 
-            key={idx} 
-            className={`flex items-start gap-2 py-2 border-b border-[oklch(85%_0.012_28)] last:border-b-0 ${isKDS && showCheckbox ? 'cursor-pointer select-none group/item' : ''}`}
-            onClick={() => showCheckbox && handleToggleCheck(item)}
-        >
-            {isKDS && showCheckbox && (
-                <div className="mt-0.5 shrink-0 transition-opacity">
-                    {item.is_checked ? (
-                        <CheckSquare size={16} className="text-[oklch(18%_0.012_28)]" />
-                    ) : (
-                        <Square size={16} className="text-[oklch(55%_0.010_28)] group-hover/item:text-[oklch(18%_0.012_28)]" />
-                    )}
+    const renderItemRow = (item, idx, showCheckbox) => {
+        const Wrapper = (isKDS && showCheckbox) ? 'button' : 'div'
+        return (
+            <Wrapper 
+                type={(isKDS && showCheckbox) ? "button" : undefined}
+                key={idx} 
+                className={`w-full text-left flex items-start gap-2 py-2 border-b border-[oklch(85%_0.012_28)] last:border-b-0 ${isKDS && showCheckbox ? 'cursor-pointer select-none group/item touch-manipulation' : ''}`}
+                onClick={(e) => {
+                    if (showCheckbox) {
+                        e.preventDefault();
+                        handleToggleCheck(item);
+                    }
+                }}
+            >
+                {isKDS && showCheckbox && (
+                    <div className="mt-0.5 shrink-0 transition-opacity pointer-events-none">
+                        {item.is_checked ? (
+                            <CheckSquare size={16} className="text-[oklch(18%_0.012_28)]" />
+                        ) : (
+                            <Square size={16} className="text-[oklch(55%_0.010_28)] group-hover/item:text-[oklch(18%_0.012_28)]" />
+                        )}
+                    </div>
+                )}
+                <div className={`font-mono text-xs mt-0.5 w-6 pointer-events-none ${item.is_checked && showCheckbox ? 'text-[oklch(55%_0.010_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
+                    {item.quantity}
                 </div>
-            )}
-            <div className={`font-mono text-xs mt-0.5 w-6 ${item.is_checked && showCheckbox ? 'text-[oklch(55%_0.010_28)]' : 'text-[oklch(18%_0.012_28)]'}`}>
-                {item.quantity}
-            </div>
-            <div className="flex-1">
-                <div className={`text-base tracking-tight ${item.is_checked && showCheckbox ? 'text-[oklch(55%_0.010_28)] line-through' : 'text-[oklch(18%_0.012_28)] font-medium'}`}>
-                    {item.menu_items?.name}
+                <div className="flex-1 pointer-events-none">
+                    <div className={`text-base tracking-tight ${item.is_checked && showCheckbox ? 'text-[oklch(55%_0.010_28)] line-through' : 'text-[oklch(18%_0.012_28)] font-medium'}`}>
+                        {item.menu_items?.name}
+                    </div>
+                    <div className={item.is_checked && showCheckbox ? 'opacity-50' : ''}>
+                        {renderOptions(item)}
+                    </div>
                 </div>
-                <div className={item.is_checked && showCheckbox ? 'opacity-50' : ''}>
-                    {renderOptions(item)}
-                </div>
-            </div>
-        </div>
-    )
+            </Wrapper>
+        )
+    }
 
     return (
         <div className={`
@@ -224,20 +233,22 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
             <div className="grid grid-cols-2 border-t border-[oklch(85%_0.012_28)]">
                 {/* Left Side Action */}
                 <div className="border-r border-[oklch(85%_0.012_28)]">
-                    {!isKDS && order.payment_slip_url ? (
-                        <button 
-                            onClick={() => onVerifyPayment(order)} 
-                            className="w-full h-full flex items-center justify-center gap-2 py-3 font-mono text-[10px] uppercase text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
-                        >
-                            <Receipt size={14} /> Verify Slip
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={() => onPrint(order)} 
-                            className="w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
-                        >
-                            <Printer size={14} /> Print
-                        </button>
+                    {!isKDS && (
+                        order.payment_slip_url ? (
+                            <button 
+                                onClick={() => onVerifyPayment(order)} 
+                                className="w-full h-full flex items-center justify-center gap-2 py-3 font-mono text-[10px] uppercase text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
+                            >
+                                <Receipt size={14} /> Verify Slip
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => onPrint(order)} 
+                                className="w-full h-full flex items-center justify-center py-3 font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-colors"
+                            >
+                                <Printer size={14} /> Print
+                            </button>
+                        )
                     )}
                 </div>
 
