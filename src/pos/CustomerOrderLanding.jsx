@@ -602,7 +602,7 @@ export default function CustomerOrderLanding() {
 
         } catch (err) {
             console.error('Checkout error:', err);
-            toast.error('Failed to submit order. Please try again.');
+            toast.error('Failed to submit order. Please try again. Error: ' + err.message);
         } finally {
             setSubmitting(false);
         }
