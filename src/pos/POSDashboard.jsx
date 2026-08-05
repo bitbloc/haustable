@@ -646,7 +646,7 @@ export default function POSDashboard() {
                         }
                     }
                 });
-                playSystemAlertSound();
+                playQRAlertSound();
 
                 await autoPrintQROrder(partialBooking);
             }
@@ -830,6 +830,36 @@ export default function POSDashboard() {
             osc2.stop(ctx.currentTime + delay + 0.25);
         } catch (err) {
             console.error("Web Audio API failed:", err);
+        }
+    };
+
+    const playQRAlertSound = () => {
+        try {
+            const ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+            
+            const playNote = (freq, startTime, duration) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine'; // Smooth doorbell sound
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.4, startTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+
+            // Distinct Doorbell Sound (Ding-Dong: E5 -> C5)
+            const now = ctx.currentTime;
+            playNote(659.25, now, 0.4);       // Ding (E5)
+            playNote(523.25, now + 0.35, 0.6); // Dong (C5) - overlaps slightly for smoothness
+        } catch (err) {
+            console.error("Web Audio API failed for QR sound:", err);
         }
     };
 
