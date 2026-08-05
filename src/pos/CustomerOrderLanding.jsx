@@ -576,8 +576,7 @@ export default function CustomerOrderLanding() {
             const updateData = {
                 status: 'seated', // Auto-accepted; triggers auto-print on POS
                 // total_amount is dynamically calculated on the POS side and Status page to avoid concurrent race conditions
-                staff_remark: updatedRemark,
-                source: 'qr'
+                staff_remark: updatedRemark
             };
             if (memberProfile?.id && !currentBooking.user_id) {
                 updateData.user_id = memberProfile.id;
