@@ -205,12 +205,26 @@ export function OrderProvider({ children }) {
     }
 
     const updateOrderItemCheck = async (itemId, isChecked) => {
+        // Optimistic update
+        const updateItems = (ordersList) => ordersList.map(order => ({
+            ...order,
+            order_items: order.order_items?.map(item => 
+                item.id === itemId ? { ...item, is_checked: isChecked } : item
+            )
+        }))
+
+        dispatch({ type: 'SET_ORDERS', payload: updateItems(stateRef.current.orders) })
+        dispatch({ type: 'SET_SCHEDULE', payload: updateItems(stateRef.current.scheduleOrders) })
+
         try {
             const { error } = await supabase.from('order_items').update({ is_checked: isChecked }).eq('id', itemId)
             if (error) throw error
             return { success: true }
         } catch (error) {
             console.error(error)
+            // Rollback on error
+            fetchLiveOrders(true)
+            fetchScheduleOrders()
             return { success: false, error: error.message }
         }
     }
