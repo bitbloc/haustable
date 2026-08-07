@@ -26,6 +26,73 @@ const getCurrentBangkokMonth = () => {
     return `${year}-${month}`;
 };
 
+// Item & Total extraction helpers supporting Supabase, POS Local Cache, Offline Queue, and custom fee items
+const getBookingItems = (order) => {
+    if (!order) return [];
+    if (Array.isArray(order.order_items) && order.order_items.length > 0) {
+        return order.order_items;
+    }
+    if (Array.isArray(order.items) && order.items.length > 0) {
+        return order.items;
+    }
+    if (Array.isArray(order.cart) && order.cart.length > 0) {
+        return order.cart;
+    }
+    if (Array.isArray(order.cartItems) && order.cartItems.length > 0) {
+        return order.cartItems;
+    }
+    return [];
+};
+
+const getItemName = (item) => {
+    if (!item) return 'รายการสินค้า';
+    return (
+        item.menu_items?.name ||
+        item.name ||
+        item.menu_name ||
+        item.item_name ||
+        item.title ||
+        'รายการสินค้า'
+    );
+};
+
+const getItemQty = (item) => {
+    if (!item) return 1;
+    const q = parseInt(item.quantity ?? item.qty ?? item.count ?? 1, 10);
+    return isNaN(q) || q <= 0 ? 1 : q;
+};
+
+const getItemUnitPrice = (item) => {
+    if (!item) return 0;
+    const p = parseFloat(
+        item.price_at_time ??
+        item.price ??
+        item.unit_price ??
+        item.menu_items?.price ??
+        0
+    );
+    return isNaN(p) ? 0 : p;
+};
+
+const calculateSubtotal = (order, items) => {
+    const itemsSum = items.reduce((sum, item) => {
+        const qty = getItemQty(item);
+        const price = getItemUnitPrice(item);
+        return sum + (qty * price);
+    }, 0);
+
+    if (itemsSum > 0) return itemsSum;
+    const directTotal = parseFloat(order?.total_amount ?? order?.total_price ?? order?.total ?? 0);
+    return isNaN(directTotal) ? 0 : directTotal;
+};
+
+const calculateNetTotal = (order, subtotal) => {
+    const directTotal = parseFloat(order?.total_amount ?? order?.total_price ?? order?.total ?? 0);
+    if (!isNaN(directTotal) && directTotal > 0) return directTotal;
+    const discount = parseFloat(order?.discount_amount || 0);
+    return Math.max(0, subtotal - (isNaN(discount) ? 0 : discount));
+};
+
 export default function SlipAuditManager({ 
     filterMode: parentFilterMode, 
     selectedDate: parentSelectedDate,
@@ -227,7 +294,8 @@ export default function SlipAuditManager({
                 const name = (o.profiles?.display_name || o.pickup_contact_name || o.customer_name || '').toLowerCase();
                 const phone = (o.profiles?.phone || o.pickup_contact_phone || '').toLowerCase();
                 const remark = (o.staff_remark || '').toLowerCase();
-                const itemsStr = (o.order_items || []).map(i => i.menu_items?.name || '').join(' ').toLowerCase();
+                const itemsList = getBookingItems(o);
+                const itemsStr = itemsList.map(i => getItemName(i)).join(' ').toLowerCase();
 
                 return token.includes(q) || idStr.includes(q) || table.includes(q) || name.includes(q) || phone.includes(q) || remark.includes(q) || itemsStr.includes(q);
             });
@@ -334,7 +402,13 @@ export default function SlipAuditManager({
     const openBillsCount = orders.filter(o => o.status !== 'completed' && o.status !== 'paid' && o.status !== 'success' && o.status !== 'cancelled' && o.status !== 'void').length;
     const paidOrdersCount = orders.filter(o => o.status === 'completed' || o.status === 'paid' || o.status === 'success').length;
     const ordersWithSlipsCount = orders.filter(o => !!o.payment_slip_url).length;
-    const totalRevenueSum = filteredOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || o.total_price || 0), 0);
+
+    const totalRevenueSum = filteredOrders.reduce((sum, o) => {
+        const items = getBookingItems(o);
+        const sub = calculateSubtotal(o, items);
+        const net = calculateNetTotal(o, sub);
+        return sum + net;
+    }, 0);
 
     const dividerStyle = printerConfig.divider_style || 'dashed';
     const shopName = printerConfig.shop_name || printerConfig.receipt_shop_name || 'IN THE HAUS';
@@ -534,10 +608,10 @@ export default function SlipAuditManager({
                     {filteredOrders.map((order) => {
                         const queueNo = getShortBookingId(order);
                         const fullSlipUrl = getFullSlipUrl(order.payment_slip_url);
-                        const items = order.order_items || [];
-                        const subtotal = items.reduce((sum, i) => sum + (parseFloat(i.price_at_time || i.menu_items?.price || i.price || 0) * (i.quantity || 1)), 0);
+                        const items = getBookingItems(order);
+                        const subtotal = calculateSubtotal(order, items);
                         const discount = parseFloat(order.discount_amount || 0);
-                        const netTotal = parseFloat(order.total_amount || order.total_price || subtotal);
+                        const netTotal = calculateNetTotal(order, subtotal);
                         const paxCount = order.pax || order.number_of_guests || 1;
                         const guestName = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Walk-in Customer';
                         const phone = order.profiles?.phone || order.pickup_contact_phone || '';
@@ -557,7 +631,6 @@ export default function SlipAuditManager({
                         }
 
                         const docTitle = paid ? 'RECEIPT / ใบเสร็จรับเงิน' : 'BILLING SLIP / ใบแจ้งยอดชำระเงิน';
-                        const bannerTitle = paid ? 'RECEIPT (ชำระเงินแล้ว)' : 'OPEN BILL (ยังไม่ชำระเงิน)';
 
                         return (
                             <div key={order.id} className="flex flex-col items-center gap-3">
@@ -681,30 +754,37 @@ export default function SlipAuditManager({
                                         <div className="text-[9px] font-black uppercase tracking-widest text-right mb-1 opacity-60">
                                             01. ITEMS
                                         </div>
-                                        {items.map((item, idx) => {
-                                            const qty = item.quantity || 1;
-                                            const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0);
-                                            const lineTotal = price * qty;
+                                        {items.length === 0 ? (
+                                            <div className="text-xs font-bold text-center py-2 text-gray-500">
+                                                - ไม่มีรายการสินค้า -
+                                            </div>
+                                        ) : (
+                                            items.map((item, idx) => {
+                                                const name = getItemName(item);
+                                                const qty = getItemQty(item);
+                                                const unitPrice = getItemUnitPrice(item);
+                                                const lineTotal = qty * unitPrice;
 
-                                            return (
-                                                <div key={idx} className="text-xs">
-                                                    <div className="flex justify-between font-bold items-baseline gap-2">
-                                                        <span className="w-6 shrink-0 text-sm font-black">{qty}x</span>
-                                                        <span className="grow font-bold uppercase text-[12px] tracking-tight leading-4">
-                                                            {item.menu_items?.name || item.name || 'ITEM'}
-                                                        </span>
-                                                        <span className="shrink-0 font-mono font-bold">
-                                                            {lineTotal.toLocaleString()}
-                                                        </span>
-                                                    </div>
-                                                    {item.special_instructions && (
-                                                        <div className="pl-6 text-[10px] text-gray-800 font-bold border-l-2 border-black ml-1 pl-2">
-                                                            ▶ {item.special_instructions}
+                                                return (
+                                                    <div key={idx} className="text-xs">
+                                                        <div className="flex justify-between font-bold items-baseline gap-2">
+                                                            <span className="w-6 shrink-0 text-sm font-black">{qty}x</span>
+                                                            <span className="grow font-bold uppercase text-[12px] tracking-tight leading-4">
+                                                                {name}
+                                                            </span>
+                                                            <span className="shrink-0 font-mono font-bold">
+                                                                {lineTotal > 0 ? lineTotal.toLocaleString() : (unitPrice > 0 ? unitPrice.toLocaleString() : '')}
+                                                            </span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                                        {item.special_instructions && (
+                                                            <div className="pl-6 text-[10px] text-gray-800 font-bold border-l-2 border-black ml-1 pl-2">
+                                                                ▶ {item.special_instructions}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        )}
                                     </div>
 
                                     {/* Divider Line */}
