@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
-import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue } from '../utils/offlineHelper';
+import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue } from '../utils/offlineHelper';
 import { recordShiftTransaction } from '../utils/shiftHelper';
 
 export function usePOSOrder() {
@@ -292,6 +292,15 @@ export function usePOSOrder() {
                             bookings.push(newBooking);
                             posCache.setBookings(bookings);
                         }
+                        
+                        const queue = getOfflineQueue();
+                        const newQueue = queue.filter(q => 
+                            !((q.type === 'create_walkin' || q.type === 'create_pickup') && q.payload.tempBookingId === bookingId)
+                        );
+                        if (queue.length !== newQueue.length) {
+                            saveOfflineQueue(newQueue);
+                        }
+
                         bookingId = newBooking.id;
                     }
                 }

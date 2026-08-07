@@ -239,13 +239,19 @@ export async function syncOfflineQueue(isManual = false) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
 
-                const itemsToInsert = items.map(item => ({
-                    booking_id: bookingId,
-                    menu_item_id: item.id,
-                    quantity: item.quantity,
-                    price_at_time: item.price,
-                    selected_options: item.selected_options || []
-                }));
+                const itemsToInsert = items.map(item => {
+                    const finalOpts = [...(item.selected_options || [])];
+                    if (item.item_note) {
+                        finalOpts.push({ name: `Note: ${item.item_note}` });
+                    }
+                    return {
+                        booking_id: bookingId,
+                        menu_item_id: item.id || item.menu_item_id,
+                        quantity: item.quantity,
+                        price_at_time: item.price,
+                        selected_options: finalOpts
+                    };
+                });
 
                 const { error } = await supabase.from('order_items').insert(itemsToInsert);
                 if (error) throw error;
