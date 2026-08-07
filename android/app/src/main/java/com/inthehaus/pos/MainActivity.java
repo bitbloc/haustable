@@ -21,7 +21,8 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
-                webView.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
+                webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+                webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
                 WebSettings settings = webView.getSettings();
                 settings.setMediaPlaybackRequiresUserGesture(false);
                 settings.setJavaScriptEnabled(true);
@@ -57,7 +58,8 @@ public class MainActivity extends BridgeActivity {
             super.onCreate(savedInstanceState);
             
             WebView webView = new WebView(getContext());
-            webView.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
+            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+            webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
