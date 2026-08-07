@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Clock, Phone, Printer, Check, X, ChefHat, LogOut, Users, AlertCircle, Receipt, Square, CheckSquare, Timer } from 'lucide-react'
 import { formatThaiTimeOnly, formatThaiDateLong } from '../../utils/timeUtils'
 import { useOrderContext } from '../../context/OrderContext'
+import { getShortBookingId } from '../../utils/printerHelper'
 
 const OrderTimer = ({ createdAt }) => {
     const [elapsed, setElapsed] = useState(0)
@@ -170,7 +171,7 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                             </span>
                         )}
                         <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase border border-[oklch(85%_0.012_28)] px-1.5 py-0.5">
-                            ID {order.tracking_token ? order.tracking_token.slice(-4).toUpperCase() : String(order.id).slice(-4).toUpperCase()}
+                            ID #{getShortBookingId(order)}
                         </span>
                      </div>
                      <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase mt-1">

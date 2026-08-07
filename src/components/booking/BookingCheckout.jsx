@@ -78,9 +78,9 @@ export default function BookingCheckout() {
             alert(t('confirmBooking') + ' Success!')
             
             if (token) {
-                window.location.href = `/tracking/${token}`
+                window.location.replace(`/tracking/${token}`)
             } else {
-                window.location.href = '/'
+                window.location.replace('/')
             }
         } else {
             alert('Error: ' + result.error)

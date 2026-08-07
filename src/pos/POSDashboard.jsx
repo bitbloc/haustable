@@ -17,7 +17,7 @@ import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
 export default function POSDashboard() {
@@ -2373,7 +2373,7 @@ export default function POSDashboard() {
                                                         </span>
                                                     )}
                                                     <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
-                                                        QUEUE #{item.tracking_token ? item.tracking_token.slice(-4).toUpperCase() : (item.id?.slice(-4).toUpperCase() || (idx + 1))}
+                                                        QUEUE #{getShortBookingId(item)}
                                                     </span>
                                                 </div>
 

@@ -5,6 +5,7 @@ import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
 import { format } from 'date-fns'
+import { getShortBookingId } from './utils/printerHelper'
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -216,14 +217,11 @@ export default function AdminBookings() {
         }
     }
 
-    // Helper
-    const getShortId = (token) => token ? token.slice(-4).toUpperCase() : '----'
-
     // Filter & Sort Logic
     const filteredBookings = bookings.filter(b => {
         const matchesStatus = filter === 'all' || b.status === filter
         const matchesType = typeFilter === 'all' || b.booking_type === typeFilter
-        const shortId = getShortId(b.tracking_token)
+        const shortId = getShortBookingId(b)
         const nameToSearch = b.pickup_contact_name || b.profiles?.display_name || ''
         
         const matchesSearch =
@@ -388,7 +386,7 @@ export default function AdminBookings() {
                                                 {/* Booking Time (Primary) */}
                                                 <div className="flex items-center gap-2">
                                                     <span className="bg-brand text-ink text-xs font-bold px-1.5 py-0.5 rounded border border-brandDark/20">
-                                                        #{getShortId(booking.tracking_token)}
+                                                        #{getShortBookingId(booking)}
                                                     </span>
                                                     <span className="text-ink font-bold text-sm">
                                                         {new Date(booking.booking_time).toLocaleDateString()}

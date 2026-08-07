@@ -234,9 +234,9 @@ export default function PickupPage() {
         if (result.success) {
             alert(t('confirmOrder') + ' Success!')
             if (result.trackingToken) {
-                window.location.href = `/tracking/${result.trackingToken}`
+                window.location.replace(`/tracking/${result.trackingToken}`)
             } else {
-                navigate('/')
+                navigate('/', { replace: true })
             }
         } else {
             alert('Error: ' + result.error)

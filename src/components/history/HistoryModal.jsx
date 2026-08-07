@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Clock, CheckCircle, AlertCircle, ChefHat, Utensils, ArrowRight, ExternalLink, Calendar } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
+import { getShortBookingId } from '../../utils/printerHelper'
 
 export default function HistoryModal({ isOpen, onClose, history }) {
     const { t } = useLanguage()
@@ -86,7 +87,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                         <div>
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className="text-2xl font-black font-mono tracking-tight">
-                                                                    #{getShortId(order.tracking_token)}
+                                                                    #{getShortBookingId(order)}
                                                                 </span>
                                                                 <StatusBadge status={order.status} />
                                                             </div>
@@ -136,7 +137,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                     <div>
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-mono font-bold text-gray-900">
-                                                                #{getShortId(order.tracking_token)}
+                                                                #{getShortBookingId(order)}
                                                             </span>
                                                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 uppercase font-bold">
                                                                 {order.status}
@@ -183,9 +184,6 @@ function StatusBadge({ status }) {
     )
 }
 
-function getShortId(token) {
-    return token ? token.slice(-4).toUpperCase() : '----'
-}
 
 function bookingTypeLabel(order) {
     if (order.booking_type === 'steak') return 'Steak Pre-order'

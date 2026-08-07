@@ -404,13 +404,30 @@ export async function syncOfflineQueue(isManual = false) {
             
         } catch (err) {
             console.error(`[Offline Sync] Failed to sync action (${action.type}):`, action, err);
+            
+            const isNetworkErr = !isOnline() || 
+                err.name === 'TypeError' || 
+                (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('network')));
+            
+            if (isNetworkErr) {
+                console.warn('[Offline Sync] Connection lost mid-sync. Aborting sync loop and preserving remaining queue items.');
+                toast.warning('⚠️ การเชื่อมต่อสัญญาณหลุดขณะ Sync ข้อมูล ถูกบันทึกไว้ในเครื่องรอเชื่อมต่ออีกครั้ง');
+                // Push current action and all un-processed actions back to remainingQueue
+                remainingQueue.push(action);
+                const currentIdx = queue.indexOf(action);
+                if (currentIdx !== -1 && currentIdx < queue.length - 1) {
+                    remainingQueue.push(...queue.slice(currentIdx + 1));
+                }
+                break;
+            }
+
             toast.error(`Sync error (${action.type}): ${err.message || JSON.stringify(err)}`);
             action.retryCount = (action.retryCount || 0) + 1;
-            if (action.retryCount < 3) {
+            if (action.retryCount < 5) {
                 remainingQueue.push(action);
             } else {
-                console.warn(`[Offline Sync] Discarding unrecoverable offline action (${action.type}) after 3 retries:`, action);
-                toast.error(`Discarded sync action: ${action.type} after 3 retries.`);
+                console.warn(`[Offline Sync] Discarding unrecoverable offline action (${action.type}) after 5 retries:`, action);
+                toast.error(`Discarded sync action: ${action.type} after 5 retries.`);
             }
         }
     }

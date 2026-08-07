@@ -42,7 +42,7 @@ export function getShortBookingId(booking) {
         return digits.length >= 4 ? digits.slice(-4) : (digits || '0000');
     }
     const cleanUuid = rawId.replace(/-/g, '');
-    return cleanUuid ? cleanUuid.slice(0, 4).toUpperCase() : '0000';
+    return cleanUuid ? cleanUuid.slice(-4).toUpperCase() : '0000';
 }
 
 export const fetchPrinterConfigOnline = async () => {
