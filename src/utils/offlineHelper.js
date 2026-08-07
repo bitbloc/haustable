@@ -404,11 +404,13 @@ export async function syncOfflineQueue(isManual = false) {
             
         } catch (err) {
             console.error(`[Offline Sync] Failed to sync action (${action.type}):`, action, err);
+            toast.error(`Sync error (${action.type}): ${err.message || JSON.stringify(err)}`);
             action.retryCount = (action.retryCount || 0) + 1;
             if (action.retryCount < 3) {
                 remainingQueue.push(action);
             } else {
                 console.warn(`[Offline Sync] Discarding unrecoverable offline action (${action.type}) after 3 retries:`, action);
+                toast.error(`Discarded sync action: ${action.type} after 3 retries.`);
             }
         }
     }
