@@ -257,7 +257,77 @@ export default function SlipAuditManager({
                 }
             });
 
-            const combinedList = Array.from(orderMap.values()).sort((a, b) => {
+            const combinedRaw = Array.from(orderMap.values());
+
+            // 4. Direct Supabase order_items query fallback for any booking missing order_items (e.g. PC browser view)
+            const missingItemBookingIds = combinedRaw
+                .filter(b => b && b.id && (!b.order_items || b.order_items.length === 0))
+                .map(b => b.id);
+
+            if (missingItemBookingIds.length > 0) {
+                try {
+                    const { data: directItems, error: itemsErr } = await supabase
+                        .from('order_items')
+                        .select(`
+                            id,
+                            booking_id,
+                            quantity,
+                            price_at_time,
+                            price,
+                            special_instructions,
+                            selected_options,
+                            menu_item_id,
+                            menu_items (
+                                id,
+                                name,
+                                price
+                            )
+                        `)
+                        .in('booking_id', missingItemBookingIds);
+
+                    if (!itemsErr && directItems && directItems.length > 0) {
+                        const itemsByBooking = {};
+                        directItems.forEach(item => {
+                            const bId = String(item.booking_id);
+                            if (!itemsByBooking[bId]) itemsByBooking[bId] = [];
+                            itemsByBooking[bId].push(item);
+                        });
+
+                        combinedRaw.forEach(b => {
+                            const bId = String(b.id);
+                            if (itemsByBooking[bId] && itemsByBooking[bId].length > 0) {
+                                b.order_items = itemsByBooking[bId];
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn("Direct order_items fallback error:", e);
+                }
+            }
+
+            // 5. Direct Supabase menu_items fallback to map missing menu item names/prices
+            let menuItemMap = {};
+            try {
+                const { data: menuList } = await supabase
+                    .from('menu_items')
+                    .select('id, name, price');
+                if (menuList && menuList.length > 0) {
+                    menuList.forEach(m => {
+                        menuItemMap[String(m.id)] = m;
+                    });
+                }
+            } catch (e) {}
+
+            combinedRaw.forEach(b => {
+                const items = getBookingItems(b);
+                items.forEach(item => {
+                    if (!item.menu_items && item.menu_item_id && menuItemMap[String(item.menu_item_id)]) {
+                        item.menu_items = menuItemMap[String(item.menu_item_id)];
+                    }
+                });
+            });
+
+            const combinedList = combinedRaw.sort((a, b) => {
                 return new Date(b.booking_time || Date.now()) - new Date(a.booking_time || Date.now());
             });
 
