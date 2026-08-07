@@ -85,7 +85,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     }, 0);
 
     const unsentKitchenCount = activeOrders.filter(order => {
-        return (order.order_items || []).some(item => !item.db_id || item.status === 'pending');
+        return (order.order_items || []).some(item => 
+            item.status === 'pending' || 
+            (!item.db_id && typeof item.id === 'string' && item.id.startsWith('local_'))
+        );
     }).length;
 
     const filteredOrders = orders.filter(order => {
@@ -105,7 +108,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
         // Unsent filter
         if (unsentOnly) {
-            const hasUnsent = (order.order_items || []).some(item => !item.db_id || item.status === 'pending');
+            const hasUnsent = (order.order_items || []).some(item => 
+                item.status === 'pending' || 
+                (!item.db_id && typeof item.id === 'string' && item.id.startsWith('local_'))
+            );
             if (!hasUnsent) return false;
         }
 
@@ -301,7 +307,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                             const itemCount = items.reduce((sum, i) => sum + (i.quantity || 1), 0);
                             const itemsTotal = items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
                             const totalAmount = order.total_amount || itemsTotal;
-                            const hasUnsentItems = !isVoid && items.some(i => !i.db_id || i.status === 'pending');
+                            const hasUnsentItems = !isVoid && items.some(i => 
+                                i.status === 'pending' || 
+                                (!i.db_id && typeof i.id === 'string' && i.id.startsWith('local_'))
+                            );
 
                             const customerName = order.profiles?.display_name 
                                 || order.customer_name 

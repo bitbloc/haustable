@@ -128,7 +128,11 @@ export async function syncOfflineQueue(isManual = false) {
         toast.info(`🔄 ตรวจพบข้อมูลค้างในเครื่อง ${queue.length} รายการ กำลังเชื่อมโยงข้อมูลกับเซิร์ฟเวอร์...`);
     }
 
-    const idMapping = {}; // Maps local temp IDs to database real IDs
+    let idMapping = {}; // Maps local temp IDs to database real IDs
+    try {
+        idMapping = JSON.parse(localStorage.getItem('pos_offline_id_mapping')) || {};
+    } catch (e) {}
+    
     const remainingQueue = [];
 
     for (const action of queue) {
@@ -155,6 +159,7 @@ export async function syncOfflineQueue(isManual = false) {
                 
                 // Save mapping
                 idMapping[tempBookingId] = data.id;
+                try { localStorage.setItem('pos_offline_id_mapping', JSON.stringify(idMapping)); } catch(e) {}
                 console.log(`[Offline Sync] Mapped booking local ID ${tempBookingId} -> remote ID ${data.id}`);
                 
                 // Replace in posCache
@@ -187,6 +192,7 @@ export async function syncOfflineQueue(isManual = false) {
                 if (error) throw error;
 
                 idMapping[tempBookingId] = data.id;
+                try { localStorage.setItem('pos_offline_id_mapping', JSON.stringify(idMapping)); } catch(e) {}
                 console.log(`[Offline Sync] Mapped pickup local ID ${tempBookingId} -> remote ID ${data.id}`);
                 
                 // Replace in posCache
