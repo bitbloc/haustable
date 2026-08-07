@@ -370,8 +370,8 @@ export default function AdminMembers() {
                                     <p className="text-[10px] text-subInk uppercase tracking-wider font-bold">Total Bookings</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-2xl font-bold text-brandDark">{member.completed_bookings}</p>
-                                    <p className="text-[10px] text-subInk uppercase tracking-wider font-bold">Completed</p>
+                                    <p className="text-2xl font-bold text-brandDark">{Number(member.xhaus_balance || 0).toFixed(0)}</p>
+                                    <p className="text-[10px] text-subInk uppercase tracking-wider font-bold">xHaus Coins</p>
                                 </div>
                             </div>
 

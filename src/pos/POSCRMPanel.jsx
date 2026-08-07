@@ -153,6 +153,7 @@ export default function POSCRMPanel() {
                                         <th className="py-3 px-4">Access Tier</th>
                                         <th className="py-3 px-4 text-center">Visits</th>
                                         <th className="py-3 px-4 text-center">Completed</th>
+                                        <th className="py-3 px-4 text-right">xhaus Coins</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[#ECECE9]">
@@ -193,6 +194,9 @@ export default function POSCRMPanel() {
                                             </td>
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs">{m.total_bookings}</td>
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs text-emerald-600">{m.completed_bookings}</td>
+                                            <td className="py-3 px-4 text-right font-mono font-bold text-xs text-[oklch(52%_0.16_28)]">
+                                                {Number(m.xhaus_balance || 0).toFixed(2)}
+                                            </td>
                                         </tr>
                                     ))}
                                     {filteredMembers.length === 0 && (
