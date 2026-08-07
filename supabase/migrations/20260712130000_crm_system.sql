@@ -69,7 +69,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. RPC function to complete checkout with xhaus updates
 CREATE OR REPLACE FUNCTION process_checkout_xhaus(
-    p_booking_id bigint,
+    p_booking_id uuid,
     p_xhaus_earned NUMERIC(10, 2),
     p_xhaus_redeemed NUMERIC(10, 2),
     p_xhaus_discount NUMERIC(10, 2)
