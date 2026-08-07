@@ -16,7 +16,7 @@ import {
     Receipt, Calendar, Filter, Search, Download, ExternalLink,
     CheckCircle2, AlertCircle, FileText, Image as ImageIcon,
     RefreshCw, Layers, CreditCard, DollarSign, Smartphone, QrCode, Printer,
-    Copy, Share2, Clock
+    Copy, Share2, Clock, WifiOff
 } from 'lucide-react';
 
 const getCurrentBangkokMonth = () => {
@@ -203,7 +203,7 @@ export default function SlipAuditManager({
                     id, tracking_token, booking_time, total_amount, total_price, discount_amount,
                     status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
                     customer_name, customer_note, pickup_contact_name, pickup_contact_phone, user_id,
-                    profiles ( id, display_name, phone, line_user_id ),
+                    profiles ( * ),
                     tables_layout ( table_name ),
                     order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
                 `)
@@ -220,7 +220,7 @@ export default function SlipAuditManager({
                     id, tracking_token, booking_time, total_amount, total_price, discount_amount,
                     status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
                     customer_name, customer_note, pickup_contact_name, pickup_contact_phone, user_id,
-                    profiles ( id, display_name, phone, line_user_id ),
+                    profiles ( * ),
                     tables_layout ( table_name ),
                     order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
                 `)
@@ -689,6 +689,7 @@ export default function SlipAuditManager({
                         const paid = isOrderPaid(order);
                         const payMethodLabel = getPaymentMethodLabel(order);
                         const trackingUrl = `${window.location.origin}/t/${order.tracking_token || order.id}`;
+                        const isOfflineSyncPending = items.length === 0 && (order.staff_remark || '').includes('Offline');
 
                         // PromptPay QR payload for unpaid / Open Bill
                         let qrPayload = trackingUrl;
@@ -717,9 +718,10 @@ export default function SlipAuditManager({
                                         }`}>
                                             {paid ? 'PAID' : 'OPEN BILL'}
                                         </span>
-                                        {order.isOfflineUnsent && (
-                                            <span className="px-1.5 py-0.5 rounded font-mono text-[8px] font-black bg-rose-100 text-rose-900 border border-rose-300">
-                                                UNSENT
+                                        {(order.isOfflineUnsent || isOfflineSyncPending) && (
+                                            <span className="px-1.5 py-0.5 rounded font-mono text-[8px] font-black bg-rose-100 text-rose-900 border border-rose-300 flex items-center gap-0.5">
+                                                <WifiOff size={10} />
+                                                <span>UNSENT POS</span>
                                             </span>
                                         )}
                                     </div>
@@ -825,8 +827,8 @@ export default function SlipAuditManager({
                                             01. ITEMS
                                         </div>
                                         {items.length === 0 ? (
-                                            <div className="text-xs font-bold text-center py-2 text-gray-500">
-                                                - ไม่มีรายการสินค้า -
+                                            <div className="text-[10px] font-bold text-center py-2 text-amber-900 bg-amber-50 rounded border border-amber-300 leading-normal px-2">
+                                                ⏳ ออเดอร์เปิดจาก POS ออฟไลน์<br/>(กรุณากด 'ซิงค์ข้อมูล' ที่เครื่อง POS)
                                             </div>
                                         ) : (
                                             items.map((item, idx) => {

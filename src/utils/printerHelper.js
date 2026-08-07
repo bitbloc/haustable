@@ -619,8 +619,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     };
 
     const is80mm = String(paperSize ?? '').toLowerCase().includes('80');
-    // If maxCols is 42 and hardware is 48, offset is 3 spaces to physically center the block
-    const globalLeftMargin = is80mm ? '   ' : '';
+    // If maxCols is 36 and hardware is 48, offset is 6 spaces to physically center the block
+    const hardwareCols = is80mm ? 48 : 32;
+    const paddingCols = Math.max(0, hardwareCols - maxCols);
+    const offset = Math.floor(paddingCols / 2);
+    const globalLeftMargin = ' '.repeat(offset);
 
     const originalLine = encoder.line.bind(encoder);
     encoder.line = function(value) {
