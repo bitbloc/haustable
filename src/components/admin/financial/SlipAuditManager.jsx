@@ -11,6 +11,7 @@ import {
     fetchPrinterConfigOnline, initPrinterConfigSync,
     generateDivider, getShortBookingId
 } from '../../../utils/printerHelper';
+import { posCache, getOfflineQueue } from '../../../utils/offlineHelper';
 import {
     Receipt, Calendar, Filter, Search, Download, ExternalLink,
     CheckCircle2, AlertCircle, FileText, Image as ImageIcon,
@@ -70,7 +71,6 @@ export default function SlipAuditManager({
             const cfg = await fetchPrinterConfigOnline();
             if (cfg) setPrinterConfig(prev => ({ ...prev, ...cfg }));
 
-            // Fetch promptpay_id or store phone number if available in app_settings
             try {
                 const { data } = await supabase
                     .from('app_settings')
@@ -117,70 +117,84 @@ export default function SlipAuditManager({
         try {
             let startIso, endIso;
             if (filterMode === 'day') {
-                startIso = `${selectedDate}T00:00:00+07:00`;
-                endIso = `${selectedDate}T23:59:59+07:00`;
+                startIso = `${selectedDate}T00:00:00`;
+                endIso = `${selectedDate}T23:59:59`;
             } else if (filterMode === 'month') {
-                startIso = `${selectedMonth}-01T00:00:00+07:00`;
+                startIso = `${selectedMonth}-01T00:00:00`;
                 const [y, m] = selectedMonth.split('-');
                 const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
-                endIso = `${selectedMonth}-${lastDay}T23:59:59+07:00`;
+                endIso = `${selectedMonth}-${String(lastDay).padStart(2, '0')}T23:59:59`;
             } else {
-                startIso = `${selectedYear}-01-01T00:00:00+07:00`;
-                endIso = `${selectedYear}-12-31T23:59:59+07:00`;
+                startIso = `${selectedYear}-01-01T00:00:00`;
+                endIso = `${selectedYear}-12-31T23:59:59`;
             }
 
-            // Fetch ALL orders including open bills, pending payments, confirmed, seated, ready, completed
-            const { data, error } = await supabase
+            // 1. Fetch range bookings from Supabase
+            const { data: rangeData, error: rangeErr } = await supabase
                 .from('bookings')
                 .select(`
-                    id,
-                    tracking_token,
-                    booking_time,
-                    total_amount,
-                    total_price,
-                    discount_amount,
-                    status,
-                    pax,
-                    number_of_guests,
-                    booking_type,
-                    payment_slip_url,
-                    staff_remark,
-                    customer_name,
-                    customer_note,
-                    pickup_contact_name,
-                    pickup_contact_phone,
-                    user_id,
-                    profiles (
-                        id,
-                        display_name,
-                        phone,
-                        line_user_id
-                    ),
-                    tables_layout (
-                        table_name
-                    ),
-                    order_items (
-                        id,
-                        quantity,
-                        price_at_time,
-                        special_instructions,
-                        selected_options,
-                        menu_items (
-                            id,
-                            name,
-                            price,
-                            menu_categories (
-                                name
-                            )
-                        )
-                    )
+                    id, tracking_token, booking_time, total_amount, total_price, discount_amount,
+                    status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
+                    customer_name, customer_note, pickup_contact_name, pickup_contact_phone, user_id,
+                    profiles ( id, display_name, phone, line_user_id ),
+                    tables_layout ( table_name ),
+                    order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
                 `)
                 .gte('booking_time', startIso)
                 .lte('booking_time', endIso)
                 .order('booking_time', { ascending: false });
 
-            if (error) throw error;
-            setOrders(data || []);
+            if (rangeErr) console.warn("Supabase range query warning:", rangeErr);
+
+            // 2. Fetch ALL active Open Bills (status !== completed/cancelled/void) regardless of date bounds
+            const { data: openBillsData, error: openErr } = await supabase
+                .from('bookings')
+                .select(`
+                    id, tracking_token, booking_time, total_amount, total_price, discount_amount,
+                    status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
+                    customer_name, customer_note, pickup_contact_name, pickup_contact_phone, user_id,
+                    profiles ( id, display_name, phone, line_user_id ),
+                    tables_layout ( table_name ),
+                    order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
+                `)
+                .in('status', ['pending', 'confirmed', 'seated', 'ready', 'open', 'draft', 'pending_payment'])
+                .order('booking_time', { ascending: false });
+
+            if (openErr) console.warn("Supabase open bills query warning:", openErr);
+
+            // 3. Inspect posCache & localStorage offline queue for active/unsent orders
+            let localCached = [];
+            try {
+                localCached = posCache.getBookings() || [];
+            } catch (e) {}
+
+            let offlineQueue = [];
+            try {
+                const queue = getOfflineQueue() || [];
+                offlineQueue = queue.map(q => q.payload?.booking || q.payload?.order).filter(Boolean);
+            } catch (e) {}
+
+            // Deduplicate all orders by ID
+            const orderMap = new Map();
+
+            (rangeData || []).forEach(b => { if (b && b.id) orderMap.set(String(b.id), b); });
+            (openBillsData || []).forEach(b => { if (b && b.id) orderMap.set(String(b.id), b); });
+            localCached.forEach(b => {
+                if (b && b.id && !orderMap.has(String(b.id))) {
+                    orderMap.set(String(b.id), b);
+                }
+            });
+            offlineQueue.forEach(b => {
+                if (b && b.id && !orderMap.has(String(b.id))) {
+                    orderMap.set(String(b.id), { ...b, isOfflineUnsent: true });
+                }
+            });
+
+            const combinedList = Array.from(orderMap.values()).sort((a, b) => {
+                return new Date(b.booking_time || Date.now()) - new Date(a.booking_time || Date.now());
+            });
+
+            setOrders(combinedList);
         } catch (err) {
             console.error("Failed to fetch slip audit orders:", err);
             toast.error("ไม่สามารถดึงข้อมูลสลิปและออเดอร์ได้");
@@ -521,7 +535,7 @@ export default function SlipAuditManager({
                         const queueNo = getShortBookingId(order);
                         const fullSlipUrl = getFullSlipUrl(order.payment_slip_url);
                         const items = order.order_items || [];
-                        const subtotal = items.reduce((sum, i) => sum + (parseFloat(i.price_at_time || i.menu_items?.price || 0) * (i.quantity || 1)), 0);
+                        const subtotal = items.reduce((sum, i) => sum + (parseFloat(i.price_at_time || i.menu_items?.price || i.price || 0) * (i.quantity || 1)), 0);
                         const discount = parseFloat(order.discount_amount || 0);
                         const netTotal = parseFloat(order.total_amount || order.total_price || subtotal);
                         const paxCount = order.pax || order.number_of_guests || 1;
@@ -560,6 +574,11 @@ export default function SlipAuditManager({
                                         }`}>
                                             {paid ? 'PAID' : 'OPEN BILL'}
                                         </span>
+                                        {order.isOfflineUnsent && (
+                                            <span className="px-1.5 py-0.5 rounded font-mono text-[8px] font-black bg-rose-100 text-rose-900 border border-rose-300">
+                                                UNSENT
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center gap-1">
@@ -664,7 +683,7 @@ export default function SlipAuditManager({
                                         </div>
                                         {items.map((item, idx) => {
                                             const qty = item.quantity || 1;
-                                            const price = parseFloat(item.price_at_time || item.menu_items?.price || 0);
+                                            const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0);
                                             const lineTotal = price * qty;
 
                                             return (
@@ -672,7 +691,7 @@ export default function SlipAuditManager({
                                                     <div className="flex justify-between font-bold items-baseline gap-2">
                                                         <span className="w-6 shrink-0 text-sm font-black">{qty}x</span>
                                                         <span className="grow font-bold uppercase text-[12px] tracking-tight leading-4">
-                                                            {item.menu_items?.name || 'ITEM'}
+                                                            {item.menu_items?.name || item.name || 'ITEM'}
                                                         </span>
                                                         <span className="shrink-0 font-mono font-bold">
                                                             {lineTotal.toLocaleString()}
