@@ -22,11 +22,18 @@ export default function AdminFinancialDashboard() {
     const [loading, setLoading] = useState(false)
     const [activeTab, setActiveTab] = useState('all') // 'all', 'slips', 'summary', 'heatmap', 'top_menu', 'crm', 'casual'
     
+    const getCurrentBangkokMonth = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+    };
+
     // Filter States
     const [filterMode, setFilterMode] = useState('month') // 'day', 'month', 'year'
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
-    const [selectedMonth, setSelectedMonth] = useState('2026-07')
-    const [selectedYear, setSelectedYear] = useState('2026')
+    const [selectedMonth, setSelectedMonth] = useState(getCurrentBangkokMonth())
+    const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
     const [compareWithPrev, setCompareWithPrev] = useState(true)
 
     // Real Live Financial Metrics (Connected directly to POS & Supabase)

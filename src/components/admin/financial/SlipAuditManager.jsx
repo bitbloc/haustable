@@ -1,9 +1,10 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Synchronized Thermal Receipt Audit Workbench · theme: Atelier (Thai Modern OKLCH) */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Synchronized Thermal Receipt & Open Bill Audit Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { getThaiDate } from '../../../utils/timeUtils';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
+import generatePayload from 'promptpay-qr';
 import html2canvas from 'html2canvas';
 import ViewSlipModal from '../../shared/ViewSlipModal';
 import {
@@ -13,8 +14,16 @@ import {
 import {
     Receipt, Calendar, Filter, Search, Download, ExternalLink,
     CheckCircle2, AlertCircle, FileText, Image as ImageIcon,
-    RefreshCw, Layers, CreditCard, DollarSign, Smartphone, QrCode, Printer
+    RefreshCw, Layers, CreditCard, DollarSign, Smartphone, QrCode, Printer,
+    Copy, Share2, Clock
 } from 'lucide-react';
+
+const getCurrentBangkokMonth = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+};
 
 export default function SlipAuditManager({ 
     filterMode: parentFilterMode, 
@@ -27,14 +36,14 @@ export default function SlipAuditManager({
     const [filteredOrders, setFilteredOrders] = useState([]);
     
     // Filter controls
-    const [filterMode, setFilterMode] = useState(parentFilterMode || 'day'); // 'day', 'month', 'year'
+    const [filterMode, setFilterMode] = useState(parentFilterMode || 'month'); // 'day', 'month', 'year'
     const [selectedDate, setSelectedDate] = useState(parentSelectedDate || getThaiDate());
-    const [selectedMonth, setSelectedMonth] = useState(parentSelectedMonth || '2026-07');
-    const [selectedYear, setSelectedYear] = useState(parentSelectedYear || '2026');
-    const [slipFilter, setSlipFilter] = useState('all'); // 'all', 'slip_only', 'no_slip'
+    const [selectedMonth, setSelectedMonth] = useState(parentSelectedMonth || getCurrentBangkokMonth());
+    const [selectedYear, setSelectedYear] = useState(parentSelectedYear || String(new Date().getFullYear()));
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'open_bill', 'paid', 'slip_only', 'no_slip'
     const [searchQuery, setSearchQuery] = useState('');
     
-    // Printer settings synced with backend (app_settings)
+    // Printer & Shop settings synced with backend (app_settings)
     const [printerConfig, setPrinterConfig] = useState({
         shop_name: 'IN THE HAUS',
         shop_address: '',
@@ -44,7 +53,8 @@ export default function SlipAuditManager({
         shop_footer_text: '',
         shop_tagline: 'TASTE YOUR SCENT.',
         divider_style: 'dashed',
-        footer_ascii_art: ''
+        footer_ascii_art: '',
+        promptpay_id: ''
     });
 
     // Modal states
@@ -56,9 +66,27 @@ export default function SlipAuditManager({
 
     // Real-time Printer Config & Receipt Settings Sync with Supabase app_settings
     useEffect(() => {
-        fetchPrinterConfigOnline().then(cfg => {
+        const loadSettings = async () => {
+            const cfg = await fetchPrinterConfigOnline();
             if (cfg) setPrinterConfig(prev => ({ ...prev, ...cfg }));
-        });
+
+            // Fetch promptpay_id or store phone number if available in app_settings
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', ['promptpay_id', 'phone_number', 'receipt_shop_phone']);
+
+                if (data && data.length > 0) {
+                    const ppObj = data.find(i => (i.key === 'promptpay_id' || i.key === 'phone_number' || i.key === 'receipt_shop_phone') && i.value);
+                    if (ppObj && ppObj.value) {
+                        setPrinterConfig(prev => ({ ...prev, promptpay_id: ppObj.value }));
+                    }
+                }
+            } catch (err) {}
+        };
+
+        loadSettings();
 
         const unsubscribe = initPrinterConfigSync((updatedCfg) => {
             if (updatedCfg) setPrinterConfig(prev => ({ ...prev, ...updatedCfg }));
@@ -82,7 +110,7 @@ export default function SlipAuditManager({
 
     useEffect(() => {
         applyFilters();
-    }, [orders, slipFilter, searchQuery]);
+    }, [orders, statusFilter, searchQuery]);
 
     const fetchOrdersAndSlips = async () => {
         setLoading(true);
@@ -101,6 +129,7 @@ export default function SlipAuditManager({
                 endIso = `${selectedYear}-12-31T23:59:59+07:00`;
             }
 
+            // Fetch ALL orders including open bills, pending payments, confirmed, seated, ready, completed
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`
@@ -163,10 +192,14 @@ export default function SlipAuditManager({
     const applyFilters = () => {
         let result = [...orders];
 
-        // 1. Slip attachment filter
-        if (slipFilter === 'slip_only') {
+        // 1. Status Filter
+        if (statusFilter === 'open_bill') {
+            result = result.filter(o => o.status !== 'completed' && o.status !== 'paid' && o.status !== 'success' && o.status !== 'cancelled' && o.status !== 'void');
+        } else if (statusFilter === 'paid') {
+            result = result.filter(o => o.status === 'completed' || o.status === 'paid' || o.status === 'success');
+        } else if (statusFilter === 'slip_only') {
             result = result.filter(o => !!o.payment_slip_url);
-        } else if (slipFilter === 'no_slip') {
+        } else if (statusFilter === 'no_slip') {
             result = result.filter(o => !o.payment_slip_url);
         }
 
@@ -197,7 +230,14 @@ export default function SlipAuditManager({
         return `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${srcUrl}`;
     };
 
+    const isOrderPaid = (order) => {
+        return order.status === 'completed' || order.status === 'paid' || order.status === 'success';
+    };
+
     const getPaymentMethodLabel = (order) => {
+        if (!isOrderPaid(order)) {
+            return 'OPEN BILL (ยังไม่ชำระเงิน)';
+        }
         const remark = (order.staff_remark || '').toLowerCase();
         if (order.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
             return 'QR TRANSFER / โอนเงินผ่าน QR';
@@ -219,7 +259,7 @@ export default function SlipAuditManager({
         }
 
         setExportingId(orderId);
-        toast.info("กำลังประมวลผลการส่งออกภาพใบเสร็จหลักบ้าน...");
+        toast.info("กำลังประมวลผลการส่งออกภาพใบแจ้งยอด/สลิป...");
 
         try {
             const canvas = await html2canvas(element, {
@@ -232,20 +272,26 @@ export default function SlipAuditManager({
 
             const image = canvas.toDataURL('image/png');
             const link = document.createElement('a');
-            const fileName = `receipt_ticket_${token || orderId}_${selectedDate || 'audit'}.png`;
+            const fileName = `bill_${token || orderId}_${selectedDate || 'audit'}.png`;
             link.href = image;
             link.download = fileName;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
-            toast.success(`ส่งออกภาพใบเสร็จเรียบร้อยแล้ว (${fileName})`);
+            toast.success(`ส่งออกภาพใบเสร็จ/ใบแจ้งยอดเรียบร้อยแล้ว (${fileName})`);
         } catch (err) {
             console.error("Export slip image error:", err);
-            toast.error("เกิดข้อผิดพลาดในการบันทึกภาพใบเสร็จ");
+            toast.error("เกิดข้อผิดพลาดในการบันทึกภาพสลิป");
         } finally {
             setExportingId(null);
         }
+    };
+
+    const handleCopyBillLink = (order) => {
+        const link = `${window.location.origin}/t/${order.tracking_token || order.id}`;
+        navigator.clipboard.writeText(link);
+        toast.success(`คัดลอกลิงก์แจ้งยอดออเดอร์ #${getShortBookingId(order)} เรียบร้อยแล้ว (ส่งให้ลูกค้าทาง LINE/FB ได้ทันที)`);
     };
 
     const formatThaiDateTime = (isoString) => {
@@ -271,6 +317,8 @@ export default function SlipAuditManager({
         return `ประจำปี ${selectedYear}`;
     };
 
+    const openBillsCount = orders.filter(o => o.status !== 'completed' && o.status !== 'paid' && o.status !== 'success' && o.status !== 'cancelled' && o.status !== 'void').length;
+    const paidOrdersCount = orders.filter(o => o.status === 'completed' || o.status === 'paid' || o.status === 'success').length;
     const ordersWithSlipsCount = orders.filter(o => !!o.payment_slip_url).length;
     const totalRevenueSum = filteredOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || o.total_price || 0), 0);
 
@@ -283,6 +331,7 @@ export default function SlipAuditManager({
     const shopTagline = printerConfig.shop_tagline || 'TASTE YOUR SCENT.';
     const shopFooter = printerConfig.shop_footer_text || printerConfig.receipt_shop_footer || '';
     const asciiArt = printerConfig.footer_ascii_art || '';
+    const promptpayId = printerConfig.promptpay_id || '0985284217';
 
     return (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -304,14 +353,14 @@ export default function SlipAuditManager({
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <h2 className="text-lg md:text-xl font-black tracking-tight text-[oklch(18%_0.012_28)] font-sans">
-                                    ระบบสลิปใบเสร็จหลักบ้าน & ดาวน์โหลดสเปกเครื่องพิมพ์ (Thermal Slip Sync)
+                                    ระบบสลิปใบเสร็จ & Open Bill ส่งลูกค้าออนไลน์ (Thermal Ticket Sync)
                                 </h2>
                                 <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-emerald-800 text-white font-bold uppercase tracking-wider">
-                                    PRINTER CONFIG SYNCED
+                                    OPEN BILL & ONLINE SYNCED
                                 </span>
                             </div>
                             <p className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] mt-0.5">
-                                โครงสร้างใบเสร็จตรงตามที่ตั้งค่าเครื่องพิมพ์หลังบ้าน (Shop Logo, Address, Tax ID, Dividers & ASCII Art) // {getTimeRangeTitle()}
+                                รวมรายการยังไม่ชำระเงิน (Open Bill) และรายการชำระแล้ว พร้อมสร้างภาพสลิป/QR Code ส่งลูกค้าออนไลน์ // {getTimeRangeTitle()}
                             </p>
                         </div>
                     </div>
@@ -401,33 +450,46 @@ export default function SlipAuditManager({
                     </div>
                 </div>
 
-                {/* Slip Filter Category Tabs */}
+                {/* Status & Slip Filter Tabs */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border-2 border-[oklch(85%_0.012_28)]">
+                    <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 rounded-xl border-2 border-[oklch(85%_0.012_28)]">
                         <button
-                            onClick={() => setSlipFilter('all')}
+                            onClick={() => setStatusFilter('all')}
                             className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
-                                slipFilter === 'all' ? 'bg-[oklch(18%_0.012_28)] text-white font-black' : 'text-[oklch(42%_0.010_28)] hover:bg-gray-50'
+                                statusFilter === 'all' ? 'bg-[oklch(18%_0.012_28)] text-white font-black' : 'text-[oklch(42%_0.010_28)] hover:bg-gray-50'
                             }`}
                         >
                             ทั้งหมด ({orders.length})
                         </button>
+
                         <button
-                            onClick={() => setSlipFilter('slip_only')}
+                            onClick={() => setStatusFilter('open_bill')}
                             className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1 ${
-                                slipFilter === 'slip_only' ? 'bg-emerald-800 text-white font-black' : 'text-emerald-800 hover:bg-emerald-50'
+                                statusFilter === 'open_bill' ? 'bg-amber-800 text-white font-black' : 'text-amber-900 bg-amber-50 hover:bg-amber-100'
+                            }`}
+                        >
+                            <Clock size={14} />
+                            <span>ยังไม่ชำระ / Open Bill ({openBillsCount})</span>
+                        </button>
+
+                        <button
+                            onClick={() => setStatusFilter('paid')}
+                            className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1 ${
+                                statusFilter === 'paid' ? 'bg-emerald-800 text-white font-black' : 'text-emerald-900 bg-emerald-50 hover:bg-emerald-100'
+                            }`}
+                        >
+                            <CheckCircle2 size={14} />
+                            <span>ชำระเงินแล้ว ({paidOrdersCount})</span>
+                        </button>
+
+                        <button
+                            onClick={() => setStatusFilter('slip_only')}
+                            className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all flex items-center gap-1 ${
+                                statusFilter === 'slip_only' ? 'bg-indigo-800 text-white font-black' : 'text-indigo-900 hover:bg-indigo-50'
                             }`}
                         >
                             <ImageIcon size={14} />
-                            <span>เฉพาะมีสลิป ({ordersWithSlipsCount})</span>
-                        </button>
-                        <button
-                            onClick={() => setSlipFilter('no_slip')}
-                            className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
-                                slipFilter === 'no_slip' ? 'bg-[oklch(18%_0.012_28)] text-white font-black' : 'text-[oklch(42%_0.010_28)] hover:bg-gray-50'
-                            }`}
-                        >
-                            ไม่มีสลิป ({orders.length - ordersWithSlipsCount})
+                            <span>มีสลิปแนบ ({ordersWithSlipsCount})</span>
                         </button>
                     </div>
 
@@ -437,20 +499,20 @@ export default function SlipAuditManager({
                 </div>
             </div>
 
-            {/* Content Viewport - Render exact backend thermal receipt cards */}
+            {/* Content Viewport - Render exact backend thermal receipt & open bill cards */}
             {loading ? (
                 <div className="py-20 text-center font-mono text-xs text-[oklch(55%_0.010_28)] uppercase tracking-widest flex flex-col items-center gap-3">
                     <div className="w-8 h-8 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
-                    <span>กำลังโหลดสลิปใบเสร็จรับเงิน...</span>
+                    <span>กำลังโหลดสลิปใบเสร็จและ Open Bill...</span>
                 </div>
             ) : filteredOrders.length === 0 ? (
                 <div className="p-10 bg-white border-2 border-dashed border-[oklch(85%_0.012_28)] rounded-2xl text-center space-y-3">
                     <AlertCircle size={32} className="mx-auto text-[oklch(55%_0.010_28)]" />
                     <div className="font-sans font-bold text-base text-[oklch(18%_0.012_28)]">
-                        ไม่พบรายการสลิปชำระเงินตามเงื่อนไข
+                        ไม่พบรายการออเดอร์ หรือ Open Bill ตามเงื่อนไขที่เลือก
                     </div>
                     <p className="font-mono text-xs text-[oklch(42%_0.010_28)]">
-                        ลองเปลี่ยนตัวกรอง วัน/เดือน/ปี หรือค้นหาด้วยคีย์เวิร์ดอื่น
+                        ลองเปลี่ยนตัวกรอง วัน/เดือน/ปี หรือเลือกแท็บ "ยังไม่ชำระ / Open Bill" หรือ "ทั้งหมด"
                     </p>
                 </div>
             ) : (
@@ -466,25 +528,59 @@ export default function SlipAuditManager({
                         const guestName = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Walk-in Customer';
                         const phone = order.profiles?.phone || order.pickup_contact_phone || '';
                         const tableName = order.tables_layout?.table_name || (order.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN');
-                        const qrValue = `${window.location.origin}/t/${order.tracking_token || order.id}`;
+                        const paid = isOrderPaid(order);
                         const payMethodLabel = getPaymentMethodLabel(order);
+                        const trackingUrl = `${window.location.origin}/t/${order.tracking_token || order.id}`;
+
+                        // PromptPay QR payload for unpaid / Open Bill
+                        let qrPayload = trackingUrl;
+                        if (!paid && netTotal > 0 && promptpayId) {
+                            try {
+                                qrPayload = generatePayload(promptpayId, { amount: netTotal });
+                            } catch (e) {
+                                qrPayload = trackingUrl;
+                            }
+                        }
+
+                        const docTitle = paid ? 'RECEIPT / ใบเสร็จรับเงิน' : 'BILLING SLIP / ใบแจ้งยอดชำระเงิน';
+                        const bannerTitle = paid ? 'RECEIPT (ชำระเงินแล้ว)' : 'OPEN BILL (ยังไม่ชำระเงิน)';
 
                         return (
                             <div key={order.id} className="flex flex-col items-center gap-3">
                                 {/* Action Top Ribbon */}
                                 <div className="w-full flex items-center justify-between gap-2 px-1">
-                                    <span className="font-mono text-xs font-black text-[oklch(18%_0.012_28)]">
-                                        REF: #{queueNo} (ID: {order.id})
-                                    </span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-mono text-xs font-black text-[oklch(18%_0.012_28)]">
+                                            #{queueNo}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-black border ${
+                                            paid 
+                                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
+                                                : 'bg-amber-100 text-amber-900 border-amber-300'
+                                        }`}>
+                                            {paid ? 'PAID' : 'OPEN BILL'}
+                                        </span>
+                                    </div>
 
-                                    <button
-                                        onClick={() => handleExportSlipAsImage(order.id, order.tracking_token)}
-                                        disabled={exportingId === order.id}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-white font-mono text-[11px] font-black rounded-lg transition-all shadow-sm shrink-0 min-h-[36px]"
-                                    >
-                                        <Download size={14} />
-                                        <span>{exportingId === order.id ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลดเป็นภาพสลิป'}</span>
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => handleCopyBillLink(order)}
+                                            className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-gray-100 border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-[10px] font-bold rounded-lg transition-all min-h-[34px]"
+                                            title="คัดลอกลิงก์แจ้งยอดส่งลูกค้าทาง LINE/FB"
+                                        >
+                                            <Copy size={12} />
+                                            <span>คัดลอกลิงก์</span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleExportSlipAsImage(order.id, order.tracking_token)}
+                                            disabled={exportingId === order.id}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-black rounded-lg transition-all shadow-sm shrink-0 min-h-[34px]"
+                                        >
+                                            <Download size={12} />
+                                            <span>{exportingId === order.id ? 'กำลังดาวน์โหลด...' : 'โหลดสลิป PNG'}</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Actual Thermal Receipt Ticket DOM Node (Synced with Backend Printer Layout) */}
@@ -513,9 +609,13 @@ export default function SlipAuditManager({
                                             </p>
                                         )}
 
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-black border-t border-b border-black py-1 my-2 w-full text-center">
+                                            {docTitle}
+                                        </div>
+
                                         {/* Shop Address & Tax Metadata */}
                                         {(shopAddress || shopPhone || shopVat) && (
-                                            <div className="text-[8px] leading-relaxed text-center font-bold text-gray-600 border-t border-b border-dashed border-black py-2 my-2 w-full uppercase">
+                                            <div className="text-[8px] leading-relaxed text-center font-bold text-gray-600 border-b border-dashed border-black pb-2 mb-2 w-full uppercase">
                                                 {shopAddress && <div>{shopAddress}</div>}
                                                 {shopPhone && <div>TEL: {shopPhone}</div>}
                                                 {shopVat && <div>TAX ID: {shopVat}</div>}
@@ -621,22 +721,26 @@ export default function SlipAuditManager({
 
                                     <div className="pt-1 text-center flex flex-col items-center">
                                         <span className="text-[9px] font-black tracking-widest uppercase mb-2">
-                                            SCAN TO PAY / สแกนชำระเงิน
+                                            {paid ? 'ORDER COMPLETED / ชำระเรียบร้อย' : 'SCAN TO PAY / สแกนชำระเงิน (PROMPTPAY)'}
                                         </span>
+                                        
                                         <div className="p-2 bg-white rounded-xl border border-gray-200 shadow-sm inline-block my-1">
                                             <QRCodeSVG 
-                                                value={qrValue}
-                                                size={110}
+                                                value={qrPayload}
+                                                size={120}
                                                 bgColor="#FFFFFF"
                                                 fgColor="#181815"
                                                 level="M"
                                             />
                                         </div>
+                                        
                                         <span className="text-[8px] text-gray-500 font-mono mt-1 uppercase font-bold">
-                                            IN THE HAUS PROMPTPAY
+                                            {paid ? 'RECEIPT VERIFICATION QR' : 'IN THE HAUS PROMPTPAY'}
                                         </span>
 
-                                        <div className="border-2 border-black rounded px-3 py-1 mt-3 font-black text-xs uppercase tracking-wider">
+                                        <div className={`border-2 border-black rounded px-3 py-1 mt-3 font-black text-xs uppercase tracking-wider ${
+                                            paid ? 'bg-black text-white' : 'bg-amber-100 text-amber-950 border-black'
+                                        }`}>
                                             {payMethodLabel}
                                         </div>
                                     </div>
