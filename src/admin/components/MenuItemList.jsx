@@ -378,7 +378,26 @@ export default function MenuItemList() {
         if (!confirm('คุณต้องการลบเมนูนี้ใช่หรือไม่? (การลบจะไม่สามารถกู้คืนได้)')) return
         try {
             const { error } = await supabase.from('menu_items').delete().eq('id', id)
-            if (error) throw error
+            if (error) {
+                if (error.code === '23503') { // Foreign key constraint
+                    if (!confirm('เมนูนี้มีประวัติการสั่งซื้ออยู่ ไม่สามารถลบออกจากฐานข้อมูลได้โดยตรง\nระบบจะทำการย้ายไปหมวดหมู่ "Archived" และซ่อนเมนูนี้แทน ต้องการดำเนินการต่อหรือไม่?')) return;
+                    
+                    const { error: archiveError } = await supabase.from('menu_items').update({
+                        category: 'Archived',
+                        category_id: null,
+                        is_available: false,
+                        is_pickup_available: false,
+                        is_recommended: false
+                    }).eq('id', id);
+
+                    if (archiveError) throw archiveError;
+                    
+                    setMenuItems(prev => prev.filter(i => i.id !== id))
+                    setIsModalOpen(false)
+                    return;
+                }
+                throw error
+            }
             
             // Success
             setMenuItems(prev => prev.filter(i => i.id !== id))

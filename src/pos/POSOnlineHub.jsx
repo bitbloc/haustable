@@ -80,7 +80,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             // We fetch bookings that are source = 'online' OR have payment_slip_url (for slip verification) OR booking_type = 'pickup' with online tracking
             const { data, error } = await supabase
                 .from('bookings')
-                .select('*, profiles(display_name, phone_number)')
+                .select('*, tables_layout(*), profiles(display_name, phone_number), order_items(*, menu_items(name, category_id))')
                 .gte('booking_time', todayIso)
                 .order('booking_time', { ascending: false });
 
@@ -214,6 +214,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         const name = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'ลูกค้าทั่วไป';
         const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
         const isPickup = order.booking_type === 'pickup';
+        const items = order.order_items || [];
+        const tableName = order.tables_layout?.table_name;
 
         return (
             <motion.div 
@@ -229,7 +231,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             <span className={`text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg inline-block ${
                                 isPickup ? 'bg-blue-100 text-blue-900 border border-blue-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
                             }`}>
-                                {isPickup ? '🛍️ PICKUP (รับกลับบ้าน)' : '🍽️ DINE-IN (จองโต๊ะ)'}
+                                {isPickup ? '🛍️ PICKUP (รับกลับบ้าน)' : `🍽️ DINE-IN ${tableName ? `(โต๊ะ ${tableName})` : '(จองโต๊ะ)'}`}
                             </span>
                             <span className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2.5 py-1 rounded-lg border border-[oklch(52%_0.16_28)]/20">
                                 {typeLabel}
@@ -265,13 +267,53 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     )}
                 </div>
 
+                {/* Order Items Summary Preview */}
+                {items.length > 0 && (
+                    <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-xl text-xs flex flex-col gap-1 border border-[oklch(85%_0.012_28)]">
+                        <span className="font-mono font-bold text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                            📦 รายการสินค้า ({items.length} รายการ):
+                        </span>
+                        <ul className="space-y-1">
+                            {items.map((item, idx) => (
+                                <li key={item.id || idx} className="flex justify-between items-center text-[oklch(18%_0.012_28)] font-sans">
+                                    <span className="font-medium truncate pr-2">
+                                        <strong className="font-mono font-bold">{item.quantity}x</strong> {item.menu_items?.name || item.name || 'สินค้า'}
+                                    </span>
+                                    <span className="font-mono font-bold text-[oklch(42%_0.010_28)] shrink-0">
+                                        ฿{(item.price_at_time || item.price || 0) * item.quantity}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {order.customer_note && (
                     <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-xl text-xs text-[oklch(18%_0.012_28)] font-bold border-l-4 border-[oklch(52%_0.16_28)] leading-normal">
                         "{order.customer_note}"
                     </div>
                 )}
 
-                <div className="mt-auto pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2.5">
+                {/* Slip Printing Quick Action Row */}
+                <div className="flex gap-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
+                    <button
+                        onClick={() => onOpenSlipModal && onOpenSlipModal(order, 'kitchen')}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold transition-all hover:bg-amber-100 active:scale-95 cursor-pointer uppercase tracking-wider"
+                        title="พิมพ์ใบสั่งครัว/บาร์"
+                    >
+                        <span>🍳 พิมพ์ใบครัว</span>
+                    </button>
+
+                    <button
+                        onClick={() => onOpenSlipModal && onOpenSlipModal(order, order.status === 'completed' ? 'receipt' : 'billing')}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 border border-slate-300 text-slate-900 text-xs font-bold transition-all hover:bg-slate-200 active:scale-95 cursor-pointer uppercase tracking-wider"
+                        title="พิมพ์ใบแจ้งยอด / ใบเสร็จ"
+                    >
+                        <span>🧾 พิมพ์ใบแจ้งยอด</span>
+                    </button>
+                </div>
+
+                <div className="mt-auto pt-2 border-t border-[oklch(85%_0.012_28)] flex gap-2.5">
                     {order.payment_slip_url && (
                         <button 
                             onClick={() => {

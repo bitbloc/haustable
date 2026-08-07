@@ -347,11 +347,8 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         normalized === '58' ||
         Number(paperSize) === 58
     );
-    // CRITICAL: We use 42 (for 80mm) and 30 (for 58mm) to leave buffer room for Thai vowels.
-    // ESC/POS TIS-620 buffers count bytes, not physical width. 
-    // By keeping the software maxCols lower than the hardware maxCols (48 / 32), 
-    // the extra bytes from padded Thai vowels won't overflow the hardware buffer and wrap the line!
-    return is58mm ? 30 : 42;
+    // Safe Column Limits: 36 for 80mm thermal paper rolls and 26 for 58mm rolls per Rule 3
+    return is58mm ? 26 : 36;
 }
 
 // Classifier helper to categorize menu items into kitchen, bar, or other
@@ -1102,11 +1099,9 @@ function splitPrinterGraphemes(str) {
     return clusters;
 }
 
-// Measure string cell width for ESC/POS printing (TIS-620 grapheme cluster width)
-// CRITICAL: We use grapheme cluster width for straight visual alignment.
-// To prevent the hardware byte-buffer from overflowing (which causes line wrapping),
-// maxCols must be set lower than the hardware limit (e.g. 40 instead of 48).
-export function getPrinterCellWidth(str, useByteLength = false) {
+// Measure string cell width for ESC/POS printing (TIS-620 byte length / character cells)
+// CRITICAL (Rule 3): In ESC/POS text mode, every byte in str.length consumes 1 physical character cell.
+export function getPrinterCellWidth(str, useByteLength = true) {
     if (str === null || str === undefined) return 0;
     if (useByteLength) return String(str).length;
     const clusters = splitPrinterGraphemes(str);
@@ -1115,17 +1110,16 @@ export function getPrinterCellWidth(str, useByteLength = false) {
 
 export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    // CRITICAL: Use visual width (false) for padding to ensure grid alignment!
-    // Thai vowels do not take horizontal space.
-    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
+    // ALWAYS calculate padding based on exact str.length (byte count) per Rule 3!
+    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
 export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    // CRITICAL: Use visual width (false) for padding to ensure grid alignment!
-    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
+    // ALWAYS calculate padding based on exact str.length (byte count) per Rule 3!
+    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
@@ -1243,17 +1237,17 @@ function formatReceiptMoney(value) {
 }
 
 function formatItemLine(calculationText, name, priceStr, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 48);
+    const totalWidth = Math.max(20, Number(maxCols) || 36);
     const nameLines = wrapTextByWords(String(name ?? ''), totalWidth);
     if (nameLines.length === 0) nameLines.push('');
 
     const left = String(calculationText ?? '');
     const right = String(priceStr ?? '');
-    const priceColWidth = Math.max(totalWidth <= 28 ? 9 : 12, getPrinterCellWidth(right));
+    const priceColWidth = Math.max(totalWidth <= 28 ? 8 : 10, getPrinterCellWidth(right, true));
     const leftWidth = Math.max(1, totalWidth - priceColWidth - 1);
 
     let numericRow;
-    if (getPrinterCellWidth(left) <= leftWidth) {
+    if (getPrinterCellWidth(left, true) <= leftWidth) {
         numericRow = padEndPrinter(left, leftWidth) + ' ' + padStartPrinter(right, priceColWidth);
     } else {
         numericRow = padStartPrinter(right, totalWidth);
@@ -1263,22 +1257,23 @@ function formatItemLine(calculationText, name, priceStr, maxCols) {
 }
 
 function formatThreeCols(left, mid, right, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 48);
+    const totalWidth = Math.max(20, Number(maxCols) || 36);
     const isSmall = totalWidth <= 28;
+    const leftStr = String(left ?? '');
     const midStr = String(mid ?? '');
     const rightStr = String(right ?? '');
-    const midWidth = Math.max(getPrinterCellWidth(midStr), isSmall ? 5 : 7);
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 9 : 12);
+    const midWidth = Math.max(getPrinterCellWidth(midStr, true), isSmall ? 4 : 6);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr, true), isSmall ? 8 : 10);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (midWidth + rightWidth + 2 + minLeftWidth > totalWidth) {
-        const leftLines = wrapTextByWords(String(left ?? ''), totalWidth);
+        const leftLines = wrapTextByWords(leftStr, totalWidth);
         const numericLine = formatTwoCols(midStr, rightStr, totalWidth);
         return [...leftLines, numericLine].join('\n');
     }
 
     const leftWidth = totalWidth - midWidth - rightWidth - 2;
-    const leftLines = wrapTextByWords(String(left ?? ''), leftWidth);
+    const leftLines = wrapTextByWords(leftStr, leftWidth);
     if (leftLines.length === 0) leftLines.push('');
 
     const output = [
@@ -1294,11 +1289,11 @@ function formatThreeCols(left, mid, right, maxCols) {
 }
 
 function formatTwoCols(left, right, maxCols) {
-    const totalWidth = Math.max(20, Number(maxCols) || 48);
+    const totalWidth = Math.max(20, Number(maxCols) || 36);
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
     const rightStr = String(right ?? '');
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr), isSmall ? 9 : 12);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr, true), isSmall ? 8 : 10);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (rightWidth + 1 + minLeftWidth > totalWidth) {
