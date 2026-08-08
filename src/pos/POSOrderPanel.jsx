@@ -103,6 +103,103 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         }
     };
 
+    // Quick Register Customer States
+    const [isQuickRegistering, setIsQuickRegistering] = React.useState(false);
+    const [quickName, setQuickName] = React.useState('');
+    const [quickPhone, setQuickPhone] = React.useState('');
+    const [isRegisteringMember, setIsRegisteringMember] = React.useState(false);
+
+    const handleQuickRegisterCustomer = async (e) => {
+        if (e) e.preventDefault();
+        const nameTrim = quickName.trim();
+        const cleanPhone = quickPhone.replace(/\D/g, '');
+
+        if (!nameTrim) {
+            toast.error("กรุณากรอกชื่อลูกค้า");
+            return;
+        }
+        if (!cleanPhone || cleanPhone.length < 9) {
+            toast.error("กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง (อย่างน้อย 9-10 หลัก)");
+            return;
+        }
+
+        setIsRegisteringMember(true);
+        try {
+            // 1. Check if profile with phone number already exists
+            const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('phone_number', cleanPhone)
+                .maybeSingle();
+
+            if (existingProfile) {
+                toast.info(`พบข้อมูลสมาชิก "${existingProfile.display_name}" อยู่ในระบบแล้ว ทำการเชื่อมต่อบิลเรียบร้อย`);
+                await onAttachCustomer?.(existingProfile);
+                setIsQuickRegistering(false);
+                setQuickName('');
+                setQuickPhone('');
+                setActiveModal(null);
+                return;
+            }
+
+            // 2. Register account via Edge Function with default pass: inthehaus
+            const defaultEmail = `${cleanPhone}@inthehaus.com`;
+            const defaultPassword = 'inthehaus';
+
+            const { data: resData, error: fnError } = await supabase.functions.invoke('manage-booking', {
+                body: {
+                    action: 'register_account',
+                    email: defaultEmail,
+                    password: defaultPassword,
+                    profileData: {
+                        display_name: nameTrim,
+                        phone_number: cleanPhone
+                    }
+                }
+            });
+
+            if (fnError) throw fnError;
+            if (resData?.error) throw new Error(resData.error);
+
+            // Fetch newly created profile
+            const newUserId = resData?.userId;
+            let newMember = null;
+            if (newUserId) {
+                const { data: createdProf } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', newUserId)
+                    .maybeSingle();
+                newMember = createdProf;
+            }
+
+            if (!newMember) {
+                newMember = {
+                    id: newUserId || Date.now().toString(),
+                    display_name: nameTrim,
+                    phone_number: cleanPhone,
+                    role: 'customer'
+                };
+            }
+
+            toast.success(`สมัครสมาชิกสำเร็จ! เบอร์: ${cleanPhone} (รหัสผ่านเข้าดูคะแนน: inthehaus)`);
+            
+            await onAttachCustomer?.(newMember);
+
+            setIsQuickRegistering(false);
+            setQuickName('');
+            setQuickPhone('');
+            await loadCrmMembers();
+            setActiveModal(null);
+
+        } catch (err) {
+            console.error("Error quick registering customer:", err);
+            toast.error("ไม่สามารถสมัครสมาชิกได้: " + (err.message || err));
+        } finally {
+            setIsRegisteringMember(false);
+        }
+    };
+
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
         try {
@@ -114,7 +211,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             if (searchQuery.trim()) {
                 const q = `%${searchQuery.trim()}%`;
-                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},email.ilike.${q}`);
+                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q}`);
             }
 
             const { data, error } = await query;
@@ -1094,16 +1191,34 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 ) : (
                                     /* Customer Search Area */
                                     <div className="space-y-3.5">
-                                        <div className="relative">
-                                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
-                                            <input 
-                                                type="text"
-                                                placeholder="SEARCH BY NAME OR PHONE (ค้นหาด้วยชื่อหรือเบอร์)..."
-                                                value={crmSearchTerm}
-                                                onChange={(e) => setCrmSearchTerm(e.target.value)}
-                                                className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#1A1A1A] font-bold transition-colors font-mono h-12"
-                                                autoFocus
-                                            />
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
+                                                <input 
+                                                    type="text"
+                                                    placeholder="SEARCH BY NAME OR PHONE (ค้นหาด้วยชื่อหรือเบอร์)..."
+                                                    value={crmSearchTerm}
+                                                    onChange={(e) => setCrmSearchTerm(e.target.value)}
+                                                    className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[#1A1A1A] font-bold transition-colors font-mono h-12"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsQuickRegistering(true);
+                                                    if (/^\d+$/.test(crmSearchTerm)) {
+                                                        setQuickPhone(crmSearchTerm);
+                                                    } else if (crmSearchTerm) {
+                                                        setQuickName(crmSearchTerm);
+                                                    }
+                                                }}
+                                                className="px-3.5 py-3 bg-[var(--color-accent)] hover:bg-[#d00000] text-white rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm shrink-0 flex items-center gap-1.5 h-12 active:scale-95"
+                                                title="สมัครสมาชิกด่วน"
+                                            >
+                                                <UserPlus size={16} />
+                                                <span className="hidden sm:inline">+ สมัครด่วน</span>
+                                            </button>
                                         </div>
 
                                         <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1 scrollbar-none">
@@ -1170,8 +1285,23 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     </button>
                                                 ))
                                             ) : (
-                                                <div className="text-center font-mono text-xs font-bold text-[#767673] py-12 uppercase italic bg-[#F5F5F2] rounded-xl border border-dashed border-[#D1D1CD]">
-                                                    No customer profiles found
+                                                <div className="text-center font-mono text-xs font-bold text-[#767673] py-10 uppercase bg-[#F5F5F2] rounded-xl border border-dashed border-[#D1D1CD] flex flex-col items-center justify-center gap-3">
+                                                    <span>No customer profiles found / ไม่พบสมาชิกลูกค้า</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setIsQuickRegistering(true);
+                                                            if (/^\d+$/.test(crmSearchTerm)) {
+                                                                setQuickPhone(crmSearchTerm);
+                                                            } else if (crmSearchTerm) {
+                                                                setQuickName(crmSearchTerm);
+                                                            }
+                                                        }}
+                                                        className="px-4 py-2.5 bg-[var(--color-accent)] hover:bg-[#d00000] text-white rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-1.5"
+                                                    >
+                                                        <UserPlus size={14} />
+                                                        <span>+ สมัครสมาชิกด่วนให้ลูกค้านี้</span>
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>

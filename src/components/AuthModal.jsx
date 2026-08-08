@@ -199,13 +199,20 @@ export default function AuthModal({ isOpen, onClose }) {
         setLoading(true)
         setError(null)
         try {
-            const { error } = await supabase.auth.signInWithPassword({ email, password })
+            let targetEmail = email.trim();
+            if (!targetEmail.includes('@')) {
+                const cleanPhone = targetEmail.replace(/\D/g, '');
+                if (cleanPhone) {
+                    targetEmail = `${cleanPhone}@inthehaus.com`;
+                }
+            }
+            const { error } = await supabase.auth.signInWithPassword({ email: targetEmail, password })
             if (error) throw error
             onClose()
         } catch (err) {
             console.error("Login Error:", err)
             if (err.message.includes("Invalid login credentials") || err.message.includes("Email not confirmed")) {
-                setError("Invalid email/password, or email not confirmed. Please check your inbox.")
+                setError("ชื่อผู้ใช้/เบอร์โทร หรือ รหัสผ่านไม่ถูกต้อง (Invalid credentials)")
             } else {
                 setError(err.message)
             }
@@ -367,11 +374,11 @@ export default function AuthModal({ isOpen, onClose }) {
 
                         <div className="relative flex items-center justify-center my-6">
                             <div className="h-px bg-white/10 w-full absolute" />
-                            <span className="bg-[#1A1A1A] px-2 relative text-xs text-gray-500">OR EMAIL</span>
+                            <span className="bg-[#1A1A1A] px-2 relative text-xs text-gray-500">OR PHONE / EMAIL</span>
                         </div>
 
                         <form onSubmit={handleEmailLogin} className="space-y-4">
-                            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none" required />
+                            <input type="text" placeholder="Phone Number or Email (เบอร์โทร หรือ อีเมล)" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#111] border border-white/10 rounded-xl py-3 px-4 text-white focus:border-[#DFFF00] outline-none font-sans" required />
                             <div className="relative">
                                 <input
                                     type={showPassword ? 'text' : 'password'}

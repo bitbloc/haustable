@@ -171,7 +171,7 @@ export default function POSDashboard() {
 
             if (searchQuery.trim()) {
                 const q = `%${searchQuery.trim()}%`;
-                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},email.ilike.${q}`);
+                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q}`);
             }
 
             const { data, error } = await query;
