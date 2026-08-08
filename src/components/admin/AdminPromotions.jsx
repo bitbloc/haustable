@@ -59,9 +59,62 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
         }
     }
 
+    // Drink Stamp States
+    const [categoriesList, setCategoriesList] = useState([])
+    const [allItemsList, setAllItemsList] = useState([])
+    const [stampsLoading, setStampsLoading] = useState(false)
+
+    const fetchStampSettings = async () => {
+        setStampsLoading(true)
+        try {
+            const [catRes, itemRes] = await Promise.all([
+                supabase.from('menu_categories').select('*').order('display_order'),
+                supabase.from('menu_items').select('*, menu_categories(name)').order('name')
+            ])
+            if (catRes.data) setCategoriesList(catRes.data)
+            if (itemRes.data) setAllItemsList(itemRes.data)
+        } catch (err) {
+            console.error('Error fetching stamp settings:', err)
+        } finally {
+            setStampsLoading(false)
+        }
+    }
+
+    const toggleCategoryEligibility = async (category) => {
+        const newStatus = !category.is_drink_stamp_eligible
+        setCategoriesList(prev => prev.map(c => c.id === category.id ? { ...c, is_drink_stamp_eligible: newStatus } : c))
+        setAllItemsList(prev => prev.map(i => i.category_id === category.id ? { ...i, is_drink_stamp_eligible: newStatus } : i))
+
+        try {
+            await supabase.from('menu_categories').update({ is_drink_stamp_eligible: newStatus }).eq('id', category.id)
+            await supabase.from('menu_items').update({ is_drink_stamp_eligible: newStatus }).eq('category_id', category.id)
+            toast.success(`อัปเดตสิทธิ์ 10 แถม 1 ของหมวดหมู่ ${category.name} เป็น ${newStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}`)
+        } catch (err) {
+            console.error('Failed to update category eligibility:', err)
+            toast.error('ไม่สามารถอัปเดตสิทธิ์หมวดหมู่ได้')
+            fetchStampSettings()
+        }
+    }
+
+    const toggleItemEligibility = async (item) => {
+        const newStatus = !item.is_drink_stamp_eligible
+        setAllItemsList(prev => prev.map(i => i.id === item.id ? { ...i, is_drink_stamp_eligible: newStatus } : i))
+
+        try {
+            await supabase.from('menu_items').update({ is_drink_stamp_eligible: newStatus }).eq('id', item.id)
+            toast.success(`อัปเดตสิทธิ์ 10 แถม 1 ของ ${item.name}`)
+        } catch (err) {
+            console.error('Failed to update item eligibility:', err)
+            toast.error('ไม่สามารถอัปเดตสิทธิ์เมนูได้')
+            fetchStampSettings()
+        }
+    }
+
     useEffect(() => {
         if (activeTab === 'rewards') {
             fetchRewards()
+        } else if (activeTab === 'stamps') {
+            fetchStampSettings()
         }
     }, [activeTab])
 
@@ -336,11 +389,11 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     }}
                     className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
                         activeTab === 'promo' 
-                            ? 'border-black text-black' 
+                            ? 'border-black text-black font-bold' 
                             : 'border-transparent text-gray-400 hover:text-gray-600'
                     }`}
                 >
-                    🎟️ โค้ดส่วนลดโปรโมชัน (Promotions)
+                    [PROMOTIONS] โค้ดส่วนลด
                 </button>
                 <button
                     onClick={() => {
@@ -349,11 +402,37 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     }}
                     className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
                         activeTab === 'rewards' 
+                            ? 'border-black text-black font-bold' 
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
+                >
+                    [REWARDS] ของรางวัลสะสมแต้ม
+                </button>
+                <button
+                    onClick={() => {
+                        setActiveTab('stamps')
+                        setSearchTerm('')
+                    }}
+                    className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
+                        activeTab === 'stamps' 
+                            ? 'border-black text-black font-bold' 
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
+                >
+                    [10 FREE 1] เครื่องดื่ม 10 แถม 1
+                </button>
+                <button
+                    onClick={() => {
+                        setActiveTab('stamps')
+                        setSearchTerm('')
+                    }}
+                    className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
+                        activeTab === 'stamps' 
                             ? 'border-black text-black' 
                             : 'border-transparent text-gray-400 hover:text-gray-600'
                     }`}
                 >
-                    🎁 ของรางวัลสะสมแต้ม (xhaus Rewards)
+                    🥤 เครื่องดื่ม 10 แถม 1 (Drink Stamps)
                 </button>
             </div>
 

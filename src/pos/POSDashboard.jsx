@@ -1580,7 +1580,8 @@ export default function POSDashboard() {
         promoDiscount = 0,
         manualDiscount = 0,
         rewardCode = null,
-        rewardId = null
+        rewardId = null,
+        useFreeDrinkQuota = false
     ) => {
         if (isSubmittingOrder) return;
         if (currentOrder.items.length === 0) return;
@@ -1614,19 +1615,36 @@ export default function POSDashboard() {
         
         let memberDiscount = 0;
         if (currentBooking && currentBooking.profiles) {
-            // Member Tier Auto-Discounts have been disabled as requested.
-            // Only manual discounts, promos, and xhaus redemption are applied.
             memberDiscount = 0;
         }
 
-        const netBeforeTax = subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount;
+        let freeDrinkDiscVal = 0;
+        if (useFreeDrinkQuota) {
+            const eligibleItems = currentOrder.items.filter(item => 
+                item.is_drink_stamp_eligible || 
+                item.menu_items?.is_drink_stamp_eligible || 
+                (item.category || '').toLowerCase().includes('coffee') || 
+                (item.category || '').toLowerCase().includes('tea') || 
+                (item.category || '').toLowerCase().includes('beverage') || 
+                (item.category || '').toLowerCase().includes('drink') || 
+                (item.category || '').toLowerCase().includes('soda') || 
+                (item.category || '').toLowerCase().includes('ชา') || 
+                (item.category || '').toLowerCase().includes('กาแฟ') || 
+                (item.category || '').toLowerCase().includes('เครื่องดื่ม')
+            );
+            if (eligibleItems.length > 0) {
+                freeDrinkDiscVal = Math.min(...eligibleItems.map(i => parseFloat(i.price) || 0));
+            }
+        }
+
+        const netBeforeTax = subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - freeDrinkDiscVal;
         const finalTotal = includeTax ? Math.max(0, netBeforeTax * 1.07) : Math.max(0, netBeforeTax);
 
         const success = await completeCheckout(
             bookingId, 
             finalTotal, 
             paymentMethod, 
-            memberDiscount + promoDiscount + manualDiscount + xhausDiscount, 
+            memberDiscount + promoDiscount + manualDiscount + xhausDiscount + freeDrinkDiscVal, 
             pointsEarned, 
             xhausToRedeem, 
             xhausDiscount,
@@ -1634,6 +1652,64 @@ export default function POSDashboard() {
             rewardId
         );
         if (success) {
+            // Process Automatic Drink Stamps 10 Free 1 for Attached Member Profile
+            if (currentBooking?.profiles?.id || currentBooking?.user_id) {
+                const profileId = currentBooking.profiles?.id || currentBooking.user_id;
+                try {
+                    let eligibleDrinkCount = currentOrder.items.reduce((sum, item) => {
+                        const isEligible = item.is_drink_stamp_eligible || 
+                            item.menu_items?.is_drink_stamp_eligible || 
+                            (item.category || '').toLowerCase().includes('coffee') || 
+                            (item.category || '').toLowerCase().includes('tea') || 
+                            (item.category || '').toLowerCase().includes('beverage') || 
+                            (item.category || '').toLowerCase().includes('drink') || 
+                            (item.category || '').toLowerCase().includes('soda') || 
+                            (item.category || '').toLowerCase().includes('ชา') || 
+                            (item.category || '').toLowerCase().includes('กาแฟ') || 
+                            (item.category || '').toLowerCase().includes('เครื่องดื่ม');
+
+                        return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
+                    }, 0);
+
+                    if (useFreeDrinkQuota && eligibleDrinkCount > 0) {
+                        eligibleDrinkCount = Math.max(0, eligibleDrinkCount - 1);
+                    }
+
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('drink_stamp_count, free_drink_quota, total_drinks_purchased')
+                        .eq('id', profileId)
+                        .maybeSingle();
+
+                    if (profile) {
+                        const currentStamps = profile.drink_stamp_count || 0;
+                        const currentQuota = profile.free_drink_quota || 0;
+                        const currentTotal = profile.total_drinks_purchased || 0;
+
+                        const totalStamps = currentStamps + eligibleDrinkCount;
+                        const earnedNewQuota = Math.floor(totalStamps / 10);
+                        const newStampCount = totalStamps % 10;
+                        const newQuota = Math.max(0, currentQuota - (useFreeDrinkQuota ? 1 : 0) + earnedNewQuota);
+                        const newTotalPurchased = currentTotal + eligibleDrinkCount;
+
+                        await supabase
+                            .from('profiles')
+                            .update({
+                                drink_stamp_count: newStampCount,
+                                free_drink_quota: newQuota,
+                                total_drinks_purchased: newTotalPurchased
+                            })
+                            .eq('id', profileId);
+
+                        if (earnedNewQuota > 0) {
+                            toast.success(`🎉 สะสมเครื่องดื่มครบ 10 แก้ว! ได้รับสิทธิ์เครื่องดื่มฟรีเพิ่ม ${earnedNewQuota} สิทธิ์`);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Error updating drink stamps on checkout:", err);
+                }
+            }
+
             localStorage.removeItem('pos_active_table_id');
             let completedBooking = null;
             try {

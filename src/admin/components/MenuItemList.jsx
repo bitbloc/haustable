@@ -87,6 +87,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({ item, handleEdit
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                         {isRecommended && <span className="text-[10px] bg-gray-200 text-subInk border border-gray-300 px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">FIXED</span>}
+                        {item.is_drink_stamp_eligible && <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">10 FREE 1</span>}
                         {!item.is_available && <span className="text-[10px] bg-red-50 text-red-500 border border-red-100 px-1.5 py-0.5 rounded">หมด</span>}
                     </div>
                 </div>
@@ -174,6 +175,7 @@ export default function MenuItemList() {
         is_available: true,
         is_recommended: false,
         is_pickup_available: true,
+        is_drink_stamp_eligible: false,
         material_cost: 0 
     })
 
@@ -231,6 +233,7 @@ export default function MenuItemList() {
             is_available: true,
             is_recommended: false,
             is_pickup_available: true,
+            is_drink_stamp_eligible: false,
             material_cost: 0
         })
         setIsModalOpen(true)
@@ -246,6 +249,7 @@ export default function MenuItemList() {
             is_available: item.is_available,
             is_recommended: item.is_recommended,
             is_pickup_available: item.is_pickup_available !== false,
+            is_drink_stamp_eligible: item.is_drink_stamp_eligible === true,
             // fixed_cost fields deprecated
             material_cost: 0 // Will fetch below
         })
@@ -427,6 +431,7 @@ export default function MenuItemList() {
                 is_available: item.is_available,
                 is_recommended: item.is_recommended,
                 is_pickup_available: item.is_pickup_available !== false,
+                is_drink_stamp_eligible: item.is_drink_stamp_eligible === true,
                 image_url: item.image_url || '',
                 sort_order: maxSort + 1
             }
@@ -518,6 +523,7 @@ export default function MenuItemList() {
                 is_available: formData.is_available,
                 is_recommended: formData.is_recommended,
                 is_pickup_available: formData.is_pickup_available,
+                is_drink_stamp_eligible: formData.is_drink_stamp_eligible,
                 image_url: imageUrl,
                 // fixed_cost deprecated - not saving anymore
             }
@@ -852,6 +858,7 @@ export default function MenuItemList() {
                                             <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_recommended ? 'bg-brand/20 text-brandDark' : 'bg-gray-200 text-gray-400'}`}><Star size={20} /></div><div><div className="font-bold text-sm text-ink">เมนูแนะนำ</div></div></div><input type="checkbox" checked={formData.is_recommended} onChange={e => setFormData({ ...formData, is_recommended: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
                                             <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_available ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`}><Check size={20} /></div><div><div className="font-bold text-sm text-ink">เปิดขาย</div></div></div><input type="checkbox" checked={formData.is_available} onChange={e => setFormData({ ...formData, is_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
                                             <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${formData.is_pickup_available ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-400'}`}><ShoppingBag size={20} /></div><div><div className="font-bold text-sm text-ink">Pick-up</div></div></div><input type="checkbox" checked={formData.is_pickup_available} onChange={e => setFormData({ ...formData, is_pickup_available: e.target.checked })} className="w-5 h-5 accent-brand" /></div>
+                                            <div className="flex items-center justify-between p-2"><div className="flex items-center gap-3"><div className={`px-2 py-1 rounded font-mono font-bold text-xs ${formData.is_drink_stamp_eligible ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-gray-200 text-gray-500'}`}>10+1</div><div><div className="font-bold text-sm text-ink">ร่วมรายการเครื่องดื่ม 10 แถม 1</div><div className="text-xs text-subInk">สะสมแก้วเพื่อรับเครื่องดื่มฟรีเมื่อซื้อครบ 10 แก้ว</div></div></div><input type="checkbox" checked={formData.is_drink_stamp_eligible} onChange={e => setFormData({ ...formData, is_drink_stamp_eligible: e.target.checked })} className="w-5 h-5 accent-amber-500 cursor-pointer" /></div>
                                         </div>
                                         
                                         {/* Cost & Profit Section */}

@@ -41,6 +41,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [rewardCodeInput, setRewardCodeInput] = React.useState('');
     const [appliedReward, setAppliedReward] = React.useState(null);
     const [rewardDiscount, setRewardDiscount] = React.useState(0);
+    const [useFreeDrinkQuota, setUseFreeDrinkQuota] = React.useState(false);
     
     // Manual discount states
     const [manualDiscountVal, setManualDiscountVal] = React.useState('');
@@ -320,6 +321,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             setAppliedReward(null);
             setRewardDiscount(0);
             setCashReceivedInput('');
+            setUseFreeDrinkQuota(false);
         }
     }, [booking?.id, order.items.length]);
 
@@ -334,7 +336,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             // 1. Query xhaus_rewards for the code
             const { data: reward, error } = await supabase
                 .from('xhaus_rewards')
-                .select('*, menu_items(id, name, price, category_id)')
+                .select('*')
                 .eq('claim_code', rewardCodeInput.toUpperCase().trim())
                 .eq('is_active', true)
                 .maybeSingle();
@@ -343,6 +345,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             if (!reward) {
                 toast.error("ไม่พบรหัสแลกของรางวัลนี้ หรือรหัสหมดอายุแล้วครับ");
                 return;
+            }
+
+            // Fetch linked menu item if any
+            if (reward.linked_menu_item_id) {
+                const { data: menuItem } = await supabase
+                    .from('menu_items')
+                    .select('id, name, price, category_id')
+                    .eq('id', reward.linked_menu_item_id)
+                    .maybeSingle();
+                if (menuItem) {
+                    reward.menu_items = menuItem;
+                }
             }
 
             // 2. Check customer points balance
@@ -434,7 +448,23 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     // 4. xhaus Coins Discount Calculation
     const xhausDiscount = xhausToRedeem * (crmSettings.crm_redeem_rate_xhaus || 1.0);
     
-    const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount));
+    // 5. Drink 10 Free 1 Discount Calculation
+    const isItemDrinkStampEligible = React.useCallback((item) => {
+        if (item.is_drink_stamp_eligible) return true;
+        if (item.menu_items?.is_drink_stamp_eligible) return true;
+        const catName = (item.menu_items?.menu_categories?.name || item.category || '').toLowerCase();
+        return catName.includes('coffee') || catName.includes('tea') || catName.includes('beverage') || catName.includes('drink') || catName.includes('soda') || catName.includes('ชา') || catName.includes('กาแฟ') || catName.includes('เครื่องดื่ม');
+    }, []);
+
+    const freeDrinkDiscount = React.useMemo(() => {
+        if (!useFreeDrinkQuota) return 0;
+        const eligibleItems = order.items.filter(isItemDrinkStampEligible);
+        if (eligibleItems.length === 0) return 0;
+        const prices = eligibleItems.map(i => parseFloat(i.price) || 0);
+        return Math.min(...prices);
+    }, [useFreeDrinkQuota, order.items, isItemDrinkStampEligible]);
+
+    const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount - freeDrinkDiscount));
     const tax = includeTax ? Math.ceil(netBeforeTax * 0.07) : 0;
     
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
@@ -1050,6 +1080,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         {booking.profiles.xhaus_balance !== undefined && (
                                                             <span className="text-amber-800 font-bold text-sm mt-1">🪙 {Math.ceil(parseFloat(booking.profiles.xhaus_balance || 0)).toLocaleString()} xhaus</span>
                                                         )}
+                                                        <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs font-mono">
+                                                            <span className="bg-amber-100 border border-amber-300 text-amber-950 font-bold px-2 py-0.5 rounded">
+                                                                STAMPS: {(booking.profiles.drink_stamp_count || 0)}/10
+                                                            </span>
+                                                            {(booking.profiles.free_drink_quota || 0) > 0 && (
+                                                                <span className="bg-[#1A1A1A] text-white font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                                                    FREE DRINKS: {(booking.profiles.free_drink_quota)}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1185,6 +1225,87 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         Apply
                                                     </button>
                                                 </div>
+                                            )}
+                                        </div>
+                                        {/* Automatic Drink 10 Free 1 Card */}
+                                        <div className="bg-[#FFF4E6] border border-amber-300 rounded-xl p-4 flex flex-col gap-3 shadow-sm text-left font-sans">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-1 rounded bg-[#1A1A1A] text-white font-mono text-xs font-bold">10+1</span>
+                                                    <div>
+                                                        <p className="text-xs font-mono font-bold text-amber-950 uppercase tracking-wide">
+                                                            DRINK 10 FREE 1 PUNCHCARD
+                                                        </p>
+                                                        <p className="text-xs text-amber-900/80 font-medium">
+                                                            ซื้อเครื่องดื่มสะสมครบ 10 แก้ว รับฟรี 1 แก้วทันที
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Stamp Slots Progress Display */}
+                                            <div className="flex items-center justify-between bg-white border border-amber-200 p-2.5 rounded-xl">
+                                                <div className="flex items-center gap-1.5 overflow-x-auto">
+                                                    {Array.from({ length: 10 }).map((_, idx) => {
+                                                        const isFilled = idx < (booking.profiles.drink_stamp_count || 0);
+                                                        return (
+                                                            <div 
+                                                                key={idx}
+                                                                className={`w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs border ${
+                                                                    isFilled 
+                                                                        ? 'bg-[#1A1A1A] border-black text-white shadow-xs' 
+                                                                        : 'bg-amber-50 border-amber-200 text-amber-400'
+                                                                }`}
+                                                                title={`แก้วที่ ${idx + 1}`}
+                                                            >
+                                                                {isFilled ? '✓' : idx + 1}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="font-mono font-bold text-xs text-amber-950 shrink-0 ml-2">
+                                                    {(booking.profiles.drink_stamp_count || 0)}/10
+                                                </div>
+                                            </div>
+
+                                            {/* Free Quota Action Button */}
+                                            {(booking.profiles.free_drink_quota || 0) > 0 ? (
+                                                <div className="flex items-center justify-between bg-white border border-emerald-400 p-3 rounded-xl">
+                                                    <div>
+                                                        <p className="text-xs font-mono font-bold text-emerald-950 uppercase">FREE DRINKS: {(booking.profiles.free_drink_quota)} AVAILABLE</p>
+                                                        <p className="text-[11px] text-emerald-800">
+                                                            {useFreeDrinkQuota ? 'กำลังใช้งานส่วนลดแถมฟรี 1 แก้วในบิลนี้' : 'กดใช้สิทธิ์เพื่อลดราคาเครื่องดื่มที่ร่วมรายการ'}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (useFreeDrinkQuota) {
+                                                                setUseFreeDrinkQuota(false);
+                                                                toast.info("ยกเลิกการใช้สิทธิ์เครื่องดื่มฟรีแล้ว");
+                                                            } else {
+                                                                const eligibleItems = order.items.filter(isItemDrinkStampEligible);
+                                                                if (eligibleItems.length === 0) {
+                                                                    toast.error("กรุณาเพิ่มเมนูเครื่องดื่มที่ร่วมรายการลงในบิลก่อนใช้สิทธิ์ฟรีครับ");
+                                                                    return;
+                                                                }
+                                                                setUseFreeDrinkQuota(true);
+                                                                toast.success("ใช้สิทธิ์เครื่องดื่มฟรี 10 แถม 1 ในบิลนี้เรียบร้อยครับ");
+                                                            }
+                                                        }}
+                                                        className={`px-3.5 py-2 text-xs font-mono font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-all active:scale-95 ${
+                                                            useFreeDrinkQuota 
+                                                                ? 'bg-red-50 hover:bg-red-100 border border-red-300 text-red-700' 
+                                                                : 'bg-[#1A1A1A] hover:bg-[#333330] text-white shadow-xs'
+                                                        }`}
+                                                    >
+                                                        {useFreeDrinkQuota ? 'CANCEL' : 'APPLY FREE DRINK'}
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[11px] text-amber-800/80 font-mono">
+                                                    สะสมอีก {10 - (booking.profiles.drink_stamp_count || 0)} แก้ว เพื่อรับสิทธิ์เครื่องดื่มฟรี 1 แก้ว
+                                                </p>
                                             )}
                                         </div>
                                     </div>
@@ -1558,7 +1679,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 promoDiscount + rewardDiscount,
                                                 manualDiscount,
                                                 appliedReward?.claim_code || null,
-                                                appliedReward?.id || null
+                                                appliedReward?.id || null,
+                                                useFreeDrinkQuota
                                             );
                                         }
                                         setActiveModal(null);
