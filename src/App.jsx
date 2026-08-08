@@ -47,6 +47,8 @@ const HausCheckinPage = lazy(() => import('./pages/HausCheckinPage'))
 const POSCustomerDisplay = lazy(() => import('./pos/POSCustomerDisplay'))
 const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
 const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
+const HausmadeShopPage = lazy(() => import('./pages/HausmadeShopPage'))
+const HausmadeAdminPage = lazy(() => import('./pages/admin/HausmadeAdminPage'))
 
 const FallbackLoader = () => (
   <div className="min-h-screen bg-[#ECECE9] flex flex-col items-center justify-center text-[#181815] font-mono text-xs uppercase tracking-widest gap-3 select-none">
@@ -149,6 +151,8 @@ function App() {
               <Route element={<PublicLayout session={session} />}>
                 <Route path="/booking" element={<BookingPage />} />
                 <Route path="/pickup" element={<PickupPage />} />
+                <Route path="/hausmade" element={<HausmadeShopPage />} />
+                <Route path="/shop" element={<HausmadeShopPage />} />
                 <Route path="/tracking/:token" element={<TrackingPage />} />
                 <Route path="/t/:token" element={<TrackingPage />} />
               </Route>
@@ -156,6 +160,7 @@ function App() {
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
+                <Route path="hausmade" element={<HausmadeAdminPage />} />
                 <Route path="financial" element={<AdminFinancialDashboard />} />
                 <Route path="bookings" element={<AdminBookings />} />
                 <Route path="members" element={<AdminMembers />} />

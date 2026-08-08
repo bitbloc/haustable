@@ -29,6 +29,16 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
             statusText: pickupStatus.isOpen ? 'สั่งล่วงหน้ารับหน้าร้าน' : 'บริการปิดชั่วคราว',
             isOpen: pickupStatus.isOpen,
             accentColor: 'var(--color-brand)'
+        },
+        {
+            id: 'hausmade',
+            num: '03',
+            label: 'HAUSMADE Shop',
+            labelEn: 'Craft & Retail Store',
+            path: '/hausmade',
+            statusText: 'จัดส่งพัสดุทั่วประเทศ / รับหน้าร้าน',
+            isOpen: true,
+            accentColor: 'oklch(52% 0.16 28)'
         }
     ];
 

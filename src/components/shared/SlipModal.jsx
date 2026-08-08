@@ -517,7 +517,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 <div style="text-align: center; margin: 4px 0;">${generateDivider(printerConfig.divider_style || 'dashed', 32)}</div>
                 <div class="row total-row" style="font-size: 15px; padding-top: 2px;">
                     <span>ยอดรวมทั้งสิ้น (TOTAL)</span>
-                    <span>${Math.ceil(booking.total_amount || 0).toLocaleString()}</span>
+                    <span>${Math.ceil(booking.total_amount || netAfterDiscount).toLocaleString()}</span>
                 </div>
             </div>
         ` : ''
@@ -1060,6 +1060,8 @@ export default function SlipModal({ booking, type, onClose }) {
     const queueNo = getShortBookingId(booking)
     const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
+    const discountAmount = Number(booking.discount_amount) || 0;
+    const displayTotalAmount = booking.total_amount || Math.max(0, subtotal - discountAmount);
 
     if (isAutoPrinting) {
         return null;
@@ -1117,19 +1119,19 @@ export default function SlipModal({ booking, type, onClose }) {
                         <div className="flex gap-1.5">
                             <button 
                                 onClick={() => setPaymentMethod('cash')}
-                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 เงินสด (CASH)
                             </button>
                             <button 
                                 onClick={() => setPaymentMethod('qr')}
-                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 โอนเงิน (QR)
                             </button>
                             <button 
                                 onClick={() => setPaymentMethod('credit')}
-                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'credit' ? 'bg-[#ff0000] text-white border border-[#c00000]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'credit' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
                             >
                                 บัตร (CREDIT)
                             </button>
@@ -1261,7 +1263,7 @@ export default function SlipModal({ booking, type, onClose }) {
                                 </div>
                                 <div className="flex justify-between items-end pt-1">
                                     <span className="font-black text-xs uppercase tracking-wider">TOTAL AMOUNT</span>
-                                    <span className="font-black text-xl leading-none">{booking.total_amount?.toLocaleString()}</span>
+                                    <span className="font-black text-xl leading-none">{Math.ceil(displayTotalAmount).toLocaleString()}</span>
                                 </div>
                             </div>
                         )}
@@ -1328,7 +1330,7 @@ export default function SlipModal({ booking, type, onClose }) {
 
                 {/* Actions */}
                 <div className="p-4 bg-[#F5F5F2] flex gap-3 border-t border-[#D1D1CD]">
-                    <button onClick={handlePrint} disabled={isPrinting || isAutoPrinting} className={`flex-1 ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#ff0000] hover:bg-[#c00000] cursor-pointer'} text-white py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}>
+                    <button onClick={handlePrint} disabled={isPrinting || isAutoPrinting} className={`flex-1 ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] cursor-pointer'} py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}>
                         <PrinterIcon size={14} /> {isPrinting || isAutoPrinting ? 'Printing...' : 'Print Ticket'}
                     </button>
                     <button onClick={handleSaveImage} className="flex-grow bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
