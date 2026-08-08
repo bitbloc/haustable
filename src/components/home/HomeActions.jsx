@@ -7,7 +7,7 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
 
     const tableStatus = checkStatus(settings, 'shop_mode_table');
     const pickupStatus = checkStatus(settings, 'shop_mode_pickup');
-    
+    const hausmadeStatus = checkStatus(settings, 'shop_mode_hausmade');
 
     const actions = [
         {
@@ -36,8 +36,8 @@ export default function HomeActions({ settings, checkStatus, t, user, setShowAut
             label: 'HAUSMADE Shop',
             labelEn: 'Craft & Retail Store',
             path: '/hausmade',
-            statusText: 'จัดส่งพัสดุทั่วประเทศ / รับหน้าร้าน',
-            isOpen: true,
+            statusText: hausmadeStatus.isOpen ? 'จัดส่งพัสดุทั่วประเทศ / รับหน้าร้าน' : 'บริการปิดชั่วคราว (COMING SOON)',
+            isOpen: hausmadeStatus.isOpen,
             accentColor: 'oklch(52% 0.16 28)'
         }
     ];

@@ -929,6 +929,31 @@ export default function AdminSettings() {
                                     </div>
                                 </div>
 
+                                {/* HAUSMADE Shop Status */}
+                                <div className="space-y-3 pt-2">
+                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">📦 HAUSMADE Shop Status</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
+                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-700 border-blue-300' },
+                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-700 border-red-300' }
+                                        ].map(({ mode, label, color }) => (
+                                            <button
+                                                key={mode}
+                                                type="button"
+                                                onClick={() => handleSave('shop_mode_hausmade', mode)}
+                                                className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                    (settings.shop_mode_hausmade || 'manual_close') === mode
+                                                        ? `${color} ring-2 ring-black/10 shadow-sm font-extrabold`
+                                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {/* Schedule Hours */}
                                 <div className="pt-4 border-t border-gray-100">
                                     <p className="text-xs text-gray-400 font-medium mb-3">* เวลาเปิด-ปิดสำหรับโหมด Auto</p>

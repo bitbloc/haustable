@@ -22,6 +22,7 @@ export default function HausmadeAdminPage() {
 
     // Form state for Settings
     const [formSettings, setFormSettings] = useState({
+        shopModeHausmade: settings.shopModeHausmade || 'manual_close',
         shippingFee: settings.shippingFee,
         freeShippingMinItems: settings.freeShippingMinItems,
         freeShippingMinAmount: settings.freeShippingMinAmount,
@@ -36,6 +37,7 @@ export default function HausmadeAdminPage() {
     // Sync settings when loaded
     React.useEffect(() => {
         setFormSettings({
+            shopModeHausmade: settings.shopModeHausmade || 'manual_close',
             shippingFee: settings.shippingFee,
             freeShippingMinItems: settings.freeShippingMinItems,
             freeShippingMinAmount: settings.freeShippingMinAmount,
@@ -317,8 +319,36 @@ export default function HausmadeAdminPage() {
                             // CONFIGURATION PANEL
                         </span>
                         <h2 className="text-lg font-bold uppercase text-[oklch(18%_0.012_28)]">
-                            [ ตั้งค่าค่าจัดส่ง & ข้อมูลผู้ส่งบนใบจ่าหน้า ]
+                            [ ตั้งค่าสถานะร้านค้า, ค่าจัดส่ง & ข้อมูลผู้ส่งบนใบจ่าหน้า ]
                         </h2>
+                    </div>
+
+                    {/* Section 0: Shop Operational Status */}
+                    <div className="flex flex-col gap-3 border-b border-[oklch(85%_0.012_28)] pb-6">
+                        <span className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
+                            [ 0. SHOP OPERATIONAL STATUS // เปิด-ปิดระบบร้านค้า HAUSMADE ]
+                        </span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {[
+                                { mode: 'manual_close', label: '🔴 MANUAL CLOSE (ปิดบริการชั่วคราว)', desc: 'ลูกค้ายังไม่สามารถเข้าสั่งซื้อสินค้าได้' },
+                                { mode: 'manual_open', label: '🟢 MANUAL OPEN (เปิดให้บริการปกติ)', desc: 'เปิดให้สั่งซื้อพัสดุและรับหน้าร้าน 24 ชม.' },
+                                { mode: 'auto', label: '🟡 AUTO (เปิดตามเวลาทำการ)', desc: 'เปิด/ปิดตามเวลาเปิดร้าน IN THE HAUS' }
+                            ].map(({ mode, label, desc }) => (
+                                <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => setFormSettings({ ...formSettings, shopModeHausmade: mode })}
+                                    className={`p-3.5 text-left border font-mono text-xs transition-all flex flex-col gap-1 cursor-pointer ${
+                                        formSettings.shopModeHausmade === mode
+                                            ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 font-bold text-[oklch(18%_0.012_28)]'
+                                            : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                    }`}
+                                >
+                                    <span className="font-bold text-[oklch(18%_0.012_28)]">{label}</span>
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] leading-tight">{desc}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Section 1: Sender Info */}

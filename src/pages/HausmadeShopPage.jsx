@@ -2,10 +2,12 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useHausmadeShop } from '../hooks/useHausmadeShop'
+import { useServiceGuard } from '../hooks/useServiceGuard'
 import HausmadeProductModal from '../components/hausmade/HausmadeProductModal'
 import HausmadeCartDrawer from '../components/hausmade/HausmadeCartDrawer'
 
 export default function HausmadeShopPage() {
+    const isChecking = useServiceGuard('shop_mode_hausmade')
     const shopState = useHausmadeShop()
     const {
         loading,
@@ -22,6 +24,15 @@ export default function HausmadeShopPage() {
 
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [isCartOpen, setIsCartOpen] = useState(false)
+
+    if (isChecking) {
+        return (
+            <div className="min-h-screen bg-[oklch(97%_0.008_28)] flex flex-col items-center justify-center text-[oklch(18%_0.012_28)] font-mono text-xs uppercase tracking-widest gap-3 select-none">
+                <div className="w-6 h-6 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
+                <span>CHECKING HAUSMADE SHOP STATUS...</span>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-sans flex flex-col selection:bg-[oklch(52%_0.16_28)] selection:text-white">

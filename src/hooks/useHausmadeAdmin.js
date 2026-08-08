@@ -5,6 +5,7 @@ export function useHausmadeAdmin() {
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
     const [settings, setSettings] = useState({
+        shopModeHausmade: 'manual_close',
         shippingFee: 50,
         freeShippingMinItems: 3,
         freeShippingMinAmount: 0,
@@ -35,6 +36,7 @@ export function useHausmadeAdmin() {
             if (settingsRes.data) {
                 const map = settingsRes.data.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
                 setSettings({
+                    shopModeHausmade: map.shop_mode_hausmade || 'manual_close',
                     shippingFee: Number(map.hausmade_shipping_fee ?? 50),
                     freeShippingMinItems: Number(map.hausmade_free_shipping_min_items ?? 3),
                     freeShippingMinAmount: Number(map.hausmade_free_shipping_min_amount ?? 0),
@@ -59,6 +61,7 @@ export function useHausmadeAdmin() {
     const updateSettings = async (newSettings) => {
         try {
             const updates = [
+                { key: 'shop_mode_hausmade', value: newSettings.shopModeHausmade || 'manual_close' },
                 { key: 'hausmade_shipping_fee', value: String(newSettings.shippingFee) },
                 { key: 'hausmade_free_shipping_min_items', value: String(newSettings.freeShippingMinItems) },
                 { key: 'hausmade_free_shipping_min_amount', value: String(newSettings.freeShippingMinAmount) },
