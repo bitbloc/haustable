@@ -237,7 +237,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             // 1. Query xhaus_rewards for the code
             const { data: reward, error } = await supabase
                 .from('xhaus_rewards')
-                .select('*')
+                .select('*, menu_items(id, name, price, category_id)')
                 .eq('claim_code', rewardCodeInput.toUpperCase().trim())
                 .eq('is_active', true)
                 .maybeSingle();
@@ -265,6 +265,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             // 3. Apply the reward
             setAppliedReward(reward);
+
+            // 3.5 Auto-Inject item if linked
+            if (reward.menu_items) {
+                if (onInjectRewardItem) {
+                    onInjectRewardItem(reward.menu_items, reward.claim_code);
+                }
+            }
             
             // Calculate reward discount value if it's a discount type reward
             let discVal = 0;
@@ -287,6 +294,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     };
 
     const handleCancelReward = () => {
+        if (appliedReward?.menu_items && onRemoveRewardItem) {
+            onRemoveRewardItem(appliedReward.claim_code);
+        }
         setAppliedReward(null);
         setRewardDiscount(0);
         toast.info("ยกเลิกการแลกของรางวัลแล้ว");

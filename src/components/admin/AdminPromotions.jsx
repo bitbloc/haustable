@@ -18,6 +18,7 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
 
     // Rewards States
     const [rewards, setRewards] = useState([])
+    const [menuItems, setMenuItems] = useState([])
     const [rewardsLoading, setRewardsLoading] = useState(false)
     const [isRewardModalOpen, setIsRewardModalOpen] = useState(false)
     const [editingReward, setEditingReward] = useState(null)
@@ -27,7 +28,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
         xhaus_cost: '',
         claim_code: '',
         usage_limit: '',
-        is_active: true
+        is_active: true,
+        linked_menu_item_id: ''
     })
 
     const fetchRewards = async () => {
@@ -39,6 +41,16 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 .order('created_at', { ascending: false })
             if (error) throw error
             setRewards(data || [])
+            
+            // Also fetch menu items for the dropdown
+            const { data: menuData, error: menuErr } = await supabase
+                .from('menu_items')
+                .select('id, name')
+                .eq('is_available', true)
+                .order('name')
+            if (!menuErr && menuData) {
+                setMenuItems(menuData)
+            }
         } catch (err) {
             console.error('Error fetching rewards:', err)
             toast.error('Failed to load rewards')
@@ -62,7 +74,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 xhaus_cost: reward.xhaus_cost,
                 claim_code: reward.claim_code,
                 usage_limit: reward.usage_limit || '',
-                is_active: reward.is_active
+                is_active: reward.is_active,
+                linked_menu_item_id: reward.linked_menu_item_id || ''
             })
         } else {
             setEditingReward(null)
@@ -72,7 +85,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 xhaus_cost: '',
                 claim_code: '',
                 usage_limit: '',
-                is_active: true
+                is_active: true,
+                linked_menu_item_id: ''
             })
         }
         setIsRewardModalOpen(true)
@@ -91,7 +105,8 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 xhaus_cost: parseFloat(rewardFormData.xhaus_cost),
                 claim_code: rewardFormData.claim_code.toUpperCase().trim(),
                 usage_limit: rewardFormData.usage_limit ? parseInt(rewardFormData.usage_limit) : null,
-                is_active: rewardFormData.is_active
+                is_active: rewardFormData.is_active,
+                linked_menu_item_id: rewardFormData.linked_menu_item_id ? parseInt(rewardFormData.linked_menu_item_id) : null
             }
 
             if (editingReward) {
@@ -703,6 +718,22 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                                 </div>
                             </div>
 
+                            <div className="pt-2">
+                                <label className="block text-sm font-bold mb-1">Linked Menu Item (Auto-Inject on Redeem)</label>
+                                <select
+                                    value={rewardFormData.linked_menu_item_id}
+                                    onChange={e => setRewardFormData({...rewardFormData, linked_menu_item_id: e.target.value})}
+                                    className="w-full bg-gray-50 p-2.5 rounded border outline-none focus:border-black text-sm"
+                                >
+                                    <option value="">-- ไม่ผูกเมนู (No linked item) --</option>
+                                    {menuItems.map(item => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">If selected, this menu item will be automatically added to the POS cart for 0.00 THB when the reward code is applied.</p>
+                            </div>
                             <div className="flex items-center gap-3 pt-2">
                                 <span className="text-sm font-bold">Status:</span>
                                 <label className="flex items-center gap-2 cursor-pointer">
