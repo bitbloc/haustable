@@ -1443,6 +1443,76 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     </motion.div>
                 )}
 
+
+                {/* Quick Register Modal */}
+                {isQuickRegistering && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 font-sans backdrop-blur-sm"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.97, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.97, y: 10 }}
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
+                        >
+                            <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
+                                <div>
+                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[#1A1A1A]">QUICK REGISTER</h3>
+                                    <p className="text-xs text-[#767673] font-medium mt-0.5">สมัครสมาชิกด่วน</p>
+                                </div>
+                                <button 
+                                    onClick={() => setIsQuickRegistering(false)} 
+                                    className="p-2 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleQuickRegisterCustomer} className="p-5 space-y-4 bg-white">
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">
+                                        CUSTOMER NAME <span className="text-red-500">*</span>
+                                    </label>
+                                    <input 
+                                        type="text"
+                                        placeholder="ชื่อลูกค้า"
+                                        value={quickName}
+                                        onChange={(e) => setQuickName(e.target.value)}
+                                        className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-3 text-sm text-[#1A1A1A] font-bold focus:outline-none focus:border-[#1A1A1A] transition-colors font-mono"
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">
+                                        PHONE NUMBER <span className="text-red-500">*</span>
+                                    </label>
+                                    <input 
+                                        type="tel"
+                                        placeholder="เบอร์โทรศัพท์ (9-10 หลัก)"
+                                        value={quickPhone}
+                                        onChange={(e) => setQuickPhone(e.target.value.replace(/\D/g, ''))}
+                                        className="w-full bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-3 text-sm text-[#1A1A1A] font-bold focus:outline-none focus:border-[#1A1A1A] transition-colors font-mono tracking-wider"
+                                        required
+                                        maxLength={10}
+                                    />
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    disabled={isRegisteringMember || !quickName.trim() || quickPhone.length < 9}
+                                    className="w-full bg-[var(--color-accent)] hover:bg-[#d00000] disabled:bg-[#D1D1CD] disabled:text-[#767673] text-white py-3.5 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95 mt-2"
+                                >
+                                    {isRegisteringMember ? 'REGISTERING...' : 'REGISTER & ATTACH'}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+
                 {/* Discount Modal */}
                 {activeModal === 'discount' && (
                     <motion.div 
