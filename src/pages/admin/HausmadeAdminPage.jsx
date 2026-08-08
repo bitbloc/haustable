@@ -211,8 +211,8 @@ export default function HausmadeAdminPage() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                             <div className="flex flex-col gap-1 border-b md:border-b-0 md:border-r border-[oklch(85%_0.012_28)] pb-3 md:pb-0 md:pr-4">
                                                 <span className="text-[oklch(55%_0.010_28)] text-[10px] uppercase">[ CUSTOMER INFORMATION ]</span>
-                                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">{order.guest_name}</span>
-                                                <span>TEL: {order.phone_number}</span>
+                                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">{order.pickup_contact_name || order.guest_name || 'ลูกค้า HAUSMADE'}</span>
+                                                <span>TEL: {order.pickup_contact_phone || order.phone_number || '-'}</span>
                                                 {order.payment_slip_url && (
                                                     <button
                                                         onClick={() => setSlipModalUrl(order.payment_slip_url.startsWith('http') ? order.payment_slip_url : `${supabase.storage.from('slips').getPublicUrl(order.payment_slip_url).data.publicUrl}`)}

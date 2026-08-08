@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOrderSubmission } from '../../hooks/useOrderSubmission'
+import { getThaiDate, toThaiISO } from '../../utils/timeUtils'
 
 export default function HausmadeCartDrawer({
     isOpen,
@@ -87,16 +88,26 @@ export default function HausmadeCartDrawer({
 
         const trackingToken = `HM-${Date.now().toString(36).toUpperCase()}`
 
+        const targetDateStr = pickupDate === 'tomorrow'
+            ? (() => {
+                const d = new Date()
+                d.setDate(d.getDate() + 1)
+                return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            })()
+            : getThaiDate()
+
+        const bookingDateTime = fulfilmentMode === 'pickup'
+            ? toThaiISO(targetDateStr, pickupTime)
+            : toThaiISO(getThaiDate(), '12:00')
+
         const bookingPayload = {
-            guest_name: contactName,
-            phone_number: contactPhone,
-            guest_count: 1,
-            booking_date: new Date().toISOString().split('T')[0],
-            booking_time: fulfilmentMode === 'pickup' ? pickupTime : '12:00',
+            pickup_contact_name: contactName,
+            pickup_contact_phone: contactPhone,
+            booking_time: bookingDateTime,
             status: 'pending',
             deposit_amount: totalAmount,
             total_amount: totalAmount,
-            special_request: specialRequest ? `[HAUSMADE ${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${fulfilmentMode.toUpperCase()}]`,
+            customer_note: specialRequest ? `[HAUSMADE ${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${fulfilmentMode.toUpperCase()}]`,
             order_type: fulfilmentMode === 'shipping' ? 'hausmade_shipping' : 'hausmade_pickup',
             booking_type: 'hausmade',
             tracking_token: trackingToken,

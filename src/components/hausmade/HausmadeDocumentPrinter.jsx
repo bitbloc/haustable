@@ -70,9 +70,9 @@ export default function HausmadeDocumentPrinter({ order, senderInfo, docType = '
                                 <span className="font-bold text-[10px] uppercase text-black block border-b border-black pb-1 mb-1">
                                     [ RECIPIENT // ผู้รับ ]
                                 </span>
-                                <span className="font-bold text-base">{order.guest_name}</span>
+                                <span className="font-bold text-base">{order.pickup_contact_name || order.guest_name || 'ลูกค้า HAUSMADE'}</span>
                                 <span className="text-[12px] font-bold leading-tight mt-0.5">{order.shipping_address || 'รับหน้าร้าน IN THE HAUS'}</span>
-                                <span className="font-bold text-sm mt-1.5 text-black">TEL: {order.phone_number}</span>
+                                <span className="font-bold text-sm mt-1.5 text-black">TEL: {order.pickup_contact_phone || order.phone_number || '-'}</span>
                             </div>
                         </div>
 
@@ -146,7 +146,7 @@ export default function HausmadeDocumentPrinter({ order, senderInfo, docType = '
                             <span className="font-bold text-[10px] uppercase text-zinc-500">
                                 [ CUSTOMER // ลูกค้า ]
                             </span>
-                            <div className="font-bold text-sm">{order.guest_name} (TEL: {order.phone_number})</div>
+                            <div className="font-bold text-sm">{order.pickup_contact_name || order.guest_name || 'ลูกค้า HAUSMADE'} (TEL: {order.pickup_contact_phone || order.phone_number || '-'})</div>
                             <div className="text-xs">{order.shipping_address}</div>
                         </div>
 
