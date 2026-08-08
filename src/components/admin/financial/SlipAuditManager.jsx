@@ -41,6 +41,12 @@ const getBookingItems = (order) => {
     if (Array.isArray(order.cartItems) && order.cartItems.length > 0) {
         return order.cartItems;
     }
+    if (Array.isArray(order.details?.items) && order.details.items.length > 0) {
+        return order.details.items;
+    }
+    if (Array.isArray(order.order_details) && order.order_details.length > 0) {
+        return order.order_details;
+    }
     return [];
 };
 
@@ -52,6 +58,7 @@ const getItemName = (item) => {
         item.menu_name ||
         item.item_name ||
         item.title ||
+        item.label ||
         'รายการสินค้า'
     );
 };
@@ -119,7 +126,7 @@ export default function SlipAuditManager({
         shop_vat: '',
         shop_logo_url: '',
         shop_footer_text: '',
-        shop_tagline: 'TASTE YOUR SCENT.',
+        shop_tagline: '',
         divider_style: 'dashed',
         footer_ascii_art: '',
         promptpay_id: ''
@@ -486,7 +493,7 @@ export default function SlipAuditManager({
     const shopPhone = printerConfig.shop_phone || printerConfig.receipt_shop_phone || '';
     const shopVat = printerConfig.shop_vat || printerConfig.receipt_shop_vat || '';
     const shopLogoUrl = printerConfig.shop_logo_url || printerConfig.receipt_shop_logo_url || '';
-    const shopTagline = printerConfig.shop_tagline || 'TASTE YOUR SCENT.';
+    const shopTagline = printerConfig.shop_tagline || '';
     const shopFooter = printerConfig.shop_footer_text || printerConfig.receipt_shop_footer || '';
     const asciiArt = printerConfig.footer_ascii_art || '';
     const promptpayId = printerConfig.promptpay_id || '0985284217';

@@ -53,8 +53,7 @@ const ASCII_ART_PRESETS = [
     {
         id: 'in_the_haus',
         name: 'IN THE HAUS (Clean Text)',
-        art: `--- IN THE HAUS ---
-  TASTE YOUR SCENT`
+        art: `--- IN THE HAUS ---`
     },
     {
         id: 'classic_banner',

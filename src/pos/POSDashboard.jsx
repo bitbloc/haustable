@@ -1571,30 +1571,6 @@ export default function POSDashboard() {
         }));
     };
 
-    const handleInjectRewardItem = (menuItem, claimCode) => {
-        const rewardItem = {
-            id: `reward-${Date.now()}`,
-            menu_item_id: menuItem.id,
-            name: `${menuItem.name} (แลกสิทธิ ${claimCode})`,
-            price: 0,
-            quantity: 1,
-            category_id: menuItem.category_id,
-            is_reward: true,
-            claim_code: claimCode
-        };
-        setCurrentOrder(prev => ({
-            ...prev,
-            items: [...prev.items, rewardItem]
-        }));
-    };
-
-    const handleRemoveRewardItem = (claimCode) => {
-        setCurrentOrder(prev => ({
-            ...prev,
-            items: prev.items.filter(item => item.claim_code !== claimCode)
-        }));
-    };
-
     const handleCheckout = async (
         paymentMethod, 
         includeTax, 

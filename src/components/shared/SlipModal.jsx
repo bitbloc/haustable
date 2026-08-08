@@ -1146,22 +1146,18 @@ export default function SlipModal({ booking, type, onClose }) {
                     >
                         {/* BRAND HEADER (Hide for kitchen/bar order to make it neat) */}
                         {activeTab !== 'kitchen' && activeTab !== 'bar' ? (
-                            <div className="text-center mb-5 flex flex-col items-center">
+                            <div className="text-center mb-4 flex flex-col items-center">
                                 {/* Logo */}
                                 <img 
                                     src={receiptShopLogoUrl || '/receipt-logo.png'} 
                                     alt="Logo" 
-                                    className="w-24 h-auto mb-3 object-contain contrast-125" 
+                                    className="w-24 h-auto mb-2 object-contain contrast-125" 
                                     onError={(e) => {
                                         if (e.target.src !== `${window.location.origin}/receipt-logo.png`) {
                                             e.target.src = '/receipt-logo.png';
                                         }
                                     }}
                                 />
-                                
-                                <p className="text-[9px] font-bold tracking-widest uppercase mb-4 border-b border-dashed border-black pb-3 w-full text-center">
-                                    TASTE YOUR SCENT.
-                                </p>
                             </div>
                         ) : null}
 
