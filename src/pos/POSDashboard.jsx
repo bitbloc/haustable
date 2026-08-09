@@ -1548,10 +1548,11 @@ export default function POSDashboard() {
     };
 
     const handleInjectRewardItem = (menuItem, claimCode) => {
+        if (!menuItem) return;
         const rewardItem = {
             id: `reward-${Date.now()}`,
             menu_item_id: menuItem.id,
-            name: `${menuItem.name} (แลกสิทธิ ${claimCode})`,
+            name: `${menuItem.name || 'Reward Item'} (แลกสิทธิ ${claimCode})`,
             price: 0,
             quantity: 1,
             category_id: menuItem.category_id,
@@ -1560,14 +1561,14 @@ export default function POSDashboard() {
         };
         setCurrentOrder(prev => ({
             ...prev,
-            items: [...prev.items, rewardItem]
+            items: [...(prev?.items || []), rewardItem]
         }));
     };
 
     const handleRemoveRewardItem = (claimCode) => {
         setCurrentOrder(prev => ({
             ...prev,
-            items: prev.items.filter(item => item.claim_code !== claimCode)
+            items: (prev?.items || []).filter(item => item?.claim_code !== claimCode)
         }));
     };
 

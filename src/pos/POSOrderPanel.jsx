@@ -327,7 +327,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const handleApplyRewardCode = async () => {
         if (!rewardCodeInput) return;
-        if (!booking || !booking.profiles) {
+        const currentMemberProfile = attachedMemberCrm || booking?.profiles;
+        if (!currentMemberProfile) {
             toast.error("กรุณาผูกบัญชีสมาชิก (CRM) ก่อนแลกโค้ดรางวัลครับ");
             return;
         }
@@ -349,19 +350,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             // Fetch linked menu item if any
             if (reward.linked_menu_item_id) {
-                const { data: menuItem } = await supabase
-                    .from('menu_items')
-                    .select('id, name, price, category_id')
-                    .eq('id', reward.linked_menu_item_id)
-                    .maybeSingle();
-                if (menuItem) {
-                    reward.menu_items = menuItem;
+                try {
+                    const { data: menuItem, error: menuErr } = await supabase
+                        .from('menu_items')
+                        .select('id, name, price, category_id')
+                        .eq('id', reward.linked_menu_item_id)
+                        .maybeSingle();
+                    if (menuErr) console.warn("Error fetching linked menu item:", menuErr);
+                    if (menuItem) {
+                        reward.menu_items = menuItem;
+                    }
+                } catch (fetchErr) {
+                    console.warn("Exception fetching linked menu item:", fetchErr);
                 }
             }
 
             // 2. Check customer points balance
-            const customerBalance = parseFloat(booking.profiles.xhaus_balance || 0);
-            const cost = parseFloat(reward.xhaus_cost);
+            const customerBalance = parseFloat(currentMemberProfile.xhaus_balance || 0);
+            const cost = parseFloat(reward.xhaus_cost || 0);
 
             // 2.5 Check if reward quota has been fully redeemed
             if (reward.usage_limit && (reward.used_count || 0) >= reward.usage_limit) {
@@ -374,20 +380,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 return;
             }
 
-            // 3. Apply the reward
-            setAppliedReward(reward);
-
-            // 3.5 Auto-Inject item if linked
-            if (reward.menu_items) {
-                if (onInjectRewardItem) {
-                    onInjectRewardItem(reward.menu_items, reward.claim_code);
-                }
+            // 3. Auto-Inject item if linked
+            if (reward.menu_items && onInjectRewardItem) {
+                onInjectRewardItem(reward.menu_items, reward.claim_code);
             }
             
             // Calculate reward discount value if it's a discount type reward
             let discVal = 0;
-            if (reward.title.includes("ส่วนลด") || reward.title.toLowerCase().includes("discount")) {
-                const match = reward.title.match(/(\d+)\s*(บาท|Baht|B|b)/);
+            const rewardTitle = reward.title || 'ของรางวัล';
+            if (rewardTitle.includes("ส่วนลด") || rewardTitle.toLowerCase().includes("discount")) {
+                const match = rewardTitle.match(/(\d+)\s*(บาท|Baht|B|b)/);
                 if (match) {
                     discVal = parseFloat(match[1]);
                 } else if (reward.claim_code === 'IHDISC50') {
@@ -395,12 +397,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 }
             }
             
+            setAppliedReward(reward);
             setRewardDiscount(discVal);
-            toast.success(`แลกรางวัลสำเร็จ: ${reward.title} (หัก ${cost} xhaus)`);
+            toast.success(`แลกรางวัลสำเร็จ: ${rewardTitle} (หัก ${cost} xhaus)`);
             setRewardCodeInput('');
         } catch (err) {
             console.error("Error applying reward code:", err);
-            toast.error("เกิดข้อผิดพลาดในการตรวจสอบรหัสแลกรางวัล");
+            toast.error(`เกิดข้อผิดพลาดในการตรวจสอบรหัสแลกรางวัล: ${err.message || 'กรุณาลองใหม่อีกครั้ง'}`);
+            setAppliedReward(null);
+            setRewardDiscount(0);
         }
     };
 

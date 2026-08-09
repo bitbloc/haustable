@@ -351,16 +351,20 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
 
     const filteredCodes = codes.filter(c => c.code.includes(searchTerm.toUpperCase()))
     const filteredRewards = rewards.filter(r => r.title.toLowerCase().includes(searchTerm.toLowerCase()) || r.claim_code.toUpperCase().includes(searchTerm.toUpperCase()))
+    const filteredStampItems = allItemsList.filter(item => 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (item.menu_categories?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Tag className="w-6 h-6" /> {activeTab === 'promo' ? 'Promotions' : 'xhaus Rewards'}
+                        <Tag className="w-6 h-6" /> {activeTab === 'promo' ? 'Promotions' : activeTab === 'rewards' ? 'xhaus Rewards' : 'Drink Stamps (10 FREE 1)'}
                     </h1>
                     <p className="text-gray-500 text-sm">
-                        {activeTab === 'promo' ? 'Manage discount codes and coupons' : 'Manage rewards redeemable with xhaus coins'}
+                        {activeTab === 'promo' ? 'Manage discount codes and coupons' : activeTab === 'rewards' ? 'Manage rewards redeemable with xhaus coins' : 'ตั้งค่าหมวดหมู่และเครื่องดื่มสำหรับสะสมแต้ม 10 แก้ว ฟรี 1 แก้ว'}
                     </p>
                 </div>
                 {activeTab === 'promo' ? (
@@ -370,13 +374,18 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                     >
                         <Plus size={18} /> New Code
                     </button>
-                ) : (
+                ) : activeTab === 'rewards' ? (
                     <button 
                         onClick={() => handleOpenRewardModal()} 
                         className="bg-black text-[#DFFF00] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors cursor-pointer"
                     >
                         <Plus size={18} /> New Reward
                     </button>
+                ) : (
+                    <div className="px-3.5 py-2 bg-amber-50 border border-amber-300 text-amber-950 rounded-xl text-xs font-mono font-bold flex items-center gap-2 shadow-xs">
+                        <span className="px-1.5 py-0.5 bg-[#1A1A1A] text-white rounded text-[10px]">10+1</span>
+                        <span>Drink Stamp Punchcard</span>
+                    </div>
                 )}
             </div>
 
@@ -421,19 +430,6 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 >
                     [10 FREE 1] เครื่องดื่ม 10 แถม 1
                 </button>
-                <button
-                    onClick={() => {
-                        setActiveTab('stamps')
-                        setSearchTerm('')
-                    }}
-                    className={`pb-3 px-1 border-b-2 transition-all cursor-pointer ${
-                        activeTab === 'stamps' 
-                            ? 'border-black text-black' 
-                            : 'border-transparent text-gray-400 hover:text-gray-600'
-                    }`}
-                >
-                    🥤 เครื่องดื่ม 10 แถม 1 (Drink Stamps)
-                </button>
             </div>
 
             {/* Search */}
@@ -441,7 +437,7 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 <Search className="absolute left-3 top-2.5 text-gray-400 w-5 h-5" />
                 <input 
                     type="text" 
-                    placeholder={activeTab === 'promo' ? "Search code..." : "Search rewards by title or code..."} 
+                    placeholder={activeTab === 'promo' ? "Search code..." : activeTab === 'rewards' ? "Search rewards by title or code..." : "Search menu item or category..."} 
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-lg outline-none focus:border-black transition-colors"
@@ -591,6 +587,143 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                         </div>
                     )}
                 </>
+            )}
+
+            {/* Drink Stamps (10 FREE 1) Tab Render */}
+            {activeTab === 'stamps' && (
+                <div className="space-y-6">
+                    {/* Info Card */}
+                    <div className="bg-[#FFFDF5] border border-amber-300/80 rounded-xl p-5 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="px-3 py-1.5 bg-[#1A1A1A] text-amber-400 font-mono text-sm font-bold rounded-lg border border-amber-500/20 shrink-0">
+                                10+1
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-amber-950 text-base">ระบบสะสมแก้ว 10 แถม 1 (Drink Stamp Punchcard)</h3>
+                                <p className="text-xs text-amber-900/80 mt-0.5 font-medium">
+                                    เปิด/ปิดสิทธิ์สำหรับหมวดหมู่หรือเมนูเครื่องดื่มที่เข้าร่วมรายการสะสมแต้ม เมื่อลูกค้าสั่งซื้อครบ 10 แก้ว จะได้รับสิทธิ์แลกเครื่องดื่มฟรี 1 แก้ว
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {stampsLoading ? (
+                        <div className="text-center py-10 text-gray-400 font-mono text-xs uppercase animate-pulse">กำลังโหลดข้อมูลตั้งค่าสะสมแต้ม...</div>
+                    ) : (
+                        <>
+                            {/* Category Master Toggles */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
+                                    📁 เปิด/ปิดสิทธิ์ระดับหมวดหมู่ (Category Master Toggles)
+                                </h3>
+                                <p className="text-xs text-gray-500 mb-4">
+                                    คลิกปุ่มเพื่อเปิดหรือปิดสิทธิ์ 10 แถม 1 สำหรับทุกเมนูในหมวดหมู่นั้นๆ
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    {categoriesList.map(cat => {
+                                        const isCatEligible = cat.is_drink_stamp_eligible;
+                                        const itemCount = allItemsList.filter(i => i.category_id === cat.id).length;
+                                        const eligibleItemCount = allItemsList.filter(i => i.category_id === cat.id && i.is_drink_stamp_eligible).length;
+
+                                        return (
+                                            <div 
+                                                key={cat.id} 
+                                                className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                                                    isCatEligible 
+                                                        ? 'bg-amber-50/60 border-amber-300/80 text-amber-950' 
+                                                        : 'bg-gray-50 border-gray-200 text-gray-600'
+                                                }`}
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-sm truncate">{cat.name}</p>
+                                                    <p className="text-[11px] font-mono text-gray-500 mt-0.5">
+                                                        {eligibleItemCount} / {itemCount} เมนูร่วมรายการ
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => toggleCategoryEligibility(cat)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase transition-all cursor-pointer ${
+                                                        isCatEligible 
+                                                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' 
+                                                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                                                    }`}
+                                                >
+                                                    {isCatEligible ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Individual Item Toggles */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">
+                                            ☕ สิทธิ์รายเมนู (Individual Item Eligibility)
+                                        </h3>
+                                        <p className="text-xs text-gray-500">
+                                            คลิกเปิด/ปิดสิทธิ์รายเมนูได้ตามต้องการ
+                                        </p>
+                                    </div>
+                                    <span className="text-xs font-mono text-gray-500">
+                                        พบ {filteredStampItems.length} รายการ
+                                    </span>
+                                </div>
+
+                                {filteredStampItems.length === 0 ? (
+                                    <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300 text-xs font-mono text-gray-400">
+                                        ไม่พบรายการเมนูที่ตรงกับคำค้นหา
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                        {filteredStampItems.map(item => {
+                                            const isEligible = item.is_drink_stamp_eligible;
+                                            return (
+                                                <div 
+                                                    key={item.id} 
+                                                    className={`p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                                                        isEligible 
+                                                            ? 'bg-white border-amber-300 shadow-xs' 
+                                                            : 'bg-gray-50/70 border-gray-200 opacity-75'
+                                                    }`}
+                                                >
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5 mb-1">
+                                                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 truncate max-w-[120px]">
+                                                                {item.menu_categories?.name || 'Category'}
+                                                            </span>
+                                                            {isEligible && (
+                                                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                                                                    10+1
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="font-bold text-sm text-gray-900 truncate">{item.name}</p>
+                                                        <p className="text-xs font-mono text-gray-500 mt-0.5">฿{parseFloat(item.price || 0).toLocaleString()}</p>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => toggleItemEligibility(item)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
+                                                            isEligible 
+                                                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' 
+                                                                : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                                                        }`}
+                                                    >
+                                                        {isEligible ? 'ON' : 'OFF'}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
             )}
 
             {/* Code Modal */}
