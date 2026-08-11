@@ -1866,6 +1866,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 export default POSOrderPanel;
 
 const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, onUpdateItemNote }) {
+    const isRewardItem = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
+
     return (
         <div 
             className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
@@ -1916,8 +1918,18 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                 </button>
                 <span className="w-8 text-center font-mono font-bold text-base text-[#1A1A1A] select-none">{item.quantity}</span>
                 <button 
-                    onClick={() => onUpdateQuantity(item.id, 1)}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
+                    disabled={isRewardItem}
+                    onClick={() => {
+                        if (isRewardItem) {
+                            toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
+                            return;
+                        }
+                        onUpdateQuantity(item.id, 1);
+                    }}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white text-[#1A1A1A] transition-transform shadow-xs cursor-pointer touch-manipulation ${
+                        isRewardItem ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#F5F5F2] active:scale-95'
+                    }`}
+                    title={isRewardItem ? "รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้" : "เพิ่มจำนวน"}
                 >
                     <Plus size={14} />
                 </button>

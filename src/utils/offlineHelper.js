@@ -245,6 +245,14 @@ export async function syncOfflineQueue(isManual = false) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
 
+                const resolveMenuItemId = (item) => {
+                    if (item.menu_item_id && typeof item.menu_item_id !== 'string') return item.menu_item_id;
+                    if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
+                    if (item.id && typeof item.id !== 'string') return item.id;
+                    if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
+                    return item.menu_item_id || item.id;
+                };
+
                 const itemsToInsert = items.map(item => {
                     const finalOpts = [...(item.selected_options || [])];
                     if (item.item_note) {
@@ -252,7 +260,7 @@ export async function syncOfflineQueue(isManual = false) {
                     }
                     return {
                         booking_id: bookingId,
-                        menu_item_id: item.id || item.menu_item_id,
+                        menu_item_id: resolveMenuItemId(item),
                         quantity: item.quantity,
                         price_at_time: item.price,
                         selected_options: finalOpts

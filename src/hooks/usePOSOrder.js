@@ -319,6 +319,14 @@ export function usePOSOrder() {
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Submitting items to offline queue');
             // Save order items inside booking cache for local UI consistency
+            const resolveMenuItemId = (item) => {
+                if (item.menu_item_id && typeof item.menu_item_id !== 'string') return item.menu_item_id;
+                if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
+                if (item.id && typeof item.id !== 'string') return item.id;
+                if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
+                return item.menu_item_id || item.id;
+            };
+
             const newOrderItems = items.map((item, i) => {
                 const finalOpts = [...(item.selected_options || [])];
                 if (item.item_note) {
@@ -327,7 +335,7 @@ export function usePOSOrder() {
                 return {
                     id: `local_item_${Date.now()}_${i}`,
                     booking_id: bookingId,
-                    menu_item_id: item.id || item.menu_item_id,
+                    menu_item_id: resolveMenuItemId(item),
                     quantity: item.quantity,
                     price_at_time: item.price,
                     selected_options: finalOpts,
@@ -357,6 +365,14 @@ export function usePOSOrder() {
         }
 
         try {
+            const resolveMenuItemId = (item) => {
+                if (item.menu_item_id && typeof item.menu_item_id !== 'string') return item.menu_item_id;
+                if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
+                if (item.id && typeof item.id !== 'string') return item.id;
+                if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
+                return item.menu_item_id || item.id;
+            };
+
             const itemsToInsert = items.map(item => {
                 const finalOpts = [...(item.selected_options || [])];
                 if (item.item_note) {
@@ -364,7 +380,7 @@ export function usePOSOrder() {
                 }
                 return {
                     booking_id: bookingId,
-                    menu_item_id: item.id || item.menu_item_id,
+                    menu_item_id: resolveMenuItemId(item),
                     quantity: item.quantity,
                     price_at_time: item.price,
                     selected_options: finalOpts

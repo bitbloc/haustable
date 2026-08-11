@@ -1488,6 +1488,11 @@ export default function POSDashboard() {
             ...prev,
             items: prev.items.map(item => {
                 if (item.id === itemId) {
+                    const isReward = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
+                    if (isReward && delta > 0) {
+                        toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
+                        return item;
+                    }
                     const newQty = Math.max(0, item.quantity + delta);
                     return { ...item, quantity: newQty };
                 }
