@@ -23,6 +23,7 @@ export default function MemberCard() {
         is_in_grace_period: false
     })
     const [history, setHistory] = useState([])
+    const [serviceHistory, setServiceHistory] = useState([])
     const [loading, setLoading] = useState(true)
     const [qrUrl, setQrUrl] = useState('')
     const [showAuthModal, setShowAuthModal] = useState(false)
@@ -132,10 +133,21 @@ export default function MemberCard() {
             const qrDataUrl = await QRCode.toDataURL(qrValue, { width: 250, margin: 1 })
             setQrUrl(qrDataUrl)
 
-            // 4. Fetch point transaction history
+            // 4. Fetch point transaction & service history
             const { data: bookings, error: bErr } = await supabase
                 .from('bookings')
-                .select('id, created_at, total_amount, xhaus_earned, xhaus_redeemed, xhaus_discount')
+                .select(`
+                    id, 
+                    created_at, 
+                    booking_time, 
+                    booking_type, 
+                    status, 
+                    total_amount, 
+                    xhaus_earned, 
+                    xhaus_redeemed, 
+                    xhaus_discount,
+                    tables_layout (table_name)
+                `)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
 
@@ -165,6 +177,69 @@ export default function MemberCard() {
                     })
                 }
                 setHistory(mappedHistory)
+
+                // Map bookings to service history list
+                const mappedServiceHistory = bookings.map(b => {
+                    let typeLabel = b.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน (TABLE)';
+                    if (b.tables_layout?.table_name) {
+                        typeLabel = `โต๊ะ ${b.tables_layout.table_name}`;
+                    }
+                    
+                    let statusLabel = 'กำลังดำเนินการ';
+                    let statusColor = 'text-amber-600';
+                    if (b.status === 'completed') {
+                        statusLabel = 'เสร็จสิ้น';
+                        statusColor = 'text-[#5a6353]';
+                    } else if (b.status === 'cancelled') {
+                        statusLabel = 'ยกเลิก';
+                        statusColor = 'text-rose-500';
+                    }
+
+                    const bookingTimeStr = new Date(b.booking_time || b.created_at).toLocaleDateString('th-TH', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: '2-digit'
+                    }) + '\n' + new Date(b.booking_time || b.created_at).toLocaleTimeString('th-TH', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+
+                    return {
+                        id: b.id,
+                        date: bookingTimeStr,
+                        typeLabel,
+                        statusLabel,
+                        statusColor,
+                        earned: parseFloat(b.xhaus_earned) || 0,
+                        redeemed: parseFloat(b.xhaus_redeemed) || 0,
+                        total: parseFloat(b.total_amount) || 0
+                    };
+                });
+
+                if (welcomePoints > 0) {
+                    const welcomeTimeStr = new Date(prof.created_at).toLocaleDateString('th-TH', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: '2-digit'
+                    }) + '\n' + new Date(prof.created_at).toLocaleTimeString('th-TH', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    mappedServiceHistory.push({
+                        id: 'welcome',
+                        date: welcomeTimeStr,
+                        typeLabel: 'โบนัสต้อนรับ',
+                        statusLabel: 'ต้อนรับสมาชิก',
+                        statusColor: 'text-amber-600',
+                        earned: welcomePoints,
+                        redeemed: 0,
+                        total: 0
+                    });
+                }
+
+                setServiceHistory(mappedServiceHistory)
             }
         } catch (err) {
             console.error("Error fetching member data:", err)
@@ -388,27 +463,37 @@ export default function MemberCard() {
                             exit={{ opacity: 0, y: -15 }}
                             className="space-y-5"
                         >
-                            {/* Tabs Navigation */}
-                            <div className="flex bg-[#F2F2EC] p-1 rounded-[6px] border border-[var(--color-hallmark-rule)] font-mono text-[9px] font-bold uppercase tracking-wider">
+                            {/* Tabs Navigation - Neobrutalist border grid */}
+                            <div className="grid grid-cols-3 border border-[var(--color-hallmark-rule)] font-mono text-[9px] font-bold uppercase tracking-wider text-center divide-x divide-[var(--color-hallmark-rule)] bg-[#F5F5F2]">
                                 <button
                                     onClick={() => setActiveSubTab('card')}
-                                    className={`flex-1 py-2 text-center rounded-[4px] transition-all cursor-pointer ${
+                                    className={`py-3 transition-all cursor-pointer font-bold ${
                                         activeSubTab === 'card' 
-                                            ? 'bg-white text-[var(--color-hallmark-ink)] shadow-sm' 
-                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)]'
+                                            ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' 
+                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'
                                     }`}
                                 >
-                                    💳 บัตรสมาชิก (My Card)
+                                    MY CARD
                                 </button>
                                 <button
                                     onClick={() => setActiveSubTab('rewards')}
-                                    className={`flex-1 py-2 text-center rounded-[4px] transition-all cursor-pointer ${
+                                    className={`py-3 transition-all cursor-pointer font-bold ${
                                         activeSubTab === 'rewards' 
-                                            ? 'bg-white text-[var(--color-hallmark-ink)] shadow-sm' 
-                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)]'
+                                            ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' 
+                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'
                                     }`}
                                 >
-                                    🎁 แลกรางวัล (Redeem Rewards)
+                                    REDEEM
+                                </button>
+                                <button
+                                    onClick={() => setActiveSubTab('history')}
+                                    className={`py-3 transition-all cursor-pointer font-bold ${
+                                        activeSubTab === 'history' 
+                                            ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' 
+                                            : 'text-[var(--color-hallmark-ink-muted)] hover:text-[var(--color-hallmark-ink)] bg-transparent'
+                                    }`}
+                                >
+                                    HISTORY
                                 </button>
                             </div>
 
@@ -827,38 +912,54 @@ export default function MemberCard() {
                                 </div>
                             )}
 
-                            {/* Transaction History Log */}
-                            <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
-                                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                    <Clock size={14} /> ประวัติธุรกรรมสะสมเหรียญ
-                                </h3>
-
-                                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                                    {history.length === 0 ? (
-                                        <p className="text-center font-mono text-[8px] text-zinc-400 py-4 uppercase tracking-wider">ยังไม่มีประวัติการทำรายการ</p>
-                                    ) : (
-                                        history.map((h, idx) => (
-                                            <div key={h.id + idx} className="flex justify-between items-center text-[10px] border-b border-[var(--color-hallmark-rule)] pb-2 last:border-b-0 last:pb-0">
-                                                <div className="space-y-0.5">
-                                                    <h4 className="font-bold text-[var(--color-hallmark-ink)]">{h.title}</h4>
-                                                    <span className="text-[8px] font-mono text-[var(--color-hallmark-ink-muted)]">{h.date}</span>
+                            {activeSubTab === 'history' && (
+                                <div className="space-y-4 animate-fade-in">
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] rounded-[8px] overflow-hidden shadow-sm">
+                                        <div className="bg-[#F5F5F2] border-b border-[var(--color-hallmark-rule)] px-4 py-3 font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink-muted)] grid grid-cols-12 select-none">
+                                            <div className="col-span-3">วัน-เวลา</div>
+                                            <div className="col-span-3">รูปแบบ/โต๊ะ</div>
+                                            <div className="col-span-3 text-right">ยอดชำระ</div>
+                                            <div className="col-span-3 text-right">เหรียญ xhaus</div>
+                                        </div>
+                                        
+                                        <div className="divide-y divide-[var(--color-hallmark-rule)] max-h-[500px] overflow-y-auto pr-1">
+                                            {serviceHistory.length === 0 ? (
+                                                <div className="text-center font-mono text-[9px] text-zinc-400 py-12 uppercase italic">
+                                                    ยังไม่มีประวัติการใช้บริการ
                                                 </div>
-                                                <div className="text-right">
-                                                    {h.earned > 0 && (
-                                                        <span className="font-mono font-bold text-emerald-600 font-bold">+{h.earned.toFixed(2)} xhaus</span>
-                                                    )}
-                                                    {h.redeemed > 0 && (
-                                                        <span className="font-mono font-bold text-rose-500 font-bold">-{h.redeemed.toFixed(2)} xhaus</span>
-                                                    )}
-                                                    {h.total > 0 && (
-                                                        <p className="text-[7px] text-[var(--color-hallmark-ink-muted)] font-mono mt-0.5">บิลรวม: {h.total.toLocaleString()}.-</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
+                                            ) : (
+                                                serviceHistory.map((h, idx) => (
+                                                    <div key={h.id || idx} className="px-4 py-3.5 grid grid-cols-12 items-center text-[10px] hover:bg-neutral-50 transition-colors">
+                                                        <div className="col-span-3 font-mono text-[9px] whitespace-pre-line leading-relaxed text-[var(--color-hallmark-ink-muted)]">
+                                                            {h.date}
+                                                        </div>
+                                                        <div className="col-span-3 font-bold text-[var(--color-hallmark-ink)] flex flex-col gap-0.5">
+                                                            <span>{h.typeLabel}</span>
+                                                            <span className={`text-[8px] font-mono font-bold uppercase ${h.statusColor}`}>
+                                                                {h.statusLabel}
+                                                            </span>
+                                                        </div>
+                                                        <div className="col-span-3 text-right font-mono font-bold text-[var(--color-hallmark-ink)]">
+                                                            {h.total > 0 ? `฿${h.total.toLocaleString()}` : '-'}
+                                                        </div>
+                                                        <div className="col-span-3 text-right flex flex-col items-end gap-0.5">
+                                                            {h.earned > 0 && (
+                                                                <span className="font-mono font-bold text-emerald-600">+{h.earned.toFixed(2)}</span>
+                                                            )}
+                                                            {h.redeemed > 0 && (
+                                                                <span className="font-mono font-bold text-rose-500">-{h.redeemed.toFixed(2)}</span>
+                                                            )}
+                                                            {h.earned === 0 && h.redeemed === 0 && (
+                                                                <span className="font-mono text-zinc-400">-</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

@@ -222,7 +222,7 @@ export default function POSDashboard() {
                 } else if (!String(bookingId).startsWith('local_')) {
                     const { data } = await supabase
                         .from('bookings')
-                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                         .eq('id', bookingId)
                         .maybeSingle();
                     updatedBooking = data;
@@ -598,7 +598,7 @@ export default function POSDashboard() {
         try {
             const { data: fullBooking } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                 .eq('id', bookingId)
                 .maybeSingle();
 
@@ -1324,7 +1324,10 @@ export default function POSDashboard() {
                 price: oi.price_at_time,
                 quantity: oi.quantity,
                 db_id: oi.id,
-                selected_options: oi.selected_options
+                selected_options: oi.selected_options,
+                category_id: oi.menu_items?.category_id || oi.category_id || '',
+                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || '',
+                is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
             }));
             setCurrentOrder({
                 items: existingItems,
@@ -1769,7 +1772,7 @@ export default function POSDashboard() {
             try {
                 const { data } = await supabase
                     .from('bookings')
-                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                     .eq('id', bookingId)
                     .single();
                 completedBooking = data;
@@ -2148,7 +2151,7 @@ export default function POSDashboard() {
                                         if (selectedTable) {
                                             updatedBooking = await getActiveBooking(selectedTable.id);
                                         } else {
-                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))').eq('id', activeBooking.id).single();
+                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))').eq('id', activeBooking.id).single();
                                             updatedBooking = data;
                                         }
                                         
@@ -2199,7 +2202,7 @@ export default function POSDashboard() {
                                         } else if (!String(bookingId).startsWith('local_')) {
                                             const { data } = await supabase
                                                 .from('bookings')
-                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                                                 .eq('id', bookingId)
                                                 .maybeSingle();
                                             updatedBooking = data;
@@ -2223,7 +2226,7 @@ export default function POSDashboard() {
                                         } else if (!String(activeBooking.id).startsWith('local_')) {
                                             const { data } = await supabase
                                                 .from('bookings')
-                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                                                 .eq('id', activeBooking.id)
                                                 .maybeSingle();
                                             if (data) setActiveBooking({ ...data, user_id: null, profiles: null });
@@ -2242,7 +2245,7 @@ export default function POSDashboard() {
                                     } else {
                                         const { data } = await supabase
                                             .from('bookings')
-                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                                             .eq('id', activeBooking.id)
                                             .maybeSingle();
                                         if (data) setActiveBooking(data);
