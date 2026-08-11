@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Search, Shield, User, Phone, Clock, RefreshCw } from 'lucide-react';
+import { Search, Shield, User, Phone, Clock, RefreshCw, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getShortBookingId } from '../utils/printerHelper';
+import POSBillDetailsModal from './POSBillDetailsModal';
 
 export default function POSCRMPanel() {
     const [members, setMembers] = useState([]);
@@ -11,6 +12,7 @@ export default function POSCRMPanel() {
     const [selectedMember, setSelectedMember] = useState(null);
     const [memberHistory, setMemberHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [activeViewBooking, setActiveViewBooking] = useState(null);
 
     const [hasSession, setHasSession] = useState(true);
 
@@ -355,6 +357,17 @@ export default function POSCRMPanel() {
                                                     {(!h.order_items || h.order_items.length === 0) && (
                                                         <span className="text-[#767673] italic">No items ordered</span>
                                                     )}
+                                                    
+                                                    {/* Add View Bill Details Button */}
+                                                    <div className="pt-2 mt-2 border-t border-dashed border-[#ECECE9]">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActiveViewBooking(h)}
+                                                            className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] rounded text-[9px] font-bold uppercase tracking-widest transition-colors"
+                                                        >
+                                                            <FileText size={10} /> View Bill Details
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))
@@ -375,6 +388,14 @@ export default function POSCRMPanel() {
                     )}
                 </AnimatePresence>
             </div>
+            
+            {/* View Bill Details Modal */}
+            {activeViewBooking && (
+                <POSBillDetailsModal 
+                    booking={activeViewBooking} 
+                    onClose={() => setActiveViewBooking(null)} 
+                />
+            )}
         </div>
     );
 }

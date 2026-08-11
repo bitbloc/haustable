@@ -1690,6 +1690,11 @@ export default function POSDashboard() {
 
         const fallbackProfileId = attachedMemberCrm?.id || currentBooking?.profiles?.id || currentBooking?.user_id || null;
 
+        let finalRewardCode = rewardCode;
+        if (useFreeDrinkQuota) {
+            finalRewardCode = finalRewardCode ? `${finalRewardCode} | 10 Free 1 Drink` : '10 Free 1 Drink';
+        }
+
         const success = await completeCheckout(
             bookingId, 
             finalTotal, 
@@ -1698,7 +1703,7 @@ export default function POSDashboard() {
             pointsEarned, 
             xhausToRedeem, 
             xhausDiscount,
-            rewardCode,
+            finalRewardCode,
             rewardId,
             fallbackProfileId
         );

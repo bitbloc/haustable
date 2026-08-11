@@ -32,6 +32,7 @@ export default function POSReportsPanel() {
     const [bookings, setBookings] = useState([]);
     const [categories, setCategories] = useState([]);
     const [activeReprintBooking, setActiveReprintBooking] = useState(null);
+    const [activeViewBooking, setActiveViewBooking] = useState(null);
     const [shiftHistory, setShiftHistory] = useState([]);
     const [activeShift, setActiveShift] = useState(null);
     const [activeShiftSummary, setActiveShiftSummary] = useState(null);
@@ -1076,6 +1077,13 @@ iframe.contentDocument.write(htmlContent);
                                                             </button>
                                                         )}
                                                         <button 
+                                                            onClick={() => setActiveViewBooking(b)}
+                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                            title="View Bill Details"
+                                                        >
+                                                            <FileText size={10} />
+                                                        </button>
+                                                        <button 
                                                             onClick={() => setActiveReprintBooking(b)}
                                                             className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                             title="Reprint Bill / Receipt"
@@ -1303,6 +1311,14 @@ iframe.contentDocument.write(htmlContent);
                     booking={activeReprintBooking}
                     type="customer"
                     onClose={() => setActiveReprintBooking(null)}
+                />
+            )}
+
+            {/* View Bill Details Modal */}
+            {activeViewBooking && (
+                <POSBillDetailsModal 
+                    booking={activeViewBooking} 
+                    onClose={() => setActiveViewBooking(null)} 
                 />
             )}
 

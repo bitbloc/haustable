@@ -292,6 +292,9 @@ export async function syncOfflineQueue(isManual = false) {
                     status: 'completed',
                     total_amount: totalAmount,
                     discount_amount: discountAmount || 0,
+                    xhaus_earned: xhausEarned || 0,
+                    xhaus_redeemed: xhausRedeemed || 0,
+                    xhaus_discount: xhausDiscount || 0,
                     staff_remark: rewardCode 
                         ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode} (Offline Sync)`
                         : `Paid by ${paymentMethod.toUpperCase()} (Offline Sync)`
