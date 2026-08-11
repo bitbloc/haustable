@@ -1268,6 +1268,44 @@ export default function SlipModal({ booking, type, onClose }) {
                             </div>
                         )}
 
+                        {/* CRM Member Details Section (Only for Receipt/Billing) */}
+                        {activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && booking.profiles && (
+                            <div className="border-t-2 border-black pt-3 mb-4 text-xs font-mono font-bold">
+                                <div className="text-center font-black uppercase tracking-wider text-[10px] mb-2 bg-black text-white py-0.5">--- MEMBER ---</div>
+                                
+                                <div className="flex justify-between mb-1">
+                                    <span className="text-gray-600">ชื่อสมาชิก</span>
+                                    <span>{booking.profiles.display_name || '-'}</span>
+                                </div>
+                                {booking.profiles.phone_number && (
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-gray-600">เบอร์โทรศัพท์</span>
+                                        <span>{booking.profiles.phone_number}</span>
+                                    </div>
+                                )}
+                                
+                                {(Number(booking.xhaus_earned) > 0 || Number(booking.xhaus_redeemed) > 0) && (
+                                    <>
+                                        <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
+                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
+                                        </div>
+                                        {Number(booking.xhaus_earned) > 0 && (
+                                            <div className="flex justify-between mb-1 text-green-600">
+                                                <span>ได้รับ xhaus เพิ่ม</span>
+                                                <span>+{Number(booking.xhaus_earned).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts</span>
+                                            </div>
+                                        )}
+                                        {Number(booking.xhaus_redeemed) > 0 && (
+                                            <div className="flex justify-between mb-1 text-red-600">
+                                                <span>ใช้ xhaus แลกไป</span>
+                                                <span>-{Number(booking.xhaus_redeemed).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
+
                         {/* Payment Details Section (Only for Receipt) */}
                         {activeTab === 'receipt' && (
                             <>

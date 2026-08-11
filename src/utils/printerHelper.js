@@ -982,6 +982,30 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.line(doubleDivider);
     }
 
+    // CRM Member details
+    if (!isKitchenTab && activeTab === 'receipt' && booking.profiles) {
+        encoder.align('center').bold(true).line('--- สมาชิก (MEMBER) ---').bold(false).align('left');
+        
+        encoder.line(formatTwoCols('ชื่อสมาชิก:', booking.profiles.display_name || '-', maxCols));
+        if (booking.profiles.phone_number) {
+            encoder.line(formatTwoCols('เบอร์โทรศัพท์:', booking.profiles.phone_number, maxCols));
+        }
+
+        const earned = Number(booking.xhaus_earned) || 0;
+        const redeemed = Number(booking.xhaus_redeemed) || 0;
+        
+        if (earned > 0 || redeemed > 0) {
+            encoder.line(divider);
+            if (earned > 0) {
+                encoder.line(formatTwoCols('ได้รับ xhaus เพิ่ม:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+            }
+            if (redeemed > 0) {
+                encoder.line(formatTwoCols('ใช้ xhaus แลกไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+            }
+        }
+        encoder.line(doubleDivider);
+    }
+
     // Payment details
     if (activeTab === 'receipt') {
         const methodLabel = paymentMethod === 'cash' ? 'เงินสด' : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
