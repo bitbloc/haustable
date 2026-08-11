@@ -463,7 +463,8 @@ export function usePOSOrder() {
         xhausRedeemed = 0,
         xhausDiscount = 0,
         rewardCode = null,
-        rewardId = null
+        rewardId = null,
+        profileId = null
     ) => {
         setLoading(true);
         
@@ -551,6 +552,7 @@ export function usePOSOrder() {
             }
 
             // 2. Process xhaus transaction in database (updates profile points & dynamic tier details)
+            // Call the RPC as fallback, but also force the profile update in JS to guarantee execution
             const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
                 p_booking_id: bookingId,
                 p_xhaus_earned: xhausEarned,
@@ -560,6 +562,27 @@ export function usePOSOrder() {
 
             if (rpcErr) {
                 console.warn('process_checkout_xhaus RPC notice/error:', rpcErr);
+            }
+
+            // Force JS Update to guarantee profile sync
+            const targetProfileId = profileId;
+            if (targetProfileId && isOnline()) {
+                try {
+                    const { data: pData } = await supabase.from('profiles').select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus').eq('id', targetProfileId).single();
+                    if (pData) {
+                        const earned = parseFloat(xhausEarned) || 0;
+                        const redeemed = parseFloat(xhausRedeemed) || 0;
+                        if (earned > 0 || redeemed > 0) {
+                            await supabase.from('profiles').update({
+                                xhaus_balance: (parseFloat(pData.xhaus_balance) || 0) + earned - redeemed,
+                                total_earned_xhaus: (parseFloat(pData.total_earned_xhaus) || 0) + earned,
+                                total_redeemed_xhaus: (parseFloat(pData.total_redeemed_xhaus) || 0) + redeemed
+                            }).eq('id', targetProfileId);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to force profile xhaus update:', e);
+                }
             }
 
             setLoading(false);

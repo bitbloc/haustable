@@ -1054,13 +1054,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             </button>
                                         </div>
                                     </div>
-                                ) : booking?.profiles ? (
+                                ) : currentMemberProfile ? (
                                     <div className="space-y-4 text-left">
                                         {/* Member Profile Card */}
                                         <div className="bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-4 flex items-center justify-between shadow-sm">
                                             <div className="flex items-center gap-3.5 min-w-0">
                                                 <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0 font-mono font-bold text-base">
-                                                    {booking.profiles.display_name?.charAt(0).toUpperCase() || 'U'}
+                                                    {currentMemberProfile.display_name?.charAt(0).toUpperCase() || 'U'}
                                                 </div>
                                                 <div className="text-left min-w-0">
                                                     <div className="flex items-center gap-2">
@@ -1071,23 +1071,25 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-base font-bold text-[#1A1A1A] uppercase mt-1 truncate">{booking.profiles.display_name || 'Anonymous User'}</p>
+                                                    <p className="text-base font-bold text-[#1A1A1A] uppercase mt-1 truncate">{currentMemberProfile.display_name || 'Anonymous User'}</p>
                                                     
                                                     {/* Display Phone & Email */}
                                                     <div className="flex flex-col gap-1 mt-2 text-xs font-mono text-[#555]">
-                                                        {booking.profiles.phone_number ? (
-                                                            <span className="font-bold text-[#1A1A1A]">📞 {booking.profiles.phone_number}</span>
+                                                        {currentMemberProfile.phone_number ? (
+                                                            <span className="font-bold text-[#1A1A1A]">📞 {currentMemberProfile.phone_number}</span>
                                                         ) : (
                                                             <span className="text-red-600 font-bold">📞 No Phone (ไม่มีเบอร์)</span>
                                                         )}
-                                                        {booking.profiles.email ? (
-                                                            <span>✉️ {booking.profiles.email}</span>
+                                                        {currentMemberProfile.email ? (
+                                                            <span>✉️ {currentMemberProfile.email}</span>
                                                         ) : (
                                                             <span className="text-amber-700/80 font-medium">✉️ No Email</span>
                                                         )}
-                                                        {booking.profiles.xhaus_balance !== undefined && (() => {
-                                                            const originalBalance = Math.ceil(parseFloat(booking.profiles.xhaus_balance || 0));
-                                                            const totalRedeemed = Math.ceil((xhausToRedeem || 0) + (appliedReward?.xhaus_cost || 0));
+                                                        {currentMemberProfile.xhaus_balance !== undefined && (() => {
+                                                            const originalBalance = Math.ceil(parseFloat(currentMemberProfile.xhaus_balance || 0));
+                                                            const cartRewardCost = (order.items || []).reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
+                                                            const standaloneRewardCost = (appliedReward && !appliedReward.menu_items) ? parseFloat(appliedReward.xhaus_cost || 0) : 0;
+                                                            const totalRedeemed = Math.ceil((parseFloat(xhausToRedeem) || 0) + cartRewardCost + standaloneRewardCost);
                                                             const currentBalance = Math.max(0, originalBalance - totalRedeemed);
                                                             return (
                                                                 <span className="text-amber-800 font-bold text-sm mt-1 flex items-center gap-2">
@@ -1102,11 +1104,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         })()}
                                                         <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs font-mono">
                                                             <span className="bg-amber-100 border border-amber-300 text-amber-950 font-bold px-2 py-0.5 rounded">
-                                                                STAMPS: {(booking.profiles.drink_stamp_count || 0)}/10
+                                                                STAMPS: {(currentMemberProfile.drink_stamp_count || 0)}/10
                                                             </span>
-                                                            {(booking.profiles.free_drink_quota || 0) > 0 && (
+                                                            {(currentMemberProfile.free_drink_quota || 0) > 0 && (
                                                                 <span className="bg-[#1A1A1A] text-white font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                                                                    FREE DRINKS: {(booking.profiles.free_drink_quota)}
+                                                                    FREE DRINKS: {(currentMemberProfile.free_drink_quota)}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -1118,7 +1120,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 {/* Edit customer details button */}
                                                 <button 
                                                     type="button"
-                                                    onClick={() => startEditingProfile(booking.profiles)}
+                                                    onClick={() => startEditingProfile(currentMemberProfile)}
                                                     className="w-10 h-10 flex items-center justify-center bg-white hover:bg-blue-50 text-[#767673] hover:text-blue-600 border border-[#D1D1CD] hover:border-blue-200 rounded-xl transition-colors cursor-pointer shadow-xs"
                                                     title="Edit Customer Profile"
                                                 >
@@ -1181,7 +1183,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     <button 
                                                         onClick={() => {
                                                             const points = parseFloat(redeemInputVal) || 0;
-                                                            const maxBalance = (parseFloat(booking.profiles.xhaus_balance) || 0) - (appliedReward?.xhaus_cost || 0);
+                                                            const cartRewardCost = (order.items || []).reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
+                                                            const maxBalance = (parseFloat(currentMemberProfile.xhaus_balance) || 0) - (appliedReward?.xhaus_cost || 0) - cartRewardCost;
                                                             const minRedeem = crmSettings.crm_min_redeem_xhaus || 10.0;
                                                             
                                                             if (points < minRedeem) {
@@ -1267,7 +1270,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             <div className="flex items-center justify-between bg-white border border-amber-200 p-2.5 rounded-xl">
                                                 <div className="flex items-center gap-1.5 overflow-x-auto">
                                                     {Array.from({ length: 10 }).map((_, idx) => {
-                                                        const isFilled = idx < (booking.profiles.drink_stamp_count || 0);
+                                                        const isFilled = idx < (currentMemberProfile.drink_stamp_count || 0);
                                                         return (
                                                             <div 
                                                                 key={idx}
@@ -1284,15 +1287,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     })}
                                                 </div>
                                                 <div className="font-mono font-bold text-xs text-amber-950 shrink-0 ml-2">
-                                                    {(booking.profiles.drink_stamp_count || 0)}/10
+                                                    {(currentMemberProfile.drink_stamp_count || 0)}/10
                                                 </div>
                                             </div>
 
                                             {/* Free Quota Action Button */}
-                                            {(booking.profiles.free_drink_quota || 0) > 0 ? (
+                                            {(currentMemberProfile.free_drink_quota || 0) > 0 ? (
                                                 <div className="flex items-center justify-between bg-white border border-emerald-400 p-3 rounded-xl">
                                                     <div>
-                                                        <p className="text-xs font-mono font-bold text-emerald-950 uppercase">FREE DRINKS: {(booking.profiles.free_drink_quota)} AVAILABLE</p>
+                                                        <p className="text-xs font-mono font-bold text-emerald-950 uppercase">FREE DRINKS: {(currentMemberProfile.free_drink_quota)} AVAILABLE</p>
                                                         <p className="text-[11px] text-emerald-800">
                                                             {useFreeDrinkQuota ? 'กำลังใช้งานส่วนลดแถมฟรี 1 แก้วในบิลนี้' : 'กดใช้สิทธิ์เพื่อลดราคาเครื่องดื่มที่ร่วมรายการ'}
                                                         </p>
@@ -1324,7 +1327,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 </div>
                                             ) : (
                                                 <p className="text-[11px] text-amber-800/80 font-mono">
-                                                    สะสมอีก {10 - (booking.profiles.drink_stamp_count || 0)} แก้ว เพื่อรับสิทธิ์เครื่องดื่มฟรี 1 แก้ว
+                                                    สะสมอีก {10 - (currentMemberProfile.drink_stamp_count || 0)} แก้ว เพื่อรับสิทธิ์เครื่องดื่มฟรี 1 แก้ว
                                                 </p>
                                             )}
                                         </div>

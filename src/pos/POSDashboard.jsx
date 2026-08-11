@@ -1656,6 +1656,8 @@ export default function POSDashboard() {
         const netBeforeTax = subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - freeDrinkDiscVal;
         const finalTotal = includeTax ? Math.max(0, netBeforeTax * 1.07) : Math.max(0, netBeforeTax);
 
+        const fallbackProfileId = attachedMemberCrm?.id || currentBooking?.profiles?.id || currentBooking?.user_id || null;
+
         const success = await completeCheckout(
             bookingId, 
             finalTotal, 
@@ -1665,12 +1667,13 @@ export default function POSDashboard() {
             xhausToRedeem, 
             xhausDiscount,
             rewardCode,
-            rewardId
+            rewardId,
+            fallbackProfileId
         );
         if (success) {
             // Process Automatic Drink Stamps 10 Free 1 for Attached Member Profile
-            if (currentBooking?.profiles?.id || currentBooking?.user_id) {
-                const profileId = currentBooking.profiles?.id || currentBooking.user_id;
+            if (fallbackProfileId) {
+                const profileId = fallbackProfileId;
                 try {
                     const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
                     let eligibleDrinkCount = currentOrder.items.reduce((sum, item) => {
