@@ -258,7 +258,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                                 <div className="flex flex-col flex-1 min-h-[64px]">
                                     <h4 className="font-bold text-base text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
                                     <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-sm font-mono font-bold uppercase tracking-wider">
-                                        <span className="text-[oklch(52%_0.16_28)]">฿{item.price}{hasOptions ? '+' : ''}</span>
+                                        <span className="text-[oklch(52%_0.16_28)]">฿{item.price}</span>
                                         {item.stock_quantity !== null && (
                                             <span className="text-[#767673] text-xs tracking-normal font-medium">QTY: {item.stock_quantity}</span>
                                         )}

@@ -34,7 +34,7 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                 .from('bookings')
                 .select('*')
                 .eq('booking_type', 'pickup')
-                .gte('booking_time', `${today}T00:00:00`)
+                .gte('booking_time', `${today}T00:00:00+07:00`)
                 .order('booking_time', { ascending: false });
 
             if (error) throw error;

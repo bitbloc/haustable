@@ -11,8 +11,8 @@ export function useAvailability() {
             const requestedStart = new Date(`${dateStr}T${timeStr}`) // ISO-ish
             const requestedEnd = new Date(requestedStart.getTime() + (durationHours * 60 * 60 * 1000))
 
-            const dayStart = `${dateStr}T00:00:00`
-            const dayEnd = `${dateStr}T23:59:59`
+            const dayStart = `${dateStr}T00:00:00+07:00`
+            const dayEnd = `${dateStr}T23:59:59+07:00`
 
             const { data, error } = await supabase
                 .from('bookings')

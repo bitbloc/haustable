@@ -238,8 +238,8 @@ export default function POSReportsPanel() {
     const fetchReportData = async () => {
         setLoading(true);
         try {
-            const startOfDay = `${filterDate}T00:00:00`;
-            const endOfDay = `${filterDate}T23:59:59`;
+            const startOfDay = `${filterDate}T00:00:00+07:00`;
+            const endOfDay = `${filterDate}T23:59:59+07:00`;
 
             // 1. Fetch Bookings for the day (completed, seated, confirmed)
             const { data: bookingsData, error: bookingsError } = await supabase
@@ -1130,9 +1130,19 @@ iframe.contentDocument.write(htmlContent);
                                             </span>
                                         ) : s.closedAt ? new Date(s.closedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-';
                                         
+                                        const txs = s.transactions || [];
                                         const adjs = s.adjustments || [];
-                                        const totalIn = s.totalIn !== undefined ? s.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-                                        const totalOut = s.totalOut !== undefined ? s.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+                                        
+                                        const totalIn = Math.round(s.totalIn ? s.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0));
+                                        const totalOut = Math.round(s.totalOut ? s.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0));
+                                        
+                                        const cashSales = Math.round(s.cashSales ? s.cashSales : txs.filter(tx => tx.paymentMethod === 'cash').reduce((sum, tx) => sum + tx.amount, 0));
+                                        
+                                        const calculatedExpected = Math.round(s.openingFloat + cashSales + totalIn - totalOut);
+                                        const expectedCash = Math.round(s.expectedCash ? s.expectedCash : calculatedExpected);
+                                        const closedCash = Math.round(s.closedCash || 0);
+                                        const difference = isShiftOpen ? 0 : Math.round(s.difference !== undefined && s.difference !== 0 ? s.difference : (closedCash - expectedCash));
+                                        
                                         const isExpanded = expandedShiftId === s.id;
 
                                         return (
@@ -1147,16 +1157,16 @@ iframe.contentDocument.write(htmlContent);
                                                     </td>
                                                     <td className="py-2.5 px-3 text-[#767673]">{openTime}</td>
                                                     <td className="py-2.5 px-3 text-[#767673]">{closeTime}</td>
-                                                    <td className="py-2.5 px-3 text-right">฿{s.openingFloat?.toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right">฿{s.cashSales?.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right">฿{Math.round(s.openingFloat || 0).toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right">฿{cashSales.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">+฿{totalIn.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right text-red-500 font-bold">-฿{totalOut.toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right font-bold">฿{s.expectedCash?.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right font-bold">฿{expectedCash.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right font-bold text-[#767673]">
-                                                        {isShiftOpen ? '-' : `฿${s.closedCash?.toLocaleString()}`}
+                                                        {isShiftOpen ? '-' : `฿${closedCash.toLocaleString()}`}
                                                     </td>
-                                                    <td className={`py-2.5 px-3 text-right font-black ${isShiftOpen ? 'text-[#767673]' : s.difference === 0 ? 'text-[#767673]' : s.difference > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                        {isShiftOpen ? '-' : (s.difference > 0 ? '+' : '') + s.difference?.toLocaleString()}
+                                                    <td className={`py-2.5 px-3 text-right font-black ${isShiftOpen ? 'text-[#767673]' : difference === 0 ? 'text-[#767673]' : difference > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                        {isShiftOpen ? '-' : (difference > 0 ? '+' : '') + difference.toLocaleString()}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-center">
                                                         <button 

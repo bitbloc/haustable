@@ -63,8 +63,8 @@ export function useBooking() {
             // Fetch ALL active bookings for this date (Simple optimized fetch)
             // We fetch the whole day to ensure we catch any overlapping "Long" bookings or "Multi-slot" bookings
             const dateStr = state.date // YYYY-MM-DD
-            const dayStart = `${dateStr}T00:00:00`
-            const dayEnd = `${dateStr}T23:59:59`
+            const dayStart = `${dateStr}T00:00:00+07:00`
+            const dayEnd = `${dateStr}T23:59:59+07:00`
 
             const { data, error } = await supabase
                 .from('bookings')

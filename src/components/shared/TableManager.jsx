@@ -43,8 +43,8 @@ export default function TableManager({ isStaffView = false }) {
 
             // 3. Active Bookings
             const today = new Date().toISOString().split('T')[0];
-            const start = `${today}T00:00:00`;
-            const end = `${today}T23:59:59`;
+            const start = `${today}T00:00:00+07:00`;
+            const end = `${today}T23:59:59+07:00`;
 
             const { data: bookingsData } = await supabase
                 .from('bookings')

@@ -175,7 +175,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                                 <span>🔴 ออฟไลน์ (ค้าง {queueLength} รายการ)</span>
                             </button>
-                        ) : queueLength > 0 ? (
+                        ) : (Number(queueLength) || 0) > 0 ? (
                             <button
                                 onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
                                 className="flex items-center gap-1.5 bg-amber-100 border border-amber-200 text-amber-800 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full hover:bg-amber-200 cursor-pointer active:scale-95 transition-all shadow-sm"

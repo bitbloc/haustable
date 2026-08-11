@@ -26,12 +26,18 @@ export function getOfflineQueue() {
 export function saveOfflineQueue(queue) {
     try {
         localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('offline-queue-changed'));
+        }
     } catch (e) {
         console.error('[Offline Storage Error] Failed to save offline queue:', e);
         // Quota safety: if localStorage is full, attempt to save last 50 actions
         if (Array.isArray(queue) && queue.length > 50) {
             try {
                 localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue.slice(-50)));
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('offline-queue-changed'));
+                }
             } catch (retryErr) {
                 console.error('[Offline Storage Error] Hard failure saving pruned queue:', retryErr);
             }

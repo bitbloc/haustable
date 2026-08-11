@@ -371,13 +371,13 @@ export default function POSDashboard() {
                 const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
 
                 setRealtimeShiftSummary({
-                    cashSales,
-                    qrSales,
-                    creditSales,
-                    totalSales: cashSales + qrSales + creditSales,
-                    totalIn,
-                    totalOut,
-                    expectedCash: activeShift.openingFloat + cashSales + totalIn - totalOut
+                    cashSales: Math.round(cashSales),
+                    qrSales: Math.round(qrSales),
+                    creditSales: Math.round(creditSales),
+                    totalSales: Math.round(cashSales + qrSales + creditSales),
+                    totalIn: Math.round(totalIn),
+                    totalOut: Math.round(totalOut),
+                    expectedCash: Math.round(activeShift.openingFloat + cashSales + totalIn - totalOut)
                 });
             } catch (err) {
                 console.error("Failed to fetch realtime shift summary:", err);
@@ -395,13 +395,13 @@ export default function POSDashboard() {
                 const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
                 const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
                 setRealtimeShiftSummary({
-                    cashSales,
-                    qrSales,
-                    creditSales,
-                    totalSales: cashSales + qrSales + creditSales,
-                    totalIn,
-                    totalOut,
-                    expectedCash: activeShift.openingFloat + cashSales + totalIn - totalOut
+                    cashSales: Math.round(cashSales),
+                    qrSales: Math.round(qrSales),
+                    creditSales: Math.round(creditSales),
+                    totalSales: Math.round(cashSales + qrSales + creditSales),
+                    totalIn: Math.round(totalIn),
+                    totalOut: Math.round(totalOut),
+                    expectedCash: Math.round(activeShift.openingFloat + cashSales + totalIn - totalOut)
                 });
             }
         };
@@ -437,13 +437,13 @@ export default function POSDashboard() {
         const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
 
         return {
-            cashSales,
-            qrSales,
-            creditSales,
-            totalSales: cashSales + qrSales + creditSales,
-            totalIn,
-            totalOut,
-            expectedCash: activeShift.openingFloat + cashSales + totalIn - totalOut
+            cashSales: Math.round(cashSales),
+            qrSales: Math.round(qrSales),
+            creditSales: Math.round(creditSales),
+            totalSales: Math.round(cashSales + qrSales + creditSales),
+            totalIn: Math.round(totalIn),
+            totalOut: Math.round(totalOut),
+            expectedCash: Math.round(activeShift.openingFloat + cashSales + totalIn - totalOut)
         };
     };
 
@@ -663,7 +663,7 @@ export default function POSDashboard() {
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
                 .in('status', ['pending', 'seated'])
-                .gte('booking_time', `${today}T00:00:00`)
+                .gte('booking_time', `${today}T00:00:00+07:00`)
                 .order('booking_time', { ascending: false });
             
             if (!error && activeBookings) {
@@ -1849,7 +1849,7 @@ export default function POSDashboard() {
                 .from('bookings')
                 .select('*')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`);
+                .gte('booking_time', `${today}T00:00:00+07:00`);
 
             const occupiedTableIds = (activeBookings || []).map(b => b.table_id);
             const free = (allTables || []).filter(t => !occupiedTableIds.includes(t.id));
@@ -1920,7 +1920,7 @@ export default function POSDashboard() {
                 .from('bookings')
                 .select('*')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00`);
+                .gte('booking_time', `${today}T00:00:00+07:00`);
 
             const activeBookingMap = {};
             (activeBookings || []).forEach(b => {

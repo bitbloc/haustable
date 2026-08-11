@@ -89,9 +89,9 @@ export function OrderProvider({ children }) {
         dispatch({ type: 'SET_LOADING', payload: true })
         try {
             // Start of day
-            const start = `${dateStr}T00:00:00`
+            const start = `${dateStr}T00:00:00+07:00`
             // End of day
-            const end = `${dateStr}T23:59:59`
+            const end = `${dateStr}T23:59:59+07:00`
 
             const { data, error } = await supabase
                 .from('bookings')

@@ -191,16 +191,16 @@ export default function SlipAuditManager({
         try {
             let startIso, endIso;
             if (filterMode === 'day') {
-                startIso = `${selectedDate}T00:00:00`;
-                endIso = `${selectedDate}T23:59:59`;
+                startIso = `${selectedDate}T00:00:00+07:00`;
+                endIso = `${selectedDate}T23:59:59+07:00`;
             } else if (filterMode === 'month') {
-                startIso = `${selectedMonth}-01T00:00:00`;
+                startIso = `${selectedMonth}-01T00:00:00+07:00`;
                 const [y, m] = selectedMonth.split('-');
                 const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
-                endIso = `${selectedMonth}-${String(lastDay).padStart(2, '0')}T23:59:59`;
+                endIso = `${selectedMonth}-${String(lastDay).padStart(2, '0')}T23:59:59+07:00`;
             } else {
-                startIso = `${selectedYear}-01-01T00:00:00`;
-                endIso = `${selectedYear}-12-31T23:59:59`;
+                startIso = `${selectedYear}-01-01T00:00:00+07:00`;
+                endIso = `${selectedYear}-12-31T23:59:59+07:00`;
             }
 
             // 1. Fetch range bookings from Supabase

@@ -18,7 +18,13 @@ export async function syncShiftToCloud(shift) {
             difference: Number(shift.difference) || 0,
             status: String(shift.status || 'open'),
             transactions: Array.isArray(shift.transactions) ? shift.transactions : [],
-            adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : []
+            adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : [],
+            cash_sales: Number(shift.cashSales) || 0,
+            qr_sales: Number(shift.qrSales) || 0,
+            credit_sales: Number(shift.creditSales) || 0,
+            total_sales: Number(shift.totalSales) || 0,
+            total_in: Number(shift.totalIn) || 0,
+            total_out: Number(shift.totalOut) || 0
         };
 
         const { error } = await supabase
