@@ -1746,12 +1746,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     type="button"
                                     disabled={paymentMethod === 'cash' && (parseFloat(cashReceivedInput) < total || !cashReceivedInput)}
                                     onClick={() => {
+                                        const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : 0);
                                         if (onCheckout) {
                                             onCheckout(
                                                 paymentMethod,
                                                 includeTax,
                                                 pointsEarned,
-                                                xhausToRedeem,
+                                                totalXhausRedeemed,
                                                 xhausDiscount,
                                                 promoDiscount + rewardDiscount,
                                                 manualDiscount,

@@ -301,6 +301,22 @@ export async function syncOfflineQueue(isManual = false) {
                 
                 if (error) throw error;
 
+                if (rewardId) {
+                    try {
+                        const { data: rw } = await supabase
+                            .from('xhaus_rewards')
+                            .select('used_count')
+                            .eq('id', rewardId)
+                            .maybeSingle();
+                        if (rw) {
+                            await supabase
+                                .from('xhaus_rewards')
+                                .update({ used_count: (rw.used_count || 0) + 1 })
+                                .eq('id', rewardId);
+                        }
+                    } catch (e) {}
+                }
+
                 // Sync xhaus points if redeemed/earned
                 if (xhausEarned || xhausRedeemed) {
                     try {

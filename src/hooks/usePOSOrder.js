@@ -531,6 +531,25 @@ export function usePOSOrder() {
 
             if (bookingErr) throw bookingErr;
 
+            // 1.5 Increment reward used_count quota if rewardId is present
+            if (rewardId) {
+                try {
+                    const { data: rw } = await supabase
+                        .from('xhaus_rewards')
+                        .select('used_count')
+                        .eq('id', rewardId)
+                        .maybeSingle();
+                    if (rw) {
+                        await supabase
+                            .from('xhaus_rewards')
+                            .update({ used_count: (rw.used_count || 0) + 1 })
+                            .eq('id', rewardId);
+                    }
+                } catch (rwErr) {
+                    console.warn('Failed to increment reward used_count:', rwErr);
+                }
+            }
+
             // 2. Process xhaus transaction in database (updates profile points & dynamic tier details)
             const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
                 p_booking_id: bookingId,
