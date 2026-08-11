@@ -23,7 +23,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     onMoveTable,
     onMergeBill,
     onUpdateCustomerProfile,
-    onUpdateGuestCount
+    onUpdateGuestCount,
+    onInjectRewardItem,
+    onRemoveRewardItem
 }) {
     const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
     const [editPaxInput, setEditPaxInput] = React.useState('1');

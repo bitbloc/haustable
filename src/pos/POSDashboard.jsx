@@ -196,6 +196,7 @@ export default function POSDashboard() {
 
     const handleSelectCrmCustomer = async (member) => {
         if (!member?.id) return;
+        setAttachedMemberCrm(member);
         let bookingId = activeBooking?.id;
 
         if (!bookingId) {
@@ -204,33 +205,33 @@ export default function POSDashboard() {
                 if (newBooking) {
                     bookingId = newBooking.id;
                     setActiveBooking(newBooking);
+                    await attachCustomerToBooking(bookingId, member.id);
                 }
             } else {
-                const newBooking = await createWalkInPickup('Walk-in Customer');
-                if (newBooking) {
-                    bookingId = newBooking.id;
-                    setActiveBooking(newBooking);
+                setActiveBooking({ id: null, user_id: member.id, profiles: member, booking_type: 'pickup', pax: 1 });
+                setShowAttachCRMModal(false);
+                toast.success(`ผูกสมาชิก: ${member.display_name || member.phone || 'Customer'}`);
+                return;
+            }
+        } else {
+            const success = await attachCustomerToBooking(bookingId, member.id);
+            if (success) {
+                let updatedBooking = null;
+                if (selectedTable?.id) {
+                    updatedBooking = await getActiveBooking(selectedTable.id);
+                } else if (!String(bookingId).startsWith('local_')) {
+                    const { data } = await supabase
+                        .from('bookings')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                        .eq('id', bookingId)
+                        .maybeSingle();
+                    updatedBooking = data;
                 }
-            }
-        }
-
-        if (!bookingId) return;
-
-        const success = await attachCustomerToBooking(bookingId, member.id);
-        if (success) {
-            let updatedBooking = null;
-            if (selectedTable?.id) {
-                updatedBooking = await getActiveBooking(selectedTable.id);
-            } else {
-                const { data } = await supabase
-                    .from('bookings')
-                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
-                    .eq('id', bookingId)
-                    .maybeSingle();
-                updatedBooking = data;
-            }
-            if (updatedBooking) {
-                setActiveBooking(updatedBooking);
+                if (updatedBooking) {
+                    setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
+                } else {
+                    setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
+                }
             }
             setShowAttachCRMModal(false);
         }
@@ -1599,6 +1600,13 @@ export default function POSDashboard() {
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
+
+            // Attach CRM member if attached in local draft state
+            const memberToAttach = attachedMemberCrm || activeBooking?.profiles;
+            if (memberToAttach?.id && bookingId) {
+                await attachCustomerToBooking(bookingId, memberToAttach.id);
+                currentBooking = { ...currentBooking, user_id: memberToAttach.id, profiles: memberToAttach };
+            }
         }
 
         // 2. Submit items
@@ -2130,38 +2138,32 @@ export default function POSDashboard() {
                                         if (newBooking) {
                                             bookingId = newBooking.id;
                                             setActiveBooking({ ...newBooking, user_id: member.id, profiles: member });
+                                            await attachCustomerToBooking(bookingId, member.id);
                                         }
                                     } else {
-                                        const newBooking = await createWalkInPickup('Walk-in Customer');
-                                        if (newBooking) {
-                                            bookingId = newBooking.id;
-                                            setActiveBooking({ ...newBooking, user_id: member.id, profiles: member });
+                                        setActiveBooking({ id: null, user_id: member.id, profiles: member, booking_type: 'pickup', pax: 1 });
+                                        toast.success(`ผูกสมาชิก: ${member.display_name || member.phone || 'Customer'}`);
+                                        return;
+                                    }
+                                } else {
+                                    const success = await attachCustomerToBooking(bookingId, member.id);
+                                    if (success) {
+                                        let updatedBooking = null;
+                                        if (selectedTable?.id) {
+                                            updatedBooking = await getActiveBooking(selectedTable.id);
+                                        } else if (!String(bookingId).startsWith('local_')) {
+                                            const { data } = await supabase
+                                                .from('bookings')
+                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
+                                                .eq('id', bookingId)
+                                                .maybeSingle();
+                                            updatedBooking = data;
                                         }
-                                    }
-                                }
-
-                                if (!bookingId) {
-                                    toast.error("ไม่สามารถสร้างออเดอร์เพื่อผูกสมาชิกได้");
-                                    return;
-                                }
-
-                                const success = await attachCustomerToBooking(bookingId, member.id);
-                                if (success) {
-                                    let updatedBooking = null;
-                                    if (selectedTable?.id) {
-                                        updatedBooking = await getActiveBooking(selectedTable.id);
-                                    } else if (!String(bookingId).startsWith('local_')) {
-                                        const { data } = await supabase
-                                            .from('bookings')
-                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id))')
-                                            .eq('id', bookingId)
-                                            .maybeSingle();
-                                        updatedBooking = data;
-                                    }
-                                    if (updatedBooking) {
-                                        setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
-                                    } else {
-                                        setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
+                                        if (updatedBooking) {
+                                            setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
+                                        } else {
+                                            setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
+                                        }
                                     }
                                 }
                             }}

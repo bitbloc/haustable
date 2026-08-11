@@ -283,6 +283,13 @@ export function usePOSOrder() {
                         .single();
                         
                     if (!createErr && newBooking) {
+                        // Record local temp ID mapping so offline queue actions (like attach_customer) can map smoothly
+                        try {
+                            const idMapping = JSON.parse(localStorage.getItem('pos_offline_id_mapping')) || {};
+                            idMapping[bookingId] = newBooking.id;
+                            localStorage.setItem('pos_offline_id_mapping', JSON.stringify(idMapping));
+                        } catch (mapErr) {}
+
                         // Replace the local booking in posCache with the new online booking
                         const idx = bookings.findIndex(b => b.id === bookingId);
                         if (idx !== -1) {
