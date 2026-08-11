@@ -745,9 +745,21 @@ export default function POSDashboard() {
                 return;
             }
             try {
+                let profileData = activeBooking.profiles;
+                if (!profileData) {
+                    const { data: pData } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', activeBooking.user_id)
+                        .maybeSingle();
+                    profileData = pData;
+                }
                 const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: activeBooking.user_id });
-                if (!error && data && data.length > 0) {
-                    setAttachedMemberCrm(data[0]);
+                if (profileData) {
+                    const tierDetails = (!error && data && data.length > 0) ? data[0] : {};
+                    setAttachedMemberCrm({ ...profileData, ...tierDetails });
+                } else if (!error && data && data.length > 0) {
+                    setAttachedMemberCrm({ id: activeBooking.user_id, ...data[0] });
                 }
             } catch (err) {
                 console.error("Failed to load attached member CRM:", err);
@@ -1366,9 +1378,21 @@ export default function POSDashboard() {
         
         if (booking?.user_id) {
             try {
+                let profileData = booking.profiles;
+                if (!profileData) {
+                    const { data: pData } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', booking.user_id)
+                        .maybeSingle();
+                    profileData = pData;
+                }
                 const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: booking.user_id });
-                if (!error && data && data.length > 0) {
-                    setAttachedMemberCrm(data[0]);
+                if (profileData) {
+                    const tierDetails = (!error && data && data.length > 0) ? data[0] : {};
+                    setAttachedMemberCrm({ ...profileData, ...tierDetails });
+                } else if (!error && data && data.length > 0) {
+                    setAttachedMemberCrm({ id: booking.user_id, ...data[0] });
                 } else if (booking.profiles) {
                     setAttachedMemberCrm(booking.profiles);
                 }

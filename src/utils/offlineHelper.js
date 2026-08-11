@@ -272,7 +272,7 @@ export async function syncOfflineQueue(isManual = false) {
             } 
             
             else if (action.type === 'complete_checkout') {
-                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId, discountAmount, xhausEarned, xhausRedeemed, xhausDiscount } = action.payload;
+                let { bookingId, totalAmount, paymentMethod, rewardCode, rewardId, discountAmount, xhausEarned, xhausRedeemed, xhausDiscount, profileId } = action.payload;
                 
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
@@ -292,6 +292,9 @@ export async function syncOfflineQueue(isManual = false) {
                 };
                 if (rewardId) {
                     updatePayload.xhaus_reward_id = rewardId;
+                }
+                if (profileId) {
+                    updatePayload.user_id = profileId;
                 }
 
                 const { error } = await supabase

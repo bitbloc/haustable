@@ -482,6 +482,7 @@ export function usePOSOrder() {
                         xhaus_redeemed: xhausRedeemed,
                         xhaus_discount: xhausDiscount,
                         xhaus_reward_id: rewardId,
+                        user_id: profileId || b.user_id,
                         staff_remark: rewardCode 
                             ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}`
                             : `Paid by ${paymentMethod.toUpperCase()}` 
@@ -500,7 +501,8 @@ export function usePOSOrder() {
                 xhausRedeemed, 
                 xhausDiscount,
                 rewardCode,
-                rewardId
+                rewardId,
+                profileId
             });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
             
@@ -523,6 +525,9 @@ export function usePOSOrder() {
             };
             if (rewardId) {
                 updatePayload.xhaus_reward_id = rewardId;
+            }
+            if (profileId) {
+                updatePayload.user_id = profileId;
             }
 
             const { error: bookingErr } = await supabase
@@ -611,6 +616,7 @@ export function usePOSOrder() {
                         xhaus_redeemed: xhausRedeemed,
                         xhaus_discount: xhausDiscount,
                         xhaus_reward_id: rewardId,
+                        user_id: profileId || b.user_id,
                         staff_remark: `Paid by ${paymentMethod.toUpperCase()}` 
                     };
                 }
@@ -627,7 +633,8 @@ export function usePOSOrder() {
                 xhausRedeemed, 
                 xhausDiscount,
                 rewardCode,
-                rewardId
+                rewardId,
+                profileId
             });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
 
