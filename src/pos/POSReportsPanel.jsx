@@ -246,6 +246,7 @@ export default function POSReportsPanel() {
                 .from('bookings')
                 .select(`
                     *,
+                    profiles (display_name),
                     tables_layout (table_name),
                     order_items (
                         id,
