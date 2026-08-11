@@ -384,7 +384,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             // 3. Auto-Inject item if linked
             if (reward.menu_items && onInjectRewardItem) {
-                onInjectRewardItem(reward.menu_items, reward.claim_code);
+                onInjectRewardItem(reward.menu_items, reward.claim_code, reward.id, parseFloat(reward.xhaus_cost || 0));
             }
             
             // Calculate reward discount value if it's a discount type reward
@@ -1746,7 +1746,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     type="button"
                                     disabled={paymentMethod === 'cash' && (parseFloat(cashReceivedInput) < total || !cashReceivedInput)}
                                     onClick={() => {
-                                        const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : 0);
+                                        // Fallback to searching the cart for injected reward item metadata if local state was lost
+                                        const rewardItemsInCart = order.items.filter(item => item.is_reward);
+                                        const cartRewardCost = rewardItemsInCart.reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
+                                        const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : cartRewardCost);
+                                        
+                                        const finalRewardCode = appliedReward?.claim_code || rewardItemsInCart[0]?.claim_code || null;
+                                        const finalRewardId = appliedReward?.id || rewardItemsInCart[0]?.reward_id || null;
+
                                         if (onCheckout) {
                                             onCheckout(
                                                 paymentMethod,
@@ -1756,8 +1763,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 xhausDiscount,
                                                 promoDiscount + rewardDiscount,
                                                 manualDiscount,
-                                                appliedReward?.claim_code || null,
-                                                appliedReward?.id || null,
+                                                finalRewardCode,
+                                                finalRewardId,
                                                 useFreeDrinkQuota
                                             );
                                         }

@@ -1553,7 +1553,7 @@ export default function POSDashboard() {
         }
     };
 
-    const handleInjectRewardItem = (menuItem, claimCode) => {
+    const handleInjectRewardItem = (menuItem, claimCode, rewardId, xhausCost) => {
         if (!menuItem) return;
         const rewardItem = {
             id: `reward-${Date.now()}`,
@@ -1563,7 +1563,9 @@ export default function POSDashboard() {
             quantity: 1,
             category_id: menuItem.category_id,
             is_reward: true,
-            claim_code: claimCode
+            claim_code: claimCode,
+            reward_id: rewardId,
+            xhaus_cost: xhausCost
         };
         setCurrentOrder(prev => ({
             ...prev,
@@ -1670,17 +1672,28 @@ export default function POSDashboard() {
             if (currentBooking?.profiles?.id || currentBooking?.user_id) {
                 const profileId = currentBooking.profiles?.id || currentBooking.user_id;
                 try {
+                    const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
                     let eligibleDrinkCount = currentOrder.items.reduce((sum, item) => {
+                        // Reward items (free items) do not earn stamps
+                        if (item.is_reward) return sum;
+
+                        const cat = cachedCats.find(c => c.id === item.category_id);
+                        const categoryName = cat ? cat.name : (item.category || '');
+                        
                         const isEligible = item.is_drink_stamp_eligible || 
                             item.menu_items?.is_drink_stamp_eligible || 
-                            (item.category || '').toLowerCase().includes('coffee') || 
-                            (item.category || '').toLowerCase().includes('tea') || 
-                            (item.category || '').toLowerCase().includes('beverage') || 
-                            (item.category || '').toLowerCase().includes('drink') || 
-                            (item.category || '').toLowerCase().includes('soda') || 
-                            (item.category || '').toLowerCase().includes('ชา') || 
-                            (item.category || '').toLowerCase().includes('กาแฟ') || 
-                            (item.category || '').toLowerCase().includes('เครื่องดื่ม');
+                            (categoryName || '').toLowerCase().includes('coffee') || 
+                            (categoryName || '').toLowerCase().includes('tea') || 
+                            (categoryName || '').toLowerCase().includes('beverage') || 
+                            (categoryName || '').toLowerCase().includes('drink') || 
+                            (categoryName || '').toLowerCase().includes('soda') || 
+                            (categoryName || '').toLowerCase().includes('ชา') || 
+                            (categoryName || '').toLowerCase().includes('กาแฟ') || 
+                            (categoryName || '').toLowerCase().includes('เครื่องดื่ม') ||
+                            (item.name || '').toLowerCase().includes('coffee') || 
+                            (item.name || '').toLowerCase().includes('tea') || 
+                            (item.name || '').toLowerCase().includes('ชา') || 
+                            (item.name || '').toLowerCase().includes('กาแฟ');
 
                         return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
                     }, 0);
