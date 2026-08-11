@@ -335,6 +335,41 @@ export async function syncOfflineQueue(isManual = false) {
                 }
             }
 
+            // BUG #4 FIX: Sync drink stamp updates queued from offline checkout
+            else if (action.type === 'drink_stamp_update') {
+                const { profileId, eligibleDrinkCount, useFreeDrinkQuota } = action.payload;
+                try {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('drink_stamp_count, free_drink_quota, total_drinks_purchased')
+                        .eq('id', profileId)
+                        .maybeSingle();
+
+                    if (profile) {
+                        const currentStamps = profile.drink_stamp_count || 0;
+                        const currentQuota = profile.free_drink_quota || 0;
+                        const currentTotal = profile.total_drinks_purchased || 0;
+
+                        const totalStamps = currentStamps + eligibleDrinkCount;
+                        const earnedNewQuota = Math.floor(totalStamps / 10);
+                        const newStampCount = totalStamps % 10;
+                        const newQuota = Math.max(0, currentQuota - (useFreeDrinkQuota ? 1 : 0) + earnedNewQuota);
+                        const newTotalPurchased = currentTotal + eligibleDrinkCount;
+
+                        await supabase
+                            .from('profiles')
+                            .update({
+                                drink_stamp_count: newStampCount,
+                                free_drink_quota: newQuota,
+                                total_drinks_purchased: newTotalPurchased
+                            })
+                            .eq('id', profileId);
+                    }
+                } catch (err) {
+                    console.warn('Failed to sync drink stamp update:', err);
+                }
+            }
+
             else if (action.type === 'split_payment') {
                 let { bookingId, paidItems, paymentMethod, totalAmount } = action.payload;
                 if (idMapping[bookingId]) {

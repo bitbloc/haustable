@@ -521,7 +521,10 @@ export function usePOSOrder() {
                 status: 'completed',
                 total_amount: totalAmount,
                 discount_amount: discountAmount,
-                staff_remark: remarkText
+                staff_remark: remarkText,
+                xhaus_earned: parseFloat(xhausEarned) || 0,
+                xhaus_redeemed: parseFloat(xhausRedeemed) || 0,
+                xhaus_discount: parseFloat(xhausDiscount) || 0
             };
             if (rewardId) {
                 updatePayload.xhaus_reward_id = rewardId;
@@ -556,38 +559,49 @@ export function usePOSOrder() {
                 }
             }
 
-            // 2. Process xhaus transaction in database (updates profile points & dynamic tier details)
-            // Call the RPC as fallback, but also force the profile update in JS to guarantee execution
-            const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
-                p_booking_id: bookingId,
-                p_xhaus_earned: xhausEarned,
-                p_xhaus_redeemed: xhausRedeemed,
-                p_xhaus_discount: xhausDiscount
-            });
+            // 2. Process xhaus transaction in database (updates profile points & booking xhaus columns)
+            // RPC is the single source of truth. JS fallback ONLY executes if RPC fails.
+            // Note: booking.user_id is already set by step 1 above, so RPC can read it reliably.
+            const earned = parseFloat(xhausEarned) || 0;
+            const redeemed = parseFloat(xhausRedeemed) || 0;
 
-            if (rpcErr) {
-                console.warn('process_checkout_xhaus RPC notice/error:', rpcErr);
-            }
+            if (earned > 0 || redeemed > 0) {
+                const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
+                    p_booking_id: bookingId,
+                    p_xhaus_earned: earned,
+                    p_xhaus_redeemed: redeemed,
+                    p_xhaus_discount: parseFloat(xhausDiscount) || 0
+                });
 
-            // Force JS Update to guarantee profile sync
-            const targetProfileId = profileId;
-            if (targetProfileId && isOnline()) {
-                try {
-                    const { data: pData } = await supabase.from('profiles').select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus').eq('id', targetProfileId).single();
-                    if (pData) {
-                        const earned = parseFloat(xhausEarned) || 0;
-                        const redeemed = parseFloat(xhausRedeemed) || 0;
-                        if (earned > 0 || redeemed > 0) {
-                            await supabase.from('profiles').update({
-                                xhaus_balance: (parseFloat(pData.xhaus_balance) || 0) + earned - redeemed,
-                                total_earned_xhaus: (parseFloat(pData.total_earned_xhaus) || 0) + earned,
-                                total_redeemed_xhaus: (parseFloat(pData.total_redeemed_xhaus) || 0) + redeemed
-                            }).eq('id', targetProfileId);
+                if (rpcErr) {
+                    console.warn('process_checkout_xhaus RPC failed, falling back to JS update:', rpcErr);
+                    // Fallback: JS direct update ONLY when RPC fails
+                    const targetProfileId = profileId;
+                    if (targetProfileId) {
+                        try {
+                            const { data: pData } = await supabase.from('profiles')
+                                .select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus')
+                                .eq('id', targetProfileId).single();
+                            if (pData) {
+                                await supabase.from('profiles').update({
+                                    xhaus_balance: (parseFloat(pData.xhaus_balance) || 0) + earned - redeemed,
+                                    total_earned_xhaus: (parseFloat(pData.total_earned_xhaus) || 0) + earned,
+                                    total_redeemed_xhaus: (parseFloat(pData.total_redeemed_xhaus) || 0) + redeemed
+                                }).eq('id', targetProfileId);
+                            }
+                        } catch (e) {
+                            console.error('JS fallback xhaus update also failed:', e);
                         }
                     }
-                } catch (e) {
-                    console.error('Failed to force profile xhaus update:', e);
                 }
+            } else {
+                // Even with 0 earned/redeemed, update booking xhaus columns for record keeping
+                await supabase.rpc('process_checkout_xhaus', {
+                    p_booking_id: bookingId,
+                    p_xhaus_earned: 0,
+                    p_xhaus_redeemed: 0,
+                    p_xhaus_discount: parseFloat(xhausDiscount) || 0
+                }).catch(() => {});
             }
 
             setLoading(false);
