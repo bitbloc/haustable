@@ -322,11 +322,11 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                 (!i.db_id && typeof i.id === 'string' && i.id.startsWith('local_'))
                             );
 
-                            const customerName = order.profiles?.display_name 
-                                || order.customer_name 
-                                || order.pickup_contact_name 
-                                || order.customer_note 
-                                || (isTable ? 'Dine-in Guest' : 'Walk-in Customer');
+                             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+                             const customerName = order.profiles?.display_name 
+                                 || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
+                                 || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
+                                 || 'Guest';
 
                             return (
                                 <motion.div

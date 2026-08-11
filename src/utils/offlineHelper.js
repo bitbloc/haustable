@@ -329,14 +329,31 @@ export async function syncOfflineQueue(isManual = false) {
                 // Sync xhaus points if redeemed/earned
                 if (xhausEarned || xhausRedeemed) {
                     try {
-                        await supabase.rpc('process_checkout_xhaus', {
+                        const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
                             p_booking_id: bookingId,
                             p_xhaus_earned: xhausEarned || 0,
                             p_xhaus_redeemed: xhausRedeemed || 0,
                             p_xhaus_discount: xhausDiscount || 0
                         });
+                        if (rpcErr) throw rpcErr;
                     } catch (err) {
-                        console.warn('Failed RPC process_checkout_xhaus during sync:', err);
+                        console.warn('Failed RPC process_checkout_xhaus during sync, falling back to JS update:', err);
+                        if (profileId) {
+                            try {
+                                const { data: pData } = await supabase.from('profiles')
+                                    .select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus')
+                                    .eq('id', profileId).single();
+                                if (pData) {
+                                    await supabase.from('profiles').update({
+                                        xhaus_balance: (parseFloat(pData.xhaus_balance) || 0) + (xhausEarned || 0) - (xhausRedeemed || 0),
+                                        total_earned_xhaus: (parseFloat(pData.total_earned_xhaus) || 0) + (xhausEarned || 0),
+                                        total_redeemed_xhaus: (parseFloat(pData.total_redeemed_xhaus) || 0) + (xhausRedeemed || 0)
+                                    }).eq('id', profileId);
+                                }
+                            } catch (e) {
+                                console.error('JS fallback xhaus update also failed during sync:', e);
+                            }
+                        }
                     }
                 }
             }
@@ -373,11 +390,12 @@ export async function syncOfflineQueue(isManual = false) {
                     }
                 } catch (err) {
                     console.warn('Failed to sync drink stamp update:', err);
+                    throw err; // throw to let offline queue retry later
                 }
             }
 
             else if (action.type === 'split_payment') {
-                let { bookingId, paidItems, paymentMethod, totalAmount } = action.payload;
+                let { bookingId, tempSplitId, paidItems, paymentMethod, totalAmount, bookingMetadata } = action.payload;
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
                 }
@@ -385,6 +403,51 @@ export async function syncOfflineQueue(isManual = false) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
 
+                // 1. Create a new completed booking for the split
+                const splitBookingPayload = {
+                    table_id: bookingMetadata?.table_id || null,
+                    status: 'completed',
+                    booking_type: bookingMetadata?.booking_type || 'walk_in',
+                    source: bookingMetadata?.source || 'pos',
+                    booking_time: new Date().toISOString(),
+                    pax: bookingMetadata?.pax || 0,
+                    user_id: bookingMetadata?.user_id || null,
+                    staff_remark: `Split Paid by ${paymentMethod.toUpperCase()}`,
+                    total_amount: totalAmount,
+                    discount_amount: 0,
+                    tracking_token: crypto.randomUUID()
+                };
+
+                const { data: newSplitBooking, error: insertError } = await supabase
+                    .from('bookings')
+                    .insert(splitBookingPayload)
+                    .select('id')
+                    .single();
+
+                if (insertError) throw insertError;
+                const newSplitBookingId = newSplitBooking.id;
+
+                if (tempSplitId) {
+                    idMapping[tempSplitId] = newSplitBookingId;
+                    try { localStorage.setItem('pos_offline_id_mapping', JSON.stringify(idMapping)); } catch(e) {}
+                }
+
+                // 2. Insert paid items to the new split booking
+                const splitOrderItemsToInsert = paidItems.map(item => ({
+                    booking_id: newSplitBookingId,
+                    menu_item_id: item.menu_item_id,
+                    quantity: item.quantity,
+                    price_at_time: item.price_at_time || 0,
+                    selected_options: item.selected_options || []
+                }));
+
+                const { error: insertItemsError } = await supabase
+                    .from('order_items')
+                    .insert(splitOrderItemsToInsert);
+
+                if (insertItemsError) throw insertItemsError;
+
+                // 3. Deduct/Delete from original booking
                 for (const item of paidItems) {
                     if (item.menu_item_id) {
                         const { data: dbItem } = await supabase

@@ -332,7 +332,7 @@ export default function TableManager({ isStaffView = false }) {
                                     </div>
                                     <div className="flex items-center gap-2 text-[#1A1A1A]">
                                         <User size={12} className="text-[#767673]" />
-                                        <span className="uppercase font-bold">{selectedTable.statusData.booking.profiles?.display_name || selectedTable.statusData.booking.pickup_contact_name || 'Walk-in Guest'}</span>
+                                         <span className="uppercase font-bold">{selectedTable.statusData.booking.profiles?.display_name || (selectedTable.statusData.booking.pickup_contact_name && !['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in'].includes(selectedTable.statusData.booking.pickup_contact_name.toLowerCase().trim()) ? selectedTable.statusData.booking.pickup_contact_name : 'Guest')}</span>
                                     </div>
                                     {selectedTable.statusData.booking.profiles?.phone_number && (
                                          <div className="flex items-center gap-2 text-[#1A1A1A]">

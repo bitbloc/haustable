@@ -211,7 +211,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const renderCard = (order, typeLabel) => {
         const orderTimeStr = order.created_at ? new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : null;
         const bookingTimeStr = new Date(order.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-        const name = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'ลูกค้าทั่วไป';
+        const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer', 'ลูกค้าทั่วไป'];
+        const name = order.profiles?.display_name 
+            || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
+            || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
+            || 'Guest';
         const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
         const isPickup = order.booking_type === 'pickup';
         const items = order.order_items || [];

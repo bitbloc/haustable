@@ -317,12 +317,22 @@ export default function POSReportsPanel() {
     const filteredForBreakdown = completedBookings.filter(b => {
         if (payMethodFilter !== 'all' && getBookingPaymentMethod(b) !== payMethodFilter) return false;
 
+        const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+        const getGuestNameLower = () => {
+            if (b.profiles?.display_name) return b.profiles.display_name.toLowerCase();
+            const name = b.pickup_contact_name || b.customer_name || '';
+            if (!name || defaultWalkIns.includes(name.toLowerCase().trim())) {
+                return 'guest';
+            }
+            return name.toLowerCase();
+        };
+
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
             const token = b.tracking_token ? b.tracking_token.toLowerCase() : '';
             const idStr = String(b.id).toLowerCase();
             const tableName = (b.tables_layout?.table_name || '').toLowerCase();
-            const guestName = (b.profiles?.display_name || b.pickup_contact_name || b.customer_name || '').toLowerCase();
+            const guestName = getGuestNameLower();
             const phone = (b.profiles?.phone_number || b.pickup_contact_phone || '').toLowerCase();
             const remark = (b.staff_remark || '').toLowerCase();
 
@@ -1019,7 +1029,8 @@ iframe.contentDocument.write(htmlContent);
                                     <tbody className="divide-y divide-[#ECECE9]">
                                         {filteredForBreakdown.map((b) => {
                                             const timeStr = new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                            const guestName = b.profiles?.display_name || b.pickup_contact_name || 'Walk-in';
+                                            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+                                            const guestName = b.profiles?.display_name || (b.pickup_contact_name && !defaultWalkIns.includes(b.pickup_contact_name.toLowerCase().trim()) ? b.pickup_contact_name : 'Guest');
 
                                             return (
                                                 <tr key={b.id} className="hover:bg-[#F5F5F2] transition-colors">

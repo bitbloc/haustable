@@ -690,7 +690,8 @@ export default function SlipAuditManager({
                         const discount = parseFloat(order.discount_amount || 0);
                         const netTotal = calculateNetTotal(order, subtotal);
                         const paxCount = order.pax || order.number_of_guests || 1;
-                        const guestName = order.profiles?.display_name || order.pickup_contact_name || order.customer_name || 'Walk-in Customer';
+                        const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+                        const guestName = order.profiles?.display_name || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : 'Guest'));
                         const phone = order.profiles?.phone || order.pickup_contact_phone || '';
                         const tableName = order.tables_layout?.table_name || (order.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN');
                         const paid = isOrderPaid(order);

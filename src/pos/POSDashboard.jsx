@@ -1287,9 +1287,14 @@ export default function POSDashboard() {
                 selected_options: oi.selected_options,
                 category_id: oi.menu_items?.category_id || oi.category_id
             }));
+            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+            const customerName = booking.profiles?.display_name 
+                || (booking.customer_name && !defaultWalkIns.includes(booking.customer_name.toLowerCase().trim()) ? booking.customer_name : null)
+                || (booking.pickup_contact_name && !defaultWalkIns.includes(booking.pickup_contact_name.toLowerCase().trim()) ? booking.pickup_contact_name : null)
+                || 'Guest';
             setCurrentOrder({
                 items: existingItems,
-                customer: booking.customer_name || booking.profiles?.display_name || 'Walk-in Guest',
+                customer: customerName,
                 table: null
             });
             setView('menu');
@@ -2055,14 +2060,30 @@ export default function POSDashboard() {
             });
             localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
 
+            const mockOfflineSplitId = `local_split_${Date.now()}`;
+            mockSplitBooking.id = mockOfflineSplitId;
+
             addToOfflineQueue('split_payment', {
                 bookingId: activeBooking.id,
-                paidItems: paidItems.map(p => ({ menu_item_id: p.id, quantity: p.selectedQty })),
+                tempSplitId: mockOfflineSplitId,
+                paidItems: paidItems.map(p => ({ 
+                    menu_item_id: p.id, 
+                    quantity: p.selectedQty,
+                    price_at_time: p.price,
+                    selected_options: p.selected_options || []
+                })),
                 paymentMethod: splitPaymentMethod,
-                totalAmount: splitTotal
+                totalAmount: splitTotal,
+                bookingMetadata: {
+                    table_id: activeBooking.table_id || null,
+                    booking_type: activeBooking.booking_type || 'walk_in',
+                    source: activeBooking.source || 'pos',
+                    pax: activeBooking.pax || 0,
+                    user_id: activeBooking.user_id || null
+                }
             });
 
-            recordShiftTransaction(activeBooking.id, splitTotal, splitPaymentMethod);
+            recordShiftTransaction(mockOfflineSplitId, splitTotal, splitPaymentMethod);
 
             toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายสำเร็จ!`, { id: toastId });
             setShowSplitModal(false);
@@ -2072,6 +2093,46 @@ export default function POSDashboard() {
         }
 
         try {
+            // 1. Create a new completed booking for the split
+            const splitBookingPayload = {
+                table_id: activeBooking.table_id || null,
+                status: 'completed',
+                booking_type: activeBooking.booking_type || 'walk_in',
+                source: activeBooking.source || 'pos',
+                booking_time: new Date().toISOString(),
+                pax: activeBooking.pax || 0,
+                user_id: activeBooking.user_id || null,
+                staff_remark: `Split Paid by ${splitPaymentMethod.toUpperCase()}`,
+                total_amount: splitTotal,
+                discount_amount: 0,
+                tracking_token: crypto.randomUUID()
+            };
+
+            const { data: newSplitBooking, error: insertError } = await supabase
+                .from('bookings')
+                .insert(splitBookingPayload)
+                .select('id')
+                .single();
+
+            if (insertError) throw insertError;
+            const newSplitBookingId = newSplitBooking.id;
+
+            // 2. Insert paid items to the new split booking
+            const splitOrderItemsToInsert = paidItems.map(item => ({
+                booking_id: newSplitBookingId,
+                menu_item_id: item.id,
+                quantity: item.selectedQty,
+                price_at_time: item.price,
+                selected_options: item.selected_options || []
+            }));
+
+            const { error: insertItemsError } = await supabase
+                .from('order_items')
+                .insert(splitOrderItemsToInsert);
+
+            if (insertItemsError) throw insertItemsError;
+
+            // 3. Deduct/Delete from original booking
             for (const item of paidItems) {
                 if (item.selectedQty === item.quantity) {
                     const { error } = await supabase
@@ -2088,7 +2149,8 @@ export default function POSDashboard() {
                 }
             }
 
-            recordShiftTransaction(activeBooking.id, splitTotal, splitPaymentMethod);
+            mockSplitBooking.id = newSplitBookingId;
+            recordShiftTransaction(newSplitBookingId, splitTotal, splitPaymentMethod);
 
             toast.success('แบ่งจ่ายสำเร็จ!', { id: toastId });
             setShowSplitModal(false);
@@ -2911,20 +2973,20 @@ export default function POSDashboard() {
                                 <div className="col-span-2 border-t border-[#D1D1CD]/50 pt-2.5 grid grid-cols-2 gap-y-2 gap-x-4">
                                     <div className="flex justify-between">
                                         <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Opening Float:</span>
-                                        <span className="font-mono font-bold">฿{activeShift.openingFloat.toLocaleString()}.-</span>
+                                        <span className="font-mono font-bold">฿{Math.round(activeShift.openingFloat || 0).toLocaleString()}.-</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Cash Sales:</span>
-                                        <span className="font-mono font-bold text-emerald-600">฿{summary.cashSales.toLocaleString()}.-</span>
+                                        <span className="font-mono font-bold text-emerald-600">฿{Math.round(summary.cashSales || 0).toLocaleString()}.-</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">QR Sales:</span>
-                                        <span className="font-mono font-bold text-blue-600">฿{summary.qrSales.toLocaleString()}.-</span>
+                                        <span className="font-mono font-bold text-blue-600">฿{Math.round(summary.qrSales || 0).toLocaleString()}.-</span>
                                     </div>
                                     <div className="flex justify-between border-t border-[#D1D1CD]/30 pt-1">
                                         <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Petty Cash In/Out:</span>
                                         <span className={`font-mono font-bold ${summary.totalIn - summary.totalOut >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                            {summary.totalIn - summary.totalOut >= 0 ? '+' : '-'}฿{Math.abs(summary.totalIn - summary.totalOut).toLocaleString()}.-
+                                            {summary.totalIn - summary.totalOut >= 0 ? '+' : '-'}฿{Math.round(Math.abs(summary.totalIn - summary.totalOut)).toLocaleString()}.-
                                         </span>
                                     </div>
                                 </div>
@@ -2962,7 +3024,7 @@ export default function POSDashboard() {
                                     <span className="text-[10px] text-amber-800/80 leading-none">เงินสดตั้งต้น + ยอดขายเงินสด + เข้า - ออก</span>
                                 </div>
                                 <span className="font-mono font-black text-[#1A1A1A] text-lg">
-                                    ฿{summary.expectedCash.toLocaleString()}.-
+                                    ฿{Math.round(summary.expectedCash || 0).toLocaleString()}.-
                                 </span>
                             </div>
 
