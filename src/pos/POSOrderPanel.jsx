@@ -1085,9 +1085,21 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         ) : (
                                                             <span className="text-amber-700/80 font-medium">✉️ No Email</span>
                                                         )}
-                                                        {booking.profiles.xhaus_balance !== undefined && (
-                                                            <span className="text-amber-800 font-bold text-sm mt-1">🪙 {Math.ceil(parseFloat(booking.profiles.xhaus_balance || 0)).toLocaleString()} xhaus</span>
-                                                        )}
+                                                        {booking.profiles.xhaus_balance !== undefined && (() => {
+                                                            const originalBalance = Math.ceil(parseFloat(booking.profiles.xhaus_balance || 0));
+                                                            const totalRedeemed = Math.ceil((xhausToRedeem || 0) + (appliedReward?.xhaus_cost || 0));
+                                                            const currentBalance = Math.max(0, originalBalance - totalRedeemed);
+                                                            return (
+                                                                <span className="text-amber-800 font-bold text-sm mt-1 flex items-center gap-2">
+                                                                    <span>🪙 {currentBalance.toLocaleString()} xhaus</span>
+                                                                    {totalRedeemed > 0 && (
+                                                                        <span className="text-red-500 font-mono text-[10px] bg-red-50 px-1.5 py-0.5 rounded border border-red-200 uppercase tracking-wider">
+                                                                            (-{totalRedeemed.toLocaleString()} Redeemed)
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                         <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs font-mono">
                                                             <span className="bg-amber-100 border border-amber-300 text-amber-950 font-bold px-2 py-0.5 rounded">
                                                                 STAMPS: {(booking.profiles.drink_stamp_count || 0)}/10
@@ -1169,7 +1181,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     <button 
                                                         onClick={() => {
                                                             const points = parseFloat(redeemInputVal) || 0;
-                                                            const maxBalance = parseFloat(booking.profiles.xhaus_balance) || 0;
+                                                            const maxBalance = (parseFloat(booking.profiles.xhaus_balance) || 0) - (appliedReward?.xhaus_cost || 0);
                                                             const minRedeem = crmSettings.crm_min_redeem_xhaus || 10.0;
                                                             
                                                             if (points < minRedeem) {
