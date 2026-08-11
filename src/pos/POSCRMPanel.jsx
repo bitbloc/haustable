@@ -39,10 +39,26 @@ export default function POSCRMPanel() {
                 .from('profiles')
                 .select('*')
                 .order('created_at', { ascending: false })
-                .limit(100);
+                .limit(200);
 
             if (profileError) throw profileError;
-            setMembers(profiles || []);
+
+            // Fetch booking counts per user
+            const { data: bookings, error: bookingError } = await supabase
+                .from('bookings')
+                .select('user_id, status');
+
+            const merged = (profiles || []).map(p => {
+                const userBookings = bookingError ? [] : (bookings || []).filter(b => b.user_id === p.id);
+                const completed = userBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length;
+                return {
+                    ...p,
+                    total_bookings: userBookings.length,
+                    completed_bookings: completed
+                };
+            });
+
+            setMembers(merged);
         } catch (err) {
             console.error(err);
         } finally {
@@ -77,10 +93,12 @@ export default function POSCRMPanel() {
     };
 
     const filteredMembers = members.filter(m => {
-        const nameMatch = (m.display_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const phoneMatch = (m.phone || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const emailMatch = (m.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-        return nameMatch || phoneMatch || emailMatch;
+        const term = searchTerm.toLowerCase();
+        const nameMatch = (m.display_name || '').toLowerCase().includes(term);
+        const phoneMatch = (m.phone_number || '').toLowerCase().includes(term);
+        const emailMatch = (m.email || '').toLowerCase().includes(term);
+        const nicknameMatch = (m.nickname || '').toLowerCase().includes(term);
+        return nameMatch || phoneMatch || emailMatch || nicknameMatch;
     });
 
     if (!hasSession) {
@@ -179,8 +197,8 @@ export default function POSCRMPanel() {
                                                 </div>
                                             </td>
                                             <td className="py-3 px-4 font-mono text-[10px] text-[#1A1A1A]">
-                                                {m.phone ? (
-                                                    <span className="flex items-center gap-1.5"><Phone size={10} className="text-[#767673]" /> {m.phone}</span>
+                                                {m.phone_number ? (
+                                                    <span className="flex items-center gap-1.5"><Phone size={10} className="text-[#767673]" /> {m.phone_number}</span>
                                                 ) : (
                                                     <span className="text-[#767673] italic">No Phone</span>
                                                 )}
@@ -236,7 +254,56 @@ export default function POSCRMPanel() {
                                     )}
                                 </div>
                                 <h4 className="font-bold text-sm text-[#1A1A1A] uppercase tracking-tight leading-none">{selectedMember.display_name}</h4>
+                                {selectedMember.phone_number && (
+                                    <span className="font-mono text-[10px] text-[#1A1A1A] mt-1.5 flex items-center gap-1"><Phone size={10} className="text-[#767673]" /> {selectedMember.phone_number}</span>
+                                )}
                                 <span className="font-mono text-[9px] font-bold text-[#767673] uppercase tracking-widest mt-1 block">REGISTRATION DETAIL</span>
+
+                                {/* Stats grid */}
+                                <div className="grid grid-cols-3 gap-2 w-full mt-3 pt-3 border-t border-[#ECECE9]">
+                                    <div className="text-center">
+                                        <p className="font-mono font-bold text-sm text-[#1A1A1A]">{selectedMember.total_bookings || 0}</p>
+                                        <p className="font-mono text-[7px] text-[#767673] uppercase font-bold tracking-wider">Visits</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-mono font-bold text-sm text-[oklch(52%_0.16_28)]">{Number(selectedMember.xhaus_balance || 0).toFixed(0)}</p>
+                                        <p className="font-mono text-[7px] text-[#767673] uppercase font-bold tracking-wider">xhaus</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-mono font-bold text-sm text-[#1A1A1A]">{selectedMember.free_drink_quota || 0}</p>
+                                        <p className="font-mono text-[7px] text-[#767673] uppercase font-bold tracking-wider">Free Drink</p>
+                                    </div>
+                                </div>
+
+                                {/* Drink Stamp Progress (10 free 1) */}
+                                {(() => {
+                                    const stamps = selectedMember.drink_stamp_count || 0;
+                                    const maxStamps = 10;
+                                    const freeDrinks = selectedMember.free_drink_quota || 0;
+                                    return (
+                                        <div className="w-full mt-3 pt-3 border-t border-[#ECECE9]">
+                                            <div className="flex justify-between items-center mb-1.5">
+                                                <span className="font-mono text-[8px] font-bold text-[#767673] uppercase tracking-wider">Drink Stamps</span>
+                                                <span className="font-mono text-[9px] font-bold text-[#1A1A1A]">{stamps} / {maxStamps}</span>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                {Array.from({ length: maxStamps }).map((_, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className={`flex-1 h-2 rounded-full transition-all ${
+                                                            i < stamps ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[#E0E0DC]'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            {freeDrinks > 0 && (
+                                                <p className="font-mono text-[9px] font-bold text-emerald-600 mt-1.5 text-center uppercase">
+                                                    {freeDrinks} FREE DRINK AVAILABLE
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Visitation Log history */}
