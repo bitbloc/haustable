@@ -366,7 +366,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             }
 
             // 2. Check customer points balance
-            const customerBalance = parseFloat(currentMemberProfile.xhaus_balance || 0);
+            const customerBalance = parseFloat(currentMemberProfile.xhaus_balance ?? booking?.profiles?.xhaus_balance ?? 0);
             const cost = parseFloat(reward.xhaus_cost || 0);
 
             // 2.5 Check if reward quota has been fully redeemed

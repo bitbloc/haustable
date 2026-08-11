@@ -16,7 +16,6 @@ import TopMenuInfographic from './financial/TopMenuInfographic'
 import CRMFinancialSummary from './financial/CRMFinancialSummary'
 import CasualDiningInsights from './financial/CasualDiningInsights'
 import UnmetNeedAnalytics from './financial/UnmetNeedAnalytics'
-import SlipAuditManager from './financial/SlipAuditManager'
 
 export default function AdminFinancialDashboard() {
     const [loading, setLoading] = useState(false)
@@ -724,17 +723,6 @@ export default function AdminFinancialDashboard() {
                     <span>ทั้งหมด (Master)</span>
                 </button>
 
-                <button
-                    onClick={() => setActiveTab('slips')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'slips'
-                            ? 'bg-[oklch(52%_0.16_28)] text-white font-black border-[oklch(52%_0.16_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Receipt size={16} />
-                    <span>สลิป & รายการสั่งซื้อ (Audit & Export)</span>
-                </button>
 
                 <button
                     onClick={() => setActiveTab('summary')}
@@ -799,14 +787,6 @@ export default function AdminFinancialDashboard() {
 
             {/* Sub-Components Render Viewport with Live Data */}
             <div className="space-y-10">
-                {(activeTab === 'all' || activeTab === 'slips') && (
-                    <SlipAuditManager 
-                        filterMode={filterMode}
-                        selectedDate={selectedDate}
-                        selectedMonth={selectedMonth}
-                        selectedYear={selectedYear}
-                    />
-                )}
 
                 {(activeTab === 'all' || activeTab === 'summary') && (
                     <DetailedSalesSummary 
