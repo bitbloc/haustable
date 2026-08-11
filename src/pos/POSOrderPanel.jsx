@@ -478,8 +478,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const total = Math.ceil(Math.max(0, netBeforeTax + tax - depositPaid));
     
     // xhaus points earned
-    const pointsMultiplier = attachedMemberCrm ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
-    const pointsEarned = Math.floor((total / 100) * pointsMultiplier * 100) / 100;
+    const pointsMultiplier = attachedMemberCrm && attachedMemberCrm.multiplier ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
+    const finalMultiplier = isNaN(pointsMultiplier) ? 1.0 : pointsMultiplier;
+    const pointsEarned = Math.floor((total / 100) * finalMultiplier * 100) / 100;
     
     // CFD Broadcast Channel (BroadcastChannel + Supabase Realtime for cross-origin)
     const cfdChannel = React.useRef(null);
