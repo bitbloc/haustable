@@ -540,7 +540,6 @@ export async function syncOfflineQueue(isManual = false) {
             console.error(`[Offline Sync] Failed to sync action (${action.type}):`, action, err);
             
             const isNetworkErr = !isOnline() || 
-                err.name === 'TypeError' || 
                 (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('network')));
             
             if (isNetworkErr) {
