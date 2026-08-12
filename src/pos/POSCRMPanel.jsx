@@ -4,7 +4,7 @@ import { Search, Shield, User, Phone, Clock, RefreshCw, FileText } from 'lucide-
 import { motion, AnimatePresence } from 'framer-motion';
 import { getShortBookingId } from '../utils/printerHelper';
 import POSBillDetailsModal from './POSBillDetailsModal';
-import { posCache } from '../utils/posCache';
+import { posCache } from '../utils/offlineHelper';
 
 export default function POSCRMPanel() {
     const [members, setMembers] = useState([]);
