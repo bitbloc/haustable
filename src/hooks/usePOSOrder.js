@@ -324,7 +324,7 @@ export function usePOSOrder() {
                 if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
                 if (item.id && typeof item.id !== 'string') return item.id;
                 if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
-                return item.menu_item_id || item.id;
+                return null;
             };
 
             const newOrderItems = items.map((item, i) => {
@@ -370,7 +370,7 @@ export function usePOSOrder() {
                 if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
                 if (item.id && typeof item.id !== 'string') return item.id;
                 if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
-                return item.menu_item_id || item.id;
+                return null;
             };
 
             const itemsToInsert = items.map(item => {
