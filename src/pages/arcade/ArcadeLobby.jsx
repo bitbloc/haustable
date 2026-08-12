@@ -221,7 +221,11 @@ export default function ArcadeLobby() {
     fetchLeaderboard();
     fetchRewards();
 
-    const effectiveTableId = queryTableId || localStorage.getItem('active_customer_table_id');
+    if (searchParams.get('clearTable') === 'true') {
+      localStorage.removeItem('active_customer_table_id');
+    }
+    
+    const effectiveTableId = queryTableId || (searchParams.get('clearTable') !== 'true' ? localStorage.getItem('active_customer_table_id') : null);
     if (effectiveTableId) {
       setActiveTableId(effectiveTableId);
       localStorage.setItem('active_customer_table_id', effectiveTableId);

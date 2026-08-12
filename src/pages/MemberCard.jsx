@@ -821,7 +821,7 @@ export default function MemberCard() {
                                                 สนุกแถมได้แต้ม! เล่นเกมตู้ Flappy Cat บินผ่านท่อรับเหรียญ xhaus และลุ้นรับรางวัล 50 xhaus รายสัปดาห์!
                                             </p>
                                             <a 
-                                                href="/arcade" 
+                                                href="/arcade?clearTable=true" 
                                                 className="w-full bg-[var(--color-hallmark-ink)] hover:bg-neutral-800 text-[var(--color-hallmark-paper)] text-center py-2.5 rounded-[4px] text-[9px] font-mono font-bold uppercase tracking-widest transition-all active:scale-[0.98] block border border-transparent"
                                             >
                                                 เปิดห้องเกมตู้ ARCADE PLAYGROUND ↗
