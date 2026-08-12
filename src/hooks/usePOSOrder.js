@@ -730,6 +730,11 @@ export function usePOSOrder() {
         }
     };
     const attachCustomerToBooking = async (bookingId, userId) => {
+        if (!bookingId) {
+            toast.success(userId ? 'ผูกสมาชิกกับออเดอร์เรียบร้อยแล้ว' : 'ยกเลิกการผูกสมาชิกเรียบร้อยแล้ว');
+            return true;
+        }
+        
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Attaching customer profile to local booking cache');
             const bookings = posCache.getBookings();
