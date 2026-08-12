@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileText, X } from 'lucide-react';
-import { getShortBookingId } from '../utils/formatUtils';
+import { getShortBookingId } from '../utils/printerHelper';
 import { getBookingPaymentMethod } from '../utils/printerHelper';
 
 export default function POSBillDetailsModal({ booking, onClose }) {
