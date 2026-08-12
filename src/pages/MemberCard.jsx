@@ -158,7 +158,9 @@ export default function MemberCard() {
                     .map(b => ({
                         id: b.id,
                         date: new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
-                        title: parseFloat(b.xhaus_redeemed) > 0 ? 'แลกส่วนลดบิลอาหาร' : 'สะสมแต้มมื้ออร่อย',
+                        title: parseFloat(b.xhaus_redeemed) > 0 
+                            ? (parseFloat(b.xhaus_discount) > 0 ? 'แลกส่วนลดบิลอาหาร' : 'แลกของรางวัล') 
+                            : 'สะสมแต้มมื้ออร่อย',
                         earned: parseFloat(b.xhaus_earned),
                         redeemed: parseFloat(b.xhaus_redeemed),
                         total: b.total_amount
