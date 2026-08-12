@@ -210,7 +210,6 @@ export function usePOSOrder() {
                     table_id: null,
                     status: 'seated',
                     booking_type: 'pickup',
-                    source: 'pos',
                     booking_time: new Date().toISOString(),
                     pax: 1,
                     customer_note: note,

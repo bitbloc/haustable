@@ -740,7 +740,10 @@ export default function POSDashboard() {
 
     useEffect(() => {
         const fetchAttachedMemberCrm = async () => {
-            if (!activeBooking?.user_id) {
+            if (!activeBooking) {
+                return; // Preserve attached member for Walk-in drafts
+            }
+            if (!activeBooking.user_id) {
                 setAttachedMemberCrm(null);
                 return;
             }
