@@ -538,6 +538,7 @@ export async function syncOfflineQueue(isManual = false) {
             
         } catch (err) {
             console.error(`[Offline Sync] Failed to sync action (${action.type}):`, action, err);
+            toast.error(`Sync Error (${action.type}): ${err.message || 'Unknown error'}`);
             
             const isNetworkErr = !isOnline() || 
                 (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('network')));
