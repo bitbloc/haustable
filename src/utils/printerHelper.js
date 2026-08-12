@@ -45,6 +45,14 @@ export function getShortBookingId(booking) {
     return cleanUuid ? cleanUuid.slice(-4).toUpperCase() : '0000';
 }
 
+export function getBookingPaymentMethod(booking) {
+    if (!booking) return 'CASH';
+    const remark = (booking.staff_remark || '').toLowerCase();
+    if (remark.includes('credit') || remark.includes('บัตรเครดิต') || booking.payment_method === 'credit') return 'CREDIT';
+    if (booking.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || booking.payment_method === 'qr') return 'QR';
+    return booking.payment_method ? booking.payment_method.toUpperCase() : 'CASH';
+}
+
 export const fetchPrinterConfigOnline = async () => {
     try {
         const { data } = await supabase
