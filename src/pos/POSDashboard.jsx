@@ -2289,6 +2289,7 @@ export default function POSDashboard() {
                                         if (newBooking) {
                                             bookingId = newBooking.id;
                                             setActiveBooking({ ...newBooking, user_id: member.id, profiles: member });
+                                            setAttachedMemberCrm(member);
                                             await attachCustomerToBooking(bookingId, member.id);
                                         }
                                     } else {
@@ -2299,6 +2300,7 @@ export default function POSDashboard() {
                                 } else {
                                     const success = await attachCustomerToBooking(bookingId, member.id);
                                     if (success) {
+                                        setAttachedMemberCrm(member);
                                         let updatedBooking = null;
                                         if (selectedTable?.id) {
                                             updatedBooking = await getActiveBooking(selectedTable.id);
