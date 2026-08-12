@@ -1776,6 +1776,9 @@ export default function POSDashboard() {
                                 })
                                 .eq('id', profileId);
 
+                            if (eligibleDrinkCount > 0) {
+                                toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว`);
+                            }
                             if (earnedNewQuota > 0) {
                                 toast.success(`🎉 สะสมเครื่องดื่มครบ 10 แก้ว! ได้รับสิทธิ์เครื่องดื่มฟรีเพิ่ม ${earnedNewQuota} สิทธิ์`);
                             }

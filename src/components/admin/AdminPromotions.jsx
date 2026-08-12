@@ -62,7 +62,11 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
     // Drink Stamp States
     const [categoriesList, setCategoriesList] = useState([])
     const [allItemsList, setAllItemsList] = useState([])
+    const [initialCategoriesList, setInitialCategoriesList] = useState([])
+    const [initialAllItemsList, setInitialAllItemsList] = useState([])
     const [stampsLoading, setStampsLoading] = useState(false)
+    const [hasUnsavedStampChanges, setHasUnsavedStampChanges] = useState(false)
+    const [isSavingStamps, setIsSavingStamps] = useState(false)
 
     const fetchStampSettings = async () => {
         setStampsLoading(true)
@@ -71,8 +75,15 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                 supabase.from('menu_categories').select('*').order('display_order'),
                 supabase.from('menu_items').select('*, menu_categories(name)').order('name')
             ])
-            if (catRes.data) setCategoriesList(catRes.data)
-            if (itemRes.data) setAllItemsList(itemRes.data)
+            if (catRes.data) {
+                setCategoriesList(catRes.data)
+                setInitialCategoriesList(JSON.parse(JSON.stringify(catRes.data)))
+            }
+            if (itemRes.data) {
+                setAllItemsList(itemRes.data)
+                setInitialAllItemsList(JSON.parse(JSON.stringify(itemRes.data)))
+            }
+            setHasUnsavedStampChanges(false)
         } catch (err) {
             console.error('Error fetching stamp settings:', err)
         } finally {
@@ -80,33 +91,43 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
         }
     }
 
-    const toggleCategoryEligibility = async (category) => {
+    const toggleCategoryEligibility = (category) => {
         const newStatus = !category.is_drink_stamp_eligible
         setCategoriesList(prev => prev.map(c => c.id === category.id ? { ...c, is_drink_stamp_eligible: newStatus } : c))
         setAllItemsList(prev => prev.map(i => i.category_id === category.id ? { ...i, is_drink_stamp_eligible: newStatus } : i))
-
-        try {
-            await supabase.from('menu_categories').update({ is_drink_stamp_eligible: newStatus }).eq('id', category.id)
-            await supabase.from('menu_items').update({ is_drink_stamp_eligible: newStatus }).eq('category_id', category.id)
-            toast.success(`อัปเดตสิทธิ์ 10 แถม 1 ของหมวดหมู่ ${category.name} เป็น ${newStatus ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}`)
-        } catch (err) {
-            console.error('Failed to update category eligibility:', err)
-            toast.error('ไม่สามารถอัปเดตสิทธิ์หมวดหมู่ได้')
-            fetchStampSettings()
-        }
+        setHasUnsavedStampChanges(true)
     }
 
-    const toggleItemEligibility = async (item) => {
+    const toggleItemEligibility = (item) => {
         const newStatus = !item.is_drink_stamp_eligible
         setAllItemsList(prev => prev.map(i => i.id === item.id ? { ...i, is_drink_stamp_eligible: newStatus } : i))
+        setHasUnsavedStampChanges(true)
+    }
 
+    const handleSaveStampSettings = async () => {
+        if (!hasUnsavedStampChanges) return;
+        setIsSavingStamps(true);
         try {
-            await supabase.from('menu_items').update({ is_drink_stamp_eligible: newStatus }).eq('id', item.id)
-            toast.success(`อัปเดตสิทธิ์ 10 แถม 1 ของ ${item.name}`)
+            const changedCats = categoriesList.filter((c) => c.is_drink_stamp_eligible !== initialCategoriesList.find(ic => ic.id === c.id)?.is_drink_stamp_eligible);
+            const changedItems = allItemsList.filter((c) => c.is_drink_stamp_eligible !== initialAllItemsList.find(ic => ic.id === c.id)?.is_drink_stamp_eligible);
+
+            for (const cat of changedCats) {
+                await supabase.from('menu_categories').update({ is_drink_stamp_eligible: cat.is_drink_stamp_eligible }).eq('id', cat.id);
+            }
+            for (const item of changedItems) {
+                await supabase.from('menu_items').update({ is_drink_stamp_eligible: item.is_drink_stamp_eligible }).eq('id', item.id);
+            }
+            
+            setInitialCategoriesList(JSON.parse(JSON.stringify(categoriesList)));
+            setInitialAllItemsList(JSON.parse(JSON.stringify(allItemsList)));
+            toast.success('บันทึกการตั้งค่า 10 แถม 1 เรียบร้อยแล้ว (Saved Successfully)');
+            setHasUnsavedStampChanges(false);
         } catch (err) {
-            console.error('Failed to update item eligibility:', err)
-            toast.error('ไม่สามารถอัปเดตสิทธิ์เมนูได้')
-            fetchStampSettings()
+            console.error('Failed to save stamp settings:', err);
+            toast.error('เกิดข้อผิดพลาดในการบันทึก กรุณาลองใหม่');
+            fetchStampSettings();
+        } finally {
+            setIsSavingStamps(false);
         }
     }
 
@@ -611,6 +632,42 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
                         <div className="text-center py-10 text-gray-400 font-mono text-xs uppercase animate-pulse">กำลังโหลดข้อมูลตั้งค่าสะสมแต้ม...</div>
                     ) : (
                         <>
+                            {/* Save Actions Bar */}
+                            <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+                                hasUnsavedStampChanges 
+                                    ? 'bg-amber-50 border-amber-300 shadow-sm' 
+                                    : 'bg-gray-50 border-gray-200'
+                            }`}>
+                                <div className="flex items-center gap-2">
+                                    {hasUnsavedStampChanges ? (
+                                        <div className="flex items-center gap-2 text-amber-800 font-bold text-sm">
+                                            <AlertCircle size={18} />
+                                            <span>มีข้อมูลตั้งค่าที่ยังไม่ได้บันทึก (Unsaved Changes)</span>
+                                        </div>
+                                    ) : (
+                                        <div className="text-gray-500 text-sm font-medium">
+                                            <span>ตั้งค่าทั้งหมดเป็นปัจจุบันแล้ว</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleSaveStampSettings}
+                                    disabled={!hasUnsavedStampChanges || isSavingStamps}
+                                    className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${
+                                        hasUnsavedStampChanges 
+                                            ? 'bg-black hover:bg-gray-800 text-white shadow-md cursor-pointer active:scale-95' 
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {isSavingStamps ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-b-white"></div>
+                                    ) : (
+                                        <Tag size={16} />
+                                    )}
+                                    {isSavingStamps ? 'SAVING...' : 'SAVE CHANGES'}
+                                </button>
+                            </div>
+
                             {/* Category Master Toggles */}
                             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
                                 <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1 flex items-center gap-2 font-mono">

@@ -4,6 +4,7 @@ import { Search, Shield, User, Phone, Clock, RefreshCw, FileText } from 'lucide-
 import { motion, AnimatePresence } from 'framer-motion';
 import { getShortBookingId } from '../utils/printerHelper';
 import POSBillDetailsModal from './POSBillDetailsModal';
+import { posCache } from '../utils/posCache';
 
 export default function POSCRMPanel() {
     const [members, setMembers] = useState([]);
@@ -86,7 +87,25 @@ export default function POSCRMPanel() {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setMemberHistory(data || []);
+            
+            // BUG FIX: Merge offline/local completed bills that haven't synced yet
+            const localBookings = posCache.getBookings().filter(b => b.user_id === member.id && b.status === 'completed');
+            const mergedHistory = [...(data || [])];
+            
+            localBookings.forEach(localB => {
+                if (!mergedHistory.find(h => h.id === localB.id)) {
+                    mergedHistory.unshift({
+                        ...localB,
+                        order_items: localB.order_items || [],
+                        is_offline: true
+                    });
+                }
+            });
+            
+            // Sort merged history by created_at descending
+            mergedHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            setMemberHistory(mergedHistory);
         } catch (err) {
             console.error(err);
         } finally {
@@ -322,7 +341,7 @@ export default function POSCRMPanel() {
                                         memberHistory.map((h, i) => (
                                             <div key={i} className="bg-white border border-[#D1D1CD] rounded-lg p-3 space-y-1.5 shadow-sm text-[10px] font-mono">
                                                 <div className="flex justify-between items-center font-bold text-[#1A1A1A]">
-                                                    <span className="uppercase text-[9px]">VISIT #{getShortBookingId(h)}</span>
+                                                    <span className="uppercase text-[9px]">VISIT #{getShortBookingId(h)} {h.is_offline && <span className="text-amber-500 bg-amber-50 px-1 rounded ml-1 lowercase">(offline)</span>}</span>
                                                     <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase ${
                                                         h.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                                                     }`}>
@@ -350,7 +369,7 @@ export default function POSCRMPanel() {
                                                     <p className="font-bold text-[9px] text-[#767673] uppercase mb-1">ORDER ITEMS</p>
                                                     {h.order_items?.map((item, idx) => (
                                                         <div key={idx} className="flex justify-between">
-                                                            <span className="truncate max-w-[180px]">{item.menu_items?.name}</span>
+                                                            <span className="truncate max-w-[180px]">{item.menu_items?.name || item.name || 'Unknown Item'}</span>
                                                             <span className="font-bold">x{item.quantity}</span>
                                                         </div>
                                                     ))}
