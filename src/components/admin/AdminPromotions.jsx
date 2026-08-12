@@ -112,10 +112,14 @@ export default function AdminPromotions({ defaultTab = 'promo' }) {
             const changedItems = allItemsList.filter((c) => c.is_drink_stamp_eligible !== initialAllItemsList.find(ic => ic.id === c.id)?.is_drink_stamp_eligible);
 
             for (const cat of changedCats) {
-                await supabase.from('menu_categories').update({ is_drink_stamp_eligible: cat.is_drink_stamp_eligible }).eq('id', cat.id);
+                const { data, error } = await supabase.from('menu_categories').update({ is_drink_stamp_eligible: cat.is_drink_stamp_eligible }).eq('id', cat.id).select();
+                if (error) throw error;
+                if (!data || data.length === 0) throw new Error(`Permission denied: Cannot update category ${cat.name}`);
             }
             for (const item of changedItems) {
-                await supabase.from('menu_items').update({ is_drink_stamp_eligible: item.is_drink_stamp_eligible }).eq('id', item.id);
+                const { data, error } = await supabase.from('menu_items').update({ is_drink_stamp_eligible: item.is_drink_stamp_eligible }).eq('id', item.id).select();
+                if (error) throw error;
+                if (!data || data.length === 0) throw new Error(`Permission denied: Cannot update item ${item.name}`);
             }
             
             setInitialCategoriesList(JSON.parse(JSON.stringify(categoriesList)));
