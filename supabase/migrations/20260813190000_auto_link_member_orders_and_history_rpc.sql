@@ -115,7 +115,7 @@ BEGIN
                     SELECT COALESCE(jsonb_agg(
                         jsonb_build_object(
                             'id', oi.id,
-                            'name', COALESCE(oi.item_name, m.name, 'รายการสินค้า'),
+                            'name', COALESCE(m.name, 'รายการสินค้า'),
                             'quantity', oi.quantity,
                             'price_at_time', oi.price_at_time
                         )

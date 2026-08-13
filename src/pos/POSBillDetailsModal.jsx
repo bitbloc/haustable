@@ -1,7 +1,14 @@
 import React from 'react';
 import { FileText, X } from 'lucide-react';
 import { getShortBookingId } from '../utils/printerHelper';
-import { getBookingPaymentMethod } from '../utils/printerHelper';
+
+const getBookingPaymentMethod = (b) => {
+    if (!b) return 'CASH';
+    const remark = (b.staff_remark || '').toLowerCase();
+    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) return 'CREDIT CARD';
+    if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'QR TRANSFER';
+    return 'CASH';
+};
 
 export default function POSBillDetailsModal({ booking, onClose }) {
     if (!booking) return null;

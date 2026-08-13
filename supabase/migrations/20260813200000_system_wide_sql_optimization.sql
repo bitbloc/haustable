@@ -295,7 +295,7 @@ BEGIN
                     SELECT COALESCE(jsonb_agg(
                         jsonb_build_object(
                             'id', oi.id,
-                            'name', COALESCE(oi.item_name, m.name, 'รายการสินค้า'),
+                            'name', COALESCE(m.name, 'รายการสินค้า'),
                             'quantity', oi.quantity,
                             'price_at_time', oi.price_at_time
                         )
@@ -378,7 +378,7 @@ BEGIN
     SET xhaus_earned = COALESCE(p_xhaus_earned, 0.00),
         xhaus_redeemed = COALESCE(p_xhaus_redeemed, 0.00),
         xhaus_discount = COALESCE(p_xhaus_discount, 0.00),
-        user_id = COALESCE(bk.user_id, v_user_id),
+        user_id = COALESCE(v_user_id, bk.user_id),
         status = 'completed'
     WHERE bk.id = p_booking_id;
 
