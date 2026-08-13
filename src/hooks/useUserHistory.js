@@ -28,7 +28,16 @@ export function useUserHistory(session) {
                 // Corrected: Use 'user_id' instead of 'customer_id' as per schema
                 const { data, error } = await supabase
                     .from('bookings')
-                    .select('*')
+                    .select(`
+                        *,
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            price,
+                            menu_items (id, name)
+                        )
+                    `)
                     .eq('user_id', session.user.id)
                     .order('created_at', { ascending: false })
 

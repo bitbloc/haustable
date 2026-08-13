@@ -559,38 +559,45 @@ export function usePOSOrder() {
             }
 
             // 2. Process xhaus transaction in database (updates profile points & booking xhaus columns)
-            // RPC is the single source of truth. JS fallback ONLY executes if RPC fails.
-            // Note: booking.user_id is already set by step 1 above, so RPC can read it reliably.
             const earned = parseFloat(xhausEarned) || 0;
             const redeemed = parseFloat(xhausRedeemed) || 0;
 
             if (earned > 0 || redeemed > 0) {
-                const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
-                    p_booking_id: bookingId,
-                    p_xhaus_earned: earned,
-                    p_xhaus_redeemed: redeemed,
-                    p_xhaus_discount: parseFloat(xhausDiscount) || 0
-                });
+                let rpcSucceeded = false;
+                try {
+                    const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
+                        p_booking_id: bookingId,
+                        p_xhaus_earned: earned,
+                        p_xhaus_redeemed: redeemed,
+                        p_xhaus_discount: parseFloat(xhausDiscount) || 0
+                    });
+                    if (!rpcErr) rpcSucceeded = true;
+                    else console.warn('process_checkout_xhaus RPC returned error:', rpcErr);
+                } catch (rpcEx) {
+                    console.warn('process_checkout_xhaus RPC call exception:', rpcEx);
+                }
 
-                if (rpcErr) {
-                    console.warn('process_checkout_xhaus RPC failed, falling back to JS update:', rpcErr);
-                    // Fallback: JS direct update ONLY when RPC fails
-                    const targetProfileId = profileId;
-                    if (targetProfileId) {
-                        try {
-                            const { data: pData } = await supabase.from('profiles')
-                                .select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus')
-                                .eq('id', targetProfileId).single();
-                            if (pData) {
-                                await supabase.from('profiles').update({
-                                    xhaus_balance: (parseFloat(pData.xhaus_balance) || 0) + earned - redeemed,
-                                    total_earned_xhaus: (parseFloat(pData.total_earned_xhaus) || 0) + earned,
-                                    total_redeemed_xhaus: (parseFloat(pData.total_redeemed_xhaus) || 0) + redeemed
-                                }).eq('id', targetProfileId);
-                            }
-                        } catch (e) {
-                            console.error('JS fallback xhaus update also failed:', e);
+                // Guaranteed direct JS profile update if RPC failed or to ensure profile xhaus balance stays sync'd
+                const targetProfileId = profileId;
+                if (targetProfileId) {
+                    try {
+                        const { data: pData } = await supabase.from('profiles')
+                            .select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus')
+                            .eq('id', targetProfileId).maybeSingle();
+                        if (pData) {
+                            const currentBal = parseFloat(pData.xhaus_balance) || 0;
+                            const newBalance = Math.max(0, currentBal + earned - redeemed);
+                            const newEarned = (parseFloat(pData.total_earned_xhaus) || 0) + earned;
+                            const newRedeemed = (parseFloat(pData.total_redeemed_xhaus) || 0) + redeemed;
+
+                            await supabase.from('profiles').update({
+                                xhaus_balance: newBalance,
+                                total_earned_xhaus: newEarned,
+                                total_redeemed_xhaus: newRedeemed
+                            }).eq('id', targetProfileId);
                         }
+                    } catch (e) {
+                        console.error('JS fallback xhaus update failed:', e);
                     }
                 }
             } else {

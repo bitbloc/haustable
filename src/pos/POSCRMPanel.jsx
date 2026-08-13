@@ -365,6 +365,25 @@ export default function POSCRMPanel() {
                                                         );
                                                     })()}
                                                 </div>
+                                                {(Number(h.xhaus_earned || 0) > 0 || Number(h.xhaus_redeemed || 0) > 0 || Number(h.xhaus_discount || 0) > 0) && (
+                                                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[8px] font-bold">
+                                                        {Number(h.xhaus_earned || 0) > 0 && (
+                                                            <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                +{Number(h.xhaus_earned)} pts
+                                                            </span>
+                                                        )}
+                                                        {Number(h.xhaus_redeemed || 0) > 0 && (
+                                                            <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                                                                -{Number(h.xhaus_redeemed)} pts
+                                                            </span>
+                                                        )}
+                                                        {Number(h.xhaus_discount || 0) > 0 && (
+                                                            <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                                                                -฿{Number(h.xhaus_discount).toLocaleString()} disc
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <div className="border-t border-[#ECECE9] pt-1.5 mt-1.5 text-[#1A1A1A]">
                                                     <p className="font-bold text-[9px] text-[#767673] uppercase mb-1">ORDER ITEMS</p>
                                                     {h.order_items?.map((item, idx) => (

@@ -460,7 +460,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         if (item.is_drink_stamp_eligible) return true;
         if (item.menu_items?.is_drink_stamp_eligible) return true;
         const catName = (item.menu_items?.menu_categories?.name || item.category || '').toLowerCase();
-        return catName.includes('coffee') || catName.includes('tea') || catName.includes('beverage') || catName.includes('drink') || catName.includes('soda') || catName.includes('ชา') || catName.includes('กาแฟ') || catName.includes('เครื่องดื่ม');
+        const itemName = (item.menu_items?.name || item.name || '').toLowerCase();
+        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา/i;
+        return drinkRegex.test(catName) || drinkRegex.test(itemName);
     }, []);
 
     const freeDrinkDiscount = React.useMemo(() => {

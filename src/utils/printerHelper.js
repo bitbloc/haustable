@@ -548,8 +548,14 @@ export function buildReceiptTotalRows(booking, receiptConfig = {}, itemsToRender
     rows.push({ type: 'qty', label: 'จำนวนชิ้น', value: `${totalQty} ชิ้น` });
     rows.push({ type: 'subtotal', label: 'ยอดรวมก่อนหัก', value: formatReceiptMoney(totals.subtotal) });
 
+    if (booking.xhaus_discount > 0) {
+        rows.push({ type: 'xhaus_discount', label: 'ส่วนลด xhaus', value: `-${formatReceiptMoney(booking.xhaus_discount)}` });
+    }
     if (totals.discount > 0) {
-        rows.push({ type: 'discount', label: 'ส่วนลด', value: `-${formatReceiptMoney(totals.discount)}` });
+        const otherDiscount = Math.max(0, totals.discount - (booking.xhaus_discount || 0));
+        if (otherDiscount > 0 || !booking.xhaus_discount) {
+            rows.push({ type: 'discount', label: booking.xhaus_discount ? 'ส่วนลดอื่นๆ' : 'ส่วนลด', value: `-${formatReceiptMoney(booking.xhaus_discount ? otherDiscount : totals.discount)}` });
+        }
     }
 
     if (totals.vat > 0) {
@@ -1001,15 +1007,23 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
         const earned = Number(booking.xhaus_earned) || 0;
         const redeemed = Number(booking.xhaus_redeemed) || 0;
+        const balance = Number(booking.profiles.xhaus_balance) || 0;
+        const stamps = Number(booking.profiles.drink_stamp_count) || 0;
+        const freeQuota = Number(booking.profiles.free_drink_quota) || 0;
+
+        encoder.line(divider);
+        if (earned > 0) {
+            encoder.line(formatTwoCols('ได้รับ xhaus เพิ่ม:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+        }
+        if (redeemed > 0) {
+            encoder.line(formatTwoCols('ใช้ xhaus แลกไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+        }
+        encoder.line(formatTwoCols('แต้มสะสมคงเหลือ:', `${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
         
-        if (earned > 0 || redeemed > 0) {
-            encoder.line(divider);
-            if (earned > 0) {
-                encoder.line(formatTwoCols('ได้รับ xhaus เพิ่ม:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
-            }
-            if (redeemed > 0) {
-                encoder.line(formatTwoCols('ใช้ xhaus แลกไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
-            }
+        encoder.line(divider);
+        encoder.line(formatTwoCols('แสตมป์เครื่องดื่ม:', `${stamps}/10 แก้ว`, maxCols));
+        if (freeQuota > 0) {
+            encoder.line(formatTwoCols('สิทธิ์เครื่องดื่มฟรี:', `${freeQuota} แก้ว`, maxCols));
         }
         encoder.line(doubleDivider);
     }

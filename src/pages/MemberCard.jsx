@@ -146,7 +146,13 @@ export default function MemberCard() {
                     xhaus_earned, 
                     xhaus_redeemed, 
                     xhaus_discount,
-                    tables_layout (table_name)
+                    tables_layout (table_name),
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        price,
+                        menu_items (name)
+                    )
                 `)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
@@ -215,7 +221,8 @@ export default function MemberCard() {
                         statusColor,
                         earned: parseFloat(b.xhaus_earned) || 0,
                         redeemed: parseFloat(b.xhaus_redeemed) || 0,
-                        total: parseFloat(b.total_amount) || 0
+                        total: parseFloat(b.total_amount) || 0,
+                        order_items: b.order_items || []
                     };
                 });
 
@@ -734,6 +741,53 @@ export default function MemberCard() {
                                         </span>
                                     </div>
 
+                                    {/* 10 Free 1 Drink Stamp Card Progress */}
+                                    <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
+                                        <div className="flex justify-between items-center border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5">
+                                                <span>☕</span> บัตรสะสมแสตมป์เครื่องดื่ม (10 FREE 1)
+                                            </h3>
+                                            <span className="font-mono text-xs font-bold text-[var(--color-hallmark-ink)]">
+                                                {(profile?.drink_stamp_count || 0)} / 10
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {Array.from({ length: 10 }).map((_, i) => {
+                                                    const isStamped = i < (profile?.drink_stamp_count || 0);
+                                                    return (
+                                                        <div 
+                                                            key={i} 
+                                                            className={`h-10 rounded-[6px] border flex items-center justify-center font-mono text-xs font-bold transition-all ${
+                                                                isStamped 
+                                                                    ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(45%_0.16_28)] shadow-inner' 
+                                                                    : 'bg-[#F5F5F2] text-zinc-300 border-[#D1D1CD]'
+                                                            }`}
+                                                        >
+                                                            {isStamped ? '☕' : i + 1}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            
+                                            {(profile?.free_drink_quota || 0) > 0 ? (
+                                                <div className="bg-emerald-50 border border-emerald-300 rounded-[6px] p-2.5 text-center font-mono">
+                                                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                                                        🎉 คุณได้รับสิทธิ์เครื่องดื่มฟรี {(profile.free_drink_quota)} แก้ว!
+                                                    </span>
+                                                    <span className="text-[8px] text-emerald-600 mt-0.5 block">
+                                                        แจ้งพนักงาน POS ในร้านเพื่อใช้สิทธิ์รับเครื่องดื่มฟรี 10 Free 1
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] font-mono text-center pt-1">
+                                                    สะสมครบ 10 แก้ว รับสิทธิ์แลกเครื่องดื่มฟรี 1 แก้วทันที!
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     {/* Tiers Multiplier Info Card */}
                                     <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
                                         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
@@ -931,30 +985,43 @@ export default function MemberCard() {
                                                 </div>
                                             ) : (
                                                 serviceHistory.map((h, idx) => (
-                                                    <div key={h.id || idx} className="px-4 py-3.5 grid grid-cols-12 items-center text-[10px] hover:bg-neutral-50 transition-colors">
-                                                        <div className="col-span-3 font-mono text-[9px] whitespace-pre-line leading-relaxed text-[var(--color-hallmark-ink-muted)]">
-                                                            {h.date}
+                                                    <div key={h.id || idx} className="px-4 py-3.5 flex flex-col gap-2 hover:bg-neutral-50 transition-colors border-b border-[var(--color-hallmark-rule)] last:border-b-0">
+                                                        <div className="grid grid-cols-12 items-center text-[10px]">
+                                                            <div className="col-span-3 font-mono text-[9px] whitespace-pre-line leading-relaxed text-[var(--color-hallmark-ink-muted)]">
+                                                                {h.date}
+                                                            </div>
+                                                            <div className="col-span-3 font-bold text-[var(--color-hallmark-ink)] flex flex-col gap-0.5">
+                                                                <span>{h.typeLabel}</span>
+                                                                <span className={`text-[8px] font-mono font-bold uppercase ${h.statusColor}`}>
+                                                                    {h.statusLabel}
+                                                                </span>
+                                                            </div>
+                                                            <div className="col-span-3 text-right font-mono font-bold text-[var(--color-hallmark-ink)]">
+                                                                {h.total > 0 ? `฿${h.total.toLocaleString()}` : '-'}
+                                                            </div>
+                                                            <div className="col-span-3 text-right flex flex-col items-end gap-0.5">
+                                                                {h.earned > 0 && (
+                                                                    <span className="font-mono font-bold text-emerald-600">+{h.earned.toFixed(2)}</span>
+                                                                )}
+                                                                {h.redeemed > 0 && (
+                                                                    <span className="font-mono font-bold text-rose-500">-{h.redeemed.toFixed(2)}</span>
+                                                                )}
+                                                                {h.earned === 0 && h.redeemed === 0 && (
+                                                                    <span className="font-mono text-zinc-400">-</span>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <div className="col-span-3 font-bold text-[var(--color-hallmark-ink)] flex flex-col gap-0.5">
-                                                            <span>{h.typeLabel}</span>
-                                                            <span className={`text-[8px] font-mono font-bold uppercase ${h.statusColor}`}>
-                                                                {h.statusLabel}
-                                                            </span>
-                                                        </div>
-                                                        <div className="col-span-3 text-right font-mono font-bold text-[var(--color-hallmark-ink)]">
-                                                            {h.total > 0 ? `฿${h.total.toLocaleString()}` : '-'}
-                                                        </div>
-                                                        <div className="col-span-3 text-right flex flex-col items-end gap-0.5">
-                                                            {h.earned > 0 && (
-                                                                <span className="font-mono font-bold text-emerald-600">+{h.earned.toFixed(2)}</span>
-                                                            )}
-                                                            {h.redeemed > 0 && (
-                                                                <span className="font-mono font-bold text-rose-500">-{h.redeemed.toFixed(2)}</span>
-                                                            )}
-                                                            {h.earned === 0 && h.redeemed === 0 && (
-                                                                <span className="font-mono text-zinc-400">-</span>
-                                                            )}
-                                                        </div>
+                                                        {h.order_items && h.order_items.length > 0 && (
+                                                            <div className="bg-[#F5F5F2] rounded p-2 text-[9px] font-mono text-zinc-600 space-y-1 border border-[#E0E0DC]">
+                                                                <span className="font-bold text-[8px] uppercase tracking-wider text-zinc-400 block">รายการสั่งซื้อ (ORDER ITEMS)</span>
+                                                                {h.order_items.map((item, iIdx) => (
+                                                                    <div key={iIdx} className="flex justify-between items-center">
+                                                                        <span className="truncate max-w-[200px] text-zinc-800">{item.menu_items?.name || item.name || 'สินค้า'}</span>
+                                                                        <span className="font-bold text-zinc-900">x{item.quantity}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))
                                             )}

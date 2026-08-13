@@ -83,7 +83,7 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                         <ExternalLink size={40} />
                                                     </div>
 
-                                                    <div className="flex justify-between items-start mb-4">
+                                                     <div className="flex justify-between items-start mb-4">
                                                         <div>
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className="text-2xl font-black font-mono tracking-tight">
@@ -98,6 +98,34 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                                             </p>
                                                         </div>
                                                     </div>
+
+                                                    {/* Order items summary */}
+                                                    {order.order_items && order.order_items.length > 0 && (
+                                                        <div className="my-2 p-2.5 bg-gray-50 rounded-xl text-xs space-y-1 font-mono text-gray-700">
+                                                            {order.order_items.map((item, idx) => (
+                                                                <div key={idx} className="flex justify-between">
+                                                                    <span>{item.menu_items?.name || item.name || 'Item'}</span>
+                                                                    <span className="font-bold">x{item.quantity}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Points summary */}
+                                                    {(Number(order.xhaus_earned || 0) > 0 || Number(order.xhaus_redeemed || 0) > 0) && (
+                                                        <div className="flex gap-2 font-mono text-[10px] font-bold mt-2">
+                                                            {Number(order.xhaus_earned || 0) > 0 && (
+                                                                <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                                                    +{Number(order.xhaus_earned)} xhaus
+                                                                </span>
+                                                            )}
+                                                            {Number(order.xhaus_redeemed || 0) > 0 && (
+                                                                <span className="text-rose-500 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                                                                    -{Number(order.xhaus_redeemed)} xhaus
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
 
                                                     <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
                                                         <div className="flex items-center gap-2 text-sm font-bold text-black">
@@ -126,36 +154,71 @@ export default function HistoryModal({ isOpen, onClose, history }) {
                                         {pastOrders.map(order => (
                                             <div 
                                                 key={order.id}
-                                                className="bg-white p-4 rounded-xl border border-gray-100 flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity"
+                                                className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col gap-2.5 opacity-90 hover:opacity-100 transition-opacity shadow-xs"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                                                        order.status === 'cancelled' || order.status === 'void' ? 'bg-red-50 text-red-400' : 'bg-gray-100 text-gray-400'
-                                                    }`}>
-                                                        {order.status === 'cancelled' || order.status === 'void' ? <X size={18}/> : <CheckCircle size={18}/>}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-mono font-bold text-gray-900">
-                                                                #{getShortBookingId(order)}
-                                                            </span>
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 uppercase font-bold">
-                                                                {order.status}
-                                                            </span>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                                                            order.status === 'cancelled' || order.status === 'void' ? 'bg-red-50 text-red-400' : 'bg-gray-100 text-gray-500'
+                                                        }`}>
+                                                            {order.status === 'cancelled' || order.status === 'void' ? <X size={16}/> : <CheckCircle size={16}/>}
                                                         </div>
-                                                        <p className="text-xs text-gray-400 mt-0.5">
-                                                            {new Date(order.booking_time).toLocaleDateString('th-TH')}
-                                                        </p>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-mono font-bold text-gray-900 text-sm">
+                                                                    #{getShortBookingId(order)}
+                                                                </span>
+                                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase font-bold font-mono">
+                                                                    {order.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-400 font-mono mt-0.5">
+                                                                {new Date(order.booking_time).toLocaleDateString('th-TH')}
+                                                            </p>
+                                                        </div>
                                                     </div>
+                                                    
+                                                    <Link 
+                                                        to={`/tracking/${order.tracking_token}`}
+                                                        onClick={onClose}
+                                                        className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                                                    >
+                                                        <ArrowRight size={18} />
+                                                    </Link>
                                                 </div>
-                                                
-                                                <Link 
-                                                    to={`/tracking/${order.tracking_token}`}
-                                                    onClick={onClose}
-                                                    className="p-2 text-gray-300 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                                >
-                                                    <ArrowRight size={16} />
-                                                </Link>
+
+                                                {/* Past Order items list */}
+                                                {order.order_items && order.order_items.length > 0 && (
+                                                    <div className="p-2 bg-gray-50 rounded-lg text-xs font-mono text-gray-700 space-y-1 border border-gray-100">
+                                                        {order.order_items.map((item, idx) => (
+                                                            <div key={idx} className="flex justify-between">
+                                                                <span>{item.menu_items?.name || item.name || 'Item'}</span>
+                                                                <span className="font-bold">x{item.quantity}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Points & Total summary */}
+                                                <div className="flex justify-between items-center text-xs font-mono pt-1 border-t border-gray-50">
+                                                    <div className="flex gap-1.5 font-bold">
+                                                        {Number(order.xhaus_earned || 0) > 0 && (
+                                                            <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                                +{Number(order.xhaus_earned)} xhaus
+                                                            </span>
+                                                        )}
+                                                        {Number(order.xhaus_redeemed || 0) > 0 && (
+                                                            <span className="text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                                -{Number(order.xhaus_redeemed)} xhaus
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {Number(order.total_amount || 0) > 0 && (
+                                                        <span className="font-bold text-gray-900">
+                                                            ฿{Number(order.total_amount).toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

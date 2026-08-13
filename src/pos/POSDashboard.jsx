@@ -1602,10 +1602,29 @@ export default function POSDashboard() {
             reward_id: rewardId,
             xhaus_cost: xhausCost
         };
-        setCurrentOrder(prev => ({
-            ...prev,
-            items: [...(prev?.items || []), rewardItem]
-        }));
+        setCurrentOrder(prev => {
+            const existingItems = prev?.items || [];
+            // Check if there is a matching paid item in cart (price > 0) to deduct
+            const matchingIndex = existingItems.findIndex(i => 
+                !i.is_reward && 
+                (i.menu_item_id === menuItem.id || i.id === menuItem.id || (i.name && menuItem.name && i.name.toLowerCase() === menuItem.name.toLowerCase())) && 
+                (parseFloat(i.price) > 0)
+            );
+
+            let updatedItems = [...existingItems];
+            if (matchingIndex !== -1) {
+                const target = updatedItems[matchingIndex];
+                if ((target.quantity || 1) > 1) {
+                    updatedItems[matchingIndex] = { ...target, quantity: target.quantity - 1 };
+                } else {
+                    updatedItems.splice(matchingIndex, 1);
+                }
+            }
+            return {
+                ...prev,
+                items: [...updatedItems, rewardItem]
+            };
+        });
     };
 
     const handleRemoveRewardItem = (claimCode) => {
@@ -1736,13 +1755,8 @@ export default function POSDashboard() {
                         // Secondary: keyword fallback for items without DB flags
                         const catName = (menuItem.menu_categories?.name || item.category || '').toLowerCase();
                         const itemName = (menuItem.name || item.name || '').toLowerCase();
-                        const isKeywordEligible = 
-                            catName.includes('coffee') || catName.includes('tea') || 
-                            catName.includes('beverage') || catName.includes('drink') || 
-                            catName.includes('soda') || catName.includes('ชา') || 
-                            catName.includes('กาแฟ') || catName.includes('เครื่องดื่ม') ||
-                            itemName.includes('coffee') || itemName.includes('tea') ||
-                            itemName.includes('ชา') || itemName.includes('กาแฟ');
+                        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา/i;
+                        const isKeywordEligible = drinkRegex.test(catName) || drinkRegex.test(itemName);
 
                         const isEligible = isDbEligible || isCatEligible || isKeywordEligible;
                         return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
