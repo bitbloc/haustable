@@ -1,6 +1,5 @@
--- Migration: Update CRM Tier Privileges - Point Collection Only (No Member Bill Discount)
--- Date: 2026-08-13
--- Description: Removes tier percentage discounts (0.00% discount) while retaining point accumulation multipliers (x1.0, x1.25, x1.50).
+-- Ensure current_tier column exists on profiles table
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS current_tier TEXT DEFAULT 'Haus Common';
 
 CREATE OR REPLACE FUNCTION public.get_member_tier_details(p_user_id UUID)
 RETURNS TABLE (
@@ -59,6 +58,11 @@ BEGIN
         v_mult := 1.00;
         v_disc := 0.00; -- 0% privilege discount (Point collection only x1.0)
     END IF;
+
+    -- Synchronize profile table current_tier column so all receipt printers & POS selects see exact updated tier
+    UPDATE public.profiles AS p
+    SET current_tier = v_tier
+    WHERE p.id = p_user_id AND (p.current_tier IS DISTINCT FROM v_tier);
 
     RETURN QUERY SELECT v_spent_12m, v_spent_13m, v_tier, v_mult, v_disc, v_grace;
 END;

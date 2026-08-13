@@ -217,9 +217,9 @@ export default function POSDashboard() {
                     await attachCustomerToBooking(bookingId, member.id);
                 }
             } else {
-                setActiveBooking({ id: null, user_id: member.id, profiles: member, booking_type: 'pickup', pax: 1 });
+                setActiveBooking({ id: null, user_id: member.id, profiles: fullMember, booking_type: 'pickup', pax: 1 });
                 setShowAttachCRMModal(false);
-                toast.success(`ผูกสมาชิก: ${member.display_name || member.phone || 'Customer'}`);
+                toast.success(`ผูกสมาชิก: ${fullMember.display_name || fullMember.phone || 'Customer'}`);
                 return;
             }
         } else {
@@ -237,9 +237,9 @@ export default function POSDashboard() {
                     updatedBooking = data;
                 }
                 if (updatedBooking) {
-                    setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: member });
+                    setActiveBooking({ ...updatedBooking, user_id: member.id, profiles: { ...updatedBooking.profiles, ...fullMember } });
                 } else {
-                    setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: member } : prev);
+                    setActiveBooking(prev => prev ? { ...prev, user_id: member.id, profiles: { ...prev.profiles, ...fullMember } } : prev);
                 }
             }
             setShowAttachCRMModal(false);

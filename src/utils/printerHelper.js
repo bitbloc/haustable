@@ -1019,8 +1019,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             encoder.line(formatTwoCols('เบอร์โทรศัพท์:', booking.profiles.phone_number, maxCols));
         }
 
-        const tierName = booking.profiles.current_tier || 'Haus Common';
-        const mult = tierName === 'Inner Haus' ? '1.5x' : (tierName === 'Haus People' ? '1.25x' : '1.0x');
+        const tierName = booking.profiles.current_tier || booking.profiles.tier || 'Haus Common';
+        const mult = booking.profiles.multiplier ? `${parseFloat(booking.profiles.multiplier).toFixed(2).replace(/\.00$/, '')}x` : (tierName === 'Inner Haus' ? '1.5x' : (tierName === 'Haus People' ? '1.25x' : '1.0x'));
         encoder.line(formatTwoCols('ระดับสมาชิก:', `${tierName} (แต้ม ${mult})`, maxCols));
 
         const earned = Number(booking.xhaus_earned) || 0;

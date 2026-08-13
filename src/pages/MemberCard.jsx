@@ -153,7 +153,8 @@ export default function MemberCard() {
             setQrUrl(qrDataUrl)
 
             // 4. Fetch point transaction & service history
-            const { data: bookings, error: bErr } = await supabase
+            const phone = prof.phone_number ? prof.phone_number.trim() : '';
+            let bookingsQuery = supabase
                 .from('bookings')
                 .select(`
                     id, 
@@ -169,15 +170,24 @@ export default function MemberCard() {
                     order_items (
                         id,
                         item_name,
-                        name,
                         quantity,
                         price_at_time,
-                        price,
                         menu_items (name)
                     )
                 `)
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            if (phone) {
+                bookingsQuery = bookingsQuery.or(`user_id.eq.${userId},pickup_contact_phone.eq.${phone},customer_phone.eq.${phone}`);
+            } else {
+                bookingsQuery = bookingsQuery.eq('user_id', userId);
+            }
+
+            const { data: bookings, error: bErr } = await bookingsQuery;
+
+            if (bErr) {
+                console.error("Error fetching member bookings:", bErr);
+            }
 
             if (!bErr && bookings) {
                 // Map bookings to points history list
