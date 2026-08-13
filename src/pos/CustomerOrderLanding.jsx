@@ -52,12 +52,29 @@ export default function CustomerOrderLanding() {
 
     // Member Flow States
     const [memberProfile, setMemberProfile] = useState(null);
+    const [tierDetails, setTierDetails] = useState({ current_tier: 'Haus Common', multiplier: 1.00 });
     const [showMemberModal, setShowMemberModal] = useState(false);
     const [memberPhoneInput, setMemberPhoneInput] = useState('');
     const [memberLookupLoading, setMemberLookupLoading] = useState(false);
     const [isNewMemberForm, setIsNewMemberForm] = useState(false);
     const [newMemberForm, setNewMemberForm] = useState({ display_name: '', phone_number: '' });
     const [tableRemarkInput, setTableRemarkInput] = useState('');
+
+    // Fetch Tier details dynamically when memberProfile changes
+    useEffect(() => {
+        if (!memberProfile?.id) return;
+        const fetchTier = async () => {
+            try {
+                const { data } = await supabase.rpc('get_member_tier_details', { p_user_id: memberProfile.id });
+                if (data && data.length > 0) {
+                    setTierDetails(data[0]);
+                }
+            } catch (e) {
+                console.warn('Fetch tier details error:', e);
+            }
+        };
+        fetchTier();
+    }, [memberProfile?.id]);
 
     // Geofencing and Security States
     const [gpsChecking, setGpsChecking] = useState(true);
@@ -779,16 +796,20 @@ export default function CustomerOrderLanding() {
             <div className="px-5 py-3 bg-[#F5F5F2] border-b border-[#D1D1CD] flex items-center justify-between shadow-inner">
                 {memberProfile ? (
                     <div className="flex items-center gap-2.5 text-xs">
-                        <div className="w-8 h-8 rounded-full bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 flex items-center justify-center font-bold shrink-0">
-                            <Crown size={16} />
+                        <div className="w-9 h-9 rounded-full bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 flex items-center justify-center font-bold shrink-0">
+                            <Crown size={18} />
                         </div>
                         <div>
                             <div className="flex items-center gap-1.5 font-bold text-[#1A1A1A]">
                                 <span>คุณ {memberProfile.display_name || 'สมาชิก'}</span>
-                                <span className="text-[10px] text-[#767673] font-mono">({memberProfile.phone_number || 'Member'})</span>
+                                <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-white text-[8px] font-mono font-bold rounded-md">
+                                    {tierDetails.current_tier || 'Haus Common'} ({tierDetails.multiplier || '1.0'}x)
+                                </span>
                             </div>
-                            <div className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)]">
-                                🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} xhaus
+                            <div className="flex items-center gap-2 text-[10px] font-mono font-bold mt-0.5">
+                                <span className="text-[oklch(52%_0.16_28)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} xhaus</span>
+                                <span className="text-[#767673]">|</span>
+                                <span className="text-[oklch(18%_0.012_28)]">☕ {memberProfile.drink_stamp_count || 0}/10 แก้ว</span>
                             </div>
                         </div>
                     </div>

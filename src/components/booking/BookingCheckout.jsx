@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, X, Tag, AlertCircle } from 'lucide-react'
+import { Upload, X, Tag, AlertCircle, Crown, Sparkles, Coins, Coffee } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import { usePromotion } from '../../hooks/usePromotion' // NEW
 import ImageModal from '../shared/ImageModal'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -20,6 +21,44 @@ export default function BookingCheckout() {
     const [submitting, setSubmitting] = useState(false)
     const [isSlipModalOpen, setIsSlipModalOpen] = useState(false)
 
+    // Member CRM state
+    const [memberProfile, setMemberProfile] = useState(null)
+    const [tierDetails, setTierDetails] = useState({
+        current_tier: 'Haus Common',
+        multiplier: 1.00,
+        is_in_grace_period: false
+    })
+
+    useEffect(() => {
+        const loadMemberProfile = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+                    if (prof) {
+                        setMemberProfile(prof)
+                        if (!localName && prof.display_name) {
+                            setLocalName(prof.display_name)
+                            updateForm('contactName', prof.display_name)
+                        }
+                        if (!localPhone && prof.phone_number) {
+                            setLocalPhone(prof.phone_number)
+                            updateForm('contactPhone', prof.phone_number)
+                        }
+
+                        const { data: tierData } = await supabase.rpc('get_member_tier_details', { p_user_id: user.id })
+                        if (tierData && tierData.length > 0) {
+                            setTierDetails(tierData[0])
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Load member CRM error in BookingCheckout:', e)
+            }
+        }
+        loadMemberProfile()
+    }, [])
+
     // Promotion Hook
     const { 
         promoCode, setPromoCode, 
@@ -33,6 +72,9 @@ export default function BookingCheckout() {
     const discountAmount = appliedPromo?.discountAmount || 0
     const finalTotal = Math.max(0, cartTotal - discountAmount)
     const depositAmount = Math.ceil(finalTotal * 0.5)
+
+    // Estimated points earned
+    const estimatedPointsEarned = Math.floor((finalTotal / 100) * (tierDetails.multiplier || 1.0))
 
     // Revalidate when cartTotal changes
     useEffect(() => {
@@ -89,6 +131,41 @@ export default function BookingCheckout() {
 
     return (
         <div className="flex-1 overflow-y-auto space-y-4">
+            {/* Member CRM Privileges Badge */}
+            {memberProfile && (
+                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(52%_0.16_28)]/30 p-4 rounded-rams space-y-3">
+                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-[oklch(52%_0.16_28)] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                                <Crown size={14} />
+                            </div>
+                            <div>
+                                <span className="font-bold text-xs text-[oklch(18%_0.012_28)] block">คุณ {memberProfile.display_name}</span>
+                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">สิทธิประโยชน์สมาชิก CRM</span>
+                            </div>
+                        </div>
+                        <span className="px-2.5 py-1 bg-[oklch(52%_0.16_28)] text-white text-[9px] font-mono font-bold rounded-rams uppercase tracking-wider">
+                            {tierDetails.current_tier} ({tierDetails.multiplier}x)
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                        <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
+                            <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">xhaus Balance</span>
+                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span>
+                        </div>
+                        <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
+                            <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">Drink Stamps</span>
+                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">☕ {memberProfile.drink_stamp_count || 0}/10</span>
+                        </div>
+                        <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
+                            <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">Earn Points</span>
+                            <span className="text-xs font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
                 <h3 className="text-xs font-mono font-bold text-subInk uppercase mb-3">{t('bookingSummary')}</h3>
                 <div className="space-y-2 mb-4 text-sm font-mono border-b border-[var(--color-rule)] pb-4">
