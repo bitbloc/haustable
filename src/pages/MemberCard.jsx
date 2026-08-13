@@ -178,15 +178,41 @@ export default function MemberCard() {
                 .order('created_at', { ascending: false });
 
             if (phone) {
-                bookingsQuery = bookingsQuery.or(`user_id.eq.${userId},pickup_contact_phone.eq.${phone},customer_phone.eq.${phone}`);
+                bookingsQuery = bookingsQuery.or(`user_id.eq.${userId},pickup_contact_phone.eq.${phone}`);
             } else {
                 bookingsQuery = bookingsQuery.eq('user_id', userId);
             }
 
-            const { data: bookings, error: bErr } = await bookingsQuery;
+            let { data: bookings, error: bErr } = await bookingsQuery;
 
             if (bErr) {
-                console.error("Error fetching member bookings:", bErr);
+                console.warn("Primary bookings query error, retrying with user_id:", bErr);
+                const fallbackRes = await supabase
+                    .from('bookings')
+                    .select(`
+                        id, 
+                        created_at, 
+                        booking_time, 
+                        booking_type, 
+                        status, 
+                        total_amount, 
+                        xhaus_earned, 
+                        xhaus_redeemed, 
+                        xhaus_discount,
+                        tables_layout (table_name),
+                        order_items (
+                            id,
+                            item_name,
+                            quantity,
+                            price_at_time,
+                            menu_items (name)
+                        )
+                    `)
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
+
+                bookings = fallbackRes.data || [];
+                bErr = fallbackRes.error;
             }
 
             if (!bErr && bookings) {
