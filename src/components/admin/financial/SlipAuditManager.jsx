@@ -209,7 +209,7 @@ export default function SlipAuditManager({
                 .select(`
                     id, tracking_token, booking_time, total_amount, total_price, discount_amount,
                     status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
-                    customer_name, customer_note, pickup_contact_name, pickup_contact_phone, user_id,
+                    customer_note, pickup_contact_name, pickup_contact_phone, user_id,
                     profiles ( * ),
                     tables_layout ( table_name ),
                     order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
@@ -226,7 +226,7 @@ export default function SlipAuditManager({
                 .select(`
                     id, tracking_token, booking_time, total_amount, total_price, discount_amount,
                     status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
-                    customer_name, customer_note, pickup_contact_name, pickup_contact_phone, user_id,
+                    customer_note, pickup_contact_name, pickup_contact_phone, user_id,
                     profiles ( * ),
                     tables_layout ( table_name ),
                     order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )

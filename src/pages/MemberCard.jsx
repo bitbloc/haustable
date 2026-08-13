@@ -176,11 +176,9 @@ export default function MemberCard() {
                 if (phone) orConditions.push(`pickup_contact_phone.eq.${phone}`);
                 if (displayName && displayName.length >= 2) {
                     orConditions.push(`pickup_contact_name.ilike.%${displayName}%`);
-                    orConditions.push(`customer_name.ilike.%${displayName}%`);
                 }
                 if (nickname && nickname.length >= 2 && nickname !== displayName) {
                     orConditions.push(`pickup_contact_name.ilike.%${nickname}%`);
-                    orConditions.push(`customer_name.ilike.%${nickname}%`);
                 }
 
                 try {
