@@ -199,7 +199,6 @@ export default function MemberCard() {
                             tables_layout (table_name),
                             order_items (
                                 id,
-                                item_name,
                                 quantity,
                                 price_at_time,
                                 menu_items (name)

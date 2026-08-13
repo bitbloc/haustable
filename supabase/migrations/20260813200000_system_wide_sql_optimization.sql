@@ -360,7 +360,7 @@ CREATE OR REPLACE FUNCTION public.process_checkout_xhaus(
 )
 RETURNS TABLE (
     success BOOLEAN,
-    user_id UUID,
+    res_user_id UUID,
     new_balance NUMERIC(10, 2)
 ) AS $$
 DECLARE
@@ -374,29 +374,29 @@ BEGIN
         SELECT b.user_id INTO v_user_id FROM public.bookings b WHERE b.id = p_booking_id;
     END IF;
 
-    UPDATE public.bookings
+    UPDATE public.bookings AS bk
     SET xhaus_earned = COALESCE(p_xhaus_earned, 0.00),
         xhaus_redeemed = COALESCE(p_xhaus_redeemed, 0.00),
         xhaus_discount = COALESCE(p_xhaus_discount, 0.00),
-        user_id = COALESCE(user_id, v_user_id),
+        user_id = COALESCE(bk.user_id, v_user_id),
         status = 'completed'
-    WHERE id = p_booking_id;
+    WHERE bk.id = p_booking_id;
 
     IF v_user_id IS NOT NULL THEN
-        UPDATE public.profiles
-        SET xhaus_balance = GREATEST(0.00, COALESCE(xhaus_balance, 0.00) + COALESCE(p_xhaus_earned, 0.00) - COALESCE(p_xhaus_redeemed, 0.00)),
-            total_earned_xhaus = COALESCE(total_earned_xhaus, 0.00) + COALESCE(p_xhaus_earned, 0.00),
-            total_redeemed_xhaus = COALESCE(total_redeemed_xhaus, 0.00) + COALESCE(p_xhaus_redeemed, 0.00)
-        WHERE id = v_user_id
-        RETURNING xhaus_balance INTO v_new_balance;
+        UPDATE public.profiles AS pr
+        SET xhaus_balance = GREATEST(0.00, COALESCE(pr.xhaus_balance, 0.00) + COALESCE(p_xhaus_earned, 0.00) - COALESCE(p_xhaus_redeemed, 0.00)),
+            total_earned_xhaus = COALESCE(pr.total_earned_xhaus, 0.00) + COALESCE(p_xhaus_earned, 0.00),
+            total_redeemed_xhaus = COALESCE(pr.total_redeemed_xhaus, 0.00) + COALESCE(p_xhaus_redeemed, 0.00)
+        WHERE pr.id = v_user_id
+        RETURNING pr.xhaus_balance INTO v_new_balance;
 
         SELECT t.current_tier INTO v_calculated_tier 
         FROM public.get_member_tier_details(v_user_id) t;
 
         IF v_calculated_tier IS NOT NULL THEN
-            UPDATE public.profiles
+            UPDATE public.profiles AS pr
             SET current_tier = v_calculated_tier
-            WHERE id = v_user_id AND (current_tier IS DISTINCT FROM v_calculated_tier);
+            WHERE pr.id = v_user_id AND (pr.current_tier IS DISTINCT FROM v_calculated_tier);
         END IF;
     END IF;
 

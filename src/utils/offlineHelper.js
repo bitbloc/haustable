@@ -329,8 +329,8 @@ export async function syncOfflineQueue(isManual = false) {
                     } catch (e) {}
                 }
 
-                // Sync xhaus points if redeemed/earned
-                if (xhausEarned || xhausRedeemed) {
+                // Sync xhaus points if redeemed/earned or profile attached
+                if (xhausEarned || xhausRedeemed || profileId) {
                     try {
                         const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
                             p_booking_id: bookingId,

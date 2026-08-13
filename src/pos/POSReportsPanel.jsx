@@ -251,11 +251,8 @@ export default function POSReportsPanel() {
                     tables_layout (table_name),
                     order_items (
                         id,
-                        item_name,
-                        name,
                         quantity,
                         price_at_time,
-                        price,
                         selected_options,
                         menu_item_id,
                         menu_items (

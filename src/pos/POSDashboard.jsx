@@ -1670,13 +1670,13 @@ export default function POSDashboard() {
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
+        }
 
-            // Attach CRM member if attached in local draft state
-            const memberToAttach = attachedMemberCrm || activeBooking?.profiles;
-            if (memberToAttach?.id && bookingId) {
-                await attachCustomerToBooking(bookingId, memberToAttach.id);
-                currentBooking = { ...currentBooking, user_id: memberToAttach.id, profiles: memberToAttach };
-            }
+        // Attach CRM member if attached in local draft state (works for new & existing bookings)
+        const memberToAttach = attachedMemberCrm || activeBooking?.profiles;
+        if (memberToAttach?.id && bookingId && (!currentBooking?.user_id || currentBooking.user_id !== memberToAttach.id)) {
+            await attachCustomerToBooking(bookingId, memberToAttach.id);
+            currentBooking = { ...currentBooking, user_id: memberToAttach.id, profiles: memberToAttach };
         }
 
         // 2. Submit items
@@ -1740,10 +1740,10 @@ export default function POSDashboard() {
             if (fallbackProfileId) {
                 const profileId = fallbackProfileId;
                 try {
-                    // Fetch dbOrderItems including item_name for accurate eligibility check
+                    // Fetch dbOrderItems for accurate eligibility check
                     const { data: dbOrderItems } = await supabase
                         .from('order_items')
-                        .select('quantity, item_name, is_drink_stamp_eligible, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
+                        .select('quantity, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
                         .eq('booking_id', bookingId);
 
                     const itemsToCheck = dbOrderItems && dbOrderItems.length > 0 ? dbOrderItems : currentOrder.items;

@@ -117,11 +117,8 @@ export default function POSCRMPanel() {
                         *,
                         order_items (
                             id,
-                            item_name,
-                            name,
                             quantity,
                             price_at_time,
-                            price,
                             menu_items (name)
                         )
                     `)
