@@ -31,56 +31,100 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                 <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
                     
                     {/* Member / Guest Info */}
-                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-                        <div className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">Customer Info</div>
+                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 flex flex-col gap-2 shadow-sm">
                         <div className="flex items-center justify-between">
-                            <div className="font-bold text-[#1A1A1A]">
-                                {booking.profiles?.display_name || booking.pickup_contact_name || 'Walk-in Guest'}
-                            </div>
-                            <div className="text-xs font-mono font-bold text-[var(--color-accent)]">
-                                Table: {booking.tables_layout?.table_name || 'PICK'}
-                            </div>
+                            <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">Customer / สมาชิก</span>
+                            <span className="text-xs font-mono font-bold text-[var(--color-accent)] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                {booking.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : `โต๊ะ ${booking.tables_layout?.table_name || 'PICK'}`}
+                            </span>
                         </div>
-                        {booking.profiles && (
-                            <div className="flex flex-wrap items-center gap-2 mt-1">
-                                {booking.profiles.current_tier && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1A1A1A] text-white">
-                                        {booking.profiles.current_tier}
+
+                        {booking.profiles ? (
+                            <div className="flex flex-col gap-1.5 pt-1 border-t border-[#ECECE9]">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-600 text-white">
+                                            สมาชิก MEMBER
+                                        </span>
+                                        <span className="font-bold text-[#1A1A1A] text-sm">
+                                            {booking.profiles.display_name || booking.profiles.nickname || 'สมาชิก'}
+                                        </span>
+                                    </div>
+                                    {booking.profiles.phone_number && (
+                                        <span className="font-mono text-xs text-[#767673]">
+                                            {booking.profiles.phone_number}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                    {booking.profiles.current_tier && (
+                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-[#1A1A1A] text-white">
+                                            {booking.profiles.current_tier}
+                                        </span>
+                                    )}
+                                    {Number(booking.xhaus_earned || 0) > 0 && (
+                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                            สะสม +{Number(booking.xhaus_earned).toFixed(2)} xhaus
+                                        </span>
+                                    )}
+                                    {Number(booking.xhaus_redeemed || 0) > 0 && (
+                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold border bg-amber-50 text-amber-700 border-amber-200">
+                                            ตัดแต้ม -{Number(booking.xhaus_redeemed).toFixed(2)} xhaus {Number(booking.xhaus_discount || 0) > 0 && `(-฿${Number(booking.xhaus_discount).toLocaleString()})`}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between pt-1 border-t border-[#ECECE9]">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-gray-200 text-gray-700 border border-gray-300">
+                                        ทั่วไป NON-MEMBER
                                     </span>
-                                )}
-                                {(booking.xhaus_earned || 0) > 0 && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                        EARNED +{booking.xhaus_earned} XHAUS
+                                    <span className="font-bold text-[#1A1A1A] text-xs">
+                                        {booking.pickup_contact_name || booking.customer_name || 'ลูกค้าทั่วไป (Walk-in)'}
                                     </span>
-                                )}
-                                {(booking.xhaus_redeemed || 0) > 0 && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                                        ตัดแต้ม USED -{booking.xhaus_redeemed} XHAUS {booking.xhaus_discount > 0 && `(-฿${booking.xhaus_discount})`}
-                                    </span>
-                                )}
+                                </div>
+                                <span className="text-[10px] font-mono text-[#767673] italic">ไม่ได้ผูกสมาชิก</span>
                             </div>
                         )}
                     </div>
 
                     {/* Order Items */}
-                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-3 flex flex-col gap-3 shadow-sm">
-                        <div className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider border-b border-[#ECECE9] pb-2">
-                            Order Items
+                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 flex flex-col gap-3 shadow-sm">
+                        <div className="flex justify-between items-center text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider border-b border-[#ECECE9] pb-2">
+                            <span>Order Items / รายการที่สั่ง</span>
+                            <span>{booking.order_items?.length || 0} รายการ</span>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            {booking.order_items?.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-start text-xs">
-                                    <div className="flex gap-2">
-                                        <span className="font-mono font-bold text-[#1A1A1A]">{item.quantity}x</span>
-                                        <span className="text-[#1A1A1A]">{item.menu_items?.name || 'Unknown Item'}</span>
+                        <div className="flex flex-col gap-2.5 divide-y divide-[#ECECE9]">
+                            {booking.order_items?.map((item, idx) => {
+                                const itemName = item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า';
+                                const itemPrice = Number(item.price_at_time || item.price || 0);
+                                const opts = item.selected_options || [];
+                                return (
+                                    <div key={idx} className="flex justify-between items-start text-xs pt-1.5 first:pt-0">
+                                        <div className="flex flex-col gap-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono font-bold text-[#1A1A1A] bg-neutral-100 px-1.5 py-0.5 rounded text-[10px]">
+                                                    {item.quantity}x
+                                                </span>
+                                                <span className="font-bold text-[#1A1A1A]">{itemName}</span>
+                                            </div>
+                                            {opts.length > 0 && (
+                                                <div className="pl-6 text-[10px] font-mono text-zinc-500">
+                                                    {opts.map((opt, oIdx) => (
+                                                        <span key={oIdx} className="block">• {opt.name || opt}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="font-mono font-bold text-[#1A1A1A]">
+                                            ฿{(itemPrice * (item.quantity || 1)).toLocaleString()}
+                                        </span>
                                     </div>
-                                    <span className="font-mono text-[#767673]">
-                                        ฿{((item.price_at_time || 0) * item.quantity).toLocaleString()}
-                                    </span>
-                                </div>
-                            ))}
+                                );
+                            })}
                             {(!booking.order_items || booking.order_items.length === 0) && (
-                                <div className="text-xs text-[#767673] italic">No items recorded (Split bill or voided items)</div>
+                                <div className="text-xs text-[#767673] italic">ไม่มีรายการสั่งซื้อย่อย</div>
                             )}
                         </div>
                     </div>

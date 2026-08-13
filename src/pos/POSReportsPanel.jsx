@@ -247,12 +247,16 @@ export default function POSReportsPanel() {
                 .from('bookings')
                 .select(`
                     *,
-                    profiles (display_name),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout (table_name),
                     order_items (
                         id,
+                        item_name,
+                        name,
                         quantity,
                         price_at_time,
+                        price,
+                        selected_options,
                         menu_item_id,
                         menu_items (
                             name,
@@ -1021,7 +1025,7 @@ iframe.contentDocument.write(htmlContent);
                                             <th className="py-2.5 px-3 w-16">Bill No</th>
                                             <th className="py-2.5 px-3 w-20">Time</th>
                                             <th className="py-2.5 px-3 w-16 text-center">Table</th>
-                                            <th className="py-2.5 px-3">Guest</th>
+                                            <th className="py-2.5 px-3">Customer / สมาชิก</th>
                                             <th className="py-2.5 px-3 w-24">Pay Method</th>
                                             <th className="py-2.5 px-3 text-right">Amount</th>
                                             <th className="py-2.5 px-3 text-right w-24">Action</th>
@@ -1031,10 +1035,16 @@ iframe.contentDocument.write(htmlContent);
                                         {filteredForBreakdown.map((b) => {
                                             const timeStr = new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
-                                            const guestName = b.profiles?.display_name || (b.pickup_contact_name && !defaultWalkIns.includes(b.pickup_contact_name.toLowerCase().trim()) ? b.pickup_contact_name : 'Guest');
+                                            const isMember = !!(b.profiles || b.user_id);
+                                            const memberName = b.profiles?.display_name || b.profiles?.nickname || b.customer_name;
+                                            const guestName = (b.pickup_contact_name && !defaultWalkIns.includes(b.pickup_contact_name.toLowerCase().trim())) ? b.pickup_contact_name : 'ลูกค้าทั่วไป';
 
                                             return (
-                                                <tr key={b.id} className="hover:bg-[#F5F5F2] transition-colors">
+                                                <tr 
+                                                    key={b.id} 
+                                                    onClick={() => setActiveViewBooking(b)}
+                                                    className="hover:bg-[#F5F5F2] transition-colors cursor-pointer"
+                                                >
                                                     <td className="py-2.5 px-3 font-mono font-bold text-[#767673]">
                                                         #{getShortBookingId(b)}
                                                     </td>
@@ -1042,7 +1052,34 @@ iframe.contentDocument.write(htmlContent);
                                                     <td className="py-2.5 px-3 font-mono font-bold text-center text-[#ff0000]">
                                                         {b.tables_layout?.table_name || 'PICK'}
                                                     </td>
-                                                    <td className="py-2.5 px-3 font-bold truncate max-w-[120px] uppercase text-[#1A1A1A]">{guestName}</td>
+                                                    <td className="py-2.5 px-3 font-sans">
+                                                        {isMember ? (
+                                                            <div className="flex flex-col gap-0.5 max-w-[160px]">
+                                                                <div className="flex items-center gap-1.5 truncate">
+                                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase bg-emerald-600 text-white shrink-0">
+                                                                        สมาชิก
+                                                                    </span>
+                                                                    <span className="font-bold text-[#1A1A1A] text-xs truncate">
+                                                                        {memberName || 'สมาชิก'}
+                                                                    </span>
+                                                                </div>
+                                                                {b.profiles?.phone_number && (
+                                                                    <span className="text-[9px] font-mono text-[#767673] pl-0.5">
+                                                                        {b.profiles.phone_number}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 max-w-[160px]">
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase bg-gray-200 text-gray-700 border border-gray-300 shrink-0">
+                                                                    ทั่วไป
+                                                                </span>
+                                                                <span className="font-medium text-[#767673] text-xs truncate">
+                                                                    {guestName}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                     <td className="py-2.5 px-3">
                                                         {(() => {
                                                             const pm = getBookingPaymentMethod(b);
@@ -1066,10 +1103,10 @@ iframe.contentDocument.write(htmlContent);
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold">
                                                         ฿{b.total_amount?.toLocaleString()}
                                                     </td>
-                                                    <td className="py-2.5 px-3 text-right flex justify-end gap-1">
+                                                    <td className="py-2.5 px-3 text-right flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                                                         {b.payment_slip_url && (
                                                             <button 
-                                                                onClick={() => setViewSlipUrl(b.payment_slip_url)}
+                                                                onClick={(e) => { e.stopPropagation(); setViewSlipUrl(b.payment_slip_url); }}
                                                                 className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-700 hover:text-emerald-900 transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                                 title="ดูรูปสลิปหลักฐานโอนเงิน"
                                                             >
@@ -1077,21 +1114,21 @@ iframe.contentDocument.write(htmlContent);
                                                             </button>
                                                         )}
                                                         <button 
-                                                            onClick={() => setActiveViewBooking(b)}
+                                                            onClick={(e) => { e.stopPropagation(); setActiveViewBooking(b); }}
                                                             className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                                                            title="View Bill Details"
+                                                            title="View Bill Details / ดูรายละเอียดบิล"
                                                         >
                                                             <FileText size={10} />
                                                         </button>
                                                         <button 
-                                                            onClick={() => setActiveReprintBooking(b)}
+                                                            onClick={(e) => { e.stopPropagation(); setActiveReprintBooking(b); }}
                                                             className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                             title="Reprint Bill / Receipt"
                                                         >
                                                             <PrinterIcon size={10} />
                                                         </button>
                                                         <button 
-                                                            onClick={() => handleVoidBill(b.id, b.total_amount)}
+                                                            onClick={(e) => { e.stopPropagation(); handleVoidBill(b.id, b.total_amount); }}
                                                             className="p-1.5 bg-white hover:bg-[#ff0000]/10 border border-[#D1D1CD] hover:border-[#ff0000]/20 rounded-lg text-red-500 hover:text-[#ff0000] transition-colors cursor-pointer flex items-center justify-center shrink-0"
                                                             title="Void Bill / ยกเลิกบิล"
                                                         >
