@@ -1692,15 +1692,7 @@ export default function POSDashboard() {
         // 3. Complete Checkout
         const subtotal = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        let memberDiscount = 0;
-        const currentMemberForDisc = attachedMemberCrm || currentBooking?.profiles;
-        if (currentMemberForDisc) {
-            const tierName = currentMemberForDisc.current_tier || '';
-            const tierDiscountRate = currentMemberForDisc.discount_rate !== undefined 
-                ? parseFloat(currentMemberForDisc.discount_rate)
-                : (tierName === 'Inner Haus' ? 0.10 : (tierName === 'Haus People' ? 0.05 : 0.00));
-            memberDiscount = Math.ceil(subtotal * tierDiscountRate);
-        }
+        let memberDiscount = 0; // Member percentage discount disabled (Point-only model)
 
         let freeDrinkDiscVal = 0;
         if (useFreeDrinkQuota) {

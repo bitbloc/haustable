@@ -791,7 +791,7 @@ export default function MemberCard() {
                                     {/* Tiers Multiplier Info Card */}
                                     <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
                                         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                            <Award size={14} /> ระดับความสัมพันธ์ (Loyalty Tier)
+                                            <Award size={14} /> สิทธิประโยชน์ระดับสมาชิก (สะสมแต้มตามยอดใช้จ่าย)
                                         </h3>
 
                                         <div className="grid grid-cols-3 gap-2 text-center text-[9px]">
@@ -811,9 +811,10 @@ export default function MemberCard() {
                                                 <span className="block text-[7px] font-mono mt-0.5">1.5x Rate</span>
                                             </div>
                                         </div>
-                                        <p className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-relaxed border-t border-[var(--color-hallmark-rule)] pt-2.5 text-center">
-                                            ยอดใช้จ่ายสะสมย้อนหลัง 12 เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m).toLocaleString()} บาท</strong>
-                                        </p>
+                                        <div className="text-[9px] text-[var(--color-hallmark-ink-muted)] space-y-1 border-t border-[var(--color-hallmark-rule)] pt-2.5 text-center">
+                                            <p>ยอดใช้จ่ายสะสมย้อนหลัง 12 เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m).toLocaleString()} บาท</strong></p>
+                                            <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-tight">* ร้านเน้นสะสมแต้มตามยอดใช้จ่ายและสิทธิ์แลกรางวัล (ไม่มีส่วนลดเปอร์เซ็นต์ท้ายบิล)</p>
+                                        </div>
                                     </div>
 
                                     {/* Transaction History Log */}

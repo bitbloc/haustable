@@ -42,7 +42,12 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                             </div>
                         </div>
                         {booking.profiles && (
-                            <div className="flex flex-wrap gap-2 mt-1">
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                {booking.profiles.current_tier && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1A1A1A] text-white">
+                                        {booking.profiles.current_tier}
+                                    </span>
+                                )}
                                 {(booking.xhaus_earned || 0) > 0 && (
                                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
                                         EARNED +{booking.xhaus_earned} PTS
@@ -50,7 +55,7 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                                 )}
                                 {(booking.xhaus_redeemed || 0) > 0 && (
                                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                                        USED -{booking.xhaus_redeemed} PTS
+                                        ตัดแต้ม USED -{booking.xhaus_redeemed} PTS {booking.xhaus_discount > 0 && `(-฿${booking.xhaus_discount})`}
                                     </span>
                                 )}
                             </div>

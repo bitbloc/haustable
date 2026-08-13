@@ -422,14 +422,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // 1. Member Tier Discount Calculation
+    // 1. Member Tier Privilege (Point Earning Multiplier Model, 0% bill percentage discount)
     const currentMemberForDisc = attachedMemberCrm || booking?.profiles;
     const tierName = currentMemberForDisc?.current_tier || '';
-    const tierDiscountRate = currentMemberForDisc?.discount_rate !== undefined 
-        ? parseFloat(currentMemberForDisc.discount_rate)
-        : (tierName === 'Inner Haus' ? 0.10 : (tierName === 'Haus People' ? 0.05 : 0.00));
-    const memberDiscount = Math.ceil(subtotal * tierDiscountRate);
-    const discountLabel = tierDiscountRate > 0 ? `${tierName} (${Math.round(tierDiscountRate * 100)}%)` : '';
+    const tierMultiplier = currentMemberForDisc?.multiplier !== undefined 
+        ? parseFloat(currentMemberForDisc.multiplier)
+        : (tierName === 'Inner Haus' ? 1.50 : (tierName === 'Haus People' ? 1.25 : 1.00));
+    const tierDiscountRate = 0.00; // 0% member bill discount
+    const memberDiscount = 0;
+    const discountLabel = '';
+    const estimatedPointsEarned = currentMemberForDisc ? Math.floor(subtotal * tierMultiplier) : 0;
         
     // 2. Promotion Code Discount Calculation
     const getPromoDiscount = () => {
@@ -758,11 +760,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         <div className="flex items-center gap-2.5 min-w-0">
                             <span className="w-3 h-3 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
                             <div className="text-left min-w-0">
-                                <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider block">Attached Customer</span>
-                                <p className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate uppercase">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider block">Attached Member</span>
+                                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[8px] font-mono font-bold rounded">
+                                        แต้ม x{tierMultiplier}
+                                    </span>
+                                </div>
+                                <p className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate uppercase flex items-center gap-1">
                                     {attachedMemberCrm?.display_name || booking?.profiles?.display_name || 'Anonymous User'} 
                                     {(attachedMemberCrm?.current_tier || booking?.profiles?.current_tier) && (
-                                        <span className="ml-1.5 px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-mono font-bold rounded uppercase">
+                                        <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-mono font-bold rounded uppercase">
                                             {attachedMemberCrm?.current_tier || booking?.profiles?.current_tier}
                                         </span>
                                     )}
@@ -819,15 +826,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         <span className="text-[#1A1A1A]">฿{subtotal.toLocaleString()}</span>
                     </div>
 
-                    {(memberDiscount > 0 || promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
-                        <div className="space-y-1 border-t border-[#D1D1CD]/40 pt-1.5 mt-1 text-xs">
-                            {memberDiscount > 0 && (
-                                <div className="flex justify-between items-center text-purple-700 font-bold py-0.5">
-                                    <span>MEMBER PRIVILEGE ({discountLabel})</span>
-                                    <span>-฿{Math.ceil(memberDiscount).toLocaleString()}</span>
-                                </div>
-                            )}
+                    {currentMemberForDisc && (
+                        <div className="flex justify-between items-center text-emerald-700 font-bold py-1 border-t border-[#D1D1CD]/40 mt-1 text-xs">
+                            <span className="flex items-center gap-1">
+                                <span>+ EARNED POINTS (สะสมแต้ม)</span>
+                                <span className="text-[8px] bg-emerald-100 px-1 py-0.2 rounded text-emerald-800 font-mono">x{tierMultiplier}</span>
+                            </span>
+                            <span className="font-mono">+{estimatedPointsEarned} pts</span>
+                        </div>
+                    )}
 
+                    {(promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
+                        <div className="space-y-1 border-t border-[#D1D1CD]/40 pt-1.5 mt-1 text-xs">
                             {promoDiscount > 0 && (
                                 <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
                                     <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
@@ -844,7 +854,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                             {xhausDiscount > 0 && (
                                 <div className="flex justify-between items-center text-amber-700 font-bold py-0.5">
-                                    <span>xhaus REDEEMED</span>
+                                    <span>xhaus REDEEMED (ตัดแต้ม -{xhausToRedeem || Math.ceil(xhausDiscount)} pts)</span>
                                     <span>-฿{Math.ceil(xhausDiscount).toLocaleString()}</span>
                                 </div>
                             )}

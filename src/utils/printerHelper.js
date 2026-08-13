@@ -998,25 +998,31 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // CRM Member details
     if (!isKitchenTab && activeTab === 'receipt' && booking.profiles) {
-        encoder.align('center').bold(true).line('--- สมาชิก (MEMBER) ---').bold(false).align('left');
+        encoder.align('center').bold(true).line('--- ข้อมูลสมาชิก (MEMBER) ---').bold(false).align('left');
         
         encoder.line(formatTwoCols('ชื่อสมาชิก:', booking.profiles.display_name || '-', maxCols));
         if (booking.profiles.phone_number) {
             encoder.line(formatTwoCols('เบอร์โทรศัพท์:', booking.profiles.phone_number, maxCols));
         }
 
+        const tierName = booking.profiles.current_tier || 'Haus Common';
+        const mult = tierName === 'Inner Haus' ? '1.5x' : (tierName === 'Haus People' ? '1.25x' : '1.0x');
+        encoder.line(formatTwoCols('ระดับสมาชิก:', `${tierName} (แต้ม ${mult})`, maxCols));
+
         const earned = Number(booking.xhaus_earned) || 0;
         const redeemed = Number(booking.xhaus_redeemed) || 0;
+        const xhausDisc = Number(booking.xhaus_discount) || 0;
         const balance = Number(booking.profiles.xhaus_balance) || 0;
         const stamps = Number(booking.profiles.drink_stamp_count) || 0;
         const freeQuota = Number(booking.profiles.free_drink_quota) || 0;
 
         encoder.line(divider);
         if (earned > 0) {
-            encoder.line(formatTwoCols('ได้รับ xhaus เพิ่ม:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+            encoder.line(formatTwoCols('ได้รับ xhaus ครั้งนี้:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
         }
         if (redeemed > 0) {
-            encoder.line(formatTwoCols('ใช้ xhaus แลกไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+            const discStr = xhausDisc > 0 ? ` (-฿${xhausDisc.toLocaleString()})` : '';
+            encoder.line(formatTwoCols('ตัดยอดแต้มที่ใช้ไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts${discStr}`, maxCols));
         }
         encoder.line(formatTwoCols('แต้มสะสมคงเหลือ:', `${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
         

@@ -1291,14 +1291,14 @@ export default function SlipModal({ booking, type, onClose }) {
                                         </div>
                                         {Number(booking.xhaus_earned) > 0 && (
                                             <div className="flex justify-between mb-1 text-green-600">
-                                                <span>ได้รับ xhaus เพิ่ม</span>
+                                                <span>ได้รับ xhaus ครั้งนี้</span>
                                                 <span>+{Number(booking.xhaus_earned).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts</span>
                                             </div>
                                         )}
                                         {Number(booking.xhaus_redeemed) > 0 && (
-                                            <div className="flex justify-between mb-1 text-red-600">
-                                                <span>ใช้ xhaus แลกไป</span>
-                                                <span>-{Number(booking.xhaus_redeemed).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts</span>
+                                            <div className="flex justify-between mb-1 text-amber-600">
+                                                <span>ตัดยอดแต้มที่ใช้ไป</span>
+                                                <span>-{Number(booking.xhaus_redeemed).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts {Number(booking.xhaus_discount || 0) > 0 && `(-฿${Number(booking.xhaus_discount).toLocaleString()})`}</span>
                                             </div>
                                         )}
                                     </>

@@ -40,29 +40,29 @@ BEGIN
     FROM public.bookings
     WHERE user_id = p_user_id AND status = 'completed' AND created_at >= NOW() - INTERVAL '13 months';
 
-    -- Settle tier and privileges based on customer's exact relationship rules
+    -- Settle tier and privileges based on customer's exact relationship rules (Point-only model, 0% bill discount)
     IF v_spent_12m >= 12000.00 THEN
         v_tier := 'Inner Haus';
         v_mult := 1.50;
-        v_disc := 0.10; -- 10% privilege discount
+        v_disc := 0.00; -- 0% privilege discount (Point collection only x1.5)
     ELSIF v_spent_13m >= 12000.00 THEN
         v_tier := 'Inner Haus';
         v_mult := 1.50;
-        v_disc := 0.10; -- 10% privilege discount
+        v_disc := 0.00; -- 0% privilege discount (Point collection only x1.5)
         v_grace := true;
     ELSIF v_spent_12m >= 4000.00 THEN
         v_tier := 'Haus People';
         v_mult := 1.25;
-        v_disc := 0.05; -- 5% privilege discount
+        v_disc := 0.00; -- 0% privilege discount (Point collection only x1.25)
     ELSIF v_spent_13m >= 4000.00 THEN
         v_tier := 'Haus People';
         v_mult := 1.25;
-        v_disc := 0.05; -- 5% privilege discount
+        v_disc := 0.00; -- 0% privilege discount (Point collection only x1.25)
         v_grace := true;
     ELSE
         v_tier := 'Haus Common';
         v_mult := 1.00;
-        v_disc := 0.00; -- 0% privilege discount
+        v_disc := 0.00; -- 0% privilege discount (Point collection only x1.0)
     END IF;
 
     RETURN QUERY SELECT v_spent_12m, v_spent_13m, v_tier, v_mult, v_disc, v_grace;
