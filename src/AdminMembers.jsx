@@ -67,20 +67,25 @@ export default function AdminMembers() {
         setHistoryLoading(true)
         setMemberHistory([])
         try {
-            const { data, error } = await supabase
-                .from('bookings')
-                .select(`
-                    *,
-                    order_items (
-                        quantity,
-                        menu_items (name)
-                    )
-                `)
-                .eq('user_id', member.id)
-                .order('created_at', { ascending: false })
+            const { data: rpcData, error: rpcErr } = await supabase.rpc('get_member_service_history', { p_user_id: member.id })
+            if (!rpcErr && rpcData && Array.isArray(rpcData)) {
+                setMemberHistory(rpcData)
+            } else {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        order_items (
+                            quantity,
+                            menu_items (name)
+                        )
+                    `)
+                    .or(`user_id.eq.${member.id},pickup_contact_phone.eq.${member.phone_number || 'NONE'}`)
+                    .order('created_at', { ascending: false })
 
-            if (error) throw error
-            setMemberHistory(data || [])
+                if (error) throw error
+                setMemberHistory(data || [])
+            }
         } catch (err) {
             console.error(err)
             alert("Could not load history")

@@ -63,13 +63,20 @@ export default function POSCRMPanel() {
 
             if (profileError) throw profileError;
 
-            // Fetch booking counts per user
+            // Fetch booking counts per user (including matching phone numbers for unlinked bookings)
             const { data: bookings, error: bookingError } = await supabase
                 .from('bookings')
-                .select('user_id, status');
+                .select('user_id, pickup_contact_phone, status');
 
             const merged = (profiles || []).map(p => {
-                const userBookings = bookingError ? [] : (bookings || []).filter(b => b.user_id === p.id);
+                const normPPhone = p.phone_number ? p.phone_number.replace(/\D/g, '') : '';
+                const userBookings = bookingError ? [] : (bookings || []).filter(b => {
+                    if (b.user_id === p.id) return true;
+                    if (!b.user_id && normPPhone && b.pickup_contact_phone) {
+                        return b.pickup_contact_phone.replace(/\D/g, '') === normPPhone;
+                    }
+                    return false;
+                });
                 const completed = userBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length;
                 return {
                     ...p,
@@ -99,28 +106,35 @@ export default function POSCRMPanel() {
         setHistoryLoading(true);
         setMemberHistory([]);
         try {
-            const { data, error } = await supabase
-                .from('bookings')
-                .select(`
-                    *,
-                    order_items (
-                        id,
-                        item_name,
-                        name,
-                        quantity,
-                        price_at_time,
-                        price,
-                        menu_items (name)
-                    )
-                `)
-                .eq('user_id', member.id)
-                .order('created_at', { ascending: false });
+            let fetchedHistory = [];
+            const { data: rpcData, error: rpcErr } = await supabase.rpc('get_member_service_history', { p_user_id: member.id });
+            if (!rpcErr && rpcData && Array.isArray(rpcData)) {
+                fetchedHistory = rpcData;
+            } else {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        order_items (
+                            id,
+                            item_name,
+                            name,
+                            quantity,
+                            price_at_time,
+                            price,
+                            menu_items (name)
+                        )
+                    `)
+                    .or(`user_id.eq.${member.id},pickup_contact_phone.eq.${member.phone_number || 'NONE'}`)
+                    .order('created_at', { ascending: false });
 
-            if (error) throw error;
+                if (error) throw error;
+                fetchedHistory = data || [];
+            }
             
             // BUG FIX: Merge offline/local completed bills that haven't synced yet
             const localBookings = posCache.getBookings().filter(b => b.user_id === member.id && b.status === 'completed');
-            const mergedHistory = [...(data || [])];
+            const mergedHistory = [...fetchedHistory];
             
             localBookings.forEach(localB => {
                 if (!mergedHistory.find(h => h.id === localB.id)) {
@@ -133,11 +147,11 @@ export default function POSCRMPanel() {
             });
             
             // Sort merged history by created_at descending
-            mergedHistory.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            mergedHistory.sort((a, b) => new Date(b.created_at || b.booking_time) - new Date(a.created_at || a.booking_time));
             
             setMemberHistory(mergedHistory);
         } catch (err) {
-            console.error(err);
+            console.error('Failed to load member service history:', err);
         } finally {
             setHistoryLoading(false);
         }
