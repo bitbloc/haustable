@@ -190,13 +190,15 @@ export default function MemberCard() {
             }
 
             if (!bErr && bookings) {
-                // Map bookings to points history list
+                const validStatuses = ['completed', 'confirmed', 'paid', 'closed', 'seated', 'approved', 'ready'];
                 const mappedHistory = bookings
                     .filter(b => {
                         const earnedVal = Number(b.xhaus_earned) || 0;
                         const redeemedVal = Number(b.xhaus_redeemed) || 0;
-                        const isCompleted = b.status === 'completed' || b.status === 'confirmed';
-                        return earnedVal > 0 || redeemedVal > 0 || isCompleted;
+                        const stLower = String(b.status || '').toLowerCase();
+                        const isCompleted = validStatuses.includes(stLower);
+                        const hasTotal = (Number(b.total_amount) || 0) > 0;
+                        return earnedVal > 0 || redeemedVal > 0 || isCompleted || hasTotal;
                     })
                     .map(b => {
                         const earnedVal = Number(b.xhaus_earned) || 0;
@@ -239,12 +241,13 @@ export default function MemberCard() {
                         typeLabel = `โต๊ะ ${b.tables_layout.table_name}`;
                     }
                     
+                    const stLower = String(b.status || '').toLowerCase();
                     let statusLabel = 'กำลังดำเนินการ';
                     let statusColor = 'text-amber-600';
-                    if (b.status === 'completed') {
+                    if (['completed', 'confirmed', 'paid', 'closed', 'approved'].includes(stLower)) {
                         statusLabel = 'เสร็จสิ้น';
                         statusColor = 'text-[#5a6353]';
-                    } else if (b.status === 'cancelled') {
+                    } else if (['cancelled', 'rejected', 'void'].includes(stLower)) {
                         statusLabel = 'ยกเลิก';
                         statusColor = 'text-rose-500';
                     }
