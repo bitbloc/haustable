@@ -17,7 +17,7 @@ BEGIN
 
     -- Normalize contact phone
     v_phone := NULLIF(REPLACE(REPLACE(COALESCE(NEW.pickup_contact_phone, ''), '-', ''), ' ', ''), '');
-    v_name := NULLIF(LOWER(TRIM(COALESCE(NEW.pickup_contact_name, NEW.customer_name, ''))), '');
+    v_name := NULLIF(LOWER(TRIM(COALESCE(NEW.pickup_contact_name, ''))), '');
 
     -- Try matching profile by phone number first
     IF v_phone IS NOT NULL THEN
@@ -61,11 +61,7 @@ WHERE b.user_id IS NULL
   AND (
     (b.pickup_contact_phone IS NOT NULL AND REPLACE(REPLACE(b.pickup_contact_phone, '-', ''), ' ', '') = REPLACE(REPLACE(p.phone_number, '-', ''), ' ', ''))
     OR (b.pickup_contact_name IS NOT NULL AND LOWER(TRIM(b.pickup_contact_name)) = LOWER(TRIM(p.display_name)))
-    OR (b.customer_name IS NOT NULL AND LOWER(TRIM(b.customer_name)) = LOWER(TRIM(p.display_name)))
-    OR (p.nickname IS NOT NULL AND p.nickname != '' AND (
-         LOWER(TRIM(COALESCE(b.pickup_contact_name, ''))) = LOWER(TRIM(p.nickname))
-         OR LOWER(TRIM(COALESCE(b.customer_name, ''))) = LOWER(TRIM(p.nickname))
-       ))
+    OR (p.nickname IS NOT NULL AND p.nickname != '' AND LOWER(TRIM(COALESCE(b.pickup_contact_name, ''))) = LOWER(TRIM(p.nickname)))
   );
 
 -- 4. High-Performance RPC function for Member History (bypasses RLS safely)
@@ -94,7 +90,7 @@ BEGIN
     WHERE b.user_id IS NULL
       AND (
         (v_phone IS NOT NULL AND b.pickup_contact_phone IS NOT NULL AND REPLACE(REPLACE(b.pickup_contact_phone, '-', ''), ' ', '') = v_phone)
-        OR (v_name IS NOT NULL AND (LOWER(TRIM(COALESCE(b.pickup_contact_name, ''))) = v_name OR LOWER(TRIM(COALESCE(b.customer_name, ''))) = v_name))
+        OR (v_name IS NOT NULL AND LOWER(TRIM(COALESCE(b.pickup_contact_name, ''))) = v_name)
       );
 
     -- Build clean combined JSON array of history
