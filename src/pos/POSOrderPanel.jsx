@@ -464,11 +464,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     
     // 5. Drink 10 Free 1 Discount Calculation
     const isItemDrinkStampEligible = React.useCallback((item) => {
-        if (item.is_drink_stamp_eligible) return true;
-        if (item.menu_items?.is_drink_stamp_eligible) return true;
-        const catName = (item.menu_items?.menu_categories?.name || item.category || '').toLowerCase();
-        const itemName = (item.menu_items?.name || item.name || '').toLowerCase();
-        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา/i;
+        if (item.is_drink_stamp_eligible === true) return true;
+        if (item.menu_items?.is_drink_stamp_eligible === true) return true;
+        if (item.menu_items?.menu_categories?.is_drink_stamp_eligible === true) return true;
+        const catName = (item.menu_items?.menu_categories?.name || item.category || item.category_name || item.category_title || '').toLowerCase();
+        const itemName = (item.menu_items?.name || item.item_name || item.name || '').toLowerCase();
+        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|shot|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา|ช็อต|เอสเพรสโซ|เอสเพรสโซ่/i;
         return drinkRegex.test(catName) || drinkRegex.test(itemName);
     }, []);
 

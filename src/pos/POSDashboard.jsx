@@ -1743,7 +1743,7 @@ export default function POSDashboard() {
                     // Fetch dbOrderItems including item_name for accurate eligibility check
                     const { data: dbOrderItems } = await supabase
                         .from('order_items')
-                        .select('quantity, item_name, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
+                        .select('quantity, item_name, is_drink_stamp_eligible, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
                         .eq('booking_id', bookingId);
 
                     const itemsToCheck = dbOrderItems && dbOrderItems.length > 0 ? dbOrderItems : currentOrder.items;
@@ -1754,13 +1754,13 @@ export default function POSDashboard() {
 
                         // Primary: check DB-level flags (most reliable)
                         const menuItem = item.menu_items || item;
-                        const isDbEligible = menuItem.is_drink_stamp_eligible === true;
-                        const isCatEligible = menuItem.menu_categories?.is_drink_stamp_eligible === true;
+                        const isDbEligible = item.is_drink_stamp_eligible === true || menuItem.is_drink_stamp_eligible === true;
+                        const isCatEligible = menuItem.menu_categories?.is_drink_stamp_eligible === true || item.menu_categories?.is_drink_stamp_eligible === true;
 
                         // Secondary: keyword fallback for items without DB flags
-                        const catName = (menuItem.menu_categories?.name || item.category || '').toLowerCase();
+                        const catName = (menuItem.menu_categories?.name || item.category || item.category_name || item.category_title || '').toLowerCase();
                         const itemName = (menuItem.name || item.item_name || item.name || '').toLowerCase();
-                        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา/i;
+                        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|shot|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา|ช็อต|เอสเพรสโซ|เอสเพรสโซ่/i;
                         const isKeywordEligible = drinkRegex.test(catName) || drinkRegex.test(itemName);
 
                         const isEligible = isDbEligible || isCatEligible || isKeywordEligible;
@@ -1827,10 +1827,13 @@ export default function POSDashboard() {
                     try {
                         let offlineEligibleCount = currentOrder.items.reduce((sum, item) => {
                             if (item.is_reward) return sum;
+                            const catName = (item.category || item.category_name || '').toLowerCase();
+                            const itemName = (item.name || item.item_name || '').toLowerCase();
+                            const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|shot|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา|ช็อต|เอสเพรสโซ|เอสเพรสโซ่/i;
                             const isEligible = item.is_drink_stamp_eligible || 
                                 item.menu_items?.is_drink_stamp_eligible || 
-                                (item.category || '').toLowerCase().match(/coffee|tea|beverage|drink|soda|ชา|กาแฟ|เครื่องดื่ม/) ||
-                                (item.name || '').toLowerCase().match(/coffee|tea|ชา|กาแฟ/);
+                                drinkRegex.test(catName) ||
+                                drinkRegex.test(itemName);
                             return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
                         }, 0);
                         if (useFreeDrinkQuota && offlineEligibleCount > 0) {

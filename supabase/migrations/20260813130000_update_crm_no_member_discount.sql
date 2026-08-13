@@ -63,3 +63,52 @@ BEGIN
     RETURN QUERY SELECT v_spent_12m, v_spent_13m, v_tier, v_mult, v_disc, v_grace;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update all beverage & coffee categories (including shot/espresso) as drink stamp eligible
+UPDATE public.menu_categories 
+SET is_drink_stamp_eligible = true 
+WHERE LOWER(name) LIKE '%coffee%' 
+   OR LOWER(name) LIKE '%tea%' 
+   OR LOWER(name) LIKE '%beverage%' 
+   OR LOWER(name) LIKE '%drink%' 
+   OR LOWER(name) LIKE '%soda%'
+   OR LOWER(name) LIKE '%matcha%'
+   OR LOWER(name) LIKE '%cocoa%'
+   OR LOWER(name) LIKE '%latte%'
+   OR LOWER(name) LIKE '%espresso%'
+   OR LOWER(name) LIKE '%brew%'
+   OR LOWER(name) LIKE '%smoothie%'
+   OR LOWER(name) LIKE '%frappe%'
+   OR LOWER(name) LIKE '%juice%'
+   OR LOWER(name) LIKE '%milk%'
+   OR LOWER(name) LIKE '%non-coffee%'
+   OR LOWER(name) LIKE '%shot%'
+   OR LOWER(name) LIKE '%ชา%'
+   OR LOWER(name) LIKE '%กาแฟ%'
+   OR LOWER(name) LIKE '%เครื่องดื่ม%'
+   OR LOWER(name) LIKE '%นมสด%'
+   OR LOWER(name) LIKE '%มัทฉะ%'
+   OR LOWER(name) LIKE '%โกโก้%'
+   OR LOWER(name) LIKE '%น้ำผลไม้%'
+   OR LOWER(name) LIKE '%โซดา%'
+   OR LOWER(name) LIKE '%ช็อต%'
+   OR LOWER(name) LIKE '%เอสเพรสโซ%';
+
+UPDATE public.menu_items mi
+SET is_drink_stamp_eligible = true
+FROM public.menu_categories mc
+WHERE mi.category_id = mc.id AND mc.is_drink_stamp_eligible = true;
+
+-- Update menu items directly matching espresso, shot, coffee, tea keywords
+UPDATE public.menu_items
+SET is_drink_stamp_eligible = true
+WHERE LOWER(name) LIKE '%espresso%'
+   OR LOWER(name) LIKE '%shot%'
+   OR LOWER(name) LIKE '%coffee%'
+   OR LOWER(name) LIKE '%tea%'
+   OR LOWER(name) LIKE '%latte%'
+   OR LOWER(name) LIKE '%matcha%'
+   OR LOWER(name) LIKE '%กาแฟ%'
+   OR LOWER(name) LIKE '%ชา%'
+   OR LOWER(name) LIKE '%ช็อต%'
+   OR LOWER(name) LIKE '%เอสเพรสโซ%';
