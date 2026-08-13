@@ -778,3 +778,17 @@ BEGIN
     VALUES (p_item_id, CASE WHEN p_quantity_change >= 0 THEN 'in' ELSE 'out' END, p_quantity_change, p_performed_by, p_note);
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.find_profile_by_name(p_name TEXT)
+RETURNS TABLE (id UUID, display_name TEXT, nickname TEXT, phone_number TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT p.id, p.display_name, p.nickname, p.phone_number
+    FROM public.profiles p
+    WHERE p.display_name ILIKE '%' || p_name || '%'
+       OR p.nickname ILIKE '%' || p_name || '%';
+END;
+$$;

@@ -10,12 +10,14 @@ const env = fs.readFileSync('.env', 'utf8').split('\n').reduce((acc, line) => {
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_KEY);
 
-async function testRpc() {
-    console.log('Testing get_member_service_history RPC with zero UUID...');
-    const testId = '00000000-0000-0000-0000-000000000000';
-    const { data, error } = await supabase.rpc('get_member_service_history', { p_user_id: testId });
-    console.log('RPC Error:', error);
-    console.log('RPC Result count:', data ? data.length : null);
+async function findProfile() {
+    console.log('Calling find_profile_by_name for bam...');
+    const { data: bamData, error: e1 } = await supabase.rpc('find_profile_by_name', { p_name: 'bam' });
+    console.log('Bam search result:', bamData, e1);
+
+    console.log('Calling find_profile_by_name for empty string (all profiles)...');
+    const { data: allData, error: e2 } = await supabase.rpc('find_profile_by_name', { p_name: '' });
+    console.log('All profiles count:', allData ? allData.length : 0, allData ? allData.slice(0, 10) : null);
 }
 
-testRpc();
+findProfile();
