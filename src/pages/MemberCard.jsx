@@ -152,145 +152,148 @@ export default function MemberCard() {
             const qrDataUrl = await QRCode.toDataURL(qrValue, { width: 250, margin: 1 })
             setQrUrl(qrDataUrl)
 
-            // 4. Fetch point transaction & service history
-            const phone = prof.phone_number ? prof.phone_number.trim() : '';
-            const displayName = prof.display_name ? prof.display_name.trim() : '';
-            const nickname = prof.nickname ? prof.nickname.trim() : '';
-
-            let orConditions = [`user_id.eq.${userId}`];
-            if (phone) {
-                orConditions.push(`pickup_contact_phone.eq.${phone}`);
-            }
-            if (displayName && displayName.length >= 2) {
-                orConditions.push(`pickup_contact_name.ilike.%${displayName}%`);
-                orConditions.push(`customer_name.ilike.%${displayName}%`);
-            }
-            if (nickname && nickname.length >= 2 && nickname !== displayName) {
-                orConditions.push(`pickup_contact_name.ilike.%${nickname}%`);
-                orConditions.push(`customer_name.ilike.%${nickname}%`);
-            }
-
-            let bookingsQuery = supabase
-                .from('bookings')
-                .select(`
-                    id, 
-                    created_at, 
-                    booking_time, 
-                    booking_type, 
-                    status, 
-                    total_amount, 
-                    xhaus_earned, 
-                    xhaus_redeemed, 
-                    xhaus_discount,
-                    tables_layout (table_name),
-                    order_items (
-                        id,
-                        item_name,
-                        quantity,
-                        price_at_time,
-                        menu_items (name)
-                    )
-                `)
-                .or(orConditions.join(','))
-                .order('created_at', { ascending: false });
-
-            let { data: bookings, error: bErr } = await bookingsQuery;
-
-            if (bErr) {
-                console.warn("Primary bookings query error, retrying with user_id:", bErr);
-                const fallbackRes = await supabase
-                    .from('bookings')
-                    .select(`
-                        id, 
-                        created_at, 
-                        booking_time, 
-                        booking_type, 
-                        status, 
-                        total_amount, 
-                        xhaus_earned, 
-                        xhaus_redeemed, 
-                        xhaus_discount,
-                        tables_layout (table_name),
-                        order_items (
-                            id,
-                            item_name,
-                            quantity,
-                            price_at_time,
-                            menu_items (name)
-                        )
-                    `)
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false });
-
-                bookings = fallbackRes.data || [];
-                bErr = fallbackRes.error;
-            }
-
-            if (!bookings) bookings = [];
-
-            // 5. Fetch arcade rewards log if any
-            let arcadeLogs = [];
+            // 4. Fetch point transaction & service history via clean RPC function with client fallback
+            let rpcData = null;
             try {
-                const { data: aLogs } = await supabase
-                    .from('arcade_rewards_log')
-                    .select('*')
-                    .eq('profile_id', userId)
-                    .order('created_at', { ascending: false });
-                if (aLogs) arcadeLogs = aLogs;
-            } catch (aErr) {
-                console.warn("Arcade logs fetch error:", aErr);
+                const { data, error } = await supabase.rpc('get_member_service_history', { p_user_id: userId });
+                if (!error && data && Array.isArray(data)) {
+                    rpcData = data;
+                }
+            } catch (e) {
+                console.warn("RPC get_member_service_history exception:", e);
+            }
+
+            let bookings = [];
+            let arcadeLogs = [];
+
+            if (!rpcData) {
+                // Client fallback query if RPC function is not yet created
+                const phone = prof.phone_number ? prof.phone_number.trim() : '';
+                const displayName = prof.display_name ? prof.display_name.trim() : '';
+                const nickname = prof.nickname ? prof.nickname.trim() : '';
+
+                let orConditions = [`user_id.eq.${userId}`];
+                if (phone) orConditions.push(`pickup_contact_phone.eq.${phone}`);
+                if (displayName && displayName.length >= 2) {
+                    orConditions.push(`pickup_contact_name.ilike.%${displayName}%`);
+                    orConditions.push(`customer_name.ilike.%${displayName}%`);
+                }
+                if (nickname && nickname.length >= 2 && nickname !== displayName) {
+                    orConditions.push(`pickup_contact_name.ilike.%${nickname}%`);
+                    orConditions.push(`customer_name.ilike.%${nickname}%`);
+                }
+
+                try {
+                    const { data: bData } = await supabase
+                        .from('bookings')
+                        .select(`
+                            id, 
+                            created_at, 
+                            booking_time, 
+                            booking_type, 
+                            status, 
+                            total_amount, 
+                            xhaus_earned, 
+                            xhaus_redeemed, 
+                            xhaus_discount,
+                            tables_layout (table_name),
+                            order_items (
+                                id,
+                                item_name,
+                                quantity,
+                                price_at_time,
+                                menu_items (name)
+                            )
+                        `)
+                        .or(orConditions.join(','))
+                        .order('created_at', { ascending: false });
+                    bookings = bData || [];
+                } catch (bErr) {
+                    console.warn("Client fallback bookings query error:", bErr);
+                }
+
+                try {
+                    const { data: aLogs } = await supabase
+                        .from('arcade_rewards_log')
+                        .select('*')
+                        .eq('profile_id', userId)
+                        .order('created_at', { ascending: false });
+                    arcadeLogs = aLogs || [];
+                } catch (aErr) {
+                    console.warn("Arcade logs fetch error:", aErr);
+                }
+
+                rpcData = [
+                    ...bookings.map(b => ({
+                        id: b.id,
+                        created_at: b.created_at,
+                        booking_time: b.booking_time,
+                        booking_type: b.booking_type,
+                        status: b.status,
+                        total_amount: b.total_amount,
+                        xhaus_earned: b.xhaus_earned,
+                        xhaus_redeemed: b.xhaus_redeemed,
+                        xhaus_discount: b.xhaus_discount,
+                        table_name: b.tables_layout?.table_name,
+                        source: 'booking',
+                        order_items: (b.order_items || []).map(oi => ({
+                            id: oi.id,
+                            name: oi.item_name || oi.menu_items?.name || 'รายการสินค้า',
+                            quantity: oi.quantity,
+                            price_at_time: oi.price_at_time
+                        }))
+                    })),
+                    ...arcadeLogs.map(al => ({
+                        id: `arcade_${al.id}`,
+                        created_at: al.created_at,
+                        booking_time: al.created_at,
+                        booking_type: 'arcade',
+                        status: 'completed',
+                        total_amount: 0,
+                        xhaus_earned: al.xhaus_rewarded,
+                        xhaus_redeemed: 0,
+                        xhaus_discount: 0,
+                        table_name: 'ARCADE',
+                        source: 'arcade',
+                        reward_type: al.reward_type,
+                        order_items: []
+                    }))
+                ];
             }
 
             const validStatuses = ['completed', 'confirmed', 'paid', 'closed', 'seated', 'approved', 'ready'];
-            const mappedHistory = bookings
-                .filter(b => {
-                    const earnedVal = Number(b.xhaus_earned) || 0;
-                    const redeemedVal = Number(b.xhaus_redeemed) || 0;
-                    const stLower = String(b.status || '').toLowerCase();
+            const mappedHistory = rpcData
+                .filter(item => {
+                    const earnedVal = Number(item.xhaus_earned) || 0;
+                    const redeemedVal = Number(item.xhaus_redeemed) || 0;
+                    const stLower = String(item.status || '').toLowerCase();
                     const isCompleted = validStatuses.includes(stLower);
-                    const hasTotal = (Number(b.total_amount) || 0) > 0;
-                    return earnedVal > 0 || redeemedVal > 0 || isCompleted || hasTotal;
+                    const hasTotal = (Number(item.total_amount) || 0) > 0;
+                    return earnedVal > 0 || redeemedVal > 0 || isCompleted || hasTotal || item.source === 'arcade';
                 })
-                .map(b => {
-                    const earnedVal = Number(b.xhaus_earned) || 0;
-                    const redeemedVal = Number(b.xhaus_redeemed) || 0;
-                    const discVal = Number(b.xhaus_discount) || 0;
-                    let title = 'สะสมแต้มมื้ออร่อย';
+                .map(item => {
+                    const earnedVal = Number(item.xhaus_earned) || 0;
+                    const redeemedVal = Number(item.xhaus_redeemed) || 0;
+                    const discVal = Number(item.xhaus_discount) || 0;
+                    let title = item.source === 'arcade' ? `สะสมแต้ม Arcade (${item.reward_type || 'Play-to-Earn'})` : 'สะสมแต้มมื้ออร่อย';
                     if (redeemedVal > 0) {
                         title = discVal > 0 ? 'ใช้แต้มแลกส่วนลดบิล' : 'ใช้แต้มแลกของรางวัล';
-                    } else if (earnedVal === 0) {
+                    } else if (earnedVal === 0 && item.source !== 'arcade') {
                         title = 'ใช้บริการชำระเงิน';
                     }
                     return {
-                        id: b.id,
-                        date: new Date(b.created_at || b.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
+                        id: item.id,
+                        date: new Date(item.created_at || item.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
                         title,
                         earned: earnedVal,
                         redeemed: redeemedVal,
-                        total: Number(b.total_amount) || 0
+                        total: Number(item.total_amount) || 0
                     };
                 });
-            
-            // Add Arcade play-to-earn logs into points history
-            arcadeLogs.forEach(al => {
-                const rewardVal = Number(al.xhaus_rewarded) || 0;
-                if (rewardVal > 0) {
-                    mappedHistory.push({
-                        id: `arcade_${al.id}`,
-                        date: new Date(al.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
-                        title: `สะสมแต้ม Arcade (${al.reward_type || 'Play-to-Earn'})`,
-                        earned: rewardVal,
-                        redeemed: 0,
-                        total: 0
-                    });
-                }
-            });
 
-            // Calculate welcome points correctly considering total balance/earned
-            const totalBookingsEarned = bookings.reduce((sum, b) => sum + parseFloat(b.xhaus_earned || 0), 0);
-            const totalArcadeEarned = arcadeLogs.reduce((sum, a) => sum + parseFloat(a.xhaus_rewarded || 0), 0);
+            const totalBookingsEarned = rpcData.reduce((sum, b) => sum + parseFloat(b.xhaus_earned || 0), 0);
             const totalEarnedProfile = Math.max(parseFloat(prof.total_earned_xhaus || 0), parseFloat(prof.xhaus_balance || 0));
-            const welcomePoints = Math.max(0, totalEarnedProfile - totalBookingsEarned - totalArcadeEarned);
+            const welcomePoints = Math.max(0, totalEarnedProfile - totalBookingsEarned);
 
             if (welcomePoints > 0) {
                 mappedHistory.push({
@@ -304,49 +307,50 @@ export default function MemberCard() {
             }
             setHistory(mappedHistory);
 
-            // Map bookings to service history list
-            const mappedServiceHistory = bookings.map(b => {
-                let typeLabel = b.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน (TABLE)';
-                if (b.tables_layout?.table_name) {
-                    typeLabel = `โต๊ะ ${b.tables_layout.table_name}`;
-                }
-                
-                const stLower = String(b.status || '').toLowerCase();
-                let statusLabel = 'กำลังดำเนินการ';
-                let statusColor = 'text-amber-600';
-                if (['completed', 'confirmed', 'paid', 'closed', 'approved'].includes(stLower)) {
-                    statusLabel = 'เสร็จสิ้น';
-                    statusColor = 'text-[#5a6353]';
-                } else if (['cancelled', 'rejected', 'void'].includes(stLower)) {
-                    statusLabel = 'ยกเลิก';
-                    statusColor = 'text-rose-500';
-                }
+            const mappedServiceHistory = rpcData
+                .filter(item => item.source === 'booking')
+                .map(b => {
+                    let typeLabel = b.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน (TABLE)';
+                    if (b.table_name) {
+                        typeLabel = `โต๊ะ ${b.table_name}`;
+                    }
+                    
+                    const stLower = String(b.status || '').toLowerCase();
+                    let statusLabel = 'กำลังดำเนินการ';
+                    let statusColor = 'text-amber-600';
+                    if (['completed', 'confirmed', 'paid', 'closed', 'approved'].includes(stLower)) {
+                        statusLabel = 'เสร็จสิ้น';
+                        statusColor = 'text-[#5a6353]';
+                    } else if (['cancelled', 'rejected', 'void'].includes(stLower)) {
+                        statusLabel = 'ยกเลิก';
+                        statusColor = 'text-rose-500';
+                    }
 
-                const bookingTimeStr = new Date(b.booking_time || b.created_at).toLocaleDateString('th-TH', { 
-                    day: 'numeric', 
-                    month: 'short', 
-                    year: '2-digit'
-                }) + '\n' + new Date(b.booking_time || b.created_at).toLocaleTimeString('th-TH', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
+                    const bookingTimeStr = new Date(b.booking_time || b.created_at).toLocaleDateString('th-TH', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: '2-digit'
+                    }) + '\n' + new Date(b.booking_time || b.created_at).toLocaleTimeString('th-TH', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+
+                    return {
+                        id: b.id,
+                        date: bookingTimeStr,
+                        typeLabel,
+                        statusLabel,
+                        statusColor,
+                        earned: parseFloat(b.xhaus_earned) || 0,
+                        redeemed: parseFloat(b.xhaus_redeemed) || 0,
+                        total: parseFloat(b.total_amount) || 0,
+                        order_items: (b.order_items || []).map(item => ({
+                            ...item,
+                            name: item.name || 'รายการสินค้า'
+                        }))
+                    };
                 });
-
-                return {
-                    id: b.id,
-                    date: bookingTimeStr,
-                    typeLabel,
-                    statusLabel,
-                    statusColor,
-                    earned: parseFloat(b.xhaus_earned) || 0,
-                    redeemed: parseFloat(b.xhaus_redeemed) || 0,
-                    total: parseFloat(b.total_amount) || 0,
-                    order_items: (b.order_items || []).map(item => ({
-                        ...item,
-                        name: item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า'
-                    }))
-                };
-            });
 
             if (welcomePoints > 0) {
                 const welcomeTimeStr = new Date(prof.created_at || Date.now()).toLocaleDateString('th-TH', { 
