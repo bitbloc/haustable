@@ -154,6 +154,22 @@ export default function MemberCard() {
 
             // 4. Fetch point transaction & service history
             const phone = prof.phone_number ? prof.phone_number.trim() : '';
+            const displayName = prof.display_name ? prof.display_name.trim() : '';
+            const nickname = prof.nickname ? prof.nickname.trim() : '';
+
+            let orConditions = [`user_id.eq.${userId}`];
+            if (phone) {
+                orConditions.push(`pickup_contact_phone.eq.${phone}`);
+            }
+            if (displayName && displayName.length >= 2) {
+                orConditions.push(`pickup_contact_name.ilike.%${displayName}%`);
+                orConditions.push(`customer_name.ilike.%${displayName}%`);
+            }
+            if (nickname && nickname.length >= 2 && nickname !== displayName) {
+                orConditions.push(`pickup_contact_name.ilike.%${nickname}%`);
+                orConditions.push(`customer_name.ilike.%${nickname}%`);
+            }
+
             let bookingsQuery = supabase
                 .from('bookings')
                 .select(`
@@ -175,13 +191,8 @@ export default function MemberCard() {
                         menu_items (name)
                     )
                 `)
+                .or(orConditions.join(','))
                 .order('created_at', { ascending: false });
-
-            if (phone) {
-                bookingsQuery = bookingsQuery.or(`user_id.eq.${userId},pickup_contact_phone.eq.${phone}`);
-            } else {
-                bookingsQuery = bookingsQuery.eq('user_id', userId);
-            }
 
             let { data: bookings, error: bErr } = await bookingsQuery;
 
@@ -215,119 +226,151 @@ export default function MemberCard() {
                 bErr = fallbackRes.error;
             }
 
-            if (!bErr && bookings) {
-                const validStatuses = ['completed', 'confirmed', 'paid', 'closed', 'seated', 'approved', 'ready'];
-                const mappedHistory = bookings
-                    .filter(b => {
-                        const earnedVal = Number(b.xhaus_earned) || 0;
-                        const redeemedVal = Number(b.xhaus_redeemed) || 0;
-                        const stLower = String(b.status || '').toLowerCase();
-                        const isCompleted = validStatuses.includes(stLower);
-                        const hasTotal = (Number(b.total_amount) || 0) > 0;
-                        return earnedVal > 0 || redeemedVal > 0 || isCompleted || hasTotal;
-                    })
-                    .map(b => {
-                        const earnedVal = Number(b.xhaus_earned) || 0;
-                        const redeemedVal = Number(b.xhaus_redeemed) || 0;
-                        const discVal = Number(b.xhaus_discount) || 0;
-                        let title = 'สะสมแต้มมื้ออร่อย';
-                        if (redeemedVal > 0) {
-                            title = discVal > 0 ? 'ใช้แต้มแลกส่วนลดบิล' : 'ใช้แต้มแลกของรางวัล';
-                        } else if (earnedVal === 0) {
-                            title = 'ใช้บริการชำระเงิน';
-                        }
-                        return {
-                            id: b.id,
-                            date: new Date(b.created_at || b.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
-                            title,
-                            earned: earnedVal,
-                            redeemed: redeemedVal,
-                            total: Number(b.total_amount) || 0
-                        };
-                    });
-                
-                // Add welcome points entry if profile points earned contains initial welcome
-                const welcomePoints = parseFloat(prof.total_earned_xhaus) - bookings.reduce((sum, b) => sum + parseFloat(b.xhaus_earned || 0), 0)
-                if (welcomePoints > 0) {
-                    mappedHistory.push({
-                        id: 'welcome',
-                        date: new Date(prof.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
-                        title: 'โบนัสสมาชิกใหม่ต้อนรับเข้าบ้าน',
-                        earned: welcomePoints,
-                        redeemed: 0,
-                        total: 0
-                    })
-                }
-                setHistory(mappedHistory)
+            if (!bookings) bookings = [];
 
-                // Map bookings to service history list
-                const mappedServiceHistory = bookings.map(b => {
-                    let typeLabel = b.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน (TABLE)';
-                    if (b.tables_layout?.table_name) {
-                        typeLabel = `โต๊ะ ${b.tables_layout.table_name}`;
-                    }
-                    
+            // 5. Fetch arcade rewards log if any
+            let arcadeLogs = [];
+            try {
+                const { data: aLogs } = await supabase
+                    .from('arcade_rewards_log')
+                    .select('*')
+                    .eq('profile_id', userId)
+                    .order('created_at', { ascending: false });
+                if (aLogs) arcadeLogs = aLogs;
+            } catch (aErr) {
+                console.warn("Arcade logs fetch error:", aErr);
+            }
+
+            const validStatuses = ['completed', 'confirmed', 'paid', 'closed', 'seated', 'approved', 'ready'];
+            const mappedHistory = bookings
+                .filter(b => {
+                    const earnedVal = Number(b.xhaus_earned) || 0;
+                    const redeemedVal = Number(b.xhaus_redeemed) || 0;
                     const stLower = String(b.status || '').toLowerCase();
-                    let statusLabel = 'กำลังดำเนินการ';
-                    let statusColor = 'text-amber-600';
-                    if (['completed', 'confirmed', 'paid', 'closed', 'approved'].includes(stLower)) {
-                        statusLabel = 'เสร็จสิ้น';
-                        statusColor = 'text-[#5a6353]';
-                    } else if (['cancelled', 'rejected', 'void'].includes(stLower)) {
-                        statusLabel = 'ยกเลิก';
-                        statusColor = 'text-rose-500';
+                    const isCompleted = validStatuses.includes(stLower);
+                    const hasTotal = (Number(b.total_amount) || 0) > 0;
+                    return earnedVal > 0 || redeemedVal > 0 || isCompleted || hasTotal;
+                })
+                .map(b => {
+                    const earnedVal = Number(b.xhaus_earned) || 0;
+                    const redeemedVal = Number(b.xhaus_redeemed) || 0;
+                    const discVal = Number(b.xhaus_discount) || 0;
+                    let title = 'สะสมแต้มมื้ออร่อย';
+                    if (redeemedVal > 0) {
+                        title = discVal > 0 ? 'ใช้แต้มแลกส่วนลดบิล' : 'ใช้แต้มแลกของรางวัล';
+                    } else if (earnedVal === 0) {
+                        title = 'ใช้บริการชำระเงิน';
                     }
-
-                    const bookingTimeStr = new Date(b.booking_time || b.created_at).toLocaleDateString('th-TH', { 
-                        day: 'numeric', 
-                        month: 'short', 
-                        year: '2-digit'
-                    }) + '\n' + new Date(b.booking_time || b.created_at).toLocaleTimeString('th-TH', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
-
                     return {
                         id: b.id,
-                        date: bookingTimeStr,
-                        typeLabel,
-                        statusLabel,
-                        statusColor,
-                        earned: parseFloat(b.xhaus_earned) || 0,
-                        redeemed: parseFloat(b.xhaus_redeemed) || 0,
-                        total: parseFloat(b.total_amount) || 0,
-                        order_items: (b.order_items || []).map(item => ({
-                            ...item,
-                            name: item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า'
-                        }))
+                        date: new Date(b.created_at || b.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
+                        title,
+                        earned: earnedVal,
+                        redeemed: redeemedVal,
+                        total: Number(b.total_amount) || 0
                     };
                 });
-
-                if (welcomePoints > 0) {
-                    const welcomeTimeStr = new Date(prof.created_at).toLocaleDateString('th-TH', { 
-                        day: 'numeric', 
-                        month: 'short', 
-                        year: '2-digit'
-                    }) + '\n' + new Date(prof.created_at).toLocaleTimeString('th-TH', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
-                    mappedServiceHistory.push({
-                        id: 'welcome',
-                        date: welcomeTimeStr,
-                        typeLabel: 'โบนัสต้อนรับ',
-                        statusLabel: 'ต้อนรับสมาชิก',
-                        statusColor: 'text-amber-600',
-                        earned: welcomePoints,
+            
+            // Add Arcade play-to-earn logs into points history
+            arcadeLogs.forEach(al => {
+                const rewardVal = Number(al.xhaus_rewarded) || 0;
+                if (rewardVal > 0) {
+                    mappedHistory.push({
+                        id: `arcade_${al.id}`,
+                        date: new Date(al.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
+                        title: `สะสมแต้ม Arcade (${al.reward_type || 'Play-to-Earn'})`,
+                        earned: rewardVal,
                         redeemed: 0,
                         total: 0
                     });
                 }
+            });
 
-                setServiceHistory(mappedServiceHistory)
+            // Calculate welcome points correctly considering total balance/earned
+            const totalBookingsEarned = bookings.reduce((sum, b) => sum + parseFloat(b.xhaus_earned || 0), 0);
+            const totalArcadeEarned = arcadeLogs.reduce((sum, a) => sum + parseFloat(a.xhaus_rewarded || 0), 0);
+            const totalEarnedProfile = Math.max(parseFloat(prof.total_earned_xhaus || 0), parseFloat(prof.xhaus_balance || 0));
+            const welcomePoints = Math.max(0, totalEarnedProfile - totalBookingsEarned - totalArcadeEarned);
+
+            if (welcomePoints > 0) {
+                mappedHistory.push({
+                    id: 'welcome',
+                    date: new Date(prof.created_at || Date.now()).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
+                    title: 'โบนัสสมาชิกใหม่ต้อนรับเข้าบ้าน',
+                    earned: welcomePoints,
+                    redeemed: 0,
+                    total: 0
+                });
             }
+            setHistory(mappedHistory);
+
+            // Map bookings to service history list
+            const mappedServiceHistory = bookings.map(b => {
+                let typeLabel = b.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน (TABLE)';
+                if (b.tables_layout?.table_name) {
+                    typeLabel = `โต๊ะ ${b.tables_layout.table_name}`;
+                }
+                
+                const stLower = String(b.status || '').toLowerCase();
+                let statusLabel = 'กำลังดำเนินการ';
+                let statusColor = 'text-amber-600';
+                if (['completed', 'confirmed', 'paid', 'closed', 'approved'].includes(stLower)) {
+                    statusLabel = 'เสร็จสิ้น';
+                    statusColor = 'text-[#5a6353]';
+                } else if (['cancelled', 'rejected', 'void'].includes(stLower)) {
+                    statusLabel = 'ยกเลิก';
+                    statusColor = 'text-rose-500';
+                }
+
+                const bookingTimeStr = new Date(b.booking_time || b.created_at).toLocaleDateString('th-TH', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: '2-digit'
+                }) + '\n' + new Date(b.booking_time || b.created_at).toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+
+                return {
+                    id: b.id,
+                    date: bookingTimeStr,
+                    typeLabel,
+                    statusLabel,
+                    statusColor,
+                    earned: parseFloat(b.xhaus_earned) || 0,
+                    redeemed: parseFloat(b.xhaus_redeemed) || 0,
+                    total: parseFloat(b.total_amount) || 0,
+                    order_items: (b.order_items || []).map(item => ({
+                        ...item,
+                        name: item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า'
+                    }))
+                };
+            });
+
+            if (welcomePoints > 0) {
+                const welcomeTimeStr = new Date(prof.created_at || Date.now()).toLocaleDateString('th-TH', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: '2-digit'
+                }) + '\n' + new Date(prof.created_at || Date.now()).toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                mappedServiceHistory.push({
+                    id: 'welcome',
+                    date: welcomeTimeStr,
+                    typeLabel: 'โบนัสต้อนรับ',
+                    statusLabel: 'ต้อนรับสมาชิก',
+                    statusColor: 'text-amber-600',
+                    earned: welcomePoints,
+                    redeemed: 0,
+                    total: 0
+                });
+            }
+
+            setServiceHistory(mappedServiceHistory);
         } catch (err) {
             console.error("Error fetching member data:", err)
             toast.error("ล้มเหลวในการดึงข้อมูลสมาชิก")
@@ -433,7 +476,7 @@ export default function MemberCard() {
         return (
             <div className="min-h-screen bg-[var(--color-hallmark-paper)] flex flex-col items-center justify-center font-[var(--font-body)] text-[var(--color-hallmark-ink)]">
                 <div className="w-8 h-8 rounded-full border-2 border-t-[var(--color-hallmark-ink)] border-[var(--color-hallmark-rule)] animate-spin" />
-                <p className="text-[10px] text-[var(--color-hallmark-ink-muted)] font-mono mt-3 uppercase tracking-wider">LOADING RAMS CRM...</p>
+                <p className="text-[10px] text-[var(--color-hallmark-ink-muted)] font-mono mt-3 uppercase tracking-wider">LOADING ONHAUS CRM...</p>
             </div>
         )
     }
