@@ -99,6 +99,25 @@ export default function MemberCard() {
         return () => subscription.unsubscribe()
     }, [])
 
+    // Realtime live update subscription for member profile and bookings
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const channel = supabase
+            .channel(`member_card_realtime_${user.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => {
+                fetchMemberData(user.id);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `user_id=eq.${user.id}` }, () => {
+                fetchMemberData(user.id);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id])
+
     const fetchMemberData = async (userId) => {
         setLoading(true)
         try {
@@ -148,6 +167,9 @@ export default function MemberCard() {
                     xhaus_discount,
                     tables_layout (table_name),
                     order_items (
+                        id,
+                        item_name,
+                        name,
                         quantity,
                         price_at_time,
                         price,
@@ -157,20 +179,34 @@ export default function MemberCard() {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
 
-            if (!bErr) {
+            if (!bErr && bookings) {
                 // Map bookings to points history list
                 const mappedHistory = bookings
-                    .filter(b => parseFloat(b.xhaus_earned) > 0 || parseFloat(b.xhaus_redeemed) > 0)
-                    .map(b => ({
-                        id: b.id,
-                        date: new Date(b.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
-                        title: parseFloat(b.xhaus_redeemed) > 0 
-                            ? (parseFloat(b.xhaus_discount) > 0 ? 'แลกส่วนลดบิลอาหาร' : 'แลกของรางวัล') 
-                            : 'สะสมแต้มมื้ออร่อย',
-                        earned: parseFloat(b.xhaus_earned),
-                        redeemed: parseFloat(b.xhaus_redeemed),
-                        total: b.total_amount
-                    }))
+                    .filter(b => {
+                        const earnedVal = Number(b.xhaus_earned) || 0;
+                        const redeemedVal = Number(b.xhaus_redeemed) || 0;
+                        const isCompleted = b.status === 'completed' || b.status === 'confirmed';
+                        return earnedVal > 0 || redeemedVal > 0 || isCompleted;
+                    })
+                    .map(b => {
+                        const earnedVal = Number(b.xhaus_earned) || 0;
+                        const redeemedVal = Number(b.xhaus_redeemed) || 0;
+                        const discVal = Number(b.xhaus_discount) || 0;
+                        let title = 'สะสมแต้มมื้ออร่อย';
+                        if (redeemedVal > 0) {
+                            title = discVal > 0 ? 'ใช้แต้มแลกส่วนลดบิล' : 'ใช้แต้มแลกของรางวัล';
+                        } else if (earnedVal === 0) {
+                            title = 'ใช้บริการชำระเงิน';
+                        }
+                        return {
+                            id: b.id,
+                            date: new Date(b.created_at || b.booking_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }),
+                            title,
+                            earned: earnedVal,
+                            redeemed: redeemedVal,
+                            total: Number(b.total_amount) || 0
+                        };
+                    });
                 
                 // Add welcome points entry if profile points earned contains initial welcome
                 const welcomePoints = parseFloat(prof.total_earned_xhaus) - bookings.reduce((sum, b) => sum + parseFloat(b.xhaus_earned || 0), 0)
@@ -222,7 +258,10 @@ export default function MemberCard() {
                         earned: parseFloat(b.xhaus_earned) || 0,
                         redeemed: parseFloat(b.xhaus_redeemed) || 0,
                         total: parseFloat(b.total_amount) || 0,
-                        order_items: b.order_items || []
+                        order_items: (b.order_items || []).map(item => ({
+                            ...item,
+                            name: item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า'
+                        }))
                     };
                 });
 

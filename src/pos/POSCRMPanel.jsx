@@ -32,8 +32,25 @@ export default function POSCRMPanel() {
             }
         });
 
-        return () => subscription.unsubscribe();
-    }, []);
+        // Supabase Realtime subscription for live CRM member and booking updates
+        const channel = supabase
+            .channel('pos_crm_panel_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                fetchMembers();
+                if (selectedMember?.id) {
+                    handleSelectMember(selectedMember);
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+                fetchMembers();
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+            supabase.removeChannel(channel);
+        };
+    }, [selectedMember?.id]);
 
     const fetchMembers = async () => {
         setLoading(true);
@@ -62,6 +79,14 @@ export default function POSCRMPanel() {
             });
 
             setMembers(merged);
+
+            // Update selected member if active
+            if (selectedMember?.id) {
+                const updatedSel = merged.find(m => m.id === selectedMember.id);
+                if (updatedSel) {
+                    setSelectedMember(prev => ({ ...prev, ...updatedSel }));
+                }
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -79,7 +104,12 @@ export default function POSCRMPanel() {
                 .select(`
                     *,
                     order_items (
+                        id,
+                        item_name,
+                        name,
                         quantity,
+                        price_at_time,
+                        price,
                         menu_items (name)
                     )
                 `)
@@ -388,7 +418,7 @@ export default function POSCRMPanel() {
                                                     <p className="font-bold text-[9px] text-[#767673] uppercase mb-1">ORDER ITEMS</p>
                                                     {h.order_items?.map((item, idx) => (
                                                         <div key={idx} className="flex justify-between">
-                                                            <span className="truncate max-w-[180px]">{item.menu_items?.name || item.name || 'Unknown Item'}</span>
+                                                            <span className="truncate max-w-[180px]">{item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า'}</span>
                                                             <span className="font-bold">x{item.quantity}</span>
                                                         </div>
                                                     ))}
