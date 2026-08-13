@@ -423,8 +423,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     // 1. Member Tier Discount Calculation
-    const memberDiscount = 0;
-    const discountLabel = '';
+    const currentMemberForDisc = attachedMemberCrm || booking?.profiles;
+    const tierName = currentMemberForDisc?.current_tier || '';
+    const tierDiscountRate = currentMemberForDisc?.discount_rate !== undefined 
+        ? parseFloat(currentMemberForDisc.discount_rate)
+        : (tierName === 'Inner Haus' ? 0.10 : (tierName === 'Haus People' ? 0.05 : 0.00));
+    const memberDiscount = Math.ceil(subtotal * tierDiscountRate);
+    const discountLabel = tierDiscountRate > 0 ? `${tierName} (${Math.round(tierDiscountRate * 100)}%)` : '';
         
     // 2. Promotion Code Discount Calculation
     const getPromoDiscount = () => {
@@ -813,6 +818,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                     {(memberDiscount > 0 || promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
                         <div className="space-y-1 border-t border-[#D1D1CD]/40 pt-1.5 mt-1 text-xs">
+                            {memberDiscount > 0 && (
+                                <div className="flex justify-between items-center text-purple-700 font-bold py-0.5">
+                                    <span>MEMBER PRIVILEGE ({discountLabel})</span>
+                                    <span>-฿{Math.ceil(memberDiscount).toLocaleString()}</span>
+                                </div>
+                            )}
+
                             {promoDiscount > 0 && (
                                 <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
                                     <span>PROMO DISCOUNT ({selectedPromo?.code})</span>

@@ -1684,8 +1684,13 @@ export default function POSDashboard() {
         const subtotal = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
         let memberDiscount = 0;
-        if (currentBooking && currentBooking.profiles) {
-            memberDiscount = 0;
+        const currentMemberForDisc = attachedMemberCrm || currentBooking?.profiles;
+        if (currentMemberForDisc) {
+            const tierName = currentMemberForDisc.current_tier || '';
+            const tierDiscountRate = currentMemberForDisc.discount_rate !== undefined 
+                ? parseFloat(currentMemberForDisc.discount_rate)
+                : (tierName === 'Inner Haus' ? 0.10 : (tierName === 'Haus People' ? 0.05 : 0.00));
+            memberDiscount = Math.ceil(subtotal * tierDiscountRate);
         }
 
         let freeDrinkDiscVal = 0;
@@ -1734,11 +1739,10 @@ export default function POSDashboard() {
             if (fallbackProfileId) {
                 const profileId = fallbackProfileId;
                 try {
-                    // BUG #3 FIX: Query actual order_items from DB for reliable is_drink_stamp_eligible
-                    // instead of depending on localStorage cache which may be empty
+                    // Fetch dbOrderItems including item_name for accurate eligibility check
                     const { data: dbOrderItems } = await supabase
                         .from('order_items')
-                        .select('quantity, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
+                        .select('quantity, item_name, menu_items(id, name, is_drink_stamp_eligible, category_id, menu_categories(name, is_drink_stamp_eligible))')
                         .eq('booking_id', bookingId);
 
                     const itemsToCheck = dbOrderItems && dbOrderItems.length > 0 ? dbOrderItems : currentOrder.items;
@@ -1754,7 +1758,7 @@ export default function POSDashboard() {
 
                         // Secondary: keyword fallback for items without DB flags
                         const catName = (menuItem.menu_categories?.name || item.category || '').toLowerCase();
-                        const itemName = (menuItem.name || item.name || '').toLowerCase();
+                        const itemName = (menuItem.name || item.item_name || item.name || '').toLowerCase();
                         const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา/i;
                         const isKeywordEligible = drinkRegex.test(catName) || drinkRegex.test(itemName);
 
@@ -1767,37 +1771,51 @@ export default function POSDashboard() {
                     }
 
                     if (eligibleDrinkCount > 0 || useFreeDrinkQuota) {
-                        const { data: profile } = await supabase
-                            .from('profiles')
-                            .select('drink_stamp_count, free_drink_quota, total_drinks_purchased')
-                            .eq('id', profileId)
-                            .maybeSingle();
+                        // Execute SECURITY DEFINER RPC process_drink_stamps
+                        const { data: rpcRes, error: rpcErr } = await supabase.rpc('process_drink_stamps', {
+                            p_user_id: profileId,
+                            p_stamp_count: eligibleDrinkCount,
+                            p_quota_used: useFreeDrinkQuota ? 1 : 0
+                        });
 
-                        if (profile) {
-                            const currentStamps = profile.drink_stamp_count || 0;
-                            const currentQuota = profile.free_drink_quota || 0;
-                            const currentTotal = profile.total_drinks_purchased || 0;
-
-                            const totalStamps = currentStamps + eligibleDrinkCount;
-                            const earnedNewQuota = Math.floor(totalStamps / 10);
-                            const newStampCount = totalStamps % 10;
-                            const newQuota = Math.max(0, currentQuota - (useFreeDrinkQuota ? 1 : 0) + earnedNewQuota);
-                            const newTotalPurchased = currentTotal + eligibleDrinkCount;
-
-                            await supabase
-                                .from('profiles')
-                                .update({
-                                    drink_stamp_count: newStampCount,
-                                    free_drink_quota: newQuota,
-                                    total_drinks_purchased: newTotalPurchased
-                                })
-                                .eq('id', profileId);
-
+                        if (!rpcErr && rpcRes && rpcRes.length > 0) {
                             if (eligibleDrinkCount > 0) {
-                                toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว`);
+                                toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว (รวม ${rpcRes[0].new_stamp_count}/10)`);
                             }
-                            if (earnedNewQuota > 0) {
-                                toast.success(`🎉 สะสมเครื่องดื่มครบ 10 แก้ว! ได้รับสิทธิ์เครื่องดื่มฟรีเพิ่ม ${earnedNewQuota} สิทธิ์`);
+                            if (useFreeDrinkQuota) {
+                                toast.success(`🎉 ใช้สิทธิ์เครื่องดื่มฟรี 1 แก้วเรียบร้อยแล้ว`);
+                            }
+                        } else {
+                            // Fallback direct profile update if RPC fails
+                            const { data: profile } = await supabase
+                                .from('profiles')
+                                .select('drink_stamp_count, free_drink_quota, total_drinks_purchased')
+                                .eq('id', profileId)
+                                .maybeSingle();
+
+                            if (profile) {
+                                const currentStamps = profile.drink_stamp_count || 0;
+                                const currentQuota = profile.free_drink_quota || 0;
+                                const currentTotal = profile.total_drinks_purchased || 0;
+
+                                const totalStamps = currentStamps + eligibleDrinkCount;
+                                const earnedNewQuota = Math.floor(totalStamps / 10);
+                                const newStampCount = totalStamps % 10;
+                                const newQuota = Math.max(0, currentQuota - (useFreeDrinkQuota ? 1 : 0) + earnedNewQuota);
+                                const newTotalPurchased = currentTotal + eligibleDrinkCount;
+
+                                await supabase
+                                    .from('profiles')
+                                    .update({
+                                        drink_stamp_count: newStampCount,
+                                        free_drink_quota: newQuota,
+                                        total_drinks_purchased: newTotalPurchased
+                                    })
+                                    .eq('id', profileId);
+
+                                if (eligibleDrinkCount > 0) {
+                                    toast.success(`☕ อัปเดต Drink Stamp +${eligibleDrinkCount} แก้ว`);
+                                }
                             }
                         }
                     }

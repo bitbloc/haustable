@@ -562,14 +562,15 @@ export function usePOSOrder() {
             const earned = parseFloat(xhausEarned) || 0;
             const redeemed = parseFloat(xhausRedeemed) || 0;
 
-            if (earned > 0 || redeemed > 0) {
+            if (earned > 0 || redeemed > 0 || profileId) {
                 let rpcSucceeded = false;
                 try {
                     const { error: rpcErr } = await supabase.rpc('process_checkout_xhaus', {
                         p_booking_id: bookingId,
                         p_xhaus_earned: earned,
                         p_xhaus_redeemed: redeemed,
-                        p_xhaus_discount: parseFloat(xhausDiscount) || 0
+                        p_xhaus_discount: parseFloat(xhausDiscount) || 0,
+                        p_user_id: profileId || null
                     });
                     if (!rpcErr) rpcSucceeded = true;
                     else console.warn('process_checkout_xhaus RPC returned error:', rpcErr);
@@ -577,9 +578,9 @@ export function usePOSOrder() {
                     console.warn('process_checkout_xhaus RPC call exception:', rpcEx);
                 }
 
-                // Guaranteed direct JS profile update if RPC failed or to ensure profile xhaus balance stays sync'd
+                // JS fallback profile update if RPC failed
                 const targetProfileId = profileId;
-                if (targetProfileId) {
+                if (!rpcSucceeded && targetProfileId) {
                     try {
                         const { data: pData } = await supabase.from('profiles')
                             .select('xhaus_balance, total_earned_xhaus, total_redeemed_xhaus')
@@ -600,14 +601,6 @@ export function usePOSOrder() {
                         console.error('JS fallback xhaus update failed:', e);
                     }
                 }
-            } else {
-                // Even with 0 earned/redeemed, update booking xhaus columns for record keeping
-                await supabase.rpc('process_checkout_xhaus', {
-                    p_booking_id: bookingId,
-                    p_xhaus_earned: 0,
-                    p_xhaus_redeemed: 0,
-                    p_xhaus_discount: parseFloat(xhausDiscount) || 0
-                }).catch(() => {});
             }
 
             setLoading(false);
