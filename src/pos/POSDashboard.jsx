@@ -753,7 +753,10 @@ export default function POSDashboard() {
                 return; // Preserve attached member for Walk-in drafts
             }
             if (!activeBooking.user_id) {
-                setAttachedMemberCrm(null);
+                // If user attached member manually in draft state, keep it. Only clear if switching active booking with no user_id
+                if (activeBooking.id && attachedMemberCrm && attachedMemberCrm.id !== activeBooking.user_id) {
+                    setAttachedMemberCrm(null);
+                }
                 return;
             }
             try {
