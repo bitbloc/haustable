@@ -568,7 +568,7 @@ export default function SlipModal({ booking, type, onClose }) {
             orderBannerTitle = 'ONLINE TABLE BOOKING';
             orderBannerSub = '(จองโต๊ะออนไลน์ - มีมัดจำ)';
         } else if (isPickupOrder) {
-            orderBannerTitle = 'IN-HAUS PICKUP';
+            orderBannerTitle = 'IN HAUS PICKUP';
             orderBannerSub = '(หน้าร้าน - สั่งกลับบ้าน)';
         } else {
             // Any Table Dine-In (QR ordering or POS table open)
@@ -652,6 +652,8 @@ export default function SlipModal({ booking, type, onClose }) {
                             letter-spacing: -1px;
                             margin-bottom: 2px;
                             line-height: 1;
+                            width: 100%;
+                            display: block;
                         }
                         .tagline {
                             font-size: 8px;
@@ -661,6 +663,7 @@ export default function SlipModal({ booking, type, onClose }) {
                             margin-bottom: 10px;
                             border-bottom: 2px dashed black;
                             padding-bottom: 5px;
+                            width: 100%;
                         }
                         .ticket-title {
                             font-size: 12px;
@@ -669,6 +672,8 @@ export default function SlipModal({ booking, type, onClose }) {
                             margin-bottom: 10px;
                             text-transform: uppercase;
                             letter-spacing: 0.5px;
+                            width: 100%;
+                            display: block;
                         }
                         .center-flex { display: flex; justify-content: center; margin-bottom: 12px; }
                         .queue-box {
@@ -779,9 +784,9 @@ export default function SlipModal({ booking, type, onClose }) {
                     <div class="ticket-title">${docTitle}</div>
 
                     <!-- Distinct Order Banner -->
-                    <div style="border: 2px solid black; text-align: center; padding: 6px 4px; margin: 8px 0; background: #F8F8F8;">
-                        <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">${orderBannerTitle}</div>
-                        <div style="font-size: 10px; font-weight: bold; color: #333; margin-top: 2px;">${orderBannerSub}</div>
+                    <div style="border: 2px solid black; text-align: center; padding: 6px 4px; margin: 8px 0; background: #F8F8F8; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; width: 100%;">${orderBannerTitle}</div>
+                        <div style="font-size: 10px; font-weight: bold; color: #333; margin-top: 2px; text-align: center; width: 100%;">${orderBannerSub}</div>
                     </div>
 
                     <!-- Shop metadata rendering if customer receipt -->

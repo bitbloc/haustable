@@ -434,12 +434,20 @@ export default function POSReportsPanel() {
 
         const printDateStr = new Date().toLocaleString('th-TH');
 
-        const catHtml = categoryList.map(c => `
-            <div class="row">
-                <span>${c.name} (x${c.quantity})</span>
-                <span>${c.amount.toLocaleString()}.-</span>
+        const catHtml = categoryList.length > 0 ? `
+            <div class="table-row table-header" style="font-weight: bold; border-bottom: 1px dashed black; padding-bottom: 3px; margin-bottom: 4px;">
+                <span class="col-name">รายการ / หมวดหมู่</span>
+                <span class="col-qty">จำนวน</span>
+                <span class="col-amt">ยอดเงิน</span>
             </div>
-        `).join('') || '<div class="empty">No Category Sales</div>';
+            ${categoryList.map(c => `
+                <div class="table-row">
+                    <span class="col-name">${c.name}</span>
+                    <span class="col-qty">x${c.quantity}</span>
+                    <span class="col-amt">฿${c.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+            `).join('')}
+        ` : '<div class="empty">No Category Sales</div>';
 
         const htmlContent = `
             <html>
@@ -455,47 +463,87 @@ export default function POSReportsPanel() {
                             padding: 20px 10px;
                             width: 280px;
                         }
-                        .header { text-align: center; margin-bottom: 15px; }
-                        .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-                        .date { font-size: 9px; color: #555; }
+                        .header { text-align: center; margin-bottom: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+                        .title { font-size: 16px; font-weight: 900; text-transform: uppercase; margin-bottom: 2px; text-align: center; width: 100%; }
+                        .subtitle { font-size: 11px; font-weight: bold; text-transform: uppercase; text-align: center; width: 100%; margin-bottom: 4px; }
+                        .date { font-size: 9px; color: #555; text-align: center; width: 100%; }
                         
                         .section { border-top: 2px dashed black; padding: 10px 0; margin-top: 10px; }
-                        .section-title { font-[9px]; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+                        .section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
                         
                         .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-                        .total-row { font-size: 14px; font-weight: bold; border-top: 1px dashed black; padding-top: 5px; margin-top: 5px; }
+                        .table-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 11px; }
+                        .col-name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                        .col-qty { width: 45px; text-align: right; flex-shrink: 0; padding-right: 4px; }
+                        .col-amt { width: 85px; text-align: right; flex-shrink: 0; font-weight: bold; }
                         
-                        .signature { margin-top: 40px; text-align: center; font-size: 9px; }
-                        .sig-line { border-bottom: 1px solid black; width: 150px; margin: 30px auto 5px auto; }
+                        .grand-total-box {
+                            border: 3px solid black;
+                            background: #f8f8f8;
+                            text-align: center;
+                            padding: 12px 6px;
+                            margin: 15px 0;
+                            box-sizing: border-box;
+                            width: 100%;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .grand-total-label {
+                            font-size: 10px;
+                            font-weight: bold;
+                            letter-spacing: 0.5px;
+                            text-transform: uppercase;
+                            margin-bottom: 4px;
+                            text-align: center;
+                            width: 100%;
+                        }
+                        .grand-total-val {
+                            font-size: 26px;
+                            font-weight: 900;
+                            line-height: 1;
+                            color: #000;
+                            text-align: center;
+                            width: 100%;
+                        }
+                        
+                        .signature { margin-top: 30px; text-align: center; font-size: 9px; }
+                        .sig-line { border-bottom: 1px solid black; width: 150px; margin: 25px auto 5px auto; }
                     </style>
                 </head>
                 <body>
                     <div class="header">
                         <div class="title">IN THE HAUS</div>
-                        <div class="title" style="font-size:11px;">SHIFT CLOSURE REPORT</div>
+                        <div class="subtitle">SHIFT CLOSURE REPORT / รายงานยอดการขาย</div>
                         <div class="date">Report Date: ${filterDate}</div>
                         <div class="date">Printed: ${printDateStr}</div>
                     </div>
  
                     <div class="section">
-                        <div class="section-title">Sales Summary</div>
+                        <div class="section-title">Sales Summary / สรุปยอดขาย</div>
                         <div class="row"><span>Total Completed Bills</span> <span>${completedBookings.length}</span></div>
                         <div class="row"><span>Total Discounts</span> <span>-${totalDiscounts.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Cash Sales</span> <span>${cashSales.toLocaleString()}.-</span></div>
-                        <div class="row"><span>QR Transfer Sales</span> <span>${qrSales.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Credit Card Sales</span> <span>${creditSales.toLocaleString()}.-</span></div>
-                        <div class="row total-row"><span>NET REVENUE</span> <span>${totalSales.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Cash Sales</span> <span>฿${cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                        <div class="row"><span>QR Transfer Sales</span> <span>฿${qrSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                        <div class="row"><span>Credit Card Sales</span> <span>฿${creditSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                     </div>
 
                     <div class="section">
-                        <div class="section-title">Sales By Category</div>
+                        <div class="section-title">Sales By Category / ยอดขายตามหมวดหมู่</div>
                         ${catHtml}
                     </div>
 
                     <div class="section">
-                        <div class="section-title">Active Registry</div>
+                        <div class="section-title">Active Registry / สถานะปัจจุบัน</div>
                         <div class="row"><span>Active Tables (Unpaid)</span> <span>${activeBookings.length}</span></div>
-                        <div class="row"><span>Pending Active Value</span> <span>${activeUnpaid.toLocaleString()}.-</span></div>
+                        <div class="row"><span>Pending Active Value</span> <span>฿${activeUnpaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                    </div>
+
+                    <!-- Prominent Large Total Sales Summary Figure at Bottom -->
+                    <div class="grand-total-box">
+                        <div class="grand-total-label">สรุปยอดขายสุทธิทั้งหมด / NET REVENUE</div>
+                        <div class="grand-total-val">฿${totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </div>
 
                     <div class="signature">
@@ -607,6 +655,8 @@ export default function POSReportsPanel() {
                 </div>
             `).join('') || '<div class="row" style="padding-left: 10px; font-size: 9px; color: #777;"><i>ไม่มีรายการเบิกจ่ายเงินสด</i></div>';
 
+            const totalSales = (shift.cashSales || 0) + (shift.qrSales || 0) + (shift.creditSales || 0);
+
             // Fallback: generate HTML for system print dialog
             const htmlContent = `
                 <html>
@@ -616,12 +666,36 @@ export default function POSReportsPanel() {
                             body { font-family: monospace; padding: 20px; width: 280px; font-size: 11px; }
                             .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
                             .divider { border-bottom: 1px dashed black; margin: 10px 0; }
-                            .title { text-align: center; font-weight: bold; font-size: 14px; }
+                            .title { text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; width: 100%; display: block; }
+                            .subtitle { text-align: center; font-size: 10px; font-weight: bold; text-transform: uppercase; width: 100%; display: block; margin-top: 2px; }
+                            .grand-total-box {
+                                border: 3px solid black;
+                                background: #f8f8f8;
+                                text-align: center;
+                                padding: 10px 4px;
+                                margin: 15px 0;
+                                box-sizing: border-box;
+                                width: 100%;
+                            }
+                            .grand-total-label {
+                                font-size: 9px;
+                                font-weight: bold;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                                margin-bottom: 4px;
+                                text-align: center;
+                            }
+                            .grand-total-val {
+                                font-size: 24px;
+                                font-weight: 900;
+                                line-height: 1;
+                                text-align: center;
+                            }
                         </style>
                     </head>
                     <body>
                         <div class="title">IN THE HAUS</div>
-                        <div class="title" style="font-size:10px;">HISTORICAL SHIFT REPORT</div>
+                        <div class="subtitle">HISTORICAL SHIFT REPORT / รายงานประวัติกะ</div>
                         <div class="divider"></div>
                         <div class="row"><span>Staff:</span> <span>${shift.staffName}</span></div>
                         <div class="row"><span>Opened:</span> <span>${new Date(shift.openedAt).toLocaleString('th-TH')}</span></div>
@@ -640,6 +714,13 @@ export default function POSReportsPanel() {
                         <div class="row"><span>Actual Cash:</span> <span>${shift.status === 'open' ? '-' : `฿${shift.closedCash?.toLocaleString()}.-`}</span></div>
                         <div class="row"><span>Difference:</span> <span>${shift.status === 'open' ? '-' : (shift.difference >= 0 ? '+' : '') + '฿' + shift.difference?.toLocaleString() + '.-'}</span></div>
                         <div class="divider"></div>
+
+                        <!-- Giant Grand Total Sales Summary Figure at Bottom -->
+                        <div class="grand-total-box">
+                            <div class="grand-total-label">สรุปยอดขายสุทธิทั้งหมด / NET REVENUE</div>
+                            <div class="grand-total-val">฿${totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        </div>
+
                         <script>window.onload = function() { window.print(); }</script>
                     </body>
                 </html>
