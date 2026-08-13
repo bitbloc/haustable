@@ -25,7 +25,7 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                                 Bill #{getShortBookingId(booking)}
                             </h2>
                             <p className="text-[10px] text-[#A3A39E] font-mono">
-                                {new Date(booking.booking_time).toLocaleString('th-TH')}
+                                {booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : '-'}
                             </p>
                         </div>
                     </div>
@@ -106,7 +106,7 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                             {booking.order_items?.map((item, idx) => {
                                 const itemName = item.item_name || item.name || item.menu_items?.name || 'รายการสินค้า';
                                 const itemPrice = Number(item.price_at_time || item.price || 0);
-                                const opts = item.selected_options || [];
+                                const opts = Array.isArray(item.selected_options) ? item.selected_options : [];
                                 return (
                                     <div key={idx} className="flex justify-between items-start text-xs pt-1.5 first:pt-0">
                                         <div className="flex flex-col gap-0.5">
@@ -118,9 +118,11 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                                             </div>
                                             {opts.length > 0 && (
                                                 <div className="pl-6 text-[10px] font-mono text-zinc-500">
-                                                    {opts.map((opt, oIdx) => (
-                                                        <span key={oIdx} className="block">• {opt.name || opt}</span>
-                                                    ))}
+                                                    {opts.map((opt, oIdx) => {
+                                                        const optText = typeof opt === 'string' ? opt : (opt?.name || opt?.label || '');
+                                                        if (!optText) return null;
+                                                        return <span key={oIdx} className="block">• {optText}</span>;
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
@@ -140,20 +142,20 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-4 flex flex-col gap-2 shadow-sm">
                         <div className="flex justify-between items-center text-xs text-[#767673]">
                             <span>Subtotal</span>
-                            <span className="font-mono">฿{((booking.total_amount || 0) + (booking.discount_amount || 0) + (booking.xhaus_discount || 0)).toLocaleString()}</span>
+                            <span className="font-mono">฿{((Number(booking.total_amount) || 0) + (Number(booking.discount_amount) || 0) + (Number(booking.xhaus_discount) || 0)).toLocaleString()}</span>
                         </div>
                         
-                        {(booking.xhaus_discount || 0) > 0 && (
+                        {Number(booking.xhaus_discount || 0) > 0 && (
                             <div className="flex justify-between items-center text-xs text-amber-600">
                                 <span>xHaus Discount</span>
-                                <span className="font-mono">-฿{booking.xhaus_discount.toLocaleString()}</span>
+                                <span className="font-mono">-฿{Number(booking.xhaus_discount).toLocaleString()}</span>
                             </div>
                         )}
                         
-                        {(booking.discount_amount || 0) > 0 && (
+                        {Number(booking.discount_amount || 0) > 0 && (
                             <div className="flex justify-between items-center text-xs text-emerald-600">
                                 <span>Other Discounts</span>
-                                <span className="font-mono">-฿{booking.discount_amount.toLocaleString()}</span>
+                                <span className="font-mono">-฿{Number(booking.discount_amount).toLocaleString()}</span>
                             </div>
                         )}
 
@@ -162,7 +164,7 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                         <div className="flex justify-between items-center">
                             <span className="font-bold text-[#1A1A1A] text-sm">Net Total</span>
                             <span className="font-mono font-black text-[#ff0000] text-lg">
-                                ฿{booking.total_amount?.toLocaleString()}
+                                ฿{(Number(booking.total_amount) || 0).toLocaleString()}
                             </span>
                         </div>
 
