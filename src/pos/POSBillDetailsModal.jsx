@@ -46,54 +46,60 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                             </span>
                         </div>
 
-                        {booking.profiles ? (
-                            <div className="flex flex-col gap-1.5 pt-1 border-t border-[#ECECE9]">
-                                <div className="flex items-center justify-between">
+                        {(() => {
+                            const profileObj = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
+                            if (profileObj) {
+                                return (
+                                    <div className="flex flex-col gap-1.5 pt-1 border-t border-[#ECECE9]">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-600 text-white">
+                                                    สมาชิก MEMBER
+                                                </span>
+                                                <span className="font-bold text-[#1A1A1A] text-sm">
+                                                    {profileObj.display_name || profileObj.nickname || 'สมาชิก'}
+                                                </span>
+                                            </div>
+                                            {profileObj.phone_number && (
+                                                <span className="font-mono text-xs text-[#767673]">
+                                                    {profileObj.phone_number}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                            {profileObj.current_tier && (
+                                                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-[#1A1A1A] text-white">
+                                                    {profileObj.current_tier}
+                                                </span>
+                                            )}
+                                            {Number(booking.xhaus_earned || 0) > 0 && (
+                                                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                    สะสม +{Number(booking.xhaus_earned).toFixed(2)} xhaus
+                                                </span>
+                                            )}
+                                            {Number(booking.xhaus_redeemed || 0) > 0 && (
+                                                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold border bg-amber-50 text-amber-700 border-amber-200">
+                                                    ตัดแต้ม -{Number(booking.xhaus_redeemed).toFixed(2)} xhaus {Number(booking.xhaus_discount || 0) > 0 && `(-฿${Number(booking.xhaus_discount).toLocaleString()})`}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="flex items-center justify-between pt-1 border-t border-[#ECECE9]">
                                     <div className="flex items-center gap-1.5">
-                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-600 text-white">
-                                            สมาชิก MEMBER
+                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-gray-200 text-gray-700 border border-gray-300">
+                                            ทั่วไป NON-MEMBER
                                         </span>
-                                        <span className="font-bold text-[#1A1A1A] text-sm">
-                                            {booking.profiles.display_name || booking.profiles.nickname || 'สมาชิก'}
+                                        <span className="font-bold text-[#1A1A1A] text-xs">
+                                            {booking.pickup_contact_name || booking.customer_name || 'ลูกค้าทั่วไป (Walk-in)'}
                                         </span>
                                     </div>
-                                    {booking.profiles.phone_number && (
-                                        <span className="font-mono text-xs text-[#767673]">
-                                            {booking.profiles.phone_number}
-                                        </span>
-                                    )}
+                                    <span className="text-[10px] font-mono text-[#767673] italic">ไม่ได้ผูกสมาชิก</span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                                    {booking.profiles.current_tier && (
-                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-[#1A1A1A] text-white">
-                                            {booking.profiles.current_tier}
-                                        </span>
-                                    )}
-                                    {Number(booking.xhaus_earned || 0) > 0 && (
-                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                            สะสม +{Number(booking.xhaus_earned).toFixed(2)} xhaus
-                                        </span>
-                                    )}
-                                    {Number(booking.xhaus_redeemed || 0) > 0 && (
-                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                                            ตัดแต้ม -{Number(booking.xhaus_redeemed).toFixed(2)} xhaus {Number(booking.xhaus_discount || 0) > 0 && `(-฿${Number(booking.xhaus_discount).toLocaleString()})`}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-between pt-1 border-t border-[#ECECE9]">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-gray-200 text-gray-700 border border-gray-300">
-                                        ทั่วไป NON-MEMBER
-                                    </span>
-                                    <span className="font-bold text-[#1A1A1A] text-xs">
-                                        {booking.pickup_contact_name || booking.customer_name || 'ลูกค้าทั่วไป (Walk-in)'}
-                                    </span>
-                                </div>
-                                <span className="text-[10px] font-mono text-[#767673] italic">ไม่ได้ผูกสมาชิก</span>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     {/* Order Items */}

@@ -1111,10 +1111,11 @@ iframe.contentDocument.write(htmlContent);
                                     </thead>
                                     <tbody className="divide-y divide-[#ECECE9]">
                                         {filteredForBreakdown.map((b) => {
-                                            const timeStr = new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                            const timeStr = b.booking_time ? new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
                                             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
-                                            const isMember = !!(b.profiles || b.user_id);
-                                            const memberName = b.profiles?.display_name || b.profiles?.nickname || b.customer_name;
+                                            const profileObj = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
+                                            const isMember = !!(profileObj || b.user_id);
+                                            const memberName = profileObj?.display_name || profileObj?.nickname || (b.customer_name && !defaultWalkIns.includes(b.customer_name.toLowerCase().trim()) ? b.customer_name : null);
                                             const guestName = (b.pickup_contact_name && !defaultWalkIns.includes(b.pickup_contact_name.toLowerCase().trim())) ? b.pickup_contact_name : 'ลูกค้าทั่วไป';
 
                                             return (
@@ -1141,9 +1142,9 @@ iframe.contentDocument.write(htmlContent);
                                                                         {memberName || 'สมาชิก'}
                                                                     </span>
                                                                 </div>
-                                                                {b.profiles?.phone_number && (
+                                                                {profileObj?.phone_number && (
                                                                     <span className="text-[9px] font-mono text-[#767673] pl-0.5">
-                                                                        {b.profiles.phone_number}
+                                                                        {profileObj.phone_number}
                                                                     </span>
                                                                 )}
                                                             </div>

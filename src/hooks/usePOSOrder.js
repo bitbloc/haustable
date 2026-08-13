@@ -172,7 +172,7 @@ export function usePOSOrder() {
         }
     };
 
-    const createWalkInPickup = async (note) => {
+    const createWalkInPickup = async (note = 'Walk-in Pick-up', userId = null) => {
         if (!isOnline()) {
             console.log('[Offline Mode] Creating offline walk-in pickup');
             const tempId = `local_pickup_${Date.now()}`;
@@ -185,7 +185,8 @@ export function usePOSOrder() {
                 pax: 1,
                 customer_note: note,
                 pickup_contact_name: note,
-                staff_remark: 'Walk-in Pick-up (Offline)'
+                staff_remark: 'Walk-in Pick-up (Offline)',
+                user_id: userId || null
             };
 
             const bookings = posCache.getBookings();
@@ -196,7 +197,8 @@ export function usePOSOrder() {
                 tempBookingId: tempId,
                 customerNote: note,
                 status: 'seated',
-                bookingTime: mockBooking.booking_time
+                bookingTime: mockBooking.booking_time,
+                userId: userId || null
             });
 
             toast.warning('⚠️ ออฟไลน์: เปิดบิลรับกลับบ้านในเครื่องแล้ว');
@@ -214,9 +216,10 @@ export function usePOSOrder() {
                     pax: 1,
                     customer_note: note,
                     pickup_contact_name: note,
-                    staff_remark: 'Walk-in Pick-up'
+                    staff_remark: 'Walk-in Pick-up',
+                    user_id: userId || null
                 })
-                .select('*')
+                .select('*, profiles(*)')
                 .single();
 
             if (error) throw error;

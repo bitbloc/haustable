@@ -1664,9 +1664,10 @@ export default function POSDashboard() {
 
         // 1. Create walk-in if no active booking
         if (!bookingId) {
+            const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
             const newBooking = selectedTable 
                 ? await createWalkIn(selectedTable)
-                : await createWalkInPickup('Walk-in Customer');
+                : await createWalkInPickup('Walk-in Customer', memberIdToPass);
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
