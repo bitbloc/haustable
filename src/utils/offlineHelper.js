@@ -336,7 +336,8 @@ export async function syncOfflineQueue(isManual = false) {
                             p_booking_id: bookingId,
                             p_xhaus_earned: xhausEarned || 0,
                             p_xhaus_redeemed: xhausRedeemed || 0,
-                            p_xhaus_discount: xhausDiscount || 0
+                            p_xhaus_discount: xhausDiscount || 0,
+                            p_user_id: profileId || null
                         });
                         if (rpcErr) throw rpcErr;
                     } catch (err) {

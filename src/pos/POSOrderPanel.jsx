@@ -485,7 +485,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const total = Math.ceil(Math.max(0, netBeforeTax + tax - depositPaid));
     
     // xhaus points earned
-    const pointsMultiplier = attachedMemberCrm && attachedMemberCrm.multiplier ? parseFloat(attachedMemberCrm.multiplier) : 1.0;
+    const currentMemberForPoints = attachedMemberCrm || booking?.profiles;
+    const pointsMultiplier = currentMemberForPoints?.multiplier !== undefined 
+        ? parseFloat(currentMemberForPoints.multiplier) 
+        : (currentMemberForPoints?.current_tier === 'Inner Haus' ? 1.50 : (currentMemberForPoints?.current_tier === 'Haus People' ? 1.25 : 1.00));
     const finalMultiplier = isNaN(pointsMultiplier) ? 1.0 : pointsMultiplier;
     const pointsEarned = Math.floor((total / 100) * finalMultiplier * 100) / 100;
     

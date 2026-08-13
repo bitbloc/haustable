@@ -196,7 +196,16 @@ export default function POSDashboard() {
 
     const handleSelectCrmCustomer = async (member) => {
         if (!member?.id) return;
-        setAttachedMemberCrm(member);
+        let fullMember = member;
+        try {
+            const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: member.id });
+            if (!error && data && data.length > 0) {
+                fullMember = { ...member, ...data[0] };
+            }
+        } catch (e) {
+            console.warn("Failed to fetch member tier details on select:", e);
+        }
+        setAttachedMemberCrm(fullMember);
         let bookingId = activeBooking?.id;
 
         if (!bookingId) {
@@ -2315,7 +2324,14 @@ export default function POSDashboard() {
                             onMergeBill={handleOpenMergeModal}
                             onAttachCustomer={async (member) => {
                                 if (!member?.id) return;
-                                setAttachedMemberCrm(member);
+                                let fullMember = member;
+                                try {
+                                    const { data, error } = await supabase.rpc('get_member_tier_details', { p_user_id: member.id });
+                                    if (!error && data && data.length > 0) {
+                                        fullMember = { ...member, ...data[0] };
+                                    }
+                                } catch (e) {}
+                                setAttachedMemberCrm(fullMember);
                                 let bookingId = activeBooking?.id;
 
                                 if (!bookingId) {

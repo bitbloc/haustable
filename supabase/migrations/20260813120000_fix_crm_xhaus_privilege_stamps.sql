@@ -1,8 +1,13 @@
--- Migration: Fix CRM xhaus Points, Tier Privilege Discounts, and 10 Free 1 Drink Stamps
+-- Migration: Complete CRM System, Tier Privileges, Drink Stamps & Performance Indexes
 -- Date: 2026-08-13
--- Description: Enhances get_member_tier_details, process_checkout_xhaus, process_drink_stamps, and sets beverage category eligibility.
+-- Description: Consolidated CRM update script including performance indexes, get_member_tier_details, process_checkout_xhaus, process_drink_stamps, and beverage eligibility.
 
--- 1. Enhanced get_member_tier_details function with discount_rate column
+-- 1. Performance Indexes for CRM & Rewards Queries
+CREATE INDEX IF NOT EXISTS idx_bookings_user_status_created ON public.bookings(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_order_items_booking_id ON public.order_items(booking_id);
+CREATE INDEX IF NOT EXISTS idx_xhaus_rewards_active ON public.xhaus_rewards(is_active, claim_code);
+
+-- 2. Enhanced get_member_tier_details function with discount_rate column
 DROP FUNCTION IF EXISTS public.get_member_tier_details(UUID);
 DROP FUNCTION IF EXISTS public.get_member_tier_details;
 
@@ -64,7 +69,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Enhanced process_checkout_xhaus function accepting optional p_user_id
+-- 3. Enhanced process_checkout_xhaus function accepting optional p_user_id
 DROP FUNCTION IF EXISTS public.process_checkout_xhaus(UUID, NUMERIC, NUMERIC, NUMERIC, UUID);
 DROP FUNCTION IF EXISTS public.process_checkout_xhaus(UUID, NUMERIC, NUMERIC, NUMERIC);
 DROP FUNCTION IF EXISTS public.process_checkout_xhaus;
@@ -114,7 +119,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Enhanced process_drink_stamps atomic function
+-- 4. Enhanced process_drink_stamps atomic function
 DROP FUNCTION IF EXISTS public.process_drink_stamps(UUID, INT, INT);
 DROP FUNCTION IF EXISTS public.process_drink_stamps;
 
@@ -158,7 +163,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Mark all beverage categories & menu items eligible for drink stamps
+-- 5. Mark all beverage categories & menu items eligible for drink stamps
 UPDATE public.menu_categories 
 SET is_drink_stamp_eligible = true 
 WHERE LOWER(name) LIKE '%coffee%' 
