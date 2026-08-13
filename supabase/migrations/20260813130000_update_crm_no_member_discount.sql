@@ -31,7 +31,11 @@ BEGIN
     FROM public.bookings
     WHERE user_id = p_user_id AND status = 'completed' AND created_at >= NOW() - INTERVAL '13 months';
 
-    -- Settle tier and privileges: Point collection model only, 0% bill percentage discount
+    -- Settle tier and privileges: Point collection model only (0% bill percentage discount)
+    -- Base Earning Rate: 100 THB spent = 1 xhaus * tier multiplier
+    --   - Inner Haus  (>= 12,000 THB/yr): Multiplier 1.50x (100 THB = 1.50 xhaus)
+    --   - Haus People (>= 4,000 THB/yr) : Multiplier 1.25x (100 THB = 1.25 xhaus)
+    --   - Haus Common (< 4,000 THB/yr)  : Multiplier 1.00x (100 THB = 1.00 xhaus)
     IF v_spent_12m >= 12000.00 THEN
         v_tier := 'Inner Haus';
         v_mult := 1.50;

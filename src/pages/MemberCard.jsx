@@ -798,22 +798,22 @@ export default function MemberCard() {
                                             <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus Common' ? 'bg-[#F2F2EC] border-[#B8B8B2] font-bold text-neutral-900' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
                                                 <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 01</span>
                                                 <span className="block text-[10px] font-bold leading-tight">Common</span>
-                                                <span className="block text-[7px] font-mono mt-0.5">1.0x Rate</span>
+                                                <span className="block text-[7px] font-mono mt-0.5">1.0x (100฿ = 1 xhaus)</span>
                                             </div>
                                             <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus People' ? 'bg-[#2E3138] border-[#A0AEC0] text-slate-100 font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
                                                 <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 02</span>
                                                 <span className="block text-[10px] font-bold leading-tight">People</span>
-                                                <span className="block text-[7px] font-mono mt-0.5">1.25x Rate</span>
+                                                <span className="block text-[7px] font-mono mt-0.5">1.25x (100฿ = 1.25 xhaus)</span>
                                             </div>
                                             <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Inner Haus' ? 'bg-[#12141a] border-[#D4AF37] text-white font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
                                                 <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 03</span>
                                                 <span className="block text-[10px] font-bold leading-tight">Inner Haus</span>
-                                                <span className="block text-[7px] font-mono mt-0.5">1.5x Rate</span>
+                                                <span className="block text-[7px] font-mono mt-0.5">1.5x (100฿ = 1.5 xhaus)</span>
                                             </div>
                                         </div>
                                         <div className="text-[9px] text-[var(--color-hallmark-ink-muted)] space-y-1 border-t border-[var(--color-hallmark-rule)] pt-2.5 text-center">
                                             <p>ยอดใช้จ่ายสะสมย้อนหลัง 12 เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m).toLocaleString()} บาท</strong></p>
-                                            <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-tight">* ร้านเน้นสะสมแต้มตามยอดใช้จ่ายและสิทธิ์แลกรางวัล (ไม่มีส่วนลดเปอร์เซ็นต์ท้ายบิล)</p>
+                                            <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-tight">* ทุก 100 บาท รับ 1 xhaus ขึ้นตามระดับสมาชิก (ไม่มีส่วนลดเปอร์เซ็นต์ท้ายบิล)</p>
                                         </div>
                                     </div>
 

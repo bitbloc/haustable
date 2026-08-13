@@ -431,7 +431,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const tierDiscountRate = 0.00; // 0% member bill discount
     const memberDiscount = 0;
     const discountLabel = '';
-    const estimatedPointsEarned = currentMemberForDisc ? Math.floor(subtotal * tierMultiplier) : 0;
+    const estimatedPointsEarned = currentMemberForDisc ? (Math.floor((subtotal / 100) * tierMultiplier * 100) / 100) : 0;
         
     // 2. Promotion Code Discount Calculation
     const getPromoDiscount = () => {
@@ -832,7 +832,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 <span>+ EARNED POINTS (สะสมแต้ม)</span>
                                 <span className="text-[8px] bg-emerald-100 px-1 py-0.2 rounded text-emerald-800 font-mono">x{tierMultiplier}</span>
                             </span>
-                            <span className="font-mono">+{estimatedPointsEarned} pts</span>
+                            <span className="font-mono">+{estimatedPointsEarned} xhaus</span>
                         </div>
                     )}
 
@@ -854,7 +854,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                             {xhausDiscount > 0 && (
                                 <div className="flex justify-between items-center text-amber-700 font-bold py-0.5">
-                                    <span>xhaus REDEEMED (ตัดแต้ม -{xhausToRedeem || Math.ceil(xhausDiscount)} pts)</span>
+                                    <span>xhaus REDEEMED (ตัดแต้ม -{xhausToRedeem || Math.ceil(xhausDiscount)} xhaus)</span>
                                     <span>-฿{Math.ceil(xhausDiscount).toLocaleString()}</span>
                                 </div>
                             )}

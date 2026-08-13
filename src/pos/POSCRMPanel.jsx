@@ -369,12 +369,12 @@ export default function POSCRMPanel() {
                                                     <div className="flex flex-wrap gap-1 mt-1 font-mono text-[8px] font-bold">
                                                         {Number(h.xhaus_earned || 0) > 0 && (
                                                             <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                                +{Number(h.xhaus_earned)} pts
+                                                                +{Number(h.xhaus_earned)} xhaus
                                                             </span>
                                                         )}
                                                         {Number(h.xhaus_redeemed || 0) > 0 && (
                                                             <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                                                                -{Number(h.xhaus_redeemed)} pts
+                                                                -{Number(h.xhaus_redeemed)} xhaus
                                                             </span>
                                                         )}
                                                         {Number(h.xhaus_discount || 0) > 0 && (

@@ -50,12 +50,12 @@ export default function POSBillDetailsModal({ booking, onClose }) {
                                 )}
                                 {(booking.xhaus_earned || 0) > 0 && (
                                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                        EARNED +{booking.xhaus_earned} PTS
+                                        EARNED +{booking.xhaus_earned} XHAUS
                                     </span>
                                 )}
                                 {(booking.xhaus_redeemed || 0) > 0 && (
                                     <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border bg-amber-50 text-amber-700 border-amber-200">
-                                        ตัดแต้ม USED -{booking.xhaus_redeemed} PTS {booking.xhaus_discount > 0 && `(-฿${booking.xhaus_discount})`}
+                                        ตัดแต้ม USED -{booking.xhaus_redeemed} XHAUS {booking.xhaus_discount > 0 && `(-฿${booking.xhaus_discount})`}
                                     </span>
                                 )}
                             </div>

@@ -1018,13 +1018,13 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
         encoder.line(divider);
         if (earned > 0) {
-            encoder.line(formatTwoCols('ได้รับ xhaus ครั้งนี้:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+            encoder.line(formatTwoCols('ได้รับ xhaus ครั้งนี้:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus`, maxCols));
         }
         if (redeemed > 0) {
             const discStr = xhausDisc > 0 ? ` (-฿${xhausDisc.toLocaleString()})` : '';
-            encoder.line(formatTwoCols('ตัดยอดแต้มที่ใช้ไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts${discStr}`, maxCols));
+            encoder.line(formatTwoCols('ตัดยอดแต้มที่ใช้ไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus${discStr}`, maxCols));
         }
-        encoder.line(formatTwoCols('แต้มสะสมคงเหลือ:', `${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} pts`, maxCols));
+        encoder.line(formatTwoCols('แต้มสะสมคงเหลือ:', `${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus`, maxCols));
         
         encoder.line(divider);
         encoder.line(formatTwoCols('แสตมป์เครื่องดื่ม:', `${stamps}/10 แก้ว`, maxCols));
