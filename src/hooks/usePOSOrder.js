@@ -43,7 +43,7 @@ export function usePOSOrder() {
         }
     }, []);
 
-    const createWalkIn = async (table = null, customPax = null) => {
+    const createWalkIn = async (table = null, customPax = null, userId = null) => {
         const tableId = table ? table.id : null;
         const capacity = customPax ? parseInt(customPax) : (table ? (table.capacity || 2) : 2);
 
@@ -57,6 +57,7 @@ export function usePOSOrder() {
                 booking_type: 'walk_in',
                 booking_time: new Date().toISOString(),
                 pax: capacity,
+                user_id: userId || null,
                 staff_remark: 'Walk-in Guest (Offline)',
                 tables_layout: table || null
             };
@@ -71,6 +72,7 @@ export function usePOSOrder() {
                 tableId: tableId,
                 tempBookingId: tempId,
                 pax: mockBooking.pax,
+                user_id: userId || null,
                 status: 'seated',
                 bookingTime: mockBooking.booking_time,
                 staffRemark: mockBooking.staff_remark
@@ -90,9 +92,10 @@ export function usePOSOrder() {
                     source: 'pos',
                     booking_time: new Date().toISOString(),
                     pax: capacity,
+                    user_id: userId || null,
                     staff_remark: 'Walk-in Guest'
                 })
-                .select('*, tables_layout(*)')
+                .select('*, tables_layout(*), profiles(*)')
                 .single();
 
             if (error) throw error;

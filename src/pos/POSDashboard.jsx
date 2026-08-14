@@ -210,10 +210,10 @@ export default function POSDashboard() {
 
         if (!bookingId) {
             if (selectedTable) {
-                const newBooking = await createWalkIn(selectedTable);
+                const newBooking = await createWalkIn(selectedTable, null, member.id);
                 if (newBooking) {
                     bookingId = newBooking.id;
-                    setActiveBooking(newBooking);
+                    setActiveBooking({ ...newBooking, user_id: member.id, profiles: fullMember });
                     await attachCustomerToBooking(bookingId, member.id);
                 }
             } else {
@@ -1669,7 +1669,7 @@ export default function POSDashboard() {
         if (!bookingId) {
             const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
             const newBooking = selectedTable 
-                ? await createWalkIn(selectedTable)
+                ? await createWalkIn(selectedTable, null, memberIdToPass)
                 : await createWalkInPickup('Walk-in Customer', memberIdToPass);
             if (!newBooking) return;
             bookingId = newBooking.id;
@@ -2335,11 +2335,11 @@ export default function POSDashboard() {
 
                                 if (!bookingId) {
                                     if (selectedTable) {
-                                        const newBooking = await createWalkIn(selectedTable);
+                                        const newBooking = await createWalkIn(selectedTable, null, member.id);
                                         if (newBooking) {
                                             bookingId = newBooking.id;
-                                            setActiveBooking({ ...newBooking, user_id: member.id, profiles: member });
-                                            setAttachedMemberCrm(member);
+                                            setActiveBooking({ ...newBooking, user_id: member.id, profiles: fullMember });
+                                            setAttachedMemberCrm(fullMember);
                                             await attachCustomerToBooking(bookingId, member.id);
                                         }
                                     } else {

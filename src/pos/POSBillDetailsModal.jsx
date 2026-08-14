@@ -150,7 +150,21 @@ function POSBillDetailsContent({ booking, onClose }) {
                                 const menuItemObj = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
                                 const itemName = item.item_name || item.name || menuItemObj?.name || 'รายการสินค้า';
                                 const itemPrice = Number(item.price_at_time || item.price || menuItemObj?.price || 0);
-                                const opts = Array.isArray(item.selected_options) ? item.selected_options : [];
+                                const rawOpts = item.selected_options;
+                                let opts = [];
+                                if (Array.isArray(rawOpts)) {
+                                    opts = rawOpts;
+                                } else if (typeof rawOpts === 'string') {
+                                    try {
+                                        const parsed = JSON.parse(rawOpts);
+                                        opts = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? Object.values(parsed) : [rawOpts]);
+                                    } catch (e) {
+                                        opts = rawOpts ? [rawOpts] : [];
+                                    }
+                                } else if (rawOpts && typeof rawOpts === 'object') {
+                                    opts = Object.values(rawOpts);
+                                }
+
                                 return (
                                     <div key={idx} className="flex justify-between items-start text-xs pt-1.5 first:pt-0">
                                         <div className="flex flex-col gap-0.5">
@@ -163,8 +177,13 @@ function POSBillDetailsContent({ booking, onClose }) {
                                             {opts.length > 0 && (
                                                 <div className="pl-6 text-[10px] font-mono text-zinc-500">
                                                     {opts.map((opt, oIdx) => {
-                                                        const optText = typeof opt === 'string' ? opt : (opt?.name || opt?.label || '');
-                                                        if (!optText) return null;
+                                                        let optText = '';
+                                                        if (typeof opt === 'string' || typeof opt === 'number') {
+                                                            optText = String(opt);
+                                                        } else if (opt && typeof opt === 'object') {
+                                                            optText = opt.name || opt.label || opt.choice_name || opt.value || '';
+                                                        }
+                                                        if (!optText || optText === '{}' || optText === '[]') return null;
                                                         return <span key={oIdx} className="block">• {optText}</span>;
                                                     })}
                                                 </div>
