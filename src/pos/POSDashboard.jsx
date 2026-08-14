@@ -1133,12 +1133,20 @@ export default function POSDashboard() {
 
         // 1. Create walk-in if no active booking
         if (!bookingId) {
+            const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
             const newBooking = selectedTable 
-                ? await createWalkIn(selectedTable)
-                : await createWalkInPickup('Walk-in Customer');
+                ? await createWalkIn(selectedTable, null, memberIdToPass)
+                : await createWalkInPickup('Walk-in Customer', memberIdToPass);
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
+        }
+
+        // Attach CRM member if attached in local draft state
+        const memberToAttach = attachedMemberCrm || activeBooking?.profiles;
+        if (memberToAttach?.id && bookingId && (!currentBooking?.user_id || currentBooking.user_id !== memberToAttach.id)) {
+            await attachCustomerToBooking(bookingId, memberToAttach.id);
+            currentBooking = { ...currentBooking, user_id: memberToAttach.id, profiles: memberToAttach };
         }
 
         // 2. Submit items
@@ -2256,7 +2264,12 @@ export default function POSDashboard() {
                             <POSPickupGrid onSelectOrder={handleSelectPickupOrder} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
                         )}
                         {view === 'crm' && (
-                            <POSCRMPanel />
+                            <POSCRMPanel 
+                                onAttachToOrder={(member) => {
+                                    handleSelectCrmCustomer(member);
+                                    setView('menu');
+                                }}
+                            />
                         )}
                         {view === 'reports' && (
                             <POSReportsPanel />

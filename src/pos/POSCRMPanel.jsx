@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Search, Shield, User, Phone, Clock, RefreshCw, FileText } from 'lucide-react';
+import { Search, Shield, User, Phone, Clock, RefreshCw, FileText, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getShortBookingId } from '../utils/printerHelper';
 import POSBillDetailsModal from './POSBillDetailsModal';
 import { posCache } from '../utils/offlineHelper';
 
-export default function POSCRMPanel() {
+export default function POSCRMPanel({ onAttachToOrder }) {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -366,6 +366,16 @@ export default function POSCRMPanel() {
                                         </div>
                                     );
                                 })()}
+
+                                {onAttachToOrder && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onAttachToOrder(selectedMember)}
+                                        className="w-full mt-3 bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                                    >
+                                        <ShoppingBag size={14} className="text-[oklch(52%_0.16_28)]" /> ผูกสมาชิก & สั่งซื้อ
+                                    </button>
+                                )}
                             </div>
 
                             {/* Visitation Log history */}
