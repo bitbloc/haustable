@@ -28,7 +28,7 @@ export default function SlipModal({ booking, type, onClose }) {
     // Else, default to billing.
     const getInitialTab = () => {
         if (type === 'kitchen') return 'kitchen'
-        if (booking.status === 'completed') return 'receipt'
+        if (booking?.status === 'completed') return 'receipt'
         return 'billing'
     }
     const [activeTab, setActiveTab] = useState(getInitialTab)
@@ -107,8 +107,8 @@ export default function SlipModal({ booking, type, onClose }) {
     // Determine initial payment method:
     // Check booking.payment_slip_url or booking.staff_remark
     const getInitialPaymentMethod = () => {
-        if (booking.payment_slip_url) return 'qr'
-        const remark = (booking.staff_remark || '').toLowerCase()
+        if (booking?.payment_slip_url) return 'qr'
+        const remark = (booking?.staff_remark || '').toLowerCase()
         if (remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'qr'
         if (remark.includes('cash') || remark.includes('เงินสด')) return 'cash'
         return 'cash'

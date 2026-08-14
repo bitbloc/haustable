@@ -1,6 +1,7 @@
-import React from 'react';
-import { FileText, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, X, Loader2 } from 'lucide-react';
 import { getShortBookingId } from '../utils/printerHelper';
+import { supabase } from '../lib/supabaseClient';
 
 const getBookingPaymentMethod = (b) => {
     if (!b) return 'CASH';
@@ -46,14 +47,53 @@ class ModalErrorBoundary extends React.Component {
     }
 }
 
-function POSBillDetailsContent({ booking, onClose }) {
-    if (!booking) return null;
+function POSBillDetailsContent({ booking: initialBooking, onClose }) {
+    if (!initialBooking) return null;
+
+    const [booking, setBooking] = useState(initialBooking);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (initialBooking?.id && (!initialBooking.order_items || initialBooking.order_items.length === 0 || !initialBooking.profiles)) {
+            setLoading(true);
+            supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
+                    tables_layout (table_name),
+                    order_items (
+                        id,
+                        quantity,
+                        price_at_time,
+                        selected_options,
+                        menu_item_id,
+                        menu_items (
+                            name,
+                            category_id
+                        )
+                    ),
+                    promotion_codes (code)
+                `)
+                .eq('id', initialBooking.id)
+                .maybeSingle()
+                .then(({ data, error }) => {
+                    if (!error && data) {
+                        setBooking(data);
+                    }
+                    setLoading(false);
+                })
+                .catch(() => setLoading(false));
+        } else {
+            setBooking(initialBooking);
+        }
+    }, [initialBooking]);
 
     const shortId = getShortBookingId(booking);
     const bookingTimeStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : '-';
     const profileObj = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
     const tableObj = Array.isArray(booking.tables_layout) ? booking.tables_layout[0] : booking.tables_layout;
-    const tableName = tableObj?.table_name || 'PICK';
+    const tableName = tableObj?.table_name || booking.table_name || (booking.booking_type === 'pickup' ? 'PICK' : '-');
 
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
