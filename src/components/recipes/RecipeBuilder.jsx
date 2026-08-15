@@ -854,29 +854,45 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             }));
 
             if (parentType === 'menu') {
-                // USE RPC (Atomic & Bypasses RLS)
-                const { data: rpcData, error: rpcError } = await supabase.rpc('save_menu_recipe', {
-                    p_menu_id: parentId,
-                    p_ingredients: payloadItems
-                });
+                // Try RPC first for atomic save, fall back to direct table update if RPC is missing
+                let rpcSucceeded = false;
+                try {
+                    const { data: rpcData, error: rpcError } = await supabase.rpc('save_menu_recipe', {
+                        p_menu_id: parentId,
+                        p_ingredients: payloadItems
+                    });
 
-                if (rpcError) throw rpcError;
-                if (!rpcData.success) throw new Error(rpcData.error || 'RPC reported failure');
+                    if (!rpcError && rpcData && rpcData.success !== false) {
+                        rpcSucceeded = true;
+                    }
+                } catch (rpcEx) {
+                    console.warn('RPC save_menu_recipe not available, falling back to direct table sync:', rpcEx);
+                }
 
-                // Also Update Price directly to menu_items (RPC might not handle it? Check RPC but safer to update here or ensure RPC does it)
-                // Let's update price manually to be sure.
-                await supabase.from('menu_items').update({ price: currentPrice }).eq('id', parentId);
+                if (!rpcSucceeded) {
+                    const queryField = 'parent_menu_item_id';
+                    const { error: delError } = await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
+                    if (delError) throw delError;
 
+                    if (payloadItems.length > 0) {
+                        const payloads = payloadItems.map(p => ({
+                            [queryField]: parentId,
+                            ...p
+                        }));
+                        const { error: insError } = await supabase.from('recipe_ingredients').insert(payloads);
+                        if (insError) throw insError;
+                    }
+                }
 
-
-                
-                // console.log("RPC Success:", rpcData);
-
+                // Update Price directly to menu_items if currentPrice is valid
+                if (currentPrice !== undefined && currentPrice !== null && !isNaN(parseFloat(currentPrice))) {
+                    await supabase.from('menu_items').update({ price: parseFloat(currentPrice) }).eq('id', parentId);
+                }
             } else {
-                // MANUAL FALLBACK (For Stock Parent - Base Recipe)
-                // If the user hasn't run the generic RLS fix, this might still fail.
+                // MANUAL (For Stock Parent - Base Recipe)
                 const queryField = 'parent_stock_item_id';
-                await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
+                const { error: delError } = await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
+                if (delError) throw delError;
                 
                 const payloads = payloadItems.map(p => ({
                     [queryField]: parentId,
@@ -884,8 +900,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 }));
 
                 if (payloads.length > 0) {
-                     const { error } = await supabase.from('recipe_ingredients').insert(payloads);
-                     if (error) throw error;
+                     const { error: insError } = await supabase.from('recipe_ingredients').insert(payloads);
+                     if (insError) throw insError;
                 }
             }
 

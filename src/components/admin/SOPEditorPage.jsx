@@ -355,7 +355,7 @@ function ImportModal({ onClose, onImport }) {
 }
 
 // ── Main Editor Page (Dieter Rams style layout) ──
-export default function SOPEditorPage() {
+export default function SOPEditorPage({ isEmbedded = false }) {
     const navigate = useNavigate();
     const { 
         recipes, 
@@ -540,21 +540,23 @@ export default function SOPEditorPage() {
     // ── LIST VIEW ──
     if (!editing) {
         return (
-            <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-                {/* Minimalist Subheader */}
-                <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
-                    <div className="p-4 flex justify-between items-center max-w-4xl mx-auto">
+            <div className={`${isEmbedded ? '' : 'min-h-screen bg-gray-50'} font-sans text-gray-900`}>
+                {/* Header / Subheader */}
+                <div className={`${isEmbedded ? 'bg-transparent mb-4' : 'sticky top-0 z-30 bg-white border-b border-gray-200'}`}>
+                    <div className={`p-3 flex justify-between items-center ${isEmbedded ? '' : 'max-w-4xl mx-auto'}`}>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded text-gray-500"><ArrowLeft className="w-5 h-5" /></button>
+                            {!isEmbedded && (
+                                <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded text-gray-500"><ArrowLeft className="w-5 h-5" /></button>
+                            )}
                             <div>
-                                <h1 className="text-base font-bold font-mono uppercase tracking-wider">SOP Recipes</h1>
-                                <p className="text-xs text-gray-500 font-mono">Management system for Bar standard procedures</p>
+                                <h1 className="text-base font-bold font-mono uppercase tracking-wider text-[oklch(18%_0.012_28)]">SOP Recipes</h1>
+                                <p className="text-xs text-[oklch(55%_0.010_28)] font-mono">สูตรมาตรฐานและคู่มือการปฏิบัติงาน (Kitchen & Bar)</p>
                             </div>
                         </div>
-                        <div className="flex gap-1">
-                            <button onClick={() => setShowCategoryManager(true)} className="p-2 hover:bg-gray-100 rounded text-gray-500" title="หมวดหมู่"><Settings size={18} /></button>
-                            <button onClick={refresh} className="p-2 hover:bg-gray-100 rounded text-gray-500"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button>
-                            <button onClick={handleNew} className="bg-black text-white px-3 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 hover:bg-gray-800 tracking-wider">
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowCategoryManager(true)} className="p-2 hover:bg-gray-100 rounded text-gray-500 border border-gray-200 bg-white" title="จัดการหมวดหมู่"><Settings size={16} /></button>
+                            <button onClick={refresh} className="p-2 hover:bg-gray-100 rounded text-gray-500 border border-gray-200 bg-white"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
+                            <button onClick={handleNew} className="bg-[oklch(18%_0.012_28)] text-white px-3 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 hover:bg-black tracking-wider shadow-sm">
                                 <Plus size={14} /> NEW SOP
                             </button>
                         </div>
@@ -562,7 +564,7 @@ export default function SOPEditorPage() {
 
                     {/* Category tabs */}
                     <div 
-                        className="flex overflow-x-auto px-4 pb-0 gap-4 border-t border-gray-200 max-w-4xl mx-auto no-scrollbar"
+                        className={`flex overflow-x-auto px-3 pb-0 gap-3 border-t border-[oklch(85%_0.012_28)] ${isEmbedded ? '' : 'max-w-4xl mx-auto'} no-scrollbar`}
                         onWheel={e => {
                             if (e.deltaY !== 0) {
                                 e.preventDefault();
@@ -570,16 +572,16 @@ export default function SOPEditorPage() {
                             }
                         }}
                     >
-                        <button onClick={() => setActiveCategory(null)} className={`pb-2.5 pt-2.5 whitespace-nowrap font-mono font-bold text-xs border-b-2 ${!activeCategory ? 'border-black text-black' : 'border-transparent text-gray-400'}`}>[ทั้งหมด]</button>
+                        <button onClick={() => setActiveCategory(null)} className={`pb-2 pt-2 whitespace-nowrap font-mono font-bold text-xs border-b-2 transition-colors ${!activeCategory ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>[ทั้งหมด]</button>
                         {categories.map(cat => (
-                            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`pb-2.5 pt-2.5 whitespace-nowrap font-mono font-bold text-xs border-b-2 ${activeCategory === cat.id ? 'border-black text-black' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                            <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`pb-2 pt-2 whitespace-nowrap font-mono font-bold text-xs border-b-2 transition-colors ${activeCategory === cat.id ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
                                 {cat.icon} {cat.label}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <div className="max-w-4xl mx-auto p-4 space-y-4 pb-20">
+                <div className={`${isEmbedded ? '' : 'max-w-4xl mx-auto p-4'} space-y-4 pb-20`}>
                     {/* Search Bar */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -994,72 +996,151 @@ export default function SOPEditorPage() {
                     <div className="space-y-2">
                         <label className="text-xs font-mono font-bold text-gray-500 block">มาตรฐานของรสชาติและหน้าตา (QC Standards)</label>
                         {(editing.advanced_details?.qc_standards || []).map((qc, i) => (
-                                    <div key={i} className="flex gap-3 items-center py-1">
-                                        <input value={qc.topic} onChange={e => {
-                                            const newQc = [...editing.advanced_details.qc_standards];
-                                            newQc[i].topic = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                        }} className="w-1/3 p-2 border border-gray-300 rounded text-sm focus:border-black font-semibold outline-none" placeholder="หัวข้อ (เช่น สี/หน้าตา)" />
-                                        <input value={qc.standard} onChange={e => {
-                                            const newQc = [...editing.advanced_details.qc_standards];
-                                            newQc[i].standard = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                        }} className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black outline-none" placeholder="มาตรฐานรสชาติที่ยอมรับได้" />
-                                        <button type="button" onClick={() => {
-                                            const newQc = [...editing.advanced_details.qc_standards];
-                                            newQc.splice(i, 1);
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                        }} className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded transition-colors"><Trash2 size={16} /></button>
-                                    </div>
-                                ))}
-                                <button onClick={() => {
-                                    const newQc = [...(editing.advanced_details?.qc_standards || []), { topic: '', standard: '' }];
-                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, qc_standards: newQc } });
-                                }} className="text-xs font-mono font-bold text-black border border-black px-3 py-1.5 rounded hover:bg-gray-50">+ เพิ่มมาตรฐาน QC</button>
+                            <div key={i} className="flex gap-3 items-center py-1">
+                                <input 
+                                    value={qc.topic || ''} 
+                                    onChange={e => {
+                                        const newQc = (editing.advanced_details?.qc_standards || []).map((item, idx) => 
+                                            idx === i ? { ...item, topic: e.target.value } : item
+                                        );
+                                        setEditing(prev => ({ 
+                                            ...prev, 
+                                            advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
+                                        }));
+                                    }} 
+                                    className="w-1/3 p-2 border border-gray-300 rounded text-sm focus:border-black font-semibold outline-none" 
+                                    placeholder="หัวข้อ (เช่น สี/หน้าตา)" 
+                                />
+                                <input 
+                                    value={qc.standard || ''} 
+                                    onChange={e => {
+                                        const newQc = (editing.advanced_details?.qc_standards || []).map((item, idx) => 
+                                            idx === i ? { ...item, standard: e.target.value } : item
+                                        );
+                                        setEditing(prev => ({ 
+                                            ...prev, 
+                                            advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
+                                        }));
+                                    }} 
+                                    className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black outline-none" 
+                                    placeholder="มาตรฐานรสชาติที่ยอมรับได้" 
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={() => {
+                                        const newQc = (editing.advanced_details?.qc_standards || []).filter((_, idx) => idx !== i);
+                                        setEditing(prev => ({ 
+                                            ...prev, 
+                                            advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
+                                        }));
+                                    }} 
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
-        
-                            {/* Troubleshooting list */}
-                            <div className="space-y-4 border-t border-gray-100 pt-4">
-                                <label className="text-xs font-mono font-bold text-gray-500 block">การแก้ปัญหาเบื้องต้น (Troubleshooting)</label>
-                                {(editing.advanced_details?.troubleshooting || []).map((tb, i) => (
-                                    <div key={i} className="p-4 bg-gray-50 rounded border border-gray-200 relative space-y-3">
-                                        <button type="button" onClick={() => {
-                                            const newTb = [...editing.advanced_details.troubleshooting];
-                                            newTb.splice(i, 1);
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                        }} className="absolute top-3 right-3 text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-                                        <div className="space-y-2.5 pr-6">
-                                            <div>
-                                                <label className="text-[10px] font-mono font-bold text-red-500 uppercase block mb-1">ปัญหาที่อาจเกิดขึ้น / Problem</label>
-                                                <input value={tb.problem} onChange={e => {
-                                                    const newTb = [...editing.advanced_details.troubleshooting];
-                                                    newTb[i].problem = e.target.value;
-                                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                                }} className="w-full p-2 border border-gray-300 rounded text-sm font-bold text-red-600 focus:border-red-500 outline-none" placeholder="เช่น ชาขมเกินไป" />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] font-mono font-bold text-gray-400 uppercase block mb-1">สาเหตุที่เป็นไปได้ / Cause</label>
-                                                <input value={tb.cause} onChange={e => {
-                                                    const newTb = [...editing.advanced_details.troubleshooting];
-                                                    newTb[i].cause = e.target.value;
-                                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                                }} className="w-full p-2 border border-gray-300 rounded text-xs focus:border-black outline-none" placeholder="เช่น แช่ชานานเกินเวลา หรือใช้น้ำร้อนเกินมาตรฐาน" />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] font-mono font-bold text-green-600 uppercase block mb-1">แนวทางการแก้ไข / Solution</label>
-                                                <input value={tb.solution} onChange={e => {
-                                                    const newTb = [...editing.advanced_details.troubleshooting];
-                                                    newTb[i].solution = e.target.value;
-                                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                                }} className="w-full p-2 border border-green-300 bg-green-50/20 rounded text-xs focus:border-green-600 outline-none" placeholder="เช่น จับเวลาสกัดชาไม่เกิน 30 วินาที และควบคุมอุณหภูมิน้ำให้อยู่ที่ 85 องศา" />
-                                            </div>
-                                        </div>
+                        ))}
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                const newQc = [...(editing.advanced_details?.qc_standards || []), { topic: '', standard: '' }];
+                                setEditing(prev => ({ 
+                                    ...prev, 
+                                    advanced_details: { ...prev.advanced_details, qc_standards: newQc } 
+                                }));
+                            }} 
+                            className="text-xs font-mono font-bold text-black border border-black px-3 py-1.5 rounded hover:bg-gray-50"
+                        >
+                            + เพิ่มมาตรฐาน QC
+                        </button>
+                    </div>
+
+                    {/* Troubleshooting list */}
+                    <div className="space-y-4 border-t border-gray-100 pt-4">
+                        <label className="text-xs font-mono font-bold text-gray-500 block">การแก้ปัญหาเบื้องต้น (Troubleshooting)</label>
+                        {(editing.advanced_details?.troubleshooting || []).map((tb, i) => (
+                            <div key={i} className="p-4 bg-gray-50 rounded border border-gray-200 relative space-y-3">
+                                <button 
+                                    type="button" 
+                                    onClick={() => {
+                                        const newTb = (editing.advanced_details?.troubleshooting || []).filter((_, idx) => idx !== i);
+                                        setEditing(prev => ({ 
+                                            ...prev, 
+                                            advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
+                                        }));
+                                    }} 
+                                    className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                                <div className="space-y-2.5 pr-6">
+                                    <div>
+                                        <label className="text-[10px] font-mono font-bold text-red-500 uppercase block mb-1">ปัญหาที่อาจเกิดขึ้น / Problem</label>
+                                        <input 
+                                            value={tb.problem || ''} 
+                                            onChange={e => {
+                                                const newTb = (editing.advanced_details?.troubleshooting || []).map((item, idx) => 
+                                                    idx === i ? { ...item, problem: e.target.value } : item
+                                                );
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
+                                                }));
+                                            }} 
+                                            className="w-full p-2 border border-gray-300 rounded text-sm font-bold text-red-600 focus:border-red-500 outline-none" 
+                                            placeholder="เช่น ชาขมเกินไป" 
+                                        />
                                     </div>
-                                ))}
-                                <button onClick={() => {
-                                    const newTb = [...(editing.advanced_details?.troubleshooting || []), { problem: '', cause: '', solution: '' }];
-                                    setEditing({ ...editing, advanced_details: { ...editing.advanced_details, troubleshooting: newTb } });
-                                }} className="text-xs font-mono font-bold text-black border border-black px-3 py-1.5 rounded hover:bg-gray-50">+ เพิ่มแนวทางการแก้ปัญหา</button>
+                                    <div>
+                                        <label className="text-[10px] font-mono font-bold text-gray-400 uppercase block mb-1">สาเหตุที่เป็นไปได้ / Cause</label>
+                                        <input 
+                                            value={tb.cause || ''} 
+                                            onChange={e => {
+                                                const newTb = (editing.advanced_details?.troubleshooting || []).map((item, idx) => 
+                                                    idx === i ? { ...item, cause: e.target.value } : item
+                                                );
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
+                                                }));
+                                            }} 
+                                            className="w-full p-2 border border-gray-300 rounded text-xs focus:border-black outline-none" 
+                                            placeholder="เช่น แช่ชานานเกินเวลา หรือใช้น้ำร้อนเกินมาตรฐาน" 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-mono font-bold text-green-600 uppercase block mb-1">แนวทางการแก้ไข / Solution</label>
+                                        <input 
+                                            value={tb.solution || ''} 
+                                            onChange={e => {
+                                                const newTb = (editing.advanced_details?.troubleshooting || []).map((item, idx) => 
+                                                    idx === i ? { ...item, solution: e.target.value } : item
+                                                );
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
+                                                }));
+                                            }} 
+                                            className="w-full p-2 border border-green-300 bg-green-50/20 rounded text-xs focus:border-green-600 outline-none" 
+                                            placeholder="เช่น จับเวลาสกัดชาไม่เกิน 30 วินาที และควบคุมอุณหภูมิน้ำให้อยู่ที่ 85 องศา" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                const newTb = [...(editing.advanced_details?.troubleshooting || []), { problem: '', cause: '', solution: '' }];
+                                setEditing(prev => ({ 
+                                    ...prev, 
+                                    advanced_details: { ...prev.advanced_details, troubleshooting: newTb } 
+                                }));
+                            }} 
+                            className="text-xs font-mono font-bold text-black border border-black px-3 py-1.5 rounded hover:bg-gray-50"
+                        >
+                            + เพิ่มแนวทางการแก้ปัญหา
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100 pt-4">
@@ -1069,28 +1150,63 @@ export default function SOPEditorPage() {
                             <div className="space-y-2">
                                 {(editing.advanced_details?.shelf_life || []).map((sl, i) => (
                                     <div key={i} className="flex gap-2 items-center">
-                                        <input value={sl.item} onChange={e => {
-                                            const newSl = [...editing.advanced_details.shelf_life];
-                                            newSl[i].item = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                        }} className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black outline-none" placeholder="รายการ (เช่น เบสชาเย็น)" />
-                                        <input value={sl.age} onChange={e => {
-                                            const newSl = [...editing.advanced_details.shelf_life];
-                                            newSl[i].age = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                        }} className="w-20 p-2 border border-gray-300 rounded text-sm text-center focus:border-black font-mono outline-none" placeholder="1 วัน" />
-                                        <button type="button" onClick={() => {
-                                            const newSl = [...editing.advanced_details.shelf_life];
-                                            newSl.splice(i, 1);
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                                        }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded"><X size={16} /></button>
+                                        <input 
+                                            value={sl.item || ''} 
+                                            onChange={e => {
+                                                const newSl = (editing.advanced_details?.shelf_life || []).map((item, idx) => 
+                                                    idx === i ? { ...item, item: e.target.value } : item
+                                                );
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, shelf_life: newSl } 
+                                                }));
+                                            }} 
+                                            className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black outline-none" 
+                                            placeholder="รายการ (เช่น เบสชาเย็น)" 
+                                        />
+                                        <input 
+                                            value={sl.age || ''} 
+                                            onChange={e => {
+                                                const newSl = (editing.advanced_details?.shelf_life || []).map((item, idx) => 
+                                                    idx === i ? { ...item, age: e.target.value } : item
+                                                );
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, shelf_life: newSl } 
+                                                }));
+                                            }} 
+                                            className="w-20 p-2 border border-gray-300 rounded text-sm text-center focus:border-black font-mono outline-none" 
+                                            placeholder="1 วัน" 
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                const newSl = (editing.advanced_details?.shelf_life || []).filter((_, idx) => idx !== i);
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, shelf_life: newSl } 
+                                                }));
+                                            }} 
+                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded"
+                                        >
+                                            <X size={16} />
+                                        </button>
                                     </div>
                                 ))}
                             </div>
-                            <button onClick={() => {
-                                const newSl = [...(editing.advanced_details?.shelf_life || []), { item: '', age: '' }];
-                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, shelf_life: newSl } });
-                            }} className="text-xs font-mono font-bold text-black border border-black px-2 py-1.5 rounded hover:bg-gray-50">+ Add Shelf Life</button>
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    const newSl = [...(editing.advanced_details?.shelf_life || []), { item: '', age: '' }];
+                                    setEditing(prev => ({ 
+                                        ...prev, 
+                                        advanced_details: { ...prev.advanced_details, shelf_life: newSl } 
+                                    }));
+                                }} 
+                                className="text-xs font-mono font-bold text-black border border-black px-2 py-1.5 rounded hover:bg-gray-50"
+                            >
+                                + Add Shelf Life
+                            </button>
                         </div>
 
                         {/* Checklist before serving */}
@@ -1100,23 +1216,49 @@ export default function SOPEditorPage() {
                                 {(editing.advanced_details?.checklist || []).map((cl, i) => (
                                     <div key={i} className="flex gap-2 items-center">
                                         <span className="text-gray-400 font-mono">☑</span>
-                                        <input value={cl} onChange={e => {
-                                            const newCl = [...editing.advanced_details.checklist];
-                                            newCl[i] = e.target.value;
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
-                                        }} className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black outline-none" placeholder="เช่น เช็ดขอบแก้วเรียบร้อย" />
-                                        <button type="button" onClick={() => {
-                                            const newCl = [...editing.advanced_details.checklist];
-                                            newCl.splice(i, 1);
-                                            setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
-                                        }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded"><X size={16} /></button>
+                                        <input 
+                                            value={cl || ''} 
+                                            onChange={e => {
+                                                const newCl = (editing.advanced_details?.checklist || []).map((item, idx) => 
+                                                    idx === i ? e.target.value : item
+                                                );
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, checklist: newCl } 
+                                                }));
+                                            }} 
+                                            className="flex-1 p-2 border border-gray-300 rounded text-sm focus:border-black outline-none" 
+                                            placeholder="เช่น เช็ดขอบแก้วเรียบร้อย" 
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                const newCl = (editing.advanced_details?.checklist || []).filter((_, idx) => idx !== i);
+                                                setEditing(prev => ({ 
+                                                    ...prev, 
+                                                    advanced_details: { ...prev.advanced_details, checklist: newCl } 
+                                                }));
+                                            }} 
+                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-50 rounded"
+                                        >
+                                            <X size={16} />
+                                        </button>
                                     </div>
                                 ))}
                             </div>
-                            <button onClick={() => {
-                                const newCl = [...(editing.advanced_details?.checklist || []), ''];
-                                setEditing({ ...editing, advanced_details: { ...editing.advanced_details, checklist: newCl } });
-                            }} className="text-xs font-mono font-bold text-black border border-black px-2 py-1.5 rounded hover:bg-gray-50">+ Add Checklist</button>
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    const newCl = [...(editing.advanced_details?.checklist || []), ''];
+                                    setEditing(prev => ({ 
+                                        ...prev, 
+                                        advanced_details: { ...prev.advanced_details, checklist: newCl } 
+                                    }));
+                                }} 
+                                className="text-xs font-mono font-bold text-black border border-black px-2 py-1.5 rounded hover:bg-gray-50"
+                            >
+                                + Add Checklist
+                            </button>
                         </div>
                     </div>
 

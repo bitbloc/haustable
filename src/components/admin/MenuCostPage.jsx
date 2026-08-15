@@ -6,7 +6,7 @@ import { ChefHat, ArrowLeft, RefreshCw, Calculator, DollarSign, TrendingUp, Sear
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 
-export default function MenuCostPage() {
+export default function MenuCostPage({ isEmbedded = false }) {
     const navigate = useNavigate();
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -40,9 +40,6 @@ export default function MenuCostPage() {
                         id, name, cost_price, pack_size, pack_unit, usage_unit, conversion_factor, yield_percent
                     )
                 `);
-            
-            // Debug: Check if we actually got links
-            // console.log("Recipe Links Found:", recipeLinks?.length);
 
             // 3. Map Recipe to Menu ID
             const recipesByMenu = {};
@@ -50,13 +47,13 @@ export default function MenuCostPage() {
                 recipeLinks.forEach(link => {
                     const mid = link.parent_menu_item_id;
                     if (mid) {
-                        const midStr = String(mid); // Ensure string key
+                        const midStr = String(mid);
                         if (!recipesByMenu[midStr]) {
                             recipesByMenu[midStr] = [];
                         }
                         recipesByMenu[midStr].push({
-                            ingredient_id: link.ingredient_id, // Use Raw ID
-                            ingredient: link.ingredient,       // Joined Data (might be null)
+                            ingredient_id: link.ingredient_id,
+                            ingredient: link.ingredient,
                             quantity: link.quantity,
                             unit: link.unit
                         });
@@ -64,16 +61,13 @@ export default function MenuCostPage() {
                 });
             }
 
-
-
             // 4. Calculate Costs
             let revObserved = 0;
             let costObserved = 0;
             let count = 0;
 
             const enrichedItems = data.map(item => {
-                const ingredients = recipesByMenu[String(item.id)] || []; // Lookup by string ID
-                // Helper to mimic 'getIngredientById' for costUtils, but we already have full object in 'ingredient'
+                const ingredients = recipesByMenu[String(item.id)] || [];
                 const breakdown = calculateRecipeCost(ingredients, (id) => ingredients.find(i => i.ingredient_id === id)?.ingredient, { qFactorPercent: item.q_factor_percent || 0 });
                 
                 const cost = breakdown.totalCost;
@@ -173,29 +167,35 @@ export default function MenuCostPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 text-[#1A1A1A] font-sans">
+        <div className={`${isEmbedded ? '' : 'min-h-screen bg-gray-50'} text-[#1A1A1A] font-sans`}>
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-                <div className="p-4 flex justify-between items-center max-w-7xl mx-auto">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded-full">
-                            <ArrowLeft className="w-6 h-6 text-gray-600" />
-                        </button>
+            <div className={`${isEmbedded ? 'bg-transparent mb-4' : 'sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm'}`}>
+                <div className={`p-3 flex justify-between items-center ${isEmbedded ? '' : 'max-w-7xl mx-auto'}`}>
+                    <div className="flex items-center gap-3">
+                        {!isEmbedded && (
+                            <button onClick={() => navigate('/admin')} className="p-2 hover:bg-gray-100 rounded-full">
+                                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                            </button>
+                        )}
                         <div>
-                            <h1 className="text-xl font-bold flex items-center gap-2">
-                                <Calculator className="w-6 h-6 text-blue-600" />
-                                วิเคราะห์ต้นทุน (Costing Dashboard)
+                            <h1 className="text-lg font-bold font-mono uppercase tracking-wider flex items-center gap-2 text-[oklch(18%_0.012_28)]">
+                                <Calculator className="w-5 h-5 text-[oklch(52%_0.16_28)]" />
+                                Food Costing (วิเคราะห์ต้นทุนเมนู)
                             </h1>
-                            <p className="text-xs text-gray-500">สรุปต้นทุนกำไรของทุกเมนู</p>
+                            <p className="text-xs text-[oklch(55%_0.010_28)] font-mono">สรุปต้นทุนกำไร ส่วนต่างราคา และ Gross Profit % ทุกเมนู</p>
                         </div>
                     </div>
-                    <button onClick={loadData} className="p-2 hover:bg-gray-100 rounded-full">
-                        <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+                    <button 
+                        onClick={loadData} 
+                        className="p-2 hover:bg-gray-100 rounded border border-gray-200 bg-white text-gray-700 shadow-sm"
+                        title="รีเฟรชข้อมูล"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto p-4 space-y-6 pb-20">
+            <div className={`${isEmbedded ? '' : 'max-w-7xl mx-auto p-4'} space-y-6 pb-20`}>
                 
                 {/* Controls */}
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-end">

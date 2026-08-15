@@ -8,15 +8,19 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
     const [selectedOptions, setSelectedOptions] = useState({})
     const [itemNote, setItemNote] = useState('')
 
-    // Preselect single-choice options on load
+    // Preselect single-choice options on load (only available choices)
     useEffect(() => {
         if (!item || !item.menu_item_options) return;
         const defaults = {};
         item.menu_item_options.forEach(rel => {
             const group = rel?.option_groups;
             if (group && group.is_required && group.selection_type === 'single' && group.option_choices && group.option_choices.length > 0) {
-                const sortedChoices = [...group.option_choices].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-                defaults[group.id] = [sortedChoices[0].id];
+                const sortedChoices = [...group.option_choices]
+                    .filter(c => c.is_available !== false)
+                    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                if (sortedChoices.length > 0) {
+                    defaults[group.id] = [sortedChoices[0].id];
+                }
             }
         });
         setSelectedOptions(defaults);
@@ -194,19 +198,33 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
 
                                 <div className="flex flex-col">
                                     {group.option_choices?.sort((a, b) => a.display_order - b.display_order).map((choice, index) => {
+                                        const isSoldOut = choice.is_available === false;
                                         const isSelected = currentSelections.includes(choice.id)
                                         const isLast = index === group.option_choices.length - 1;
                                         return (
                                             <div
                                                 key={choice.id}
-                                                onClick={() => handleOptionToggle(group, choice.id)}
-                                                className={`flex justify-between items-center p-4 cursor-pointer active:bg-[var(--color-paper-2)] select-none touch-manipulation ${!isLast ? 'border-b border-[var(--color-rule)]' : ''}`}
+                                                onClick={() => {
+                                                    if (!isSoldOut) handleOptionToggle(group, choice.id);
+                                                }}
+                                                className={`flex justify-between items-center p-4 select-none touch-manipulation ${
+                                                    isSoldOut 
+                                                        ? 'opacity-40 cursor-not-allowed bg-gray-50' 
+                                                        : 'cursor-pointer active:bg-[var(--color-paper-2)]'
+                                                } ${!isLast ? 'border-b border-[var(--color-rule)]' : ''}`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-5 h-5 flex items-center justify-center shrink-0 ${group.selection_type === 'single' ? 'rounded-full' : 'rounded-sm'} border ${isSelected ? 'border-[var(--color-ink)]' : 'border-[var(--color-rule)]'}`}>
                                                         {isSelected && <div className={`w-2.5 h-2.5 bg-[var(--color-ink)] ${group.selection_type === 'single' ? 'rounded-full' : 'rounded-sm'}`} />}
                                                     </div>
-                                                    <span className={`text-base ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{choice.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-base ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{choice.name}</span>
+                                                        {isSoldOut && (
+                                                            <span className="text-[10px] font-mono font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-sm">
+                                                                หมด
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {Number(choice.price_modifier) > 0 && (
                                                     <span className={`font-mono text-sm ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
