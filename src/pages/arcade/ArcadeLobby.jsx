@@ -760,14 +760,6 @@ export default function ArcadeLobby() {
             <Sparkles className="w-3 h-3 text-amber-300" />
             <span>TAI-PLA CHILL (น้องไตปลา)</span>
           </button>
-          
-          <Link
-            to="/song"
-            className="btn-tab px-3.5 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider text-[var(--color-ink-2)] hover:text-[var(--color-ink)] flex items-center gap-1.5"
-          >
-            <Music className="w-3 h-3" />
-            <span>ขอเพลง</span>
-          </Link>
         </div>
 
         {/* User LED Status Indicator */}

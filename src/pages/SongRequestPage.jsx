@@ -49,8 +49,8 @@ export default function SongRequestPage() {
     radius: 1000 // meters (1 km)
   })
 
-  // System Settings
-  const [isSystemEnabled, setIsSystemEnabled] = useState(true)
+  // System Settings (Temporarily Paused)
+  const [isSystemEnabled, setIsSystemEnabled] = useState(false)
 
   // Success Overlay
   const [showSuccess, setShowSuccess] = useState(false)
@@ -709,6 +709,12 @@ export default function SongRequestPage() {
             <p className="text-xs text-[var(--color-ink-2)] font-sans max-w-xs leading-relaxed">
               ขออภัยค่ะ ระบบขอเพลงปิดให้บริการชั่วคราว<br/>กรุณาติดตามเวลาเปิดให้บริการอีกครั้ง
             </p>
+            <Link
+              to="/arcade"
+              className="btn-action mt-2 px-5 py-2.5 bg-[var(--color-ink)] hover:bg-black text-white font-mono text-xs font-bold uppercase rounded-[4px] shadow-sm transition-all inline-block"
+            >
+              ไปที่ HAUS ARCADE PLAYGROUND
+            </Link>
           </div>
         ) : activeTab === 'request' ? (
           <form onSubmit={handleSubmitRequest} className="flex-grow flex flex-col gap-5">
