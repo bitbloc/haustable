@@ -93,15 +93,18 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                         </td>
 
                                         <td className="p-3.5">
-                                            <div className="flex flex-col gap-0.5 max-w-[200px]">
+                                            <div className="flex flex-col gap-0.5 max-w-[220px]">
                                                 {booking.order_items && booking.order_items.length > 0 ? (
                                                     <>
-                                                        {booking.order_items.slice(0, 2).map((item, i) => (
-                                                            <div key={i} className="text-[11px] text-[oklch(42%_0.010_28)] flex justify-between">
-                                                                <span className="truncate max-w-[130px]">{item.quantity}x {item.menu_items?.name}</span>
-                                                                <span>฿{item.price_at_time}</span>
-                                                            </div>
-                                                        ))}
+                                                        {booking.order_items.slice(0, 2).map((item, i) => {
+                                                            const lineTotal = Number(item.price_at_time || 0) * (item.quantity || 1)
+                                                            return (
+                                                                <div key={i} className="text-[11px] text-[oklch(42%_0.010_28)] flex justify-between gap-2">
+                                                                    <span className="truncate max-w-[140px]">{item.quantity}x {item.menu_items?.name || 'Item'}</span>
+                                                                    <span className="font-bold text-[oklch(18%_0.012_28)]">฿{lineTotal.toLocaleString()}</span>
+                                                                </div>
+                                                            )
+                                                        })}
                                                         {booking.order_items.length > 2 && (
                                                             <span className="text-[10px] text-[oklch(60%_0.010_28)]">
                                                                 +{booking.order_items.length - 2} more items
@@ -111,16 +114,23 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                                 ) : (
                                                     <span className="text-[11px] text-[oklch(55%_0.010_28)]">Reservation Only</span>
                                                 )}
-                                                <div className="text-xs font-bold text-[oklch(18%_0.012_28)] pt-0.5">
-                                                    ฿{Number(booking.total_amount || 0).toLocaleString()}
+                                                <div className="text-xs font-bold text-[oklch(18%_0.012_28)] pt-0.5 border-t border-[oklch(90%_0.008_28)] mt-0.5 flex justify-between">
+                                                    <span>TOTAL:</span>
+                                                    <span>฿{Number(booking.total_amount || 0).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         </td>
 
                                         <td className="p-3.5">
-                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.08_140)]">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
-                                                CONFIRMED
+                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border ${
+                                                booking.status === 'seated'
+                                                    ? 'bg-[oklch(94%_0.02_220)] text-[oklch(35%_0.10_220)] border-[oklch(82%_0.02_220)]'
+                                                    : (booking.status === 'completed'
+                                                        ? 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                        : 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border-[oklch(85%_0.08_140)]')
+                                            }`}>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                {booking.status || 'CONFIRMED'}
                                             </span>
                                         </td>
 

@@ -100,12 +100,15 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
                             {/* Items Preview */}
                             <div className="bg-[oklch(95%_0.008_28)] rounded-sm p-2.5 mb-4 border border-[oklch(88%_0.008_28)] max-h-28 overflow-y-auto">
                                 {booking.order_items && booking.order_items.length > 0 ? (
-                                    booking.order_items.map((item, i) => (
-                                        <div key={i} className="flex justify-between text-xs font-mono text-[oklch(42%_0.010_28)] py-0.5 border-b border-[oklch(90%_0.008_28)] last:border-0">
-                                            <span className="truncate max-w-[140px]">{item.quantity}x {item.menu_items?.name || 'Item'}</span>
-                                            <span>฿{Number(item.price_at_time || 0).toLocaleString()}</span>
-                                        </div>
-                                    ))
+                                    booking.order_items.map((item, i) => {
+                                        const lineTotal = Number(item.price_at_time || 0) * (item.quantity || 1)
+                                        return (
+                                            <div key={i} className="flex justify-between text-xs font-mono text-[oklch(42%_0.010_28)] py-0.5 border-b border-[oklch(90%_0.008_28)] last:border-0">
+                                                <span className="truncate max-w-[140px]">{item.quantity}x {item.menu_items?.name || 'Item'}</span>
+                                                <span className="font-bold text-[oklch(18%_0.012_28)]">฿{lineTotal.toLocaleString()}</span>
+                                            </div>
+                                        )
+                                    })
                                 ) : (
                                     <div className="font-mono text-[11px] text-[oklch(55%_0.010_28)] italic">
                                         Standard Table Reservation ({booking.pax || 2} Pax)

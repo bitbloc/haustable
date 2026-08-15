@@ -1,15 +1,15 @@
-// src/AdminTableEditor.jsx
-import { useState, useEffect } from 'react';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from './lib/supabaseClient';
 import PageTransition from './components/PageTransition';
 import { DndContext, useDraggable, useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core';
-import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { Save, Plus, Trash2, Edit, X, ZoomIn, ZoomOut, Maximize, RotateCw, Upload, QrCode, Printer, Download } from 'lucide-react';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { QRCodeSVG } from 'qrcode.react';
 import { getAppOrigin } from './utils/urlHelper';
+import { toast } from 'sonner';
 
-// Component โต๊ะที่ลากได้
+// Draggable Table Unit Component
 const DraggableTable = ({ table, onSelect, isSelected }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: table.id.toString(),
@@ -19,7 +19,6 @@ const DraggableTable = ({ table, onSelect, isSelected }) => {
     const rotation = table.rotation || 0;
 
     const style = {
-        // Apply Translation from DnD + Rotation from State
         transform: transform
             ? `${CSS.Translate.toString(transform)} rotate(${rotation}deg)`
             : `rotate(${rotation}deg)`,
@@ -32,8 +31,8 @@ const DraggableTable = ({ table, onSelect, isSelected }) => {
         touchAction: 'none'
     };
 
-    const bgColor = table.table_color || '#333333';
-    const isDark = ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor);
+    const bgColor = table.table_color || '#1A1A1A';
+    const isDark = ['#1A1A1A', '#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87', 'oklch(18% 0.012 28)', 'oklch(52% 0.16 28)'].includes(bgColor);
     const textColor = isDark ? 'white' : 'black';
 
     return (
@@ -46,85 +45,128 @@ const DraggableTable = ({ table, onSelect, isSelected }) => {
                 e.stopPropagation();
                 onSelect(table);
             }}
-            className={`dnd-draggable group cursor-move flex items-center justify-center shadow-lg transition-all
-        ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
-        ${isSelected
-                    ? 'ring-4 ring-primary ring-opacity-100 z-50 scale-105'
-                    : 'hover:ring-2 hover:ring-white/50 hover:scale-105'
-                }
-      `}
+            className={`dnd-draggable group cursor-move flex items-center justify-center border transition-all ${
+                table.shape === 'circle' ? 'rounded-full' : 'rounded-sm'
+            } ${
+                isSelected
+                    ? 'ring-2 ring-[oklch(52%_0.16_28)] border-black scale-102 z-40 shadow-md'
+                    : 'border-black/20 hover:border-black/50 shadow-xs'
+            }`}
         >
             <div
-                className={`absolute inset-0 w-full h-full opacity-90 shadow-sm ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}`}
+                className={`absolute inset-0 w-full h-full opacity-90 ${table.shape === 'circle' ? 'rounded-full' : 'rounded-sm'}`}
                 style={{ backgroundColor: bgColor }}
             />
-            {/* Counter-rotate text for better readability (optional, can remove style if unwanted) */}
-            <div className="relative z-10 flex flex-col items-center pointer-events-none select-none p-1 overflow-hidden w-full" style={{ transform: `rotate(${-rotation}deg)` }}>
-                <span className="font-bold text-[10px] sm:text-xs truncate max-w-[90%] leading-tight" style={{ color: textColor }}>{table.table_name}</span>
-                <span className="text-[8px] sm:text-[10px] opacity-80 leading-tight" style={{ color: textColor }}>{table.capacity}p</span>
+            {/* Upright Monospace Label */}
+            <div 
+                className="relative z-10 flex flex-col items-center pointer-events-none select-none p-1 overflow-hidden w-full text-center" 
+                style={{ transform: `rotate(${-rotation}deg)` }}
+            >
+                <span className="font-mono font-bold text-[11px] truncate max-w-[90%] leading-tight" style={{ color: textColor }}>
+                    {table.table_name}
+                </span>
+                <span className="font-mono text-[8px] opacity-75 uppercase leading-none mt-0.5" style={{ color: textColor }}>
+                    {table.capacity}p
+                </span>
             </div>
         </div>
     );
 };
 
+// Thai Modern OKLCH Palette presets for tables
 const COLOR_PRESETS = [
-    { name: 'Default', value: '#333333' },
-    { name: 'Red', value: '#EF4444' },
-    { name: 'Green', value: '#22C55E' },
-    { name: 'Blue', value: '#3B82F6' },
-    { name: 'Purple', value: '#A855F7' },
-    { name: 'Gold', value: '#EAB308' },
+    { name: 'Ink Dark', value: 'oklch(18% 0.012 28)' },
+    { name: 'Terracotta', value: 'oklch(52% 0.16 28)' },
+    { name: 'Banana Olive', value: 'oklch(45% 0.08 140)' },
+    { name: 'Warm Cream', value: 'oklch(94% 0.010 28)' },
+    { name: 'Teak Sand', value: 'oklch(75% 0.05 60)' },
+    { name: 'Deep Indigo', value: 'oklch(35% 0.12 260)' },
+];
+
+// Quick Size Presets for restaurant tables
+const SIZE_PRESETS = [
+    { name: '2-Top (Small)', w: 8, h: 8, cap: 2, shape: 'rect' },
+    { name: '4-Top (Standard)', w: 12, h: 10, cap: 4, shape: 'rect' },
+    { name: '6-Top (Large)', w: 16, h: 10, cap: 6, shape: 'rect' },
+    { name: '8-Top (Long)', w: 22, h: 12, cap: 8, shape: 'rect' },
+    { name: 'Round Booth', w: 12, h: 12, cap: 4, shape: 'circle' },
+    { name: 'Bar Stool', w: 6, h: 6, cap: 1, shape: 'circle' },
 ];
 
 export default function AdminTableEditor() {
     const [tables, setTables] = useState([]);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [selectedTable, setSelectedTable] = useState(null);
+    
+    // Grid Snap & Settings
+    const [snapToGrid, setSnapToGrid] = useState(true);
+    const [gridStep, setGridStep] = useState(1); // 1% or 5%
+    const [bgOpacity, setBgOpacity] = useState(100);
+    const [uploadingBg, setUploadingBg] = useState(false);
+
+    // Modals
+    const [qrModalOpen, setQrModalOpen] = useState(false);
+    const [batchQrModalOpen, setBatchQrModalOpen] = useState(false);
+    const [selectedBatchTableIds, setSelectedBatchTableIds] = useState([]);
+
+    // New Table State
     const [newTable, setNewTable] = useState({
         name: '',
         capacity: 4,
         shape: 'rect',
-        width: 10,
+        width: 12,
         height: 10,
-        color: '#333333',
+        color: 'oklch(18% 0.012 28)',
         rotation: 0
     });
-    const [snapToGrid, setSnapToGrid] = useState(true);
-    const [qrModalOpen, setQrModalOpen] = useState(false);
 
     const sensors = useSensors(
-        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+        useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
     );
 
     useEffect(() => {
         fetchData();
-        // Warning: keydown listeners removed for stability in this version
     }, []);
 
     const fetchData = async () => {
         setLoading(true);
-        // Ensure we fetch ALL columns. If table_color/rotation missing in DB, this might still work or return nulls.
-        const { data: tablesData, error } = await supabase.from('tables_layout').select('*').order('id');
-        if (error) console.error("Fetch error:", error);
+        try {
+            // 1. Fetch tables
+            const { data: tablesData, error: tErr } = await supabase
+                .from('tables_layout')
+                .select('*')
+                .order('id');
+            if (tErr) throw tErr;
+            setTables(tablesData || []);
+            setSelectedBatchTableIds((tablesData || []).map(t => t.id));
 
-        setTables(tablesData || []);
-
-        const { data: settingsData } = await supabase.from('app_settings').select('value').eq('key', 'floorplan_url').single();
-        if (settingsData?.value) {
-            setFloorplanUrl(`${settingsData.value}?t=${new Date().getTime()}`);
+            // 2. Fetch floorplan schematic image
+            const { data: settingsData } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'floorplan_url')
+                .single();
+            if (settingsData?.value) {
+                setFloorplanUrl(`${settingsData.value}?t=${Date.now()}`);
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            toast.error('Failed to load table layout: ' + err.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
+    // Drag End Handler
     const handleDragEnd = (event) => {
         const { delta, active } = event;
-        const canvasElement = document.getElementById('canvas-area');
+        const canvasElement = document.getElementById('editor-canvas-area');
         if (!canvasElement) return;
 
         const rect = canvasElement.getBoundingClientRect();
-        // Calculate movement as percentage of current view
         let percentX = (delta.x / rect.width) * 100;
         let percentY = (delta.y / rect.height) * 100;
 
@@ -134,8 +176,9 @@ export default function AdminTableEditor() {
                 let newY = t.pos_y + percentY;
 
                 if (snapToGrid) {
-                    newX = Math.round(newX);
-                    newY = Math.round(newY);
+                    const step = gridStep || 1;
+                    newX = Math.round(newX / step) * step;
+                    newY = Math.round(newY / step) * step;
                 }
 
                 newX = Math.max(0, Math.min(100 - t.width, newX));
@@ -150,32 +193,39 @@ export default function AdminTableEditor() {
         }));
     };
 
+    // Save Table Positions & Geometries
     const handleSavePositions = async () => {
+        setSaving(true);
         try {
-            // *** CRITICAL FIX: Include ALL columns in upsert to prevent "null value in column table_name" error ***
             const updates = tables.map(t => ({
                 id: t.id,
-                table_name: t.table_name, // Must be included!
-                capacity: t.capacity,     // Must be included!
-                shape: t.shape,           // Must be included!
-                pos_x: t.pos_x,
-                pos_y: t.pos_y,
-                width: t.width,
-                height: t.height,
-                table_color: t.table_color,
-                rotation: t.rotation
+                table_name: t.table_name,
+                capacity: Number(t.capacity) || 2,
+                shape: t.shape || 'rect',
+                pos_x: Number(t.pos_x) || 0,
+                pos_y: Number(t.pos_y) || 0,
+                width: Number(t.width) || 10,
+                height: Number(t.height) || 10,
+                table_color: t.table_color || 'oklch(18% 0.012 28)',
+                rotation: Number(t.rotation) || 0,
+                image_url: t.image_url || null
             }));
 
             const { error } = await supabase.from('tables_layout').upsert(updates);
             if (error) throw error;
 
-            alert('บันทึกข้อมูลเรียบร้อย (Saved Successfully)!');
+            toast.success('Floorplan saved successfully', {
+                description: `Updated geometry for ${tables.length} table units`
+            });
         } catch (error) {
             console.error('Save Error:', error);
-            alert(`Save Failed: ${error.message}\n\n(Tip: Ensure you have run the DB SQL to add 'table_color' and 'rotation' columns)`);
+            toast.error('Save failed: ' + error.message);
+        } finally {
+            setSaving(false);
         }
     };
 
+    // Duplicate Selected Table
     const handleDuplicate = async () => {
         if (!selectedTable) return;
         try {
@@ -188,47 +238,56 @@ export default function AdminTableEditor() {
                 height: selectedTable.height,
                 table_color: selectedTable.table_color,
                 rotation: selectedTable.rotation,
-                pos_x: Math.min(90, selectedTable.pos_x + 2),
-                pos_y: Math.min(90, selectedTable.pos_y + 2)
+                pos_x: Math.min(90, (selectedTable.pos_x || 0) + 3),
+                pos_y: Math.min(90, (selectedTable.pos_y || 0) + 3)
             };
             const { data, error } = await supabase.from('tables_layout').insert(dup).select().single();
             if (error) throw error;
+
             setTables([...tables, data]);
             setSelectedTable(data);
+            toast.success(`Duplicated ${selectedTable.table_name} to ${dupName}`);
         } catch (error) {
-            alert('Duplicate Failed: ' + error.message);
+            toast.error('Duplicate Failed: ' + error.message);
         }
     };
 
+    // Add New Table Unit
     const handleAddTable = async () => {
-        if (!newTable.name) return alert('กรุณาใส่ชื่อโต๊ะ');
+        if (!newTable.name.trim()) {
+            toast.error('Please enter a table name');
+            return;
+        }
         try {
-            const { error } = await supabase.from('tables_layout').insert({
-                table_name: newTable.name,
-                capacity: newTable.capacity,
-                shape: newTable.shape,
-                width: newTable.width,
-                height: newTable.height,
+            const { data, error } = await supabase.from('tables_layout').insert({
+                table_name: newTable.name.trim(),
+                capacity: Number(newTable.capacity) || 4,
+                shape: newTable.shape || 'rect',
+                width: Number(newTable.width) || 12,
+                height: Number(newTable.height) || 10,
                 table_color: newTable.color,
-                rotation: newTable.rotation,
+                rotation: Number(newTable.rotation) || 0,
                 pos_x: 50 - (newTable.width / 2),
                 pos_y: 50 - (newTable.height / 2)
-            });
+            }).select().single();
+
             if (error) throw error;
-            fetchData();
-            setNewTable({ ...newTable, name: '' }); // Reset form
+
+            setTables([...tables, data]);
+            setSelectedTable(data);
+            setNewTable({ ...newTable, name: '' });
+            toast.success(`Created table unit: ${data.table_name}`);
         } catch (error) {
-            alert('Create Failed: ' + error.message);
+            toast.error('Create Failed: ' + error.message);
         }
     };
 
+    // Optimistic Update Field
     const handleUpdateTable = async (id, field, value) => {
-        // Optimistic UI Update
         setTables(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
         if (selectedTable?.id === id) {
             setSelectedTable(prev => ({ ...prev, [field]: value }));
         }
-        // Background DB Update
         try {
             const { error } = await supabase.from('tables_layout').update({ [field]: value }).eq('id', id);
             if (error) throw error;
@@ -237,6 +296,7 @@ export default function AdminTableEditor() {
         }
     };
 
+    // Upload Table Real Photo
     const handleUploadTableImage = async (file) => {
         if (!file || !selectedTable) return;
         try {
@@ -250,50 +310,313 @@ export default function AdminTableEditor() {
 
             const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName);
             handleUpdateTable(selectedTable.id, 'image_url', publicUrl);
-            alert('Image Uploaded!');
+            toast.success('Table photo uploaded');
         } catch (error) {
-            console.error('Upload Error:', error);
-            alert('Upload Failed: ' + error.message);
+            toast.error('Upload Failed: ' + error.message);
         }
     };
 
-    const handleDeleteTable = async (id) => {
-        if (!confirm('ยืนยันที่จะลบโต๊ะนี้?')) return;
-        setTables(prev => prev.filter(t => t.id !== id));
-        setSelectedTable(null);
-        await supabase.from('tables_layout').delete().eq('id', id);
+    // Upload / Replace Floorplan Schematic Background Image
+    const handleUploadFloorplanBg = async (file) => {
+        if (!file) return;
+        setUploadingBg(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `floorplans/floorplan-schematic-${Date.now()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+                .from('public-assets')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName);
+            
+            // Save to app_settings
+            const { error: setErr } = await supabase
+                .from('app_settings')
+                .upsert({ key: 'floorplan_url', value: publicUrl, updated_at: new Date().toISOString() });
+            
+            if (setErr) throw setErr;
+
+            setFloorplanUrl(`${publicUrl}?t=${Date.now()}`);
+            toast.success('Floorplan schematic image updated');
+        } catch (err) {
+            toast.error('Floorplan upload failed: ' + err.message);
+        } finally {
+            setUploadingBg(false);
+        }
     };
 
-    if (loading) return (
-        <div className="flex h-full items-center justify-center bg-[#ECECE9] min-h-screen">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5500]"></div>
-        </div>
-    );
+    // Clear Floorplan Background
+    const handleClearFloorplanBg = async () => {
+        try {
+            await supabase.from('app_settings').upsert({ key: 'floorplan_url', value: '', updated_at: new Date().toISOString() });
+            setFloorplanUrl(null);
+            toast.success('Floorplan background removed');
+        } catch (err) {
+            toast.error('Failed to clear floorplan: ' + err.message);
+        }
+    };
+
+    // Delete Table
+    const handleDeleteTable = async (id, tableName) => {
+        if (!confirm(`Delete table unit "${tableName}"?`)) return;
+        setTables(prev => prev.filter(t => t.id !== id));
+        setSelectedTable(null);
+        try {
+            const { error } = await supabase.from('tables_layout').delete().eq('id', id);
+            if (error) throw error;
+            toast.success(`Deleted ${tableName}`);
+        } catch (err) {
+            toast.error('Failed to delete: ' + err.message);
+        }
+    };
+
+    // Batch Print Function
+    const handlePrintBatchSheet = (selectedTablesToPrint) => {
+        const printWindow = window.open('', '_blank', 'width=900,height=1000');
+        if (!printWindow) {
+            toast.error('Pop-up blocked. Please allow pop-ups to print QR sheet.');
+            return;
+        }
+
+        const appOrigin = getAppOrigin();
+
+        const cardsHtml = selectedTablesToPrint.map(table => {
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appOrigin + '/table/' + table.id)}`;
+            return `
+                <div class="qr-card">
+                    <div class="header">
+                        <div class="brand">IN THE HAUS</div>
+                        <div class="sub">SCAN TO ORDER • สแกนสั่งอาหาร</div>
+                    </div>
+                    <div class="table-box">
+                        <div class="table-label">TABLE</div>
+                        <div class="table-num">${table.table_name}</div>
+                    </div>
+                    <div class="qr-wrapper">
+                        <img src="${qrUrl}" alt="QR ${table.table_name}" class="qr-img" />
+                    </div>
+                    <div class="instructions">
+                        1. เปิดกล้องมือถือสแกน QR Code<br/>
+                        2. ตรวจสอบเมนูและส่งออเดอร์ได้ทันที
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <title>IN THE HAUS - Table QR Ordering Cards</title>
+                    <meta charset="utf-8" />
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&family=Space+Grotesk:wght@700;800&family=Space+Mono:wght@700&display=swap');
+                        @page {
+                            size: A4 portrait;
+                            margin: 10mm;
+                        }
+                        * { box-sizing: border-box; }
+                        body {
+                            font-family: 'Space Grotesk', 'IBM Plex Sans Thai', sans-serif;
+                            margin: 0;
+                            padding: 10px;
+                            background: white;
+                            color: black;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        .grid-container {
+                            display: grid;
+                            grid-template-columns: repeat(2, 1fr);
+                            gap: 15px;
+                            page-break-inside: auto;
+                        }
+                        .qr-card {
+                            border: 2px solid #000;
+                            padding: 20px;
+                            border-radius: 8px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            text-align: center;
+                            background: white;
+                            page-break-inside: avoid;
+                        }
+                        .brand {
+                            font-size: 16px;
+                            font-weight: 900;
+                            letter-spacing: 2px;
+                            text-transform: uppercase;
+                            line-height: 1;
+                        }
+                        .sub {
+                            font-size: 8px;
+                            font-weight: 700;
+                            font-family: 'Space Mono', monospace;
+                            color: #555;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            margin-top: 4px;
+                            margin-bottom: 12px;
+                        }
+                        .table-box {
+                            border-top: 1px solid #ccc;
+                            border-bottom: 1px solid #ccc;
+                            width: 100%;
+                            padding: 6px 0;
+                            margin-bottom: 12px;
+                        }
+                        .table-label {
+                            font-size: 9px;
+                            font-weight: 700;
+                            color: #777;
+                            font-family: 'Space Mono', monospace;
+                            letter-spacing: 2px;
+                        }
+                        .table-num {
+                            font-size: 32px;
+                            font-weight: 900;
+                            line-height: 1.1;
+                            margin: 2px 0;
+                        }
+                        .qr-wrapper {
+                            padding: 8px;
+                            background: white;
+                            border: 1px solid #000;
+                            margin-bottom: 12px;
+                        }
+                        .qr-img {
+                            width: 140px;
+                            height: 140px;
+                            display: block;
+                        }
+                        .instructions {
+                            font-size: 9px;
+                            font-weight: 600;
+                            line-height: 1.4;
+                            color: #333;
+                            font-family: 'IBM Plex Sans Thai', sans-serif;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="grid-container">
+                        ${cardsHtml}
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() { window.print(); }, 500);
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[500px] bg-[oklch(97%_0.008_28)] font-mono text-xs text-[oklch(55%_0.010_28)] gap-3">
+                <div className="w-6 h-6 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
+                <span>LOADING STUDIO WORKBENCH...</span>
+            </div>
+        );
+    }
 
     return (
         <PageTransition>
-            <div className="p-4 flex flex-col gap-6 text-[#1A1A1A] font-sans select-none bg-[#ECECE9]">
-
-                {/* --- Toolbar --- */}
-                <div className="flex flex-row justify-between items-center bg-[#F5F5F2] p-3 rounded-xl border border-[#D1D1CD] shadow-sm z-10 sticky top-2 text-[#1A1A1A] gap-4 w-full">
-                    <h1 className="text-xs font-mono font-bold uppercase tracking-wider hidden sm:block">Floor Plan Editor</h1>
-                    <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-                        <label className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] cursor-pointer bg-white p-2.5 rounded-lg border border-[#D1D1CD] select-none transition-colors">
-                            <input type="checkbox" checked={snapToGrid} onChange={e => setSnapToGrid(e.target.checked)} className="accent-[#FF5500] w-4 h-4" />
-                            Snap Grid (1%)
+            <div className="p-4 flex flex-col gap-4 text-[oklch(18%_0.012_28)] font-sans select-none bg-[oklch(97%_0.008_28)]">
+                
+                {/* --- Workbench Toolbar --- */}
+                <div className="flex flex-wrap items-center justify-between bg-[oklch(98%_0.006_28)] p-3 rounded-sm border border-[oklch(85%_0.012_28)] shadow-xs gap-3">
+                    
+                    {/* Left: Tool Toggles */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <label className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)] cursor-pointer bg-[oklch(94%_0.010_28)] px-3 py-2 rounded-sm border border-[oklch(85%_0.012_28)]">
+                            <input
+                                type="checkbox"
+                                checked={snapToGrid}
+                                onChange={e => setSnapToGrid(e.target.checked)}
+                                className="accent-[oklch(52%_0.16_28)] w-3.5 h-3.5"
+                            />
+                            SNAP GRID ({gridStep}%)
                         </label>
-                        <button onClick={handleSavePositions} className="bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white px-5 py-3 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-                            <Save size={16} /> Save Changes
+
+                        {/* Grid Resolution */}
+                        {snapToGrid && (
+                            <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-[9px] font-bold uppercase">
+                                <button
+                                    type="button"
+                                    onClick={() => setGridStep(1)}
+                                    className={`px-2 py-1 rounded-xs cursor-pointer ${gridStep === 1 ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(42%_0.010_28)]'}`}
+                                >
+                                    1% FINE
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setGridStep(5)}
+                                    className={`px-2 py-1 rounded-xs cursor-pointer ${gridStep === 5 ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(42%_0.010_28)]'}`}
+                                >
+                                    5% COARSE
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Floorplan Background schematic controls */}
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
+                            <label className="bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-2 rounded-sm cursor-pointer uppercase flex items-center gap-1">
+                                <span>{uploadingBg ? 'UPLOADING...' : floorplanUrl ? 'CHANGE SCHEMATIC' : 'UPLOAD SCHEMATIC'}</span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    disabled={uploadingBg}
+                                    onChange={e => handleUploadFloorplanBg(e.target.files[0])}
+                                />
+                            </label>
+                            {floorplanUrl && (
+                                <button
+                                    type="button"
+                                    onClick={handleClearFloorplanBg}
+                                    className="px-2 py-2 bg-[oklch(94%_0.010_28)] hover:bg-red-50 text-red-600 border border-[oklch(85%_0.012_28)] rounded-sm cursor-pointer uppercase"
+                                    title="Remove Background Image"
+                                >
+                                    CLEAR BG
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setBatchQrModalOpen(true)}
+                            className="bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-4 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider cursor-pointer"
+                        >
+                            BATCH QR FLYERS ({tables.length})
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={saving}
+                            onClick={handleSavePositions}
+                            className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white px-5 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer"
+                        >
+                            {saving ? 'SAVING...' : 'SAVE LAYOUT CHANGES'}
                         </button>
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[500px] lg:min-h-[600px] h-auto lg:h-[80vh]">
-
-                    {/* --- Main Editor Area (Unlimited Workspace) --- */}
-                    <div className="flex-1 w-full lg:w-auto h-[50vh] lg:h-auto relative overflow-hidden rounded-xl border border-[#D1D1CD] bg-[#E1E1DE] flex flex-col shadow-inner order-1 lg:order-1">
+                {/* --- Editor Workspace (Canvas + Inspector) --- */}
+                <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-[600px] h-auto lg:h-[calc(100vh-250px)]">
+                    
+                    {/* Canvas Area */}
+                    <div className="flex-1 w-full lg:w-auto h-[500px] lg:h-auto relative overflow-hidden rounded-sm border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col shadow-inner">
                         <TransformWrapper
-                            initialScale={0.8}
+                            initialScale={0.85}
                             minScale={0.2}
                             maxScale={4}
                             centerOnInit={true}
@@ -303,30 +626,32 @@ export default function AdminTableEditor() {
                         >
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
-                                    <div className="absolute top-4 right-4 z-50 flex flex-col gap-1 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-1 rounded-lg shadow-sm backdrop-blur-md">
-                                        <button onClick={() => zoomIn()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom In"><ZoomIn size={14} /></button>
-                                        <button onClick={() => zoomOut()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom Out"><ZoomOut size={14} /></button>
-                                        <button onClick={() => resetTransform()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Reset View"><Maximize size={14} /></button>
+                                    {/* Zoom controls */}
+                                    <div className="absolute top-4 right-4 z-50 flex gap-1 bg-[oklch(98%_0.006_28)]/95 border border-[oklch(85%_0.012_28)] p-1 rounded-sm shadow-xs backdrop-blur-xs font-mono text-xs font-bold">
+                                        <button onClick={() => zoomIn()} className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer" title="Zoom In">+</button>
+                                        <button onClick={() => zoomOut()} className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer" title="Zoom Out">-</button>
+                                        <button onClick={() => resetTransform()} className="px-2.5 py-1 hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer uppercase" title="Reset View">RESET</button>
                                     </div>
+
                                     <TransformComponent wrapperClass="w-full h-full cursor-grab active:cursor-grabbing" contentClass="w-full h-full flex items-center justify-center p-20">
                                         <DndContext onDragEnd={handleDragEnd} sensors={sensors}>
                                             <div
-                                                id="canvas-area"
-                                                className="relative bg-white shadow-sm transition-transform origin-center border border-[#D1D1CD] rounded-[24px] overflow-hidden"
+                                                id="editor-canvas-area"
+                                                className="relative bg-[oklch(98%_0.006_28)] shadow-sm transition-transform origin-center border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden"
                                                 style={{
-                                                    width: '1000px', // Fixed Reference Dimensions
+                                                    width: '1000px',
                                                     height: '750px',
                                                     backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
-                                                    backgroundSize: 'cover',
-                                                    backgroundPosition: 'center',
-                                                    backgroundColor: '#F5F5F2',
+                                                    backgroundSize: '100% 100%',
+                                                    backgroundRepeat: 'no-repeat',
+                                                    opacity: bgOpacity / 100
                                                 }}
                                                 onClick={() => setSelectedTable(null)}
                                             >
                                                 {!floorplanUrl && (
-                                                    <div className="absolute inset-0 flex items-center justify-center text-[#767673] font-mono font-bold text-xs uppercase tracking-widest opacity-40 pointer-events-none select-none flex-col gap-2">
-                                                        <Maximize size={36} className="opacity-20" />
-                                                        <span>No Floor Plan Image</span>
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] font-mono font-bold text-xs uppercase tracking-widest opacity-40 pointer-events-none select-none">
+                                                        <span>NO SCHEMATIC BACKGROUND IMAGE</span>
+                                                        <span className="text-[9px] mt-1">CLICK 'UPLOAD SCHEMATIC' ABOVE</span>
                                                     </div>
                                                 )}
 
@@ -346,33 +671,172 @@ export default function AdminTableEditor() {
                         </TransformWrapper>
                     </div>
 
-                    {/* --- Sidebar --- */}
-                    <div className="lg:w-96 bg-[#F5F5F2] p-5 rounded-xl border border-[#D1D1CD] h-full flex flex-col shadow-sm text-[#1A1A1A] font-sans">
+                    {/* --- Sidebar Inspector --- */}
+                    <div className="lg:w-96 bg-[oklch(98%_0.006_28)] p-5 rounded-sm border border-[oklch(85%_0.012_28)] h-full flex flex-col shadow-xs overflow-y-auto">
                         {selectedTable ? (
-                            // --- Edit Mode ---
-                            <div className="space-y-4 flex-1 flex flex-col animate-fade-in overflow-y-auto pr-1">
-                                <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-3 shrink-0">
-                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5">
-                                        <Edit size={14} /> EDIT TABLE UNIT
-                                    </h2>
-                                    <button onClick={() => setSelectedTable(null)} className="text-[#767673] hover:text-[#1A1A1A] transition-colors p-1 rounded-lg hover:bg-[#E0E0DC] cursor-pointer">
-                                        <X size={16} />
+                            // Edit Mode
+                            <div className="space-y-4 flex-1 flex flex-col">
+                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-3 shrink-0">
+                                    <div>
+                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                            UNIT INSPECTOR
+                                        </span>
+                                        <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                            {selectedTable.table_name}
+                                        </h2>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTable(null)}
+                                        className="text-[oklch(42%_0.010_28)] hover:text-black font-mono text-xs font-bold p-1 cursor-pointer"
+                                    >
+                                        ✕ CLOSE
                                     </button>
                                 </div>
-                                <div className="space-y-4 flex-1">
+
+                                <div className="space-y-3.5 flex-1 font-mono text-xs">
                                     <div>
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">NAME (ชื่อโต๊ะ)</label>
-                                        <input type="text" value={selectedTable.table_name} onChange={(e) => handleUpdateTable(selectedTable.id, 'table_name', e.target.value)} className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] transition-colors" />
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            TABLE NAME (ชื่อโต๊ะ)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={selectedTable.table_name}
+                                            onChange={(e) => handleUpdateTable(selectedTable.id, 'table_name', e.target.value)}
+                                            className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                        />
                                     </div>
 
+                                    {/* Shape & Capacity */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                                SEATS (ที่นั่ง)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="40"
+                                                value={selectedTable.capacity}
+                                                onChange={(e) => handleUpdateTable(selectedTable.id, 'capacity', parseInt(e.target.value) || 1)}
+                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                                SHAPE (ทรง)
+                                            </label>
+                                            <select
+                                                value={selectedTable.shape}
+                                                onChange={(e) => handleUpdateTable(selectedTable.id, 'shape', e.target.value)}
+                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold cursor-pointer"
+                                            >
+                                                <option value="rect">Rectangle</option>
+                                                <option value="circle">Circle</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Size Presets */}
                                     <div>
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">COLOR THEME (สี)</label>
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            QUICK SIZE PRESETS
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            {SIZE_PRESETS.map(preset => (
+                                                <button
+                                                    key={preset.name}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handleUpdateTable(selectedTable.id, 'width', preset.w);
+                                                        handleUpdateTable(selectedTable.id, 'height', preset.h);
+                                                        handleUpdateTable(selectedTable.id, 'shape', preset.shape);
+                                                        handleUpdateTable(selectedTable.id, 'capacity', preset.cap);
+                                                    }}
+                                                    className="px-2 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[9px] font-bold text-center cursor-pointer"
+                                                >
+                                                    {preset.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Width & Height Sliders */}
+                                    <div className="space-y-2 pt-1 border-t border-[oklch(85%_0.012_28)]">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[9px] font-bold text-[oklch(55%_0.010_28)] w-10">WIDTH</span>
+                                            <input
+                                                type="range"
+                                                min="2"
+                                                max="40"
+                                                value={selectedTable.width}
+                                                onChange={(e) => handleUpdateTable(selectedTable.id, 'width', parseInt(e.target.value))}
+                                                className="flex-1 accent-[oklch(52%_0.16_28)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
+                                            />
+                                            <span className="text-[10px] font-bold w-8 text-right">{selectedTable.width}%</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[9px] font-bold text-[oklch(55%_0.010_28)] w-10">HEIGHT</span>
+                                            <input
+                                                type="range"
+                                                min="2"
+                                                max="40"
+                                                value={selectedTable.height}
+                                                onChange={(e) => handleUpdateTable(selectedTable.id, 'height', parseInt(e.target.value))}
+                                                className="flex-1 accent-[oklch(52%_0.16_28)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
+                                            />
+                                            <span className="text-[10px] font-bold w-8 text-right">{selectedTable.height}%</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Rotation */}
+                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                                ROTATION ({selectedTable.rotation || 0}°)
+                                            </label>
+                                            <div className="flex gap-1">
+                                                {[0, 90, 180, 270].map(deg => (
+                                                    <button
+                                                        key={deg}
+                                                        type="button"
+                                                        onClick={() => handleUpdateTable(selectedTable.id, 'rotation', deg)}
+                                                        className={`px-1.5 py-0.5 text-[8px] font-bold rounded-xs border cursor-pointer ${
+                                                            selectedTable.rotation === deg
+                                                                ? 'bg-[oklch(18%_0.012_28)] text-white border-black'
+                                                                : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                                        }`}
+                                                    >
+                                                        {deg}°
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="360"
+                                            step="5"
+                                            value={selectedTable.rotation || 0}
+                                            onChange={(e) => handleUpdateTable(selectedTable.id, 'rotation', parseInt(e.target.value))}
+                                            className="w-full accent-[oklch(52%_0.16_28)] h-1 bg-gray-200 rounded-sm appearance-none cursor-pointer"
+                                        />
+                                    </div>
+
+                                    {/* Color Theme */}
+                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1.5 block">
+                                            COLOR PALETTE
+                                        </label>
                                         <div className="flex flex-wrap gap-1.5">
                                             {COLOR_PRESETS.map(c => (
                                                 <button
                                                     key={c.name}
+                                                    type="button"
                                                     onClick={() => handleUpdateTable(selectedTable.id, 'table_color', c.value)}
-                                                    className={`w-6 h-6 rounded-full border transition-all hover:scale-105 cursor-pointer ${selectedTable.table_color === c.value ? 'border-[#B0B0AC] scale-105 shadow-sm' : 'border-[#D1D1CD] opacity-80 hover:opacity-100'}`}
+                                                    className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
+                                                        selectedTable.table_color === c.value ? 'ring-2 ring-[oklch(52%_0.16_28)] scale-110 shadow-xs' : 'opacity-80'
+                                                    }`}
                                                     style={{ backgroundColor: c.value }}
                                                     title={c.name}
                                                 />
@@ -380,150 +844,132 @@ export default function AdminTableEditor() {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block flex items-center gap-1.5">
-                                            <RotateCw size={10} /> ROTATION: {selectedTable.rotation || 0}°
-                                        </label>
-                                        <input type="range" min="0" max="360" step="15" value={selectedTable.rotation || 0} onChange={(e) => handleUpdateTable(selectedTable.id, 'rotation', parseInt(e.target.value))} className="w-full accent-[#FF5500] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                        <div className="flex justify-between text-[8px] text-[#767673] mt-1 font-mono font-bold">
-                                            <span>0°</span>
-                                            <span>90°</span>
-                                            <span>180°</span>
-                                            <span>270°</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-4">
-                                        <div className="flex-1">
-                                            <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">SEATS (ที่นั่ง)</label>
-                                            <input type="number" min="1" value={selectedTable.capacity} onChange={(e) => handleUpdateTable(selectedTable.id, 'capacity', parseInt(e.target.value) || 1)} className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500]" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">SHAPE (รูปร่าง)</label>
-                                            <select value={selectedTable.shape} onChange={(e) => handleUpdateTable(selectedTable.id, 'shape', e.target.value)} className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer">
-                                                <option value="rect">Rectangle</option>
-                                                <option value="circle">Circle</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-2 border-t border-[#D1D1CD]">
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">SIZE (ขนาด %)</label>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[8px] font-mono font-bold text-[#767673] w-8">WIDTH</span>
-                                                <input type="range" min="2" max="50" value={selectedTable.width} onChange={(e) => handleUpdateTable(selectedTable.id, 'width', parseInt(e.target.value))} className="flex-1 accent-[#FF5500] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                <span className="text-[9px] font-mono font-bold w-8 text-right">{selectedTable.width}%</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[8px] font-mono font-bold text-[#767673] w-8">HEIGHT</span>
-                                                <input type="range" min="2" max="50" value={selectedTable.height} onChange={(e) => handleUpdateTable(selectedTable.id, 'height', parseInt(e.target.value))} className="flex-1 accent-[#FF5500] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                <span className="text-[9px] font-mono font-bold w-8 text-right">{selectedTable.height}%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-2 border-t border-[#D1D1CD]">
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">REAL TABLE IMAGE (รูปจริง)</label>
-                                        <div className="flex flex-col gap-2">
-                                            {selectedTable.image_url ? (
-                                                <div className="relative group rounded-lg overflow-hidden aspect-video border border-[#D1D1CD] bg-white">
-                                                    <img src={selectedTable.image_url} className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <label className="cursor-pointer bg-white text-black px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider shadow-sm">
-                                                            Change
-                                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadTableImage(e.target.files[0])} />
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <label className="cursor-pointer bg-white border border-dashed border-[#D1D1CD] hover:border-[#B0B0AC] rounded-lg p-4 flex flex-col items-center justify-center gap-1.5 transition-all group">
-                                                    <Upload size={16} className="text-[#767673] group-hover:text-[#1A1A1A]" />
-                                                    <span className="text-[10px] text-[#767673] group-hover:text-[#1A1A1A] font-mono font-bold uppercase tracking-wider">Upload Photo</span>
-                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadTableImage(e.target.files[0])} />
-                                                </label>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-3 border-t border-[#D1D1CD] flex flex-col gap-2 shrink-0 font-mono text-[9px] font-bold uppercase tracking-wider">
-                                        <button 
-                                            onClick={() => setQrModalOpen(true)} 
-                                            className="w-full bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                                    {/* Actions */}
+                                    <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex flex-col gap-2 font-mono text-[9px] font-bold uppercase tracking-wider">
+                                        <button
+                                            type="button"
+                                            onClick={() => setQrModalOpen(true)}
+                                            className="w-full py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
                                         >
-                                            <QrCode size={12} /> QR Ordering Flyer
+                                            PRINT QR ORDER FLYER
                                         </button>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <button onClick={handleDuplicate} className="bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] text-[#1A1A1A] py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-                                                Copy Table
+                                            <button
+                                                type="button"
+                                                onClick={handleDuplicate}
+                                                className="py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                            >
+                                                DUPLICATE
                                             </button>
-                                            <button onClick={() => handleDeleteTable(selectedTable.id)} className="bg-white hover:bg-red-50 border border-red-200 text-red-600 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                                                Delete Table
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteTable(selectedTable.id, selectedTable.table_name)}
+                                                className="py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-sm cursor-pointer"
+                                            >
+                                                DELETE
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            // --- Add New Mode ---
-                            <div className="space-y-4 animate-fade-in flex flex-col h-full">
-                                <div className="border-b border-[#D1D1CD] pb-3 shrink-0">
-                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5"><Plus size={14} /> NEW TABLE UNIT</h2>
-                                    <p className="text-[9px] text-[#767673] font-mono font-bold uppercase tracking-tight mt-0.5">Create a new table element and drag to position.</p>
+                            // Add New Table Mode
+                            <div className="space-y-4 flex flex-col h-full font-mono text-xs">
+                                <div className="border-b border-[oklch(85%_0.012_28)] pb-3 shrink-0">
+                                    <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                        ADD NEW ELEMENT
+                                    </span>
+                                    <h2 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                        NEW TABLE UNIT
+                                    </h2>
                                 </div>
 
-                                <div className="space-y-4 flex-1">
+                                <div className="space-y-3 flex-1">
                                     <div>
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">NAME (ชื่อโต๊ะ)</label>
-                                        <input type="text" placeholder="e.g. A1, VIP1" value={newTable.name} onChange={e => setNewTable({ ...newTable, name: e.target.value })} className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] placeholder-gray-400" />
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            TABLE NAME (ชื่อโต๊ะ)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. A1, VIP-1, T4"
+                                            value={newTable.name}
+                                            onChange={e => setNewTable({ ...newTable, name: e.target.value })}
+                                            className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                                SEATS (คน)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={newTable.capacity}
+                                                onChange={e => setNewTable({ ...newTable, capacity: parseInt(e.target.value) || 1 })}
+                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                                SHAPE
+                                            </label>
+                                            <select
+                                                value={newTable.shape}
+                                                onChange={e => setNewTable({ ...newTable, shape: e.target.value })}
+                                                className="w-full px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm outline-none focus:border-[oklch(52%_0.16_28)] font-bold cursor-pointer"
+                                            >
+                                                <option value="rect">Rectangle</option>
+                                                <option value="circle">Circle</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Presets */}
+                                    <div>
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            SIZE PRESET
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {SIZE_PRESETS.slice(0, 4).map(preset => (
+                                                <button
+                                                    key={preset.name}
+                                                    type="button"
+                                                    onClick={() => setNewTable({ ...newTable, width: preset.w, height: preset.h, shape: preset.shape, capacity: preset.cap })}
+                                                    className="px-2 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[9px] font-bold text-center cursor-pointer"
+                                                >
+                                                    {preset.name}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     <div>
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">COLOR THEME (สีเริ่มต้น)</label>
-                                        <div className="flex gap-1.5">
-                                            {COLOR_PRESETS.slice(0, 5).map(c => (
+                                        <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-1 block">
+                                            COLOR THEME
+                                        </label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {COLOR_PRESETS.map(c => (
                                                 <button
                                                     key={c.name}
+                                                    type="button"
                                                     onClick={() => setNewTable({ ...newTable, color: c.value })}
-                                                    className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${newTable.color === c.value ? 'border-[#B0B0AC] scale-105 shadow-sm' : 'border-[#D1D1CD] opacity-80'}`}
+                                                    className={`w-6 h-6 rounded-full border transition-all cursor-pointer ${
+                                                        newTable.color === c.value ? 'ring-2 ring-[oklch(52%_0.16_28)] scale-110 shadow-xs' : 'opacity-80'
+                                                    }`}
                                                     style={{ backgroundColor: c.value }}
                                                 />
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-4">
-                                        <div className="w-1/2">
-                                            <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">SEATS (คน)</label>
-                                            <input type="number" min="1" placeholder="4" value={newTable.capacity} onChange={e => setNewTable({ ...newTable, capacity: parseInt(e.target.value) || 1 })} className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500]" />
-                                        </div>
-                                        <div className="w-1/2">
-                                            <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">SHAPE</label>
-                                            <select value={newTable.shape} onChange={e => setNewTable({ ...newTable, shape: e.target.value })} className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs text-[#1A1A1A] font-medium outline-none focus:border-[#FF5500] cursor-pointer">
-                                                <option value="rect">Rect</option>
-                                                <option value="circle">Circle</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-2 border-t border-[#D1D1CD]">
-                                        <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1.5 block">INITIAL SIZE (ขนาด %)</label>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[8px] font-mono font-bold text-[#767673] w-8">W %</span>
-                                                <input type="range" min="2" max="50" value={newTable.width} onChange={e => setNewTable({ ...newTable, width: parseInt(e.target.value) })} className="flex-1 accent-[#FF5500] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                <span className="text-[9px] font-mono font-bold w-8 text-right">{newTable.width}%</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[8px] font-mono font-bold text-[#767673] w-8">H %</span>
-                                                <input type="range" min="2" max="50" value={newTable.height} onChange={e => setNewTable({ ...newTable, height: parseInt(e.target.value) })} className="flex-1 accent-[#FF5500] h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer" />
-                                                <span className="text-[9px] font-mono font-bold w-8 text-right">{newTable.height}%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button onClick={handleAddTable} className="w-full bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-3 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-colors mt-4 shadow-sm active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer">
-                                        <Plus size={14} /> Create Table Unit
+                                    <button
+                                        type="button"
+                                        onClick={handleAddTable}
+                                        className="w-full py-3 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-colors mt-4 cursor-pointer"
+                                    >
+                                        + CREATE TABLE UNIT
                                     </button>
                                 </div>
                             </div>
@@ -531,166 +977,167 @@ export default function AdminTableEditor() {
                     </div>
                 </div>
 
-                {/* QR Code Flyer Modal */}
+                {/* --- SINGLE QR ORDERING FLYER MODAL --- */}
                 {qrModalOpen && selectedTable && (
-                    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => setQrModalOpen(false)}>
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-6" onClick={(e) => e.stopPropagation()}>
-                            <div className="w-full flex justify-between items-center pb-2 border-b border-zinc-800">
-                                <h3 className="font-bold text-sm text-zinc-400 tracking-wider">QR ORDERING TICKET</h3>
-                                <button onClick={() => setQrModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">✕</button>
+                    <div
+                        className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center p-4 backdrop-blur-xs"
+                        onClick={() => setQrModalOpen(false)}
+                    >
+                        <div
+                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-4"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="w-full flex justify-between items-center pb-2 border-b border-[oklch(85%_0.012_28)]">
+                                <span className="font-mono font-bold text-xs uppercase tracking-wider text-[oklch(42%_0.010_28)]">
+                                    QR ORDERING FLYER
+                                </span>
+                                <button onClick={() => setQrModalOpen(false)} className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black">
+                                    ✕
+                                </button>
                             </div>
 
-                            {/* Flyer Preview Card */}
-                            <div className="bg-white text-black p-8 rounded-2xl border-4 border-double border-black flex flex-col items-center w-full max-w-[280px] shadow-lg">
-                                <span className="font-black text-lg tracking-tight uppercase leading-none">IN THE HAUS</span>
-                                <span className="text-[7px] font-bold text-zinc-500 uppercase tracking-widest mt-1 block">Scan to Order / สแกนสั่งอาหาร</span>
+                            {/* Flyer Card Preview */}
+                            <div className="bg-white text-black p-6 rounded-sm border-2 border-black flex flex-col items-center w-full max-w-[280px] shadow-sm font-sans">
+                                <span className="font-mono font-black text-base tracking-widest uppercase">IN THE HAUS</span>
+                                <span className="font-mono text-[8px] font-bold text-gray-500 uppercase tracking-wider mt-0.5">SCAN TO ORDER / สแกนสั่งอาหาร</span>
                                 
-                                <span className="text-xs text-zinc-500 font-bold uppercase mt-6">Table</span>
-                                <span className="text-5xl font-black leading-none block mb-4 mt-1">{selectedTable.table_name}</span>
-                                
-                                <img 
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getAppOrigin() + '/table/' + selectedTable.id)}`} 
-                                    alt="Table QR Code"
-                                    className="w-40 h-40 object-contain mb-4 border border-zinc-100 p-1"
-                                />
+                                <div className="border-t border-b border-gray-300 w-full py-2 my-3 text-center">
+                                    <span className="font-mono text-[9px] font-bold text-gray-500 uppercase tracking-widest block">TABLE</span>
+                                    <span className="font-mono text-4xl font-black leading-none block">{selectedTable.table_name}</span>
+                                </div>
 
-                                <div className="text-[8px] font-bold text-zinc-600 leading-normal max-w-[200px]">
-                                    1. เปิดกล้องสแกน QR Code<br/>
-                                    2. กดยืนยัน GPS เพื่อเช็คอินในร้าน<br/>
-                                    3. เลือกเมนูและส่งเข้าห้องครัวได้ทันที
+                                <div className="p-2 border border-black bg-white my-1">
+                                    <QRCodeSVG
+                                        value={`${getAppOrigin()}/table/${selectedTable.id}`}
+                                        size={150}
+                                        level="H"
+                                    />
+                                </div>
+
+                                <div className="text-[8px] font-medium text-gray-600 leading-tight mt-3 text-center">
+                                    1. เปิดกล้องสแกนคิวอาร์โค้ด<br/>
+                                    2. เลือกเมนูและส่งเข้าห้องครัวได้ทันที
                                 </div>
                             </div>
 
-                            {/* Modal Actions */}
-                            <div className="flex flex-col gap-2 w-full font-sans">
-                                <div className="flex gap-2 w-full">
-                                    <button 
-                                        onClick={() => {
-                                            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getAppOrigin() + '/table/' + selectedTable.id)}`;
-                                            const printWindow = window.open('', '_blank', 'width=600,height=800');
-                                            printWindow.document.write(`
-                                                <html>
-                                                    <head>
-                                                        <title>Table ${selectedTable.table_name} QR Code</title>
-                                                        <style>
-                                                            @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;700&family=Inter:wght@700;900&display=swap');
-                                                            body {
-                                                                font-family: 'Inter', 'IBM Plex Sans Thai', sans-serif;
-                                                                display: flex;
-                                                                flex-direction: column;
-                                                                align-items: center;
-                                                                justify-content: center;
-                                                                height: 100vh;
-                                                                margin: 0;
-                                                                text-align: center;
-                                                                background: white;
-                                                                color: black;
-                                                            }
-                                                            .container {
-                                                                border: 8px double black;
-                                                                padding: 40px;
-                                                                width: 350px;
-                                                                border-radius: 20px;
-                                                                display: flex;
-                                                                flex-direction: column;
-                                                                align-items: center;
-                                                            }
-                                                            .logo {
-                                                                font-size: 28px;
-                                                                font-weight: 900;
-                                                                letter-spacing: -1px;
-                                                                margin-bottom: 5px;
-                                                                text-transform: uppercase;
-                                                            }
-                                                            .tagline {
-                                                                font-size: 10px;
-                                                                text-transform: uppercase;
-                                                                letter-spacing: 2px;
-                                                                color: #666;
-                                                                margin-bottom: 30px;
-                                                                font-weight: bold;
-                                                            }
-                                                            .table-title {
-                                                                font-size: 14px;
-                                                                color: #555;
-                                                                font-weight: bold;
-                                                                text-transform: uppercase;
-                                                                margin-bottom: 5px;
-                                                            }
-                                                            .table-name {
-                                                                font-size: 72px;
-                                                                font-weight: 900;
-                                                                margin: 0 0 20px 0;
-                                                                line-height: 1;
-                                                            }
-                                                            .qr-code {
-                                                                width: 220px;
-                                                                height: 220px;
-                                                                margin-bottom: 30px;
-                                                            }
-                                                            .instructions {
-                                                                font-size: 11px;
-                                                                font-weight: bold;
-                                                                line-height: 1.6;
-                                                                color: #333;
-                                                                max-width: 300px;
-                                                            }
-                                                        </style>
-                                                    </head>
-                                                    <body>
-                                                        <div class="container">
-                                                            <div class="logo">IN THE HAUS</div>
-                                                            <div class="tagline">Scan to Order / สแกนเพื่อสั่งอาหาร</div>
-                                                            <div class="table-title">Table</div>
-                                                            <div class="table-name">${selectedTable.table_name}</div>
-                                                            <img class="qr-code" src="${qrUrl}" alt="QR Code" />
-                                                            <div class="instructions">
-                                                                1. เปิดกล้องมือถือสแกนคิวอาร์โค้ด<br/>
-                                                                2. ยืนยันพิกัด GPS เพื่อเริ่มการสั่งอาหาร<br/>
-                                                                3. ออเดอร์ของคุณจะส่งไปยังพนักงานทันที
-                                                            </div>
-                                                        </div>
-                                                        <script>
-                                                            window.onload = function() { window.print(); }
-                                                        </script>
-                                                    </body>
-                                                </html>
-                                            `);
-                                            printWindow.document.close();
-                                        }}
-                                        className="flex-grow bg-white text-black py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-zinc-200 transition-colors cursor-pointer"
-                                    >
-                                        <Printer size={14} /> Print Flyer
-                                    </button>
-                                    <button 
-                                        onClick={async () => {
-                                            try {
-                                                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(getAppOrigin() + '/table/' + selectedTable.id)}`;
-                                                const response = await fetch(qrUrl);
-                                                const blob = await response.blob();
-                                                const blobUrl = window.URL.createObjectURL(blob);
-                                                const link = document.createElement('a');
-                                                link.href = blobUrl;
-                                                link.download = `QR_Table_${selectedTable.table_name}.png`;
-                                                document.body.appendChild(link);
-                                                link.click();
-                                                document.body.removeChild(link);
-                                                window.URL.revokeObjectURL(blobUrl);
-                                            } catch (err) {
-                                                console.error("Error downloading QR:", err);
-                                                alert("ดาวน์โหลดไม่สำเร็จ โปรดคลิกขวาที่รูปคิวอาร์เพื่อกดบันทึกรูปภาพ");
-                                            }
-                                        }}
-                                        className="flex-grow bg-[#FF5500] hover:bg-[#E04B00] border border-[#D04500] text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-                                    >
-                                        <Download size={14} /> Download PNG
-                                    </button>
-                                </div>
-                                <button 
-                                    onClick={() => setQrModalOpen(false)}
-                                    className="w-full bg-zinc-900 border border-zinc-800 text-zinc-400 py-2.5 rounded-xl font-bold text-xs hover:text-white transition-colors cursor-pointer"
+                            {/* Actions */}
+                            <div className="flex gap-2 w-full font-mono text-[10px] font-bold uppercase tracking-wider">
+                                <button
+                                    type="button"
+                                    onClick={() => handlePrintBatchSheet([selectedTable])}
+                                    className="flex-1 py-2.5 bg-[oklch(18%_0.012_28)] text-white rounded-sm hover:bg-black cursor-pointer"
                                 >
-                                    Close
+                                    PRINT FLYER
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setQrModalOpen(false)}
+                                    className="px-4 py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                >
+                                    CLOSE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- BATCH QR CODE FLYERS STUDIO MODAL --- */}
+                {batchQrModalOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-xs"
+                        onClick={() => setBatchQrModalOpen(false)}
+                    >
+                        <div
+                            className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-6 max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center pb-3 border-b border-[oklch(85%_0.012_28)] shrink-0">
+                                <div>
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                        BATCH QR STUDIO
+                                    </span>
+                                    <h3 className="font-mono text-xl font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                                        Print All Store QR Flyers
+                                    </h3>
+                                </div>
+                                <button onClick={() => setBatchQrModalOpen(false)} className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black">
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Table Checkbox Selection */}
+                            <div className="my-4 flex-1 overflow-y-auto pr-1 space-y-3 font-mono text-xs">
+                                <div className="flex justify-between items-center text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold">
+                                    <span>SELECT TABLES TO PRINT ({selectedBatchTableIds.length}/{tables.length})</span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedBatchTableIds(tables.map(t => t.id))}
+                                            className="text-[oklch(52%_0.16_28)] hover:underline cursor-pointer"
+                                        >
+                                            SELECT ALL
+                                        </button>
+                                        <span>•</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedBatchTableIds([])}
+                                            className="hover:underline cursor-pointer"
+                                        >
+                                            CLEAR
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                    {tables.map(t => {
+                                        const isChecked = selectedBatchTableIds.includes(t.id);
+                                        return (
+                                            <label
+                                                key={t.id}
+                                                className={`p-2.5 rounded-sm border flex items-center gap-2 cursor-pointer transition-all ${
+                                                    isChecked
+                                                        ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] font-bold'
+                                                        : 'bg-[oklch(98%_0.006_28)] border-[oklch(85%_0.012_28)] opacity-60'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={e => {
+                                                        if (e.target.checked) {
+                                                            setSelectedBatchTableIds([...selectedBatchTableIds, t.id]);
+                                                        } else {
+                                                            setSelectedBatchTableIds(selectedBatchTableIds.filter(id => id !== t.id));
+                                                        }
+                                                    }}
+                                                    className="accent-[oklch(52%_0.16_28)]"
+                                                />
+                                                <span className="truncate">{t.table_name}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Batch Print Actions */}
+                            <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex gap-2 font-mono text-[10px] font-bold uppercase tracking-wider shrink-0">
+                                <button
+                                    type="button"
+                                    disabled={selectedBatchTableIds.length === 0}
+                                    onClick={() => {
+                                        const tablesToPrint = tables.filter(t => selectedBatchTableIds.includes(t.id));
+                                        handlePrintBatchSheet(tablesToPrint);
+                                    }}
+                                    className="flex-1 py-3 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-sm cursor-pointer disabled:opacity-40"
+                                >
+                                    PRINT {selectedBatchTableIds.length} QR CARDS (A4 GRID SHEET)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBatchQrModalOpen(false)}
+                                    className="px-5 py-3 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-sm cursor-pointer"
+                                >
+                                    CANCEL
                                 </button>
                             </div>
                         </div>

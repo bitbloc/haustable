@@ -139,13 +139,12 @@ export default function AdminDashboard() {
     }, [bookings])
 
     // 3. Live Financial Metrics for Today
-    const { revenueToday, completedOrdersCount, dineInCount, pickupCount, steakCount } = useMemo(() => {
+    const { revenueToday, completedOrdersCount, dineInCount, pickupCount } = useMemo(() => {
         const todayStr = getThaiDate()
         let rev = 0
         let paidCount = 0
         let dineIn = 0
         let pickup = 0
-        let steak = 0
 
         bookings.forEach(b => {
             const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
@@ -158,8 +157,6 @@ export default function AdminDashboard() {
                     dineIn++
                 } else if (b.booking_type === 'pickup') {
                     pickup++
-                } else if (b.booking_type === 'steak' || b.booking_type === 'preorder_steak') {
-                    steak++
                 }
             }
         })
@@ -168,8 +165,7 @@ export default function AdminDashboard() {
             revenueToday: rev,
             completedOrdersCount: paidCount,
             dineInCount: dineIn,
-            pickupCount: pickup,
-            steakCount: steak
+            pickupCount: pickup
         }
     }, [bookings])
 
@@ -313,7 +309,6 @@ export default function AdminDashboard() {
                     pendingInboxCount={pendingBookings.length}
                     dineInCount={dineInCount}
                     pickupCount={pickupCount}
-                    steakCount={steakCount}
                     loading={loading}
                 />
 

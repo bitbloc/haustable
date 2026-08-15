@@ -249,7 +249,6 @@ function StatusBadge({ status }) {
 
 
 function bookingTypeLabel(order) {
-    if (order.booking_type === 'steak') return 'Steak Pre-order'
     if (order.booking_type === 'pickup') return 'Pickup'
     if (order.table_name) return `Table ${order.table_name}`
     return 'Dine-in'

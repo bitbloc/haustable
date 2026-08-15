@@ -11,7 +11,6 @@ export default function LivePulseMetrics({
     pendingInboxCount = 0,
     dineInCount = 0,
     pickupCount = 0,
-    steakCount = 0,
     loading = false
 }) {
     const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
@@ -79,7 +78,7 @@ export default function LivePulseMetrics({
                     <Utensils size={14} className="text-[oklch(55%_0.010_28)]" />
                 </div>
 
-                <div className="my-2 grid grid-cols-3 gap-1 text-center font-mono">
+                <div className="my-2 grid grid-cols-2 gap-1.5 text-center font-mono">
                     <div className="bg-[oklch(94%_0.010_28)] p-1.5 rounded-sm">
                         <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)]">{dineInCount}</div>
                         <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase">DINE-IN</div>
@@ -88,15 +87,11 @@ export default function LivePulseMetrics({
                         <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)]">{pickupCount}</div>
                         <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase">PICKUP</div>
                     </div>
-                    <div className="bg-[oklch(94%_0.010_28)] p-1.5 rounded-sm">
-                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)]">{steakCount}</div>
-                        <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase">STEAK</div>
-                    </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
                     <span>TOTAL ACTIVE</span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]">{dineInCount + pickupCount + steakCount} ORDERS</span>
+                    <span className="font-bold text-[oklch(18%_0.012_28)]">{dineInCount + pickupCount} ORDERS</span>
                 </div>
             </div>
 
