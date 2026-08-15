@@ -136,7 +136,7 @@ export default function AdminMarketingPage({ defaultTab = 'members' }) {
                                 <Icon size={14} />
                                 <span>{tab.label}</span>
                                 {tab.count !== undefined && (
-                                    <span className={`px-1.5 py-0.2 text-[10px] rounded-xs font-bold ${
+                                    <span className={`px-1.5 py-0.5 text-[10px] rounded-xs font-bold ${
                                         isActive
                                             ? tab.alert 
                                                 ? 'bg-[oklch(52%_0.16_28)] text-white' 

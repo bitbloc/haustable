@@ -290,7 +290,7 @@ export default function AdminLayout() {
                                         <span>{item.label}</span>
                                     </div>
                                     {item.badge && (
-                                        <span className="bg-[oklch(52%_0.16_28)] text-white text-[10px] px-1.5 py-0.2 rounded-sm font-mono font-bold">
+                                        <span className="bg-[oklch(52%_0.16_28)] text-white text-[10px] px-1.5 py-0.5 rounded-sm font-mono font-bold">
                                             {item.badge}
                                         </span>
                                     )}

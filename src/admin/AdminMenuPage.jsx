@@ -125,7 +125,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                                 <Icon size={14} />
                                 <span>{tab.label}</span>
                                 {tab.count !== undefined && tab.count > 0 && (
-                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-xs font-mono ${
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-xs font-mono ${
                                         isActive ? 'bg-white/20 text-white' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
                                     }`}>
                                         {tab.count}

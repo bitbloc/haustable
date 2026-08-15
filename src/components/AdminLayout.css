@@ -1,22 +1,19 @@
 /* Hallmark · macrostructure: Workbench · redesign: admin portal
- * theme: custom · vibe: "industrial precision, Braun-instrument, mono slab"
- * paper: oklch(96% 0.006 90) · accent: oklch(88% 0.18 100)
- * display: Space Mono · body: IBM Plex Sans Thai · axes: light / mono / chromatic-other (yellow-green ~100°)
- * studied: no · context: explicit · v1.1.0
+ * theme: Thai Modern OKLCH & Dieter Rams Precision
  * pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
 .admin-system {
   /* Braun ET66 & T3 pocket radio industrial precision tokens */
-  --ram-canvas: oklch(96% 0.006 90);      /* Warm matte gray plastic cabinet */
-  --ram-paper: oklch(98% 0.004 90);       /* Ivory white dial scale / button face */
-  --ram-paper-dark: oklch(18% 0.008 90);  /* Dark cabinet body */
-  --ram-ink: oklch(18% 0.008 90);         /* Near-black charcoal typography */
-  --ram-ink-muted: oklch(50% 0.006 90);   /* Muted gray text / secondary markers */
-  --ram-rule: oklch(82% 0.006 90);        /* Mechanical seams / metal guides */
-  --ram-rule-light: oklch(88% 0.005 90);
-  --ram-accent: oklch(88% 0.18 100);      /* functional yellow-green button highlight */
-  --ram-accent-orange: oklch(72% 0.16 50); /* function toggle orange */
+  --ram-canvas: oklch(97% 0.008 28);      /* Warm cream/sand surface */
+  --ram-paper: oklch(98% 0.004 28);       /* Ivory white button / panel face */
+  --ram-paper-dark: oklch(18% 0.012 28);  /* Dark cabinet body */
+  --ram-ink: oklch(18% 0.012 28);         /* Near-black charcoal typography */
+  --ram-ink-muted: oklch(50% 0.010 28);   /* Muted gray text / secondary markers */
+  --ram-rule: oklch(85% 0.012 28);        /* Mechanical seams / metal guides */
+  --ram-rule-light: oklch(90% 0.008 28);
+  --ram-accent: oklch(52% 0.16 28);       /* Clay Terracotta */
+  --ram-accent-orange: oklch(72% 0.16 50);/* Function toggle orange */
   --ram-alert: oklch(62% 0.22 25);        /* Red indicator lamp */
   --ram-ok: oklch(64% 0.22 140);          /* Green status lamp */
   
@@ -30,313 +27,36 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* Redefine Tailwind v4 theme variables when inside .admin-system */
-.admin-system {
-  --color-canvas: var(--ram-canvas) !important;
-  --color-paper: var(--ram-paper) !important;
-  --color-ink: var(--ram-ink) !important;
-  --color-subInk: var(--ram-ink-muted) !important;
-  --color-brand: var(--ram-accent) !important;
+/* --- Custom Scrollbars for Admin System --- */
+.admin-system ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-
-/* --- Tailwind Overrides inside Admin --- */
-.admin-system .bg-white,
-.admin-system .bg-paper,
-.admin-system .bg-canvas {
-  background-color: var(--ram-paper) !important;
+.admin-system ::-webkit-scrollbar-track {
+  background: transparent;
 }
-.admin-system .bg-gray-50,
-.admin-system .bg-gray-100 {
-  background-color: var(--ram-canvas) !important;
-}
-.admin-system .border-gray-100,
-.admin-system .border-gray-200,
-.admin-system .border-gray-300 {
-  border-color: var(--ram-rule) !important;
-}
-.admin-system .text-gray-900,
-.admin-system .text-ink {
-  color: var(--ram-ink) !important;
-}
-.admin-system .text-gray-500,
-.admin-system .text-gray-400,
-.admin-system .text-subInk {
-  color: var(--ram-ink-muted) !important;
-}
-
-/* --- Sharp borders and flat design rules --- */
-.admin-system *,
-.admin-system *::before,
-.admin-system *::after {
-  border-radius: 2px !important; /* Sharp industrial corners */
-  box-shadow: none !important; /* No soft dropshadows */
-}
-
-/* --- Scrollbars --- */
 .admin-system ::-webkit-scrollbar-thumb {
-  background: var(--ram-rule) !important;
-  border-radius: 0px !important;
+  background: var(--ram-rule);
+  border-radius: 2px;
 }
 .admin-system ::-webkit-scrollbar-thumb:hover {
-  background: var(--ram-ink-muted) !important;
+  background: var(--ram-ink-muted);
 }
 
-/* --- Typography --- */
-.admin-system h1,
-.admin-system h2,
-.admin-system h3,
-.admin-system h4,
-.admin-system th,
-.admin-system .font-mono,
-.admin-system .font-bold {
-  font-family: var(--ram-font-display);
-  letter-spacing: -0.02em;
-  font-weight: 700;
-}
-
-/* --- Physical Buttons --- */
-/* Target standard action buttons, excluding icon-only, toggles, sub-menus, or tab buttons */
-.admin-system button:not(.p-1):not(.p-1\.5):not(.p-2):not(.p-3):not(.p-0):not([class*="hover:bg-"]):not(.admin-tab-btn):not([class*="border-b"]):not(.w-8):not(.h-8):not(.w-12):not(.h-12):not(.rounded-full),
-.admin-system a.button,
-.admin-system .btn {
-  font-family: var(--ram-font-display);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  border: 1px solid var(--ram-ink) !important;
-  background-color: var(--ram-paper) !important;
-  color: var(--ram-ink) !important;
-  padding: 0.5rem 1rem !important;
-  transition: transform 100ms cubic-bezier(0.16, 1, 0.3, 1), background-color 100ms;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-.admin-system button:not(.p-1):not(.p-1\.5):not(.p-2):not(.p-3):not(.p-0):not([class*="hover:bg-"]):not(.admin-tab-btn):not([class*="border-b"]):not(.w-8):not(.h-8):not(.w-12):not(.h-12):not(.rounded-full):hover,
-.admin-system a.button:hover {
-  background-color: var(--ram-canvas) !important;
-}
-.admin-system button:not(.p-1):not(.p-1\.5):not(.p-2):not(.p-3):not(.p-0):not([class*="hover:bg-"]):not(.admin-tab-btn):not([class*="border-b"]):not(.w-8):not(.h-8):not(.w-12):not(.h-12):not(.rounded-full):active,
-.admin-system a.button:active {
-  transform: translateY(1px) !important;
-}
-.admin-system button:focus-visible {
-  outline: 2px solid var(--ram-accent);
-}
-
-/* Reset / Override for Icon & Utility buttons */
-.admin-system button.p-1,
-.admin-system button.p-1\.5,
-.admin-system button.p-2,
-.admin-system button.p-2\.5,
-.admin-system button.p-3,
-.admin-system button.p-0,
-.admin-system button.rounded-full,
-.admin-system button.sd-header__btn,
-.admin-system button.sd-live__refresh,
-.admin-system button.w-8,
-.admin-system button.h-8,
-.admin-system button.w-12,
-.admin-system button.h-12,
-.admin-system button[class*="hover:bg-"] {
-  border: none !important;
-  background-color: transparent !important;
-  color: inherit !important;
-  padding: 0 !important;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  min-height: 0;
-  box-shadow: none !important;
-  border-radius: 4px !important;
-  text-transform: none !important;
-  font-family: inherit !important;
-}
-
-/* Specific styling for small icon buttons like edit/delete to look like Rams mechanical keys */
-.admin-system button.p-1\.5,
-.admin-system button.p-2 {
-  border: 1px solid var(--ram-rule) !important;
-  background-color: var(--ram-paper) !important;
-  color: var(--ram-ink-muted) !important;
-  border-radius: 2px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0.25rem !important;
-  width: 26px !important;
-  height: 26px !important;
-}
-.admin-system button.p-1\.5:hover,
-.admin-system button.p-2:hover {
-  border-color: var(--ram-ink) !important;
-  color: var(--ram-ink) !important;
-  background-color: var(--ram-canvas) !important;
-}
-.admin-system button.p-1\.5:active,
-.admin-system button.p-2:active {
-  transform: translateY(1px) !important;
-}
-
-/* Special styling for edit/delete buttons */
-.admin-system button.p-1\.5[class*="hover:text-red"],
-.admin-system button.p-2[class*="hover:text-red"] {
-  color: var(--ram-ink-muted) !important;
-}
-.admin-system button.p-1\.5[class*="hover:text-red"]:hover,
-.admin-system button.p-2[class*="hover:text-red"]:hover {
-  border-color: var(--ram-alert) !important;
-  color: var(--ram-alert) !important;
-  background-color: oklch(95% 0.03 25) !important;
-}
-
-/* Special Button highlights */
-.admin-system button.bg-brand,
-.admin-system button[class*="bg-[#DFFF00]"],
-.admin-system button.bg-primary {
-  background-color: var(--ram-accent) !important;
-  color: var(--ram-ink) !important;
-  border: 1px solid var(--ram-ink) !important;
-}
-.admin-system button.bg-brand:hover {
-  background-color: oklch(84% 0.16 100) !important;
-}
-
-/* Cancel / Danger buttons */
-.admin-system button.bg-red-500,
-.admin-system button.text-red-500,
-.admin-system button[class*="text-red-"] {
-  border-color: var(--ram-alert) !important;
-  color: var(--ram-alert) !important;
-  background-color: var(--ram-paper) !important;
-}
-.admin-system button.bg-red-500:hover,
-.admin-system button.text-red-500:hover {
-  background-color: oklch(95% 0.03 25) !important;
-}
-
-/* --- Input Fields --- */
-.admin-system input[type="text"],
-.admin-system input[type="number"],
-.admin-system input[type="email"],
-.admin-system input[type="password"],
-.admin-system input[type="search"],
-.admin-system input[type="date"],
-.admin-system input[type="time"],
-.admin-system textarea,
-.admin-system select {
-  font-family: var(--ram-font-body);
-  background-color: var(--ram-paper) !important;
-  border: 1px solid var(--ram-rule) !important;
-  color: var(--ram-ink) !important;
-  padding: 0.5rem 0.75rem;
-  outline: none;
-  font-size: 0.875rem;
-}
-.admin-system input:focus,
-.admin-system textarea:focus,
-.admin-system select:focus {
-  border-color: var(--ram-ink) !important;
-  outline: 1px solid var(--ram-ink);
-}
-
-/* --- Tables --- */
-.admin-system table {
-  border-collapse: collapse !important;
-  width: 100%;
-  border: 1px solid var(--ram-rule) !important;
-}
-.admin-system th {
-  background-color: var(--ram-canvas) !important;
-  border-bottom: 1px solid var(--ram-rule) !important;
-  border-right: 1px solid var(--ram-rule) !important;
-  color: var(--ram-ink) !important;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.75rem 1rem !important;
-  text-align: left;
-}
-.admin-system td {
-  border-bottom: 1px solid var(--ram-rule-light) !important;
-  border-right: 1px solid var(--ram-rule-light) !important;
-  padding: 0.75rem 1rem !important;
-  font-size: 0.8125rem;
-  background-color: var(--ram-paper);
-}
-.admin-system tr:hover td {
-  background-color: oklch(97% 0.005 90) !important;
-}
-
-/* --- Cards / Containers --- */
-.admin-system .card,
-.admin-system [class*="bg-white"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full):not(.menu-item-card),
-.admin-system [class*="bg-paper"][class*="rounded-"]:not([class*="w-"]):not([class*="h-"]):not(.rounded-full):not(.menu-item-card) {
-  border: 1px solid var(--ram-rule) !important;
-  background-color: var(--ram-paper) !important;
-  padding: 1.5rem !important;
-}
-
-/* Explicit compact card padding for menu item list cards */
-.admin-system .menu-item-card {
-  padding: 0.75rem !important; /* 12px padding */
-}
-
-/* Dieter Rams / Braun Mechanical Slide Switch */
-.admin-system button.rounded-full.w-8.h-4 {
-  width: 36px !important;
-  height: 18px !important;
-  border-radius: 2px !important; /* Sharp rect slot */
-  border: 1px solid var(--ram-ink) !important;
-  background-color: var(--ram-paper) !important;
-  padding: 1px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  position: relative !important;
-  cursor: pointer !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
-  overflow: hidden !important;
-}
-.admin-system button.rounded-full.w-8.h-4.bg-brand,
-.admin-system button.rounded-full.w-8.h-4[class*="bg-brand"] {
-  background-color: var(--ram-accent) !important;
-}
-
-/* Slide knob inside the switch */
-.admin-system button.rounded-full.w-8.h-4 div,
-.admin-system button.rounded-full.w-8.h-4 div.w-3.h-3 {
-  width: 14px !important;
-  height: 14px !important;
-  border-radius: 1px !important; /* Sharp slide knob */
-  background-color: var(--ram-ink) !important; /* Charcoal knob */
-  border: 1px solid var(--ram-ink) !important;
-  padding: 0 !important; /* Reset padding to overwrite greedy container rules */
-  margin: 0 !important;
-  box-shadow: none !important;
-  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-.admin-system button.rounded-full.w-8.h-4 div.translate-x-4,
-.admin-system button.rounded-full.w-8.h-4[class*="translate-x-4"] div {
-  transform: translateX(18px) !important; /* Match the slot width */
-}
-
-/* --- Navigation sidebar & menus --- */
+/* --- Navigation Sidebar & Menus --- */
 .admin-sidebar {
-  background-color: var(--ram-paper) !important;
-  border-right: 1px solid var(--ram-rule) !important;
-  padding: 1.5rem !important;
+  background-color: var(--ram-paper);
+  border-right: 1px solid var(--ram-rule);
+  padding: 1.5rem;
 }
+
 .admin-sidebar-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem !important;
+  padding: 0.75rem 1rem;
   min-height: 42px;
-  border-radius: 2px !important;
+  border-radius: 4px;
   font-family: var(--ram-font-display);
   font-size: 0.75rem;
   font-weight: 700;
@@ -344,23 +64,25 @@
   letter-spacing: 0.05em;
   color: var(--ram-ink-muted);
   border: 1px solid transparent;
-  transition: all 150ms;
+  transition: all 150ms ease;
 }
+
 .admin-sidebar-item:hover {
   color: var(--ram-ink);
-  background-color: var(--ram-canvas) !important;
-  border-color: var(--ram-rule) !important;
+  background-color: oklch(94% 0.010 28);
+  border-color: var(--ram-rule);
 }
+
 .admin-sidebar-item.is-active {
-  color: var(--ram-ink) !important;
-  background-color: var(--ram-accent) !important;
-  border-color: var(--ram-ink) !important;
+  color: #ffffff;
+  background-color: var(--ram-ink);
+  border-color: var(--ram-ink);
 }
 
 /* Mobile top navigation */
 .admin-mobile-nav {
-  background-color: var(--ram-paper) !important;
-  border-bottom: 1px solid var(--ram-rule) !important;
+  background-color: var(--ram-paper);
+  border-bottom: 1px solid var(--ram-rule);
   min-height: 54px;
 }
 
@@ -377,73 +99,31 @@
   }
 }
 
-/* --- Tabs --- */
-.admin-tabs-container {
-  display: flex;
-  gap: 0.25rem;
-  border-bottom: 1px solid var(--ram-rule) !important;
-  padding-bottom: 0px !important;
-  margin-bottom: 2rem;
-}
-.admin-tab-btn {
+/* Specific button helper classes if explicitly applied */
+.admin-btn {
   font-family: var(--ram-font-display);
-  font-size: 0.75rem;
-  font-weight: 700;
   text-transform: uppercase;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
-  padding: 0.5rem 1rem !important;
-  border: 1px solid transparent !important;
-  border-bottom: none !important;
-  border-radius: 2px 2px 0 0 !important;
-  color: var(--ram-ink-muted) !important;
-  background: transparent !important;
-  margin-bottom: -1px;
-}
-.admin-tab-btn:hover {
-  color: var(--ram-ink) !important;
-  background-color: var(--ram-canvas) !important;
-  border-color: var(--ram-rule) var(--ram-rule) transparent !important;
-}
-.admin-tab-btn.is-active {
-  color: var(--ram-ink) !important;
-  background-color: var(--ram-paper) !important;
-  border-color: var(--ram-rule) var(--ram-rule) var(--ram-paper) !important;
-  cursor: default;
+  font-weight: 700;
+  border: 1px solid var(--ram-rule);
+  background-color: var(--ram-paper);
+  color: var(--ram-ink);
+  padding: 0.5rem 1rem;
+  transition: all 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 4px;
 }
 
-/* Tab overrides in AdminMenuPage and sub-headers */
-.admin-system header button,
-.admin-system .admin-tabs-container button,
-.admin-system .admin-tab-btn,
-.admin-system button[class*="border-b-"],
-.admin-system button[class*="border-transparent"] {
-  border: none !important;
-  background: transparent !important;
-  padding: 0.75rem 1rem !important;
-  font-family: var(--ram-font-display) !important;
-  font-size: 0.75rem !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-radius: 0px !important;
-  color: var(--ram-ink-muted) !important;
-  box-shadow: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 0.5rem !important;
-  width: auto !important;
-  height: auto !important;
+.admin-btn:hover {
+  background-color: oklch(94% 0.010 28);
+  border-color: var(--ram-ink);
 }
-.admin-system header button:hover,
-.admin-system button[class*="border-transparent"]:hover {
-  color: var(--ram-ink) !important;
-  background-color: var(--ram-canvas) !important;
-}
-.admin-system header button[class*="border-brand"],
-.admin-system header button[class*="border-b-2"].border-brand,
-.admin-system button[class*="border-b-"].is-active,
-.admin-system button[class*="border-b-2"].text-brandDark {
-  border-bottom: 2px solid var(--ram-ink) !important;
-  color: var(--ram-ink) !important;
+
+.admin-btn:active {
+  transform: translateY(1px);
 }
