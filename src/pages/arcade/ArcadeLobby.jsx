@@ -850,26 +850,36 @@ export default function ArcadeLobby() {
             {activeTab === 'sator_chill' && (
               <div className="w-full flex flex-col gap-6">
                 
-                {/* Header Lounge Banner */}
-                <div className="bg-[#1b1c1e] text-white p-5 rounded-md border border-[#2d2e30] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner">
+                {/* Header Lounge Banner (Clean Light Style) */}
+                <div className="bg-white border border-[var(--color-rule)] p-5 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[9px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded-sm border border-amber-700">
+                      <span className="font-mono text-[9px] font-bold text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-2 py-0.5 rounded-sm border border-[oklch(52%_0.16_28)]/20">
                         NAKHON PHANOM x SOUTH FUSION
                       </span>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                     </div>
-                    <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-white mt-1">
+                    <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-1">
                       น้องไตปลา แมวเปรอะริมโขง
                     </h2>
-                    <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                    <p className="text-xs text-[oklch(45%_0.010_28)] font-sans mt-0.5">
                       เรื่องราวของ "น้องไตปลา" แมวเปรอะปักษ์ใต้ พลัดถิ่นมาเปิดร้านอาหารริมแม่น้ำโขงนครพนม
                     </p>
                   </div>
                 </div>
 
-                {/* Playable Mini-Game Prototype */}
-                <TaiPlaMiniGame />
+                {/* Playable Mini-Game Prototype (Clean & Fullscreen Capable) */}
+                <TaiPlaMiniGame 
+                  session={session}
+                  onClaimScore={handleClaimScore}
+                  onRequireLogin={handleRequireLogin}
+                  onCoinEarned={(coinAmount) => {
+                    if (session?.user) {
+                      fetchUserStats(session.user.id);
+                      fetchUserProfile(session.user.id);
+                    }
+                  }}
+                />
 
                 {/* Headphone Recommended Banner */}
                 <div className="bg-[oklch(94%_0.02_28)] border border-[oklch(82%_0.08_28)] rounded-md p-4 flex items-center justify-between gap-3 shadow-2xs">
@@ -898,7 +908,7 @@ export default function ArcadeLobby() {
                   <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
                     <div className="flex items-center gap-2">
                       <Volume2 className="w-4 h-4 text-[oklch(52%_0.16_28)]" />
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider">
+                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                         Lo-Fi Ambient Sound Generator
                       </span>
                     </div>
@@ -938,51 +948,51 @@ export default function ArcadeLobby() {
                   </div>
                 </div>
 
-                {/* Storyline & Game Modes Plan */}
-                <div className="bg-[#1e2023] text-white p-6 rounded-md border border-[#2e3035] flex flex-col gap-4 shadow-inner">
-                  <div className="border-b border-zinc-700 pb-3 flex items-center justify-between">
+                {/* Storyline & Game Modes Plan (Clean Light Style) */}
+                <div className="bg-white border border-[var(--color-rule)] p-6 rounded-lg flex flex-col gap-4 shadow-2xs">
+                  <div className="border-b border-[var(--color-rule)] pb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Compass className="w-4 h-4 text-amber-400" />
-                      <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-300">
+                      <Compass className="w-4 h-4 text-[oklch(52%_0.16_28)]" />
+                      <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                         STORYLINE // น้องไตปลา แมวเปรอะผจญภัย
                       </h3>
                     </div>
-                    <span className="font-mono text-[9px] text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded border border-zinc-600">
+                    <span className="font-mono text-[9px] text-[oklch(45%_0.010_28)] bg-[var(--color-paper-2)] px-2 py-0.5 rounded border border-[var(--color-rule)] font-bold">
                       ARCADE ROADMAP
                     </span>
                   </div>
 
-                  <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                  <p className="text-xs text-[oklch(35%_0.010_28)] font-sans leading-relaxed">
                     <strong>"น้องไตปลา"</strong> แมวเปรอะสามสีจากแดนใต้ ผู้มีกลิ่นหอมพริกแกงไตปลาและใบสะตอติดตัวมาตั้งแต่เด็ก ได้ยินเสียงลือเลื่องถึงความงดงามของแม่น้ำโขง จึงออกเดินทางขึ้นเหนือสู่ <strong>จังหวัดนครพนม</strong> เพื่อเปิดร้านอาหารและตามหาวัตถุดิบล้ำค่าตามแลนด์มาร์คริมฝั่งโขง
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-[10px] mt-2">
-                    <div className="bg-[#2a2c31] border border-[#3b3d44] p-3 rounded flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 text-amber-300 font-bold">
-                        <Flame size={13} className="text-red-400" />
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5 text-[oklch(52%_0.16_28)] font-bold">
+                        <Flame size={13} className="text-red-500" />
                         <span>ไตปลารัน (ถนนคนเดิน)</span>
                       </div>
-                      <p className="text-zinc-400 font-sans text-[11px] leading-relaxed">
-                        วิ่งเก็บสะตอ & ปลาทูย่าง หลบพริกแกงเผ็ดตามถนนคนเดินริมโขง
+                      <p className="text-[oklch(45%_0.010_28)] font-sans text-[11px] leading-relaxed">
+                        วิ่งเก็บสะตอ & ปลาทูย่าง หลบปีศาจพริกแกงตามถนนคนเดินริมโขง
                       </p>
                     </div>
 
-                    <div className="bg-[#2a2c31] border border-[#3b3d44] p-3 rounded flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 text-amber-300 font-bold">
-                        <Waves size={13} className="text-sky-400" />
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5 text-sky-700 font-bold">
+                        <Waves size={13} className="text-sky-600" />
                         <span>นาคาสลาลอม (พญาศรีสัตตฯ)</span>
                       </div>
-                      <p className="text-zinc-400 font-sans text-[11px] leading-relaxed">
+                      <p className="text-[oklch(45%_0.010_28)] font-sans text-[11px] leading-relaxed">
                         พายเรือยาวลัดเลาะแม่น้ำโขง หลบแก่งหินหน้าองค์พญาศรีสัตตนาคราช
                       </p>
                     </div>
 
-                    <div className="bg-[#2a2c31] border border-[#3b3d44] p-3 rounded flex flex-col gap-1.5">
-                      <div className="flex items-center gap-1.5 text-amber-300 font-bold">
-                        <Sparkles size={13} className="text-amber-300" />
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5 text-amber-700 font-bold">
+                        <Sparkles size={13} className="text-amber-600" />
                         <span>ชาชักริมโขง (ลานคนเมือง)</span>
                       </div>
-                      <p className="text-zinc-400 font-sans text-[11px] leading-relaxed">
+                      <p className="text-[oklch(45%_0.010_28)] font-sans text-[11px] leading-relaxed">
                         ชักชาใต้รสเข้มจับจังหวะดนตรีลูกทุ่งอีสาน x เรกเก้ปักษ์ใต้
                       </p>
                     </div>
