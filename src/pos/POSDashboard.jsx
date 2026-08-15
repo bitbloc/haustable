@@ -10,10 +10,11 @@ import POSReportsPanel from './POSReportsPanel';
 import POSCRMPanel from './POSCRMPanel';
 import POSOpenBillsGrid from './POSOpenBillsGrid';
 import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
+import POSSplitPaymentModal from './POSSplitPaymentModal';
 import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSOnlineHub from './POSOnlineHub';
-import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit } from '../utils/shiftHelper';
 import { isOnline, addToOfflineQueue } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
@@ -162,9 +163,15 @@ export default function POSDashboard() {
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
         try {
+            const { data: rpcData, error: rpcError } = await supabase.rpc('search_member_crm_pos', { p_term: searchQuery.trim() });
+            if (!rpcError && rpcData) {
+                setCrmMembers(rpcData);
+                return;
+            }
+
             let query = supabase
                 .from('profiles')
-                .select('*')
+                .select('id, display_name, nickname, phone_number, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota')
                 .order('display_name', { ascending: true })
                 .limit(50);
 
@@ -258,27 +265,33 @@ export default function POSDashboard() {
 
     const loadStaff = async () => {
         try {
+            const { data: rpcStaff, error: rpcError } = await supabase.rpc('get_staff_list_safe');
+            if (!rpcError && rpcStaff && rpcStaff.length > 0) {
+                setStaffList(rpcStaff);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, display_name, role, pin')
+                .select('id, display_name, role')
                 .in('role', ['staff', 'admin']);
             
             if (!error && data && data.length > 0) {
                 setStaffList(data);
             } else {
                 const DEFAULT_STAFF = [
-                    { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
-                    { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
-                    { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin', pin: '9999' }
+                    { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff' },
+                    { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff' },
+                    { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin' }
                 ];
                 setStaffList(DEFAULT_STAFF);
             }
         } catch (err) {
             console.error("Failed to load staff profiles:", err);
             const DEFAULT_STAFF = [
-                { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff', pin: '1111' },
-                { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff', pin: '2222' },
-                { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin', pin: '9999' }
+                { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff' },
+                { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff' },
+                { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin' }
             ];
             setStaffList(DEFAULT_STAFF);
         }
@@ -2076,91 +2089,140 @@ export default function POSDashboard() {
         }
     };
 
-    const handleExecuteSplitPayment = async (paidItems, splitTotal, splitPaymentMethod, splitCashReceived, splitChange) => {
+    const handleExecuteSplitPayment = async (splitPayload) => {
         if (!activeBooking || !selectedTable) return;
+        const {
+            splitMode = 'ITEMS',
+            paidItems = [],
+            splitTotal = 0,
+            paymentMethod = 'cash',
+            cashReceived = 0,
+            changeDue = 0,
+            attachedMember = null,
+            splitMeta = {}
+        } = splitPayload;
+
         const toastId = toast.loading('กำลังบันทึกแบ่งชำระเงิน...');
+
+        if (paymentMethod === 'cash') {
+            localStorage.setItem('last_cash_received', cashReceived);
+            localStorage.setItem('last_cash_change', changeDue);
+        }
+
+        const isItemsMode = splitMode === 'ITEMS';
+        const isPayingAllItems = isItemsMode && paidItems.length > 0 && 
+            currentOrder.items.length === paidItems.length && 
+            paidItems.every(p => p.selectedQty === p.quantity);
+
+        const remainingBalanceAfter = splitMeta.remainingBalanceAfterSplit !== undefined ? splitMeta.remainingBalanceAfterSplit : 0;
+        const isFullySettled = remainingBalanceAfter <= 0 || isPayingAllItems;
+
+        const splitRemark = splitMode === 'EQUAL' 
+            ? `Split (Equal ${splitMeta.currentPersonIndex || 1}/${splitMeta.totalPeople || 2}) Paid by ${paymentMethod.toUpperCase()}`
+            : splitMode === 'CUSTOM'
+                ? `Split (Custom ฿${splitTotal}) Paid by ${paymentMethod.toUpperCase()}`
+                : `Split (Items) Paid by ${paymentMethod.toUpperCase()}`;
 
         const mockSplitBooking = {
             ...activeBooking,
+            id: `split_${Date.now()}`,
             total_amount: splitTotal,
             discount_amount: 0,
-            staff_remark: `Split Paid by ${splitPaymentMethod.toUpperCase()}`,
-            order_items: paidItems.map(item => ({
-                id: item.db_id || `split_${Date.now()}_${item.id}`,
-                booking_id: activeBooking.id,
-                menu_item_id: item.id,
-                quantity: item.selectedQty,
-                price_at_time: item.price,
-                selected_options: item.selected_options || [],
-                menu_items: { name: item.name }
-            }))
+            staff_remark: splitRemark,
+            user_id: attachedMember?.id || activeBooking.user_id || null,
+            profiles: attachedMember || activeBooking.profiles || null,
+            tables_layout: activeBooking.tables_layout || { table_name: selectedTable.table_name || selectedTable.name || '' },
+            order_items: isItemsMode && paidItems.length > 0 
+                ? paidItems.map(item => ({
+                    id: item.db_id || `split_item_${Date.now()}_${item.id}`,
+                    booking_id: activeBooking.id,
+                    menu_item_id: item.id,
+                    quantity: item.selectedQty,
+                    price_at_time: item.price,
+                    selected_options: item.selected_options || [],
+                    menu_items: { name: item.name }
+                }))
+                : (activeBooking.order_items || []).map(item => ({
+                    ...item,
+                    price_at_time: item.price_at_time || item.price || 0
+                }))
         };
-
-        if (splitPaymentMethod === 'cash') {
-            localStorage.setItem('last_cash_received', splitCashReceived);
-            localStorage.setItem('last_cash_change', splitChange);
-        }
 
         if (!isOnline()) {
             const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
-            const updatedBookings = cachedBookings.map(b => {
-                if (b.id === activeBooking.id) {
-                    const remainingItems = b.order_items.map(dbItem => {
-                        const paid = paidItems.find(p => p.id === dbItem.menu_item_id);
-                        if (paid) {
-                            return { ...dbItem, quantity: Math.max(0, dbItem.quantity - paid.selectedQty) };
-                        }
-                        return dbItem;
-                    }).filter(dbItem => dbItem.quantity > 0);
-                    return { ...b, order_items: remainingItems };
-                }
-                return b;
-            });
-            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
-
             const mockOfflineSplitId = `local_split_${Date.now()}`;
             mockSplitBooking.id = mockOfflineSplitId;
+
+            if (isItemsMode) {
+                const updatedBookings = cachedBookings.map(b => {
+                    if (b.id === activeBooking.id) {
+                        const remainingItems = b.order_items.map(dbItem => {
+                            const paid = paidItems.find(p => p.id === dbItem.menu_item_id || p.db_id === dbItem.id);
+                            if (paid) {
+                                return { ...dbItem, quantity: Math.max(0, dbItem.quantity - paid.selectedQty) };
+                            }
+                            return dbItem;
+                        }).filter(dbItem => dbItem.quantity > 0);
+
+                        return {
+                            ...b,
+                            status: isFullySettled ? 'completed' : b.status,
+                            order_items: remainingItems
+                        };
+                    }
+                    return b;
+                }).filter(b => isFullySettled ? b.id !== activeBooking.id : true);
+                localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
+            }
 
             addToOfflineQueue('split_payment', {
                 bookingId: activeBooking.id,
                 tempSplitId: mockOfflineSplitId,
+                splitMode,
                 paidItems: paidItems.map(p => ({ 
                     menu_item_id: p.id, 
                     quantity: p.selectedQty,
                     price_at_time: p.price,
                     selected_options: p.selected_options || []
                 })),
-                paymentMethod: splitPaymentMethod,
+                paymentMethod,
                 totalAmount: splitTotal,
+                isFullySettled,
                 bookingMetadata: {
-                    table_id: activeBooking.table_id || null,
+                    table_id: activeBooking.table_id || selectedTable?.id || null,
                     booking_type: activeBooking.booking_type || 'walk_in',
                     source: activeBooking.source || 'pos',
                     pax: activeBooking.pax || 0,
-                    user_id: activeBooking.user_id || null
+                    user_id: attachedMember?.id || activeBooking.user_id || null
                 }
             });
 
-            recordShiftTransaction(mockOfflineSplitId, splitTotal, splitPaymentMethod);
+            recordShiftTransaction(mockOfflineSplitId, splitTotal, paymentMethod);
 
-            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายสำเร็จ!`, { id: toastId });
+            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่าย ฿${splitTotal.toLocaleString()} สำเร็จ!`, { id: toastId });
             setShowSplitModal(false);
             openSlipOrSilentPrint(mockSplitBooking, 'receipt');
+
+            if (isFullySettled) {
+                setActiveBooking(null);
+                setSelectedTable(null);
+                setView('tables');
+            }
             setRefreshKey(prev => prev + 1);
             return;
         }
 
         try {
-            // 1. Create a new completed booking for the split
+            // 1. Create a new completed booking record for this split portion
             const splitBookingPayload = {
-                table_id: activeBooking.table_id || null,
+                table_id: activeBooking.table_id || selectedTable?.id || null,
                 status: 'completed',
                 booking_type: activeBooking.booking_type || 'walk_in',
                 source: activeBooking.source || 'pos',
                 booking_time: new Date().toISOString(),
                 pax: activeBooking.pax || 0,
-                user_id: activeBooking.user_id || null,
-                staff_remark: `Split Paid by ${splitPaymentMethod.toUpperCase()}`,
+                user_id: attachedMember?.id || activeBooking.user_id || null,
+                staff_remark: splitRemark,
                 total_amount: splitTotal,
                 discount_amount: 0,
                 tracking_token: crypto.randomUUID()
@@ -2175,42 +2237,86 @@ export default function POSDashboard() {
             if (insertError) throw insertError;
             const newSplitBookingId = newSplitBooking.id;
 
-            // 2. Insert paid items to the new split booking
-            const splitOrderItemsToInsert = paidItems.map(item => ({
-                booking_id: newSplitBookingId,
-                menu_item_id: item.id,
-                quantity: item.selectedQty,
-                price_at_time: item.price,
-                selected_options: item.selected_options || []
-            }));
+            // 2. Insert items to the new split booking if By Items
+            if (isItemsMode && paidItems.length > 0) {
+                const splitOrderItemsToInsert = paidItems.map(item => ({
+                    booking_id: newSplitBookingId,
+                    menu_item_id: item.id,
+                    quantity: item.selectedQty,
+                    price_at_time: item.price,
+                    selected_options: item.selected_options || []
+                }));
 
-            const { error: insertItemsError } = await supabase
-                .from('order_items')
-                .insert(splitOrderItemsToInsert);
+                const { error: insertItemsError } = await supabase
+                    .from('order_items')
+                    .insert(splitOrderItemsToInsert);
 
-            if (insertItemsError) throw insertItemsError;
+                if (insertItemsError) throw insertItemsError;
 
-            // 3. Deduct/Delete from original booking
-            for (const item of paidItems) {
-                if (item.selectedQty === item.quantity) {
-                    const { error } = await supabase
-                        .from('order_items')
-                        .delete()
-                        .eq('id', item.db_id);
-                    if (error) throw error;
-                } else {
-                    const { error } = await supabase
-                        .from('order_items')
-                        .update({ quantity: item.quantity - item.selectedQty })
-                        .eq('id', item.db_id);
-                    if (error) throw error;
+                // 3. Deduct/Delete from original booking
+                for (const item of paidItems) {
+                    if (item.selectedQty >= item.quantity) {
+                        const { error } = await supabase
+                            .from('order_items')
+                            .delete()
+                            .eq('id', item.db_id);
+                        if (error) throw error;
+                    } else {
+                        const { error } = await supabase
+                            .from('order_items')
+                            .update({ quantity: item.quantity - item.selectedQty })
+                            .eq('id', item.db_id);
+                        if (error) throw error;
+                    }
+                }
+            }
+
+            // 4. Check if fully settled or remaining
+            if (isFullySettled) {
+                // Complete original booking and free table
+                await supabase
+                    .from('bookings')
+                    .update({ 
+                        status: 'completed',
+                        staff_remark: `Completed via Split Payments`
+                    })
+                    .eq('id', activeBooking.id);
+
+                if (selectedTable?.id) {
+                    await supabase
+                        .from('tables_layout')
+                        .update({ status: 'available' })
+                        .eq('id', selectedTable.id);
+                }
+
+                toast.success(`ชำระครบถ้วนทั้งโต๊ะแล้ว! (ยอดรอบนี้ ฿${splitTotal.toLocaleString()})`, { id: toastId });
+                setActiveBooking(null);
+                setSelectedTable(null);
+                setView('tables');
+            } else {
+                // Update original booking's remaining total amount
+                if (!isItemsMode) {
+                    await supabase
+                        .from('bookings')
+                        .update({ 
+                            total_amount: remainingBalanceAfter,
+                            staff_remark: `Partial Split Paid ฿${splitTotal}`
+                        })
+                        .eq('id', activeBooking.id);
+                }
+                
+                toast.success(`แบ่งจ่าย ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
+                
+                // Refresh remaining booking
+                if (selectedTable?.id) {
+                    const updatedBooking = await getActiveBooking(selectedTable.id);
+                    setActiveBooking(updatedBooking);
                 }
             }
 
             mockSplitBooking.id = newSplitBookingId;
-            recordShiftTransaction(newSplitBookingId, splitTotal, splitPaymentMethod);
+            recordShiftTransaction(newSplitBookingId, splitTotal, paymentMethod);
 
-            toast.success('แบ่งจ่ายสำเร็จ!', { id: toastId });
             setShowSplitModal(false);
             openSlipOrSilentPrint(mockSplitBooking, 'receipt');
             setRefreshKey(prev => prev + 1);
@@ -2888,7 +2994,7 @@ export default function POSDashboard() {
 
             {showSplitModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
-                    <SplitPaymentModalInner 
+                    <POSSplitPaymentModal 
                         order={currentOrder}
                         activeBooking={activeBooking}
                         includeTax={splitIncludeTax}
@@ -2929,7 +3035,17 @@ export default function POSDashboard() {
                                 </div>
 
                                 <POSPinPad 
-                                    onComplete={(enteredPin, onError) => {
+                                    onComplete={async (enteredPin, onError) => {
+                                        try {
+                                            const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
+                                            if (!error && verifiedStaff && verifiedStaff.length > 0) {
+                                                handlePinLogin(verifiedStaff[0]);
+                                                return;
+                                            }
+                                        } catch (e) {
+                                            console.warn("RPC verify error, checking fallback staff list:", e);
+                                        }
+
                                         const staff = staffList.find(s => s.pin === enteredPin);
                                         if (staff) {
                                             handlePinLogin(staff);
@@ -3304,8 +3420,21 @@ export default function POSDashboard() {
                             </div>
 
                             <POSPinPad 
-                                onComplete={(enteredPin, onError) => {
-                                    const staff = staffList.find(s => s.pin === enteredPin);
+                                onComplete={async (enteredPin, onError) => {
+                                    let staff = null;
+                                    try {
+                                        const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
+                                        if (!error && verifiedStaff && verifiedStaff.length > 0) {
+                                            staff = verifiedStaff[0];
+                                        }
+                                    } catch (e) {
+                                        console.warn("RPC unlock verify error, checking fallback:", e);
+                                    }
+
+                                    if (!staff) {
+                                        staff = staffList.find(s => s.pin === enteredPin);
+                                    }
+
                                     if (staff) {
                                         if (activeShift?.staffName !== staff.display_name) {
                                             const updatedShift = {
@@ -3337,182 +3466,4 @@ export default function POSDashboard() {
     );
 }
 
-function SplitPaymentModalInner({ order, activeBooking, includeTax, onClose, onConfirmSplit }) {
-    const [splitQuantities, setSplitQuantities] = useState({});
-    const [paymentMethod, setPaymentMethod] = useState('cash');
-    const [cashReceived, setCashReceived] = useState('');
-
-    useEffect(() => {
-        const initial = {};
-        order.items.forEach(item => {
-            initial[item.id] = 0;
-        });
-        setSplitQuantities(initial);
-    }, [order.items]);
-
-    const handleQtyChange = (itemId, change, maxQty) => {
-        setSplitQuantities(prev => {
-            const current = prev[itemId] || 0;
-            const next = Math.max(0, Math.min(maxQty, current + change));
-            return { ...prev, [itemId]: next };
-        });
-    };
-
-    const hasNewItems = order.items.some(item => !item.db_id);
-    const selectedItems = order.items.map(item => ({
-        ...item,
-        selectedQty: splitQuantities[item.id] || 0
-    })).filter(item => item.selectedQty > 0);
-
-    const splitSubtotal = selectedItems.reduce((sum, item) => sum + (item.price * item.selectedQty), 0);
-    const splitTax = includeTax ? splitSubtotal * 0.07 : 0;
-    const splitTotal = splitSubtotal + splitTax;
-
-    const isPayingAll = selectedItems.length > 0 && selectedItems.every(item => item.selectedQty === item.quantity) && selectedItems.length === order.items.length;
-
-    const handleConfirmClick = () => {
-        if (selectedItems.length === 0) {
-            toast.error("กรุณาเลือกรายการสินค้าที่จะชำระเงินก่อนครับ");
-            return;
-        }
-
-        if (paymentMethod === 'cash') {
-            const cashRecvVal = parseFloat(cashReceived) || 0;
-            if (cashRecvVal < splitTotal) {
-                toast.error("จำนวนเงินสดที่รับมาไม่เพียงพอครับ");
-                return;
-            }
-        }
-
-        if (isPayingAll) {
-            toast.info("เลือกทุกรายการสินค้า ระบบจะเปลี่ยนเป็นการเช็คบิลปกติโดยอัตโนมัติ");
-            onClose();
-            // Trigger regular checkout by finding checkout button or closing modal
-            return;
-        }
-
-        const changeVal = paymentMethod === 'cash' ? Math.ceil(Math.max(0, (parseFloat(cashReceived) || 0) - splitTotal)).toLocaleString() : '0';
-        onConfirmSplit(selectedItems, splitTotal, paymentMethod, parseFloat(cashReceived) || 0, changeVal);
-    };
-
-    return (
-        <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-md shadow-xl p-5 flex flex-col gap-4 text-[#1A1A1A] font-sans">
-            <div className="flex justify-between items-center pb-3 border-b border-[#D1D1CD]">
-                <div>
-                    <h3 className="text-sm font-mono font-bold tracking-wider text-[#767673] uppercase">SPLIT BILL / แบ่งชำระเงิน</h3>
-                    <p className="text-base font-bold text-[#1A1A1A] mt-0.5">เลือกรายการสินค้าและจำนวนที่จะจ่ายรอบนี้</p>
-                </div>
-                <button 
-                    onClick={onClose}
-                    className="w-8 h-8 rounded-full bg-white border border-[#D1D1CD] flex items-center justify-center text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
-                >
-                    <X size={18} />
-                </button>
-            </div>
-
-            {hasNewItems && (
-                <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-3 text-xs text-amber-900 font-bold leading-normal">
-                    ⚠️ มีรายการยังไม่ส่งครัว! กรุณากดส่งครัว (Send to Kitchen) เพื่อบันทึกออเดอร์ให้เรียบร้อยก่อนทำการแบ่งจ่ายครับ
-                </div>
-            )}
-
-            {/* Items Listing */}
-            <div className="flex-1 overflow-y-auto max-h-72 space-y-2 pr-1 scrollbar-none">
-                {order.items.map(item => {
-                    const currentSelected = splitQuantities[item.id] || 0;
-                    return (
-                        <div key={item.id} className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm">
-                            <div className="min-w-0 flex-1 mr-2">
-                                <h5 className="font-bold text-sm text-[#1A1A1A] uppercase truncate">{item.name}</h5>
-                                <p className="text-xs text-[var(--color-accent)] font-mono font-bold mt-0.5">฿{item.price}</p>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 shrink-0">
-                                <span className="text-xs font-mono text-[#767673] font-bold">Max: {item.quantity}</span>
-                                <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1">
-                                    <button 
-                                        type="button"
-                                        disabled={hasNewItems}
-                                        onClick={() => handleQtyChange(item.id, -1, item.quantity)}
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] transition-all cursor-pointer disabled:opacity-30 active:scale-95 shadow-xs"
-                                    >
-                                        <Minus size={14} />
-                                    </button>
-                                    <span className="w-7 text-center font-mono font-bold text-sm select-none">{currentSelected}</span>
-                                    <button 
-                                        type="button"
-                                        disabled={hasNewItems}
-                                        onClick={() => handleQtyChange(item.id, 1, item.quantity)}
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] transition-all cursor-pointer disabled:opacity-30 active:scale-95 shadow-xs"
-                                    >
-                                        <Plus size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Split total & payment selector */}
-            <div className="border-t border-[#D1D1CD] pt-3.5 space-y-3">
-                <div className="flex justify-between items-center text-xs font-bold">
-                    <span>ยอดที่เลือกจ่ายรอบนี้ (Selected Total)</span>
-                    <span className="text-xl font-black text-[var(--color-accent)]">฿{Math.ceil(splitTotal).toLocaleString()}</span>
-                </div>
-
-                <div className="flex bg-[#E0E0DC] p-1 rounded-xl border border-[#D1D1CD] w-full font-mono text-xs font-bold uppercase tracking-wider gap-1 h-11">
-                    <button 
-                        type="button"
-                        onClick={() => setPaymentMethod('cash')}
-                        className={`flex-1 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${paymentMethod === 'cash' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                    >
-                        CASH
-                    </button>
-                    <button 
-                        type="button"
-                        onClick={() => setPaymentMethod('qr')}
-                        className={`flex-1 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${paymentMethod === 'qr' ? 'bg-white text-[#1A1A1A] shadow-sm font-black' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                    >
-                        QR
-                    </button>
-                </div>
-
-                {paymentMethod === 'cash' && (
-                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-3 space-y-2.5 text-left shadow-sm">
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#767673]">
-                                Cash Received (รับเงินมา)
-                            </span>
-                            <input 
-                                type="number"
-                                placeholder="0.00"
-                                value={cashReceived}
-                                onChange={(e) => setCashReceived(e.target.value)}
-                                className="w-32 text-right bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl px-3 py-1.5 text-sm font-mono font-bold text-[#1A1A1A] outline-none focus:border-black h-10"
-                            />
-                        </div>
-                        <div className="flex justify-between items-center text-xs border-t border-dashed border-[#D1D1CD] pt-2">
-                            <span className="font-bold text-[#767673]">Change (เงินทอน)</span>
-                            <span className={`font-mono font-bold text-sm ${parseFloat(cashReceived) >= splitTotal ? 'text-green-600' : 'text-[#ff0000]'}`}>
-                                {parseFloat(cashReceived) >= splitTotal 
-                                    ? `฿${Math.ceil(parseFloat(cashReceived) - splitTotal).toLocaleString()}` 
-                                    : cashReceived ? `ขาดอีก ฿${Math.ceil(splitTotal - parseFloat(cashReceived)).toLocaleString()}` : '฿0'}
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                <button
-                    type="button"
-                    disabled={hasNewItems || selectedItems.length === 0}
-                    onClick={handleConfirmClick}
-                    className="w-full bg-[var(--color-accent)] hover:bg-[#d00000] border border-[#c00000] text-white py-3.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer h-12"
-                >
-                    Confirm Pay Split / ยืนยันชำระเงิน
-                </button>
-            </div>
-        </div>
-    );
-}
 

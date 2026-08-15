@@ -119,7 +119,7 @@ export default function TableManager({ isStaffView = false }) {
                 booking_time: now.toISOString(),
                 end_time: endTime.toISOString(),
                 booking_type: 'walk_in',
-                status: 'confirmed',
+                status: 'seated',
                 pickup_contact_name: 'Walk-in Guest',
                 customer_note: 'Internal Block',
                 pax: table.capacity,

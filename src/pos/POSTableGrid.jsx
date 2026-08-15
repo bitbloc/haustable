@@ -113,11 +113,11 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
             try {
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                // Fetch only active seated bookings for store floorplan display
+                // Fetch active seated and confirmed bookings for store floorplan display
                 const { data: activeBookings } = await supabase
                     .from('bookings')
                     .select('*')
-                    .in('status', ['seated']);
+                    .in('status', ['seated', 'confirmed', 'ready']);
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
@@ -127,8 +127,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                 localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
 
                 const merged = currentTables.map(t => {
-                    // Only seated/active floorplan bookings bind to physical table cards
-                    const activeBooking = currentBookings.find(b => b.table_id === t.id && b.status === 'seated');
+                    // Seated/active floorplan bookings bind to physical table cards
+                    const activeBooking = currentBookings.find(b => b.table_id === t.id && ['seated', 'confirmed', 'ready'].includes(b.status));
 
                     return {
                         ...t,

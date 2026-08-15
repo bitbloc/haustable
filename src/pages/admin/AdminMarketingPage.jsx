@@ -1,25 +1,22 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react'
-import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen } from 'lucide-react'
+import { Users, Tag, Gift, Trophy, Music } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-import OptionGroupList from './components/OptionGroupList'
-import MenuCategoryList from './components/MenuCategoryList'
-import MenuItemList from './components/MenuItemList'
-import MenuCostPage from '../components/admin/MenuCostPage'
-import RecipeLabPage from '../components/admin/RecipeLabPage'
-import SOPEditorPage from '../components/admin/SOPEditorPage'
+import AdminMembers from '../../AdminMembers'
+import AdminPromotions from '../../components/admin/AdminPromotions'
+import AdminArcade from '../../components/admin/AdminArcade'
+import AdminSongRequests from '../AdminSongRequests'
 
-export default function AdminMenuPage({ defaultTab = 'items' }) {
+export default function AdminMarketingPage({ defaultTab = 'members' }) {
     const [activeTab, setActiveTab] = useState(defaultTab)
 
     const tabs = [
-        { id: 'items', label: 'Menu Catalog', icon: LayoutGrid },
-        { id: 'categories', label: 'Categories', icon: List },
-        { id: 'options', label: 'Modifiers & Options', icon: Layers },
-        { id: 'costing', label: 'Food Costing', icon: Calculator },
-        { id: 'lab', label: 'Recipe Lab', icon: FlaskConical },
-        { id: 'sop', label: 'Kitchen & Bar SOP', icon: BookOpen },
+        { id: 'members', label: 'Members & CRM', icon: Users },
+        { id: 'promotions', label: 'Promo Vouchers', icon: Tag },
+        { id: 'rewards', label: 'xhaus Rewards', icon: Gift },
+        { id: 'arcade', label: 'Arcade Drawing', icon: Trophy },
+        { id: 'songs', label: 'Song Requests', icon: Music },
     ]
 
     return (
@@ -30,14 +27,14 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-sm">
-                                CULINARY & BEVERAGE HUB
+                                CUSTOMER & GROWTH HUB
                             </span>
                         </div>
                         <h1 className="font-mono text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] uppercase mt-1">
-                            Menu & Kitchen Lab
+                            Marketing & Loyalty
                         </h1>
                         <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                            Catalog items, modifiers, recipe costing margins, flavor trials, and preparation SOPs
+                            Customer profiles, loyalty rewards, promotional campaigns, arcade drawings, and live song requests
                         </p>
                     </div>
                 </div>
@@ -76,12 +73,11 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         exit={{ opacity: 0, y: -6 }}
                         transition={{ duration: 0.15 }}
                     >
-                        {activeTab === 'items' && <MenuItemList />}
-                        {activeTab === 'categories' && <MenuCategoryList />}
-                        {activeTab === 'options' && <OptionGroupList />}
-                        {activeTab === 'costing' && <MenuCostPage />}
-                        {activeTab === 'lab' && <RecipeLabPage />}
-                        {activeTab === 'sop' && <SOPEditorPage />}
+                        {activeTab === 'members' && <AdminMembers />}
+                        {activeTab === 'promotions' && <AdminPromotions defaultTab="promo" />}
+                        {activeTab === 'rewards' && <AdminPromotions defaultTab="rewards" />}
+                        {activeTab === 'arcade' && <AdminArcade />}
+                        {activeTab === 'songs' && <AdminSongRequests />}
                     </motion.div>
                 </AnimatePresence>
             </div>

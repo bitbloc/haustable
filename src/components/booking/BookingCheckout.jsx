@@ -95,37 +95,32 @@ export default function BookingCheckout() {
     }
 
     const handleSubmit = async () => {
+        if (submitting) return
         setSubmitting(true)
         
-        // Sync final values before submit
-        updateForm('contactName', localName)
-        updateForm('contactPhone', localPhone)
+        try {
+            // Sync final values before submit
+            updateForm('contactName', localName)
+            updateForm('contactPhone', localPhone)
 
-        // Pass promotion data and deposit amount to submitBooking
-        // Note: state context is slightly async, but submitBooking reads from the same closure.
-        // Wait, submitBooking reads from useBooking context which won't be updated immediately here.
-        // We will just let submitBooking run (it might be slightly buggy if user clicks submit very fast without blurring).
-        // Actually, if we update localName onBlur, it's mostly fine.
-        
-        const result = await submitBooking(appliedPromo, depositAmount) 
-        setSubmitting(false)
+            const result = await submitBooking(appliedPromo, depositAmount) 
 
-        if (result.success) {
-            // Check if we have tracking token in the response
-            // result.data should be the array or object returned from Supabase
-            // Depending on useBooking implementation, it might be result.data[0]
-            const bookingData = Array.isArray(result.data) ? result.data[0] : result.data
-            const token = bookingData?.tracking_token
+            if (result.success) {
+                const bookingData = Array.isArray(result.data) ? result.data[0] : result.data
+                const token = bookingData?.tracking_token
 
-            alert(t('confirmBooking') + ' Success!')
-            
-            if (token) {
-                window.location.replace(`/tracking/${token}`)
+                alert(t('confirmBooking') + ' Success!')
+                
+                if (token) {
+                    window.location.replace(`/tracking/${token}`)
+                } else {
+                    window.location.replace('/')
+                }
             } else {
-                window.location.replace('/')
+                alert('Error: ' + result.error)
             }
-        } else {
-            alert('Error: ' + result.error)
+        } finally {
+            setSubmitting(false)
         }
     }
 

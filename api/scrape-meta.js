@@ -11,14 +11,45 @@ function decodeHTMLEntities(text) {
         .replace(/&nbsp;/g, ' ');
 }
 
+function isSafeUrl(rawUrl) {
+    try {
+        const parsed = new URL(rawUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return false;
+        }
+        const hostname = parsed.hostname.toLowerCase();
+        if (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0' ||
+            hostname === '::1' ||
+            hostname.startsWith('10.') ||
+            hostname.startsWith('192.168.') ||
+            hostname.startsWith('169.254.') ||
+            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+            hostname.endsWith('.internal') ||
+            hostname.endsWith('.local')
+        ) {
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export default async function handler(req, res) {
     const { url } = req.query
     if (!url) {
         return res.status(400).json({ status: 'fail', message: 'Missing url parameter' })
     }
 
+    const cleanUrl = url.trim()
+    if (!isSafeUrl(cleanUrl)) {
+        return res.status(400).json({ status: 'fail', message: 'Invalid or restricted URL target' })
+    }
+
     try {
-        const cleanUrl = url.trim()
         console.log(`[Scraper] Scraping metadata for URL: ${cleanUrl}`)
         
         const isFacebook = cleanUrl.includes('facebook.com') || cleanUrl.includes('fb.watch')

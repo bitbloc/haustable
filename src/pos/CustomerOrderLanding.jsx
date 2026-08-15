@@ -437,6 +437,17 @@ export default function CustomerOrderLanding() {
 
             if (uploadError) throw uploadError;
 
+            // Register in slips registry for deduplication check
+            try {
+                await supabase.rpc('register_payment_slip', {
+                    p_booking_id: activeBooking.id,
+                    p_file_name: fileName,
+                    p_amount: activeBooking.total_amount || 0
+                });
+            } catch (regErr) {
+                console.warn('Slips registry registration warning:', regErr);
+            }
+
             const { error: updateError } = await supabase
                 .from('bookings')
                 .update({ 
@@ -590,9 +601,10 @@ export default function CustomerOrderLanding() {
                 updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
             }
 
+            const newTotalAmount = (Number(currentBooking.total_amount) || 0) + cartSubtotal;
             const updateData = {
                 status: 'seated', // Auto-accepted; triggers auto-print on POS
-                // total_amount is dynamically calculated on the POS side and Status page to avoid concurrent race conditions
+                total_amount: newTotalAmount,
                 staff_remark: updatedRemark
             };
             if (memberProfile?.id && !currentBooking.user_id) {

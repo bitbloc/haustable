@@ -1,34 +1,35 @@
-// src/AdminDashboard.jsx
-import { useState, useEffect, useMemo } from 'react'
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 
 // Components
+import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
+import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 
 export default function AdminDashboard() {
-    // const { toast } = useToast() -> Removed, uses import now
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
-
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
+    const [floorOccupancy, setFloorOccupancy] = useState({ totalTables: 12, occupiedTables: 0, totalGuests: 0 })
 
     useEffect(() => {
         fetchData()
 
         // Real-time: Refresh on any booking change
         const subscription = supabase
-            .channel('public:bookings')
+            .channel('public:admin-dashboard')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
             .subscribe()
 
@@ -82,18 +83,14 @@ export default function AdminDashboard() {
 
             // Merge and Deduplicate (in case a pending booking is also today)
             const map = new Map()
-            pendingRes.data.forEach(b => map.set(b.id, b))
-            todayRes.data.forEach(b => map.set(b.id, b))
+            ;(pendingRes.data || []).forEach(b => map.set(b.id, b))
+            ;(todayRes.data || []).forEach(b => map.set(b.id, b))
 
-            // Convert to Array
-            const merged = Array.from(map.values())
-
-            // Sort: Pending first? No, UI handles separation.
-            // Just keep them in state.
-            setBookings(merged)
+            setBookings(Array.from(map.values()))
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error.message)
+            toast.error('Failed to load dashboard data')
         } finally {
             setLoading(false)
         }
@@ -106,9 +103,6 @@ export default function AdminDashboard() {
             message: `Are you sure you want to mark this order as ${status}?`,
             isDangerous: status === 'cancelled',
             action: async () => {
-                // Optimistic Update can happen here or after success
-                // Let's do after success for safety or keep optimistic if preferred
-                // Keeping previous logic:
                 setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
 
                 const { error } = await supabase
@@ -117,10 +111,10 @@ export default function AdminDashboard() {
                     .eq('id', id)
 
                 if (error) {
-                    toast.error('Error updating status')
+                    toast.error('Error updating status: ' + error.message)
                     fetchData()
                 } else {
-                    toast.success('Status updated')
+                    toast.success('Status updated to ' + status)
                     fetchData()
                 }
             }
@@ -128,14 +122,60 @@ export default function AdminDashboard() {
     }
 
     // --- DERIVED STATE ---
-
     // 1. Inbox: Pending (ALL dates)
     const pendingBookings = useMemo(() =>
         bookings.filter(b => b.status === 'pending').sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
         , [bookings])
 
+    // 2. Schedule: Confirmed Today
+    const scheduleBookings = useMemo(() => {
+        const todayStr = getThaiDate()
+        return bookings.filter(b => {
+            const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isToday = bDate === todayStr
+            const isConfirmed = b.status === 'confirmed' || b.status === 'seated' || b.status === 'ready' || b.status === 'paid'
+            return isToday && isConfirmed
+        }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
+    }, [bookings])
+
+    // 3. Live Financial Metrics for Today
+    const { revenueToday, completedOrdersCount, dineInCount, pickupCount, steakCount } = useMemo(() => {
+        const todayStr = getThaiDate()
+        let rev = 0
+        let paidCount = 0
+        let dineIn = 0
+        let pickup = 0
+        let steak = 0
+
+        bookings.forEach(b => {
+            const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            if (bDate === todayStr && (b.status === 'confirmed' || b.status === 'completed' || b.status === 'paid' || b.status === 'seated')) {
+                const amount = Number(b.total_amount || b.total_price || 0)
+                rev += amount
+                paidCount++
+
+                if (b.booking_type === 'dine_in' || b.booking_type === 'walk_in') {
+                    dineIn++
+                } else if (b.booking_type === 'pickup') {
+                    pickup++
+                } else if (b.booking_type === 'steak' || b.booking_type === 'preorder_steak') {
+                    steak++
+                }
+            }
+        })
+
+        return {
+            revenueToday: rev,
+            completedOrdersCount: paidCount,
+            dineInCount: dineIn,
+            pickupCount: pickup,
+            steakCount: steak
+        }
+    }, [bookings])
+
     // --- Sound Logic ---
     const [soundUrl, setSoundUrl] = useState(null)
+    const [soundMuted, setSoundMuted] = useState(false)
     const [audio] = useState(new Audio())
 
     useEffect(() => {
@@ -148,34 +188,16 @@ export default function AdminDashboard() {
     }, [])
 
     useEffect(() => {
-        // Play if there are pending bookings
-        if (soundUrl && pendingBookings.length > 0) {
+        if (!soundMuted && soundUrl && pendingBookings.length > 0) {
             audio.src = soundUrl
-            audio.play().catch(e => console.log('Autoplay blocked:', e)) // Normal for first load without interaction
+            audio.play().catch(e => console.log('Autoplay blocked:', e))
         } else {
             audio.pause()
             audio.currentTime = 0
         }
         return () => audio.pause()
-    }, [pendingBookings.length, soundUrl])
-    // -------------------
+    }, [pendingBookings.length, soundUrl, soundMuted])
 
-    // 2. Schedule: Confirmed (Today Only)
-    // We filter from 'bookings'. Note that 'bookings' contains 'Today' (all statuses) + 'Pending' (future).
-    // So for Schedule, we want Status=Confirmed AND Date=Today.
-    const scheduleBookings = useMemo(() => {
-        const todayStr = getThaiDate()
-        return bookings.filter(b => {
-            // Date Check
-            const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            const isToday = bDate === todayStr
-            const isConfirmed = b.status === 'confirmed'
-            return isToday && isConfirmed
-        }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
-    }, [bookings])
-
-    // 4. Filter for Tabs (Dine-in / Pickup) - View ONLY Today's Confirmed/Pending?
-    // Let's make tabs act as filters on the "Today" list mostly.
     const handlePrint = (booking, type) => {
         setSlipData({ booking, type })
     }
@@ -183,9 +205,13 @@ export default function AdminDashboard() {
     const getTabContent = () => {
         if (activeTab === 'overview') {
             return (
-                <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="space-y-6">
                     {/* ZERO INBOX */}
-                    <InboxSection bookings={pendingBookings} onUpdateStatus={updateStatus} />
+                    <InboxSection 
+                        bookings={pendingBookings} 
+                        onUpdateStatus={updateStatus}
+                        onViewSlip={setViewSlipUrl}
+                    />
 
                     {/* TODAY'S SCHEDULE */}
                     <ScheduleSection 
@@ -198,8 +224,7 @@ export default function AdminDashboard() {
             )
         }
 
-        // Fallback for old tabs (Dine In / Pickup) - Just show a simple list of TODAY's relevant items
-        const filtered = bookings.filter(b => b.booking_type === activeTab && (b.status === 'confirmed' || b.status === 'pending'))
+        const filtered = bookings.filter(b => b.booking_type === activeTab && (b.status === 'confirmed' || b.status === 'pending' || b.status === 'seated'))
         return (
             <ScheduleSection 
                 bookings={filtered} 
@@ -221,41 +246,108 @@ export default function AdminDashboard() {
                 isDangerous={confirmModal.isDangerous}
             />
             
-            <div className="pb-20">
-                {/* Header */}
-                <div className="flex justify-between items-center mb-8">
+            <div className="pb-24">
+                {/* Executive Header Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[oklch(85%_0.012_28)]">
                     <div>
-                        <h1 className="text-3xl font-bold text-ink tracking-tight">Dashboard</h1>
-                        <p className="text-sm text-subInk mt-1">Manage orders and reservations</p>
+                        <div className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-sm">
+                                SYSTEM COCKPIT // 2026
+                            </span>
+                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                {getThaiDate()}
+                            </span>
+                        </div>
+                        <h1 className="font-mono text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight mt-1">
+                            EXECUTIVE OVERVIEW
+                        </h1>
                     </div>
-                    <button onClick={fetchData} className="px-5 py-2.5 bg-[#DFFF00] text-black font-bold rounded-lg shadow-sm hover:bg-[#cbe600] transition-colors flex items-center gap-2">
-                        <RotateCcw className="w-4 h-4" /> Refresh
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        {/* Audio Alert Toggle */}
+                        <button
+                            type="button"
+                            onClick={() => setSoundMuted(!soundMuted)}
+                            className={`p-2 rounded-sm border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                                soundMuted 
+                                    ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]' 
+                                    : 'bg-[oklch(92%_0.012_140)] border-[oklch(82%_0.08_140)] text-[oklch(35%_0.08_140)]'
+                            }`}
+                            title={soundMuted ? 'Alert Sound Muted' : 'Alert Sound Active'}
+                        >
+                            {soundMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                            <span className="hidden sm:inline">{soundMuted ? 'MUTED' : 'ALERT ON'}</span>
+                        </button>
+
+                        {/* Direct POS Link */}
+                        <a
+                            href="/pos"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
+                        >
+                            <span>OPEN POS</span>
+                            <ArrowUpRight size={14} />
+                        </a>
+
+                        {/* Refresh */}
+                        <button 
+                            type="button"
+                            onClick={fetchData} 
+                            disabled={loading}
+                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
+                        >
+                            <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                            <span>REFRESH</span>
+                        </button>
+                    </div>
                 </div>
 
-                {/* --- TABS --- */}
-                <div className="flex gap-8 border-b border-gray-200 mb-8 px-2">
-                    {['overview', 'dine_in', 'pickup'].map((tab) => {
-                        const isActive = activeTab === tab
-                        const label = tab === 'dine_in' ? 'Dine-In Only' : tab === 'pickup' ? 'Pickup Only' : 'Overview'
-                        
+                {/* 1. Live Pulse KPI Strip */}
+                <LivePulseMetrics 
+                    revenueToday={revenueToday}
+                    completedOrdersCount={completedOrdersCount}
+                    totalTables={floorOccupancy.totalTables}
+                    occupiedTables={floorOccupancy.occupiedTables}
+                    totalGuests={floorOccupancy.totalGuests}
+                    pendingInboxCount={pendingBookings.length}
+                    dineInCount={dineInCount}
+                    pickupCount={pickupCount}
+                    steakCount={steakCount}
+                    loading={loading}
+                />
+
+                {/* 2. Interactive Live Floor & 1-Tap Table Block */}
+                <LiveFloorQuickStatus 
+                    onOccupancyChange={setFloorOccupancy}
+                />
+
+                {/* 3. Segmented Filter Tabs */}
+                <div className="flex gap-2 border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs">
+                    {[
+                        { key: 'overview', label: `ALL SCHEDULE (${scheduleBookings.length + pendingBookings.length})` },
+                        { key: 'dine_in', label: 'DINE-IN ONLY' },
+                        { key: 'pickup', label: 'PICKUP ONLY' }
+                    ].map((tab) => {
+                        const isActive = activeTab === tab.key
                         return (
                             <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`pb-3 font-bold text-sm transition-all relative ${isActive ? 'text-black' : 'text-gray-400 hover:text-gray-600'}`}
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`pb-2.5 px-3 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[2px] ${
+                                    isActive 
+                                        ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)]' 
+                                        : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-black'
+                                }`}
                             >
-                                {label}
-                                {isActive && (
-                                    <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#DFFF00] rounded-t-full" />
-                                )}
+                                {tab.label}
                             </button>
                         )
                     })}
                 </div>
 
-                {/* CONTENT */}
-                <div className="max-w-7xl mx-auto">
+                {/* 4. Tab Content: Priority Inbox & Schedule */}
+                <div>
                     {getTabContent()}
                 </div>
             </div>
@@ -269,6 +361,7 @@ export default function AdminDashboard() {
                 />
             )}
 
+            {/* View Slip Modal */}
             {viewSlipUrl && (
                 <ViewSlipModal 
                     url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 

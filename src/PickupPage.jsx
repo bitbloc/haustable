@@ -201,62 +201,68 @@ export default function PickupPage() {
     })
 
     const handleSubmit = async () => {
+        if (submitting || isSubmitting) return
         if (!contactName || !contactPhone) return alert(t('fillContact'))
         if (!isAgreed) return alert(t('agreeTerms'))
         if (!slipFile) return alert(t('uploadSlipDesc'))
         if (!pickupTime) return alert(t('selectPickupTime'))
 
-        // Prepare Payload
-        const dateBasis = new Date()
-        if (pickupDate === 'tomorrow') {
-            dateBasis.setDate(dateBasis.getDate() + 1)
-        }
-        const dateStr = dateBasis.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) 
-        const bookingDateTime = toThaiISO(dateStr, pickupTime)
-        const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
-
-        const bookingPayload = {
-            booking_type: 'pickup',
-            status: 'pending',
-            booking_time: bookingDateTime,
-            pickup_contact_name: contactName,
-            pickup_contact_phone: contactPhone,
-            customer_note: customerNoteContent,
-            promotion_code_id: appliedPromo?.id || null, 
-            discount_amount: appliedPromo?.discountAmount || 0,
-            total_amount: finalTotal,
-            deposit_amount: finalTotal, // 100% deposit for pickup
-            tracking_token: crypto.randomUUID(),
-            payment_slip_url: null // Will be handled by hook if slipFile present
-        }
-
-        const orderItemsPayload = cart.map(item => ({
-            menu_item_id: item.id,
-            quantity: item.qty,
-            price_at_time: item.totalPricePerUnit,
-            selected_options: item.optionsSummary 
-        }))
-        
-        // Use Line Token if not logged in (logic inside component for token fetch)
-        const { data: { user } } = await supabase.auth.getUser()
-        const lineIdToken = !user && (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
-
-        const result = await submitOrder({
-            bookingPayload,
-            orderItemsPayload,
-            slipFile,
-            lineIdToken
-        })
-
-        if (result.success) {
-            alert(t('confirmOrder') + ' Success!')
-            if (result.trackingToken) {
-                window.location.replace(`/tracking/${result.trackingToken}`)
-            } else {
-                navigate('/', { replace: true })
+        setSubmitting(true)
+        try {
+            // Prepare Payload
+            const dateBasis = new Date()
+            if (pickupDate === 'tomorrow') {
+                dateBasis.setDate(dateBasis.getDate() + 1)
             }
-        } else {
-            alert('Error: ' + result.error)
+            const dateStr = dateBasis.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) 
+            const bookingDateTime = toThaiISO(dateStr, pickupTime)
+            const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
+
+            const bookingPayload = {
+                booking_type: 'pickup',
+                status: 'pending',
+                booking_time: bookingDateTime,
+                pickup_contact_name: contactName,
+                pickup_contact_phone: contactPhone,
+                customer_note: customerNoteContent,
+                promotion_code_id: appliedPromo?.id || null, 
+                discount_amount: appliedPromo?.discountAmount || 0,
+                total_amount: finalTotal,
+                deposit_amount: finalTotal, // 100% deposit for pickup
+                tracking_token: crypto.randomUUID(),
+                payment_slip_url: null // Will be handled by hook if slipFile present
+            }
+
+            const orderItemsPayload = cart.map(item => ({
+                menu_item_id: item.id,
+                quantity: item.qty,
+                price_at_time: item.totalPricePerUnit,
+                selected_options: item.optionsSummary 
+            }))
+            
+            // Use Line Token if not logged in (logic inside component for token fetch)
+            const { data: { user } } = await supabase.auth.getUser()
+            const lineIdToken = !user && (window.liff?.isLoggedIn() ? window.liff.getIDToken() : null)
+
+            const result = await submitOrder({
+                bookingPayload,
+                orderItemsPayload,
+                slipFile,
+                lineIdToken
+            })
+
+            if (result.success) {
+                alert(t('confirmOrder') + ' Success!')
+                if (result.trackingToken) {
+                    window.location.replace(`/tracking/${result.trackingToken}`)
+                } else {
+                    navigate('/', { replace: true })
+                }
+            } else {
+                alert('Error: ' + result.error)
+            }
+        } finally {
+            setSubmitting(false)
         }
     }
 

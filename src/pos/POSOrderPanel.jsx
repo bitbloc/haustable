@@ -500,45 +500,6 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const cfdChannel = React.useRef(null);
     const supabaseCfdRef = React.useRef(null);
 
-    React.useEffect(() => {
-        cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
-        supabaseCfdRef.current = supabase.channel('pos_cfd_room');
-        supabaseCfdRef.current.subscribe();
-
-        return () => {
-            if (cfdChannel.current) cfdChannel.current.close();
-            if (supabaseCfdRef.current) supabase.removeChannel(supabaseCfdRef.current);
-        };
-    }, []);
-
-    const broadcastCFD = (msg) => {
-        if (cfdChannel.current) {
-            try { cfdChannel.current.postMessage(msg); } catch (e) {}
-        }
-        if (supabaseCfdRef.current) {
-            supabaseCfdRef.current.send({
-                type: 'broadcast',
-                event: 'cfd_event',
-                payload: msg
-            }).catch(() => {});
-        }
-        try {
-            localStorage.setItem('pos_cfd_last_event', JSON.stringify(msg));
-        } catch (e) {}
-    };
-
-    React.useEffect(() => {
-        const handleCfdCustomEvent = (e) => {
-            if (e.detail) {
-                broadcastCFD(e.detail);
-            }
-        };
-        window.addEventListener('pos-cfd-broadcast', handleCfdCustomEvent);
-        return () => {
-            window.removeEventListener('pos-cfd-broadcast', handleCfdCustomEvent);
-        };
-    }, []);
-
     const currentMemberProfile = (() => {
         if (booking?.user_id) {
             if (attachedMemberCrm && (attachedMemberCrm.id === booking.user_id || attachedMemberCrm.user_id === booking.user_id)) {
@@ -552,10 +513,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         return attachedMemberCrm || null;
     })();
 
-    React.useEffect(() => {
+    const computeCurrentCFDPayload = React.useCallback(() => {
         if (activeModal === 'checkout') {
             if (paymentMethod === 'qr') {
-                broadcastCFD({
+                return {
                     type: 'SHOW_QR',
                     payload: {
                         items: order.items,
@@ -568,10 +529,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'qr'
                     }
-                });
+                };
             } else {
                 const received = parseFloat(cashReceivedInput) || 0;
-                broadcastCFD({
+                return {
                     type: 'SHOW_CHECKOUT',
                     payload: {
                         items: order.items,
@@ -586,10 +547,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         cashReceived: received,
                         changeDue: Math.max(0, received - total)
                     }
-                });
+                };
             }
         } else if (order.items && order.items.length > 0) {
-            broadcastCFD({
+            return {
                 type: 'UPDATE_CART',
                 payload: {
                     items: order.items,
@@ -601,11 +562,67 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     memberProfile: currentMemberProfile,
                     tableName: order.table?.table_name || booking?.tables_layout?.table_name || null
                 }
-            });
+            };
         } else {
-            broadcastCFD({ type: 'IDLE' });
+            return { type: 'IDLE' };
         }
-    }, [order.items, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, activeModal, paymentMethod, cashReceivedInput]);
+    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput]);
+
+    const broadcastCFD = React.useCallback((msg) => {
+        if (cfdChannel.current) {
+            try { cfdChannel.current.postMessage(msg); } catch (e) {}
+        }
+        if (supabaseCfdRef.current) {
+            supabaseCfdRef.current.send({
+                type: 'broadcast',
+                event: 'cfd_event',
+                payload: msg
+            }).catch(() => {});
+        }
+        try {
+            localStorage.setItem('pos_cfd_last_event', JSON.stringify(msg));
+        } catch (e) {}
+    }, []);
+
+    React.useEffect(() => {
+        cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
+        
+        // Handle incoming handshake requests from CFD
+        cfdChannel.current.onmessage = (event) => {
+            if (event.data?.type === 'REQUEST_CFD_STATE') {
+                const currentMsg = computeCurrentCFDPayload();
+                broadcastCFD(currentMsg);
+            }
+        };
+
+        supabaseCfdRef.current = supabase.channel('pos_cfd_room');
+        supabaseCfdRef.current.on('broadcast', { event: 'cfd_handshake' }, () => {
+            const currentMsg = computeCurrentCFDPayload();
+            broadcastCFD(currentMsg);
+        }).subscribe();
+
+        return () => {
+            if (cfdChannel.current) cfdChannel.current.close();
+            if (supabaseCfdRef.current) supabase.removeChannel(supabaseCfdRef.current);
+        };
+    }, [computeCurrentCFDPayload, broadcastCFD]);
+
+    React.useEffect(() => {
+        const handleCfdCustomEvent = (e) => {
+            if (e.detail) {
+                broadcastCFD(e.detail);
+            }
+        };
+        window.addEventListener('pos-cfd-broadcast', handleCfdCustomEvent);
+        return () => {
+            window.removeEventListener('pos-cfd-broadcast', handleCfdCustomEvent);
+        };
+    }, [broadcastCFD]);
+
+    React.useEffect(() => {
+        const currentMsg = computeCurrentCFDPayload();
+        broadcastCFD(currentMsg);
+    }, [computeCurrentCFDPayload, broadcastCFD]);
     
     const hasNewItems = order.items.some(item => !item.db_id);
 

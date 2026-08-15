@@ -3,6 +3,32 @@ import { supabase } from '../lib/supabaseClient';
 const CURRENT_SHIFT_KEY = 'pos_current_shift';
 const SHIFT_HISTORY_KEY = 'pos_shift_history';
 
+// Helper: Record immutable POS audit trail in cloud
+export async function logPosAudit(actionType, { bookingId = null, amount = 0, reason = '', metadata = {} } = {}) {
+    try {
+        const shift = getCurrentShift();
+        const savedStaff = localStorage.getItem('pos_active_staff');
+        let staffName = shift?.staffName;
+        if (!staffName && savedStaff) {
+            try { staffName = JSON.parse(savedStaff).display_name; } catch {}
+        }
+        if (!staffName) staffName = localStorage.getItem('staff_name') || 'Cashier';
+        const shiftId = shift?.id ? String(shift.id) : null;
+        
+        await supabase.rpc('log_pos_audit_event', {
+            p_shift_id: shiftId,
+            p_staff_name: staffName,
+            p_action_type: actionType,
+            p_booking_id: bookingId,
+            p_amount: Number(amount) || 0,
+            p_reason: reason || null,
+            p_metadata: metadata || {}
+        });
+    } catch (err) {
+        console.warn('[Audit Log] Failed to record audit log:', err);
+    }
+}
+
 // Helper: Sync shift log directly to Supabase cloud in background
 export async function syncShiftToCloud(shift) {
     if (!shift || !shift.id) return;
@@ -197,8 +223,9 @@ export function startShift(staffName, openingFloat) {
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(newShift));
     console.log('[Shift Management] Shift started:', newShift);
     
-    // Sync to cloud
+    // Sync to cloud & log audit
     syncShiftToCloud(newShift);
+    logPosAudit('open_shift', { amount: floatAmount, reason: `Staff ${staffName} opened shift with float ฿${floatAmount}` });
 
     window.dispatchEvent(new Event('pos-shift-changed'));
     return newShift;
@@ -263,6 +290,7 @@ export function voidShiftTransaction(bookingId) {
     }
     
     const originalLength = shift.transactions.length;
+    const targetTx = shift.transactions.find(tx => tx.bookingId === bookingId);
     shift.transactions = shift.transactions.filter(tx => tx.bookingId !== bookingId);
     
     if (shift.transactions.length === originalLength) {
@@ -296,8 +324,14 @@ export function voidShiftTransaction(bookingId) {
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
     console.log('[Shift Management] Transaction voided in shift:', bookingId);
     
-    // Sync to cloud
+    // Sync to cloud & log audit
     syncShiftToCloud(shift);
+    logPosAudit('void_transaction', {
+        bookingId,
+        amount: targetTx?.amount || 0,
+        reason: `Voided transaction for booking ${bookingId}`,
+        metadata: targetTx || {}
+    });
 
     window.dispatchEvent(new Event('pos-shift-changed'));
 }
@@ -348,8 +382,13 @@ export function addShiftAdjustment(amount, note, type) {
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
     console.log('[Shift Management] Cash adjustment recorded:', newAdj);
     
-    // Sync to cloud
+    // Sync to cloud & log audit
     syncShiftToCloud(shift);
+    logPosAudit('cash_adjustment', {
+        amount: adjAmount,
+        reason: `${type === 'in' ? 'Deposit' : 'Payout'}: ${note}`,
+        metadata: newAdj
+    });
 
     window.dispatchEvent(new Event('pos-shift-changed'));
     return shift;
@@ -409,8 +448,13 @@ export function closeShift(actualCash, computedSummary = null) {
         console.error('Failed to save shift to history:', e);
     }
     
-    // Sync the closed state to cloud
+    // Sync the closed state to cloud & log audit
     syncShiftToCloud(closedShift);
+    logPosAudit('close_shift', {
+        amount: cashActual,
+        reason: `Closed shift. Expected: ฿${expectedCashInDrawer}, Actual: ฿${cashActual}, Difference: ฿${diff}`,
+        metadata: { expectedCash: expectedCashInDrawer, actualCash: cashActual, diff, totalSales }
+    });
 
     // Clear active shift locally
     localStorage.removeItem(CURRENT_SHIFT_KEY);

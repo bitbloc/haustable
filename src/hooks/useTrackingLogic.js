@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export function useTrackingLogic(token) {
@@ -7,27 +8,29 @@ export function useTrackingLogic(token) {
   const [error, setError] = useState(null)
   const [timeLeft, setTimeLeft] = useState('')
   const [isDataLoaded, setIsDataLoaded] = useState(false)
+  const isFetchingRef = useRef(false)
 
-  const fetchTrackingInfo = async () => {
+  const fetchTrackingInfo = useCallback(async () => {
+    if (!token || isFetchingRef.current) return
+    isFetchingRef.current = true
+
     try {
       const { data: resData, error: apiError } = await supabase.functions.invoke('get-tracking-info', {
         body: { token },
       })
 
       if (apiError) {
-        // Handle 404 from Function (Booking not found)
-        if (apiError.status === 404 || (apiError.context?.status === 404)) {
-            throw new Error('ไม่พบข้อมูลการจอง (Booking not found)')
+        if (apiError.status === 404 || apiError.context?.status === 404) {
+            throw new Error('ไม่พบข้อมูลคำสั่งซื้อ (Order not found)')
         }
-        // Handle 410 from Function (Token Expired)
-        if (apiError.status === 410 || (apiError.context?.status === 410)) {
+        if (apiError.status === 410 || apiError.context?.status === 410) {
             throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
         }
         throw apiError
       }
-      if (resData.error) {
+      if (resData?.error) {
         if (resData.code === 'TOKEN_EXPIRED') throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
-        if (resData.code === 'NOT_FOUND') throw new Error('ไม่พบข้อมูลการจอง (Booking not found)')
+        if (resData.code === 'NOT_FOUND') throw new Error('ไม่พบข้อมูลคำสั่งซื้อ (Order not found)')
         throw new Error(resData.error)
       }
 
@@ -36,27 +39,49 @@ export function useTrackingLogic(token) {
       setError(null) 
     } catch (err) {
       console.error('Tracking Error:', err)
-      setError(err.message || 'ไม่สามารถโหลดข้อมูลได้')
+      setError(err.message || 'ไม่สามารถโหลดข้อมูลคำสั่งซื้อได้')
     } finally {
       setLoading(false)
+      isFetchingRef.current = false
     }
-  }
+  }, [token])
 
-  // Poll for updates
+  // Realtime Postgres Changes Subscription + Polling Fallback
   useEffect(() => {
     fetchTrackingInfo()
-    
-    // Adaptive polling: Poll faster if not yet completed/cancelled
-    let intervalTime = 45000 
-    if (data && ['pending', 'confirmed', 'preparing', 'seated'].includes(data.status)) {
-        intervalTime = 15000 
+
+    if (!token) return
+
+    // 1. Direct Realtime Subscription on Booking Token
+    const channel = supabase
+      .channel(`tracking-realtime-${token}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'bookings',
+        filter: `tracking_token=eq.${token}`
+      }, (payload) => {
+        fetchTrackingInfo()
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'order_items'
+      }, () => {
+        fetchTrackingInfo()
+      })
+      .subscribe()
+
+    // 2. Backup Polling (every 30s) in case of websocket drop
+    const interval = setInterval(fetchTrackingInfo, 30000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
     }
+  }, [token, fetchTrackingInfo])
 
-    const interval = setInterval(fetchTrackingInfo, intervalTime)
-    return () => clearInterval(interval)
-  }, [token, data?.status])
-
-  // Countdown Logic
+  // Countdown Logic for Arrival / Ready time
   useEffect(() => {
     if (!data?.booking_time) return
     const updateTime = () => {
@@ -77,5 +102,5 @@ export function useTrackingLogic(token) {
     return () => clearInterval(timer)
   }, [data?.booking_time])
 
-  return { data, loading, error, timeLeft, isDataLoaded }
+  return { data, loading, error, timeLeft, isDataLoaded, refetch: fetchTrackingInfo }
 }

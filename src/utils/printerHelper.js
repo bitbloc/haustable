@@ -720,7 +720,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const noteLower = (booking.customer_note || '').toLowerCase();
     const sourceLower = (booking.source || '').toLowerCase();
     
-    // Check category: Online Pickup vs Online Table Booking vs Walk-in Pickup vs IN HAUS Dine-In
+    // Check category: Online Pickup vs Online Table Booking vs Walk-in Pickup vs IN HAUS Dine-In vs Split Payment
+    const isSplitOrder = remarkLower.includes('split');
     const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online');
     const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr');
     
@@ -730,7 +731,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     let orderBannerTitle = '';
     let orderBannerSub = '';
 
-    if (isOnlinePickup) {
+    if (isSplitOrder) {
+        orderBannerTitle = 'SPLIT PAYMENT RECEIPT';
+        orderBannerSub = '(ใบเสร็จแบ่งชำระเงิน)';
+    } else if (isOnlinePickup) {
         orderBannerTitle = 'ONLINE PICKUP ORDER';
         orderBannerSub = '(รับกลับออนไลน์ - PICKUP)';
     } else if (isOnlineBooking) {

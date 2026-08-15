@@ -29,6 +29,7 @@ const AdminMembers = lazy(() => import('./AdminMembers'))
 const AdminPromotions = lazy(() => import('./components/admin/AdminPromotions'))
 const AdminTableManager = lazy(() => import('./admin/AdminTableManager'))
 const AdminArcade = lazy(() => import('./components/admin/AdminArcade'))
+const AdminMarketingPage = lazy(() => import('./pages/admin/AdminMarketingPage'))
 
 const MemberCard = lazy(() => import('./pages/MemberCard'))
 const StaffDashboard = lazy(() => import('./StaffDashboard'))
@@ -157,24 +158,25 @@ function App() {
                 <Route path="/t/:token" element={<TrackingPage />} />
               </Route>
 
-              {/* Admin Routes */}
+              {/* Admin Routes - Streamlined 7 Core Hubs */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
-                <Route path="hausmade" element={<HausmadeAdminPage />} />
                 <Route path="financial" element={<AdminFinancialDashboard />} />
                 <Route path="bookings" element={<AdminBookings />} />
-                <Route path="members" element={<AdminMembers />} />
-                <Route path="menu" element={<AdminMenu />} />
-                <Route path="costing" element={<MenuCostPage />} />
-                <Route path="lab" element={<RecipeLabPage />} />
-                <Route path="promotions" element={<AdminPromotions defaultTab="promo" />} />
-                <Route path="rewards" element={<AdminPromotions defaultTab="rewards" />} />
-                <Route path="arcade" element={<AdminArcade />} />
-                <Route path="tables" element={<AdminTableManager />} />
-                <Route path="editor" element={<AdminTableEditor />} />
-                <Route path="sop" element={<SOPEditorPage />} />
+                <Route path="tables" element={<AdminTableManager defaultTab="live" />} />
+                <Route path="editor" element={<AdminTableManager defaultTab="editor" />} />
+                <Route path="menu" element={<AdminMenu defaultTab="items" />} />
+                <Route path="costing" element={<AdminMenu defaultTab="costing" />} />
+                <Route path="lab" element={<AdminMenu defaultTab="lab" />} />
+                <Route path="sop" element={<AdminMenu defaultTab="sop" />} />
+                <Route path="marketing" element={<AdminMarketingPage defaultTab="members" />} />
+                <Route path="members" element={<AdminMarketingPage defaultTab="members" />} />
+                <Route path="promotions" element={<AdminMarketingPage defaultTab="promotions" />} />
+                <Route path="rewards" element={<AdminMarketingPage defaultTab="rewards" />} />
+                <Route path="arcade" element={<AdminMarketingPage defaultTab="arcade" />} />
+                <Route path="songs" element={<AdminMarketingPage defaultTab="songs" />} />
+                <Route path="hausmade" element={<HausmadeAdminPage />} />
                 <Route path="settings" element={<AdminSettings />} />
-                <Route path="songs" element={<AdminSongRequests />} />
               </Route>
 
               {/* Customer Table Ordering */}

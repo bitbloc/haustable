@@ -1,10 +1,37 @@
 import https from 'https'
 
+function isSafeUrl(rawUrl) {
+    try {
+        const parsed = new URL(rawUrl);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+            return false;
+        }
+        const hostname = parsed.hostname.toLowerCase();
+        if (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0' ||
+            hostname === '::1' ||
+            hostname.startsWith('10.') ||
+            hostname.startsWith('192.168.') ||
+            hostname.startsWith('169.254.') ||
+            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
+            hostname.endsWith('.internal') ||
+            hostname.endsWith('.local')
+        ) {
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export default async function handler(req, res) {
     const { url } = req.query
 
-    if (!url) {
-        return res.status(400).json({ error: 'URL is required' })
+    if (!url || !isSafeUrl(url.trim())) {
+        return res.status(400).json({ error: 'Valid external HTTP/HTTPS URL is required' })
     }
 
     try {

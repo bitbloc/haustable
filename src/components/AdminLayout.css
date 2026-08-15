@@ -328,13 +328,14 @@
 .admin-sidebar {
   background-color: var(--ram-paper) !important;
   border-right: 1px solid var(--ram-rule) !important;
-  padding: 2rem !important;
+  padding: 1.5rem !important;
 }
 .admin-sidebar-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem !important;
+  min-height: 42px;
   border-radius: 2px !important;
   font-family: var(--ram-font-display);
   font-size: 0.75rem;
@@ -360,6 +361,20 @@
 .admin-mobile-nav {
   background-color: var(--ram-paper) !important;
   border-bottom: 1px solid var(--ram-rule) !important;
+  min-height: 54px;
+}
+
+/* Touch optimization for tablet & mobile */
+@media (max-width: 1024px) {
+  .admin-sidebar-item {
+    min-height: 46px;
+    font-size: 0.8125rem;
+  }
+  .admin-mobile-nav button,
+  .admin-mobile-nav a {
+    min-height: 40px;
+    min-width: 40px;
+  }
 }
 
 /* --- Tabs --- */

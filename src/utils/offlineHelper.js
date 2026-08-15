@@ -378,7 +378,7 @@ export async function syncOfflineQueue(isManual = false) {
             }
 
             else if (action.type === 'split_payment') {
-                let { bookingId, tempSplitId, paidItems, paymentMethod, totalAmount, bookingMetadata } = action.payload;
+                let { bookingId, tempSplitId, splitMode, paidItems = [], paymentMethod, totalAmount, isFullySettled, bookingMetadata } = action.payload;
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
                 }
@@ -415,39 +415,56 @@ export async function syncOfflineQueue(isManual = false) {
                     try { localStorage.setItem('pos_offline_id_mapping', JSON.stringify(idMapping)); } catch(e) {}
                 }
 
-                // 2. Insert paid items to the new split booking
-                const splitOrderItemsToInsert = paidItems.map(item => ({
-                    booking_id: newSplitBookingId,
-                    menu_item_id: item.menu_item_id,
-                    quantity: item.quantity,
-                    price_at_time: item.price_at_time || 0,
-                    selected_options: item.selected_options || []
-                }));
+                // 2. Insert paid items to the new split booking if items exist
+                if (paidItems && paidItems.length > 0) {
+                    const splitOrderItemsToInsert = paidItems.map(item => ({
+                        booking_id: newSplitBookingId,
+                        menu_item_id: item.menu_item_id,
+                        quantity: item.quantity,
+                        price_at_time: item.price_at_time || 0,
+                        selected_options: item.selected_options || []
+                    }));
 
-                const { error: insertItemsError } = await supabase
-                    .from('order_items')
-                    .insert(splitOrderItemsToInsert);
+                    const { error: insertItemsError } = await supabase
+                        .from('order_items')
+                        .insert(splitOrderItemsToInsert);
 
-                if (insertItemsError) throw insertItemsError;
+                    if (insertItemsError) throw insertItemsError;
 
-                // 3. Deduct/Delete from original booking
-                for (const item of paidItems) {
-                    if (item.menu_item_id) {
-                        const { data: dbItem } = await supabase
-                            .from('order_items')
-                            .select('*')
-                            .eq('booking_id', bookingId)
-                            .eq('menu_item_id', item.menu_item_id)
-                            .limit(1)
-                            .maybeSingle();
+                    // 3. Deduct/Delete from original booking
+                    for (const item of paidItems) {
+                        if (item.menu_item_id) {
+                            const { data: dbItem } = await supabase
+                                .from('order_items')
+                                .select('*')
+                                .eq('booking_id', bookingId)
+                                .eq('menu_item_id', item.menu_item_id)
+                                .limit(1)
+                                .maybeSingle();
 
-                        if (dbItem) {
-                            if (dbItem.quantity <= item.quantity) {
-                                await supabase.from('order_items').delete().eq('id', dbItem.id);
-                            } else {
-                                await supabase.from('order_items').update({ quantity: dbItem.quantity - item.quantity }).eq('id', dbItem.id);
+                            if (dbItem) {
+                                if (dbItem.quantity <= item.quantity) {
+                                    await supabase.from('order_items').delete().eq('id', dbItem.id);
+                                } else {
+                                    await supabase.from('order_items').update({ quantity: dbItem.quantity - item.quantity }).eq('id', dbItem.id);
+                                }
                             }
                         }
+                    }
+                }
+
+                // 4. Auto-complete original booking & free table if fully settled
+                if (isFullySettled) {
+                    await supabase
+                        .from('bookings')
+                        .update({ status: 'completed', staff_remark: 'Completed via Split Payments' })
+                        .eq('id', bookingId);
+
+                    if (bookingMetadata?.table_id) {
+                        await supabase
+                            .from('tables_layout')
+                            .update({ status: 'available' })
+                            .eq('id', bookingMetadata.table_id);
                     }
                 }
             }

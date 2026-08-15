@@ -308,16 +308,39 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* 10.1 Inch HD (1024x600) Customer Display Height Guard */
+/* 10.1 Inch HD (1024x600) Customer Display Height Guard & Sunmi D2s Plus */
+.cfd-container {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
 @media (max-height: 650px) {
   .cfd-container {
     height: 100vh;
     max-height: 100vh;
     overflow: hidden;
   }
-  
-  .cfd-scrollable {
-    max-height: calc(100vh - 220px);
-    overflow-y: auto;
-  }
+}
+
+/* CFD Ultra-Clean Dieter Rams Scrollbar */
+.cfd-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.cfd-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cfd-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(85% 0.012 28);
+  border-radius: 4px;
+}
+.cfd-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(55% 0.010 28);
 }

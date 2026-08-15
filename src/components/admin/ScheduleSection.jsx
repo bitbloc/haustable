@@ -1,125 +1,167 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React from 'react'
 import { formatThaiTimeOnly } from '../../utils/timeUtils'
 import { Printer, CheckCircle, ChefHat, Image as ImageIcon } from 'lucide-react'
 
 export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip }) {
-    if (loading) return <div className="text-center py-10 text-subInk animate-pulse">Loading schedule...</div>
+    if (loading) {
+        return (
+            <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] animate-pulse rounded-sm">
+                LOADING SERVICE SCHEDULE...
+            </div>
+        )
+    }
 
     return (
-        <div className="bg-paper rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+        <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden">
+            {/* Header */}
+            <div className="p-4 md:p-5 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(96%_0.008_28)]">
                 <div>
-                    <h2 className="text-lg font-bold text-ink flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-brand border border-black/10"></span>
-                        Today's Schedule
+                    <h2 className="font-mono text-sm md:text-base font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
+                        TODAY'S SERVICE SCHEDULE
                     </h2>
-                    <p className="text-xs text-subInk mt-0.5">Confirmed orders for today</p>
+                    <p className="font-mono text-xs text-[oklch(55%_0.010_28)] mt-0.5">
+                        Chronological queue of confirmed reservations and pickup orders
+                    </p>
                 </div>
-                <div className="text-[10px] font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wide">
-                    {bookings.length > 0 && <span className="w-2 h-2 bg-green-500 rounded-full inline-block mr-1"></span>}
-                    {bookings.length === 0 ? '0 Orders' : `${bookings.length} Orders`}
+
+                <div className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-3 py-1 rounded-sm border border-[oklch(85%_0.012_28)]">
+                    {bookings.length} CONFIRMED
                 </div>
             </div>
 
+            {/* Table */}
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-canvas text-[11px] uppercase text-subInk font-bold tracking-wider border-b border-gray-100">
+                <table className="w-full text-left border-collapse font-mono text-xs">
+                    <thead className="bg-[oklch(94%_0.010_28)] text-[10px] uppercase text-[oklch(42%_0.010_28)] font-bold tracking-wider border-b border-[oklch(85%_0.012_28)]">
                         <tr>
-                            <th className="p-4 pl-6">Time</th>
-                            <th className="p-4">Table / Set</th>
-                            <th className="p-4">Customer</th>
-                            <th className="p-4">Items</th>
-                            <th className="p-4">Status</th>
-                            <th className="p-4 pr-6 text-right">Action</th>
+                            <th className="p-3.5 pl-5">TIME</th>
+                            <th className="p-3.5">TABLE / TYPE</th>
+                            <th className="p-3.5">GUEST</th>
+                            <th className="p-3.5">ITEMS & VALUE</th>
+                            <th className="p-3.5">STATUS</th>
+                            <th className="p-3.5 pr-5 text-right">ACTIONS</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
                         {bookings.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="p-16 text-center">
-                                    <div className="flex flex-col items-center gap-4 text-subInk">
-                                        <CheckCircle size={48} className="text-[#DFFF00]" strokeWidth={3} />
-                                        <p className="font-bold text-ink">All caught up! No confirmed orders for today.</p>
+                                <td colSpan="6" className="p-12 text-center">
+                                    <div className="flex flex-col items-center gap-2 text-[oklch(55%_0.010_28)]">
+                                        <div className="w-8 h-8 rounded-full border border-[oklch(80%_0.012_28)] flex items-center justify-center font-mono text-sm">
+                                            ✓
+                                        </div>
+                                        <p className="font-bold text-[oklch(18%_0.012_28)]">No confirmed bookings scheduled for today.</p>
                                     </div>
                                 </td>
                             </tr>
                         ) : (
-                            bookings.map(booking => (
-                                <tr key={booking.id} className="hover:bg-gray-50 transition-colors group">
-                                    <td className="p-4 pl-6 font-mono font-bold text-ink">
-                                        {formatThaiTimeOnly(booking.booking_time)}
-                                    </td>
-                                    <td className="p-4">
-                                        {booking.booking_type === 'dine_in' ? (
-                                            <span className="bg-gray-100 text-ink px-3 py-1 rounded-md text-xs font-bold border border-gray-200">
-                                                {booking.tables_layout?.table_name || 'Table ?'}
-                                            </span>
-                                        ) : (
-                                            <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-md text-xs font-bold border border-blue-100">
-                                                Pickup
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-bold text-sm text-ink">
-                                            {booking.booking_type === 'pickup' ? booking.pickup_contact_name : (booking.profiles?.display_name || 'Guest')}
-                                        </div>
-                                        {booking.customer_note && (
-                                            <span className="text-[10px] bg-yellow-50 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-100 inline-block mt-1 max-w-[150px] truncate">
-                                                Note: {booking.customer_note}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex flex-col gap-1">
-                                            {booking.order_items.map((item, i) => (
-                                                <div key={i} className="text-xs text-subInk flex justify-between w-36">
-                                                    <span className="truncate font-medium text-ink max-w-[100px]">{item.menu_items?.name}</span>
-                                                    <span className="text-subInk">x{item.quantity}</span>
+                            bookings.map(booking => {
+                                const isDineIn = booking.booking_type === 'dine_in'
+                                const guestName = booking.booking_type === 'pickup' 
+                                    ? (booking.pickup_contact_name || 'Guest') 
+                                    : (booking.profiles?.display_name || booking.pickup_contact_name || 'Guest')
+
+                                return (
+                                    <tr key={booking.id} className="hover:bg-[oklch(96%_0.006_28)] transition-colors">
+                                        <td className="p-3.5 pl-5 font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
+                                            {formatThaiTimeOnly(booking.booking_time)}
+                                        </td>
+
+                                        <td className="p-3.5">
+                                            {isDineIn ? (
+                                                <span className="bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.012_28)]">
+                                                    {booking.tables_layout?.table_name || 'Table ?'} ({booking.pax || 2}P)
+                                                </span>
+                                            ) : (
+                                                <span className="bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(82%_0.02_220)]">
+                                                    PICKUP
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        <td className="p-3.5">
+                                            <div className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)]">
+                                                {guestName}
+                                            </div>
+                                            {booking.customer_note && (
+                                                <div className="text-[10px] text-[oklch(42%_0.010_28)] truncate max-w-[180px]">
+                                                    Note: {booking.customer_note}
                                                 </div>
-                                            ))}
-                                            {booking.order_items.length > 2 && (
-                                                <span className="text-[10px] text-gray-400 font-medium">+ {booking.order_items.length - 2} more...</span>
                                             )}
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-600 border border-green-100">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                            Confirmed
-                                        </span>
-                                    </td>
-                                    <td className="p-4 pr-6 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            {/* Print Kitchen Slip */}
-                                            <button 
-                                                onClick={() => onPrint && onPrint(booking, 'kitchen')} 
-                                                className="p-2 bg-white border border-gray-200 rounded-lg text-subInk hover:text-ink hover:border-gray-300 transition-colors shadow-sm" 
-                                                title="Print Kitchen Slip"
-                                            >
-                                                <ChefHat size={16} />
-                                            </button>
-                                            {/* Print Customer Bill */}
-                                            <button 
-                                                onClick={() => onPrint && onPrint(booking, 'customer')} 
-                                                className="p-2 bg-white border border-gray-200 rounded-lg text-subInk hover:text-ink hover:border-gray-300 transition-colors shadow-sm" 
-                                                title="Print Customer Bill"
-                                            >
-                                                <Printer size={16} />
-                                            </button>
-                                            {/* View Slip */}
-                                            {booking.payment_slip_url && (
+                                        </td>
+
+                                        <td className="p-3.5">
+                                            <div className="flex flex-col gap-0.5 max-w-[200px]">
+                                                {booking.order_items && booking.order_items.length > 0 ? (
+                                                    <>
+                                                        {booking.order_items.slice(0, 2).map((item, i) => (
+                                                            <div key={i} className="text-[11px] text-[oklch(42%_0.010_28)] flex justify-between">
+                                                                <span className="truncate max-w-[130px]">{item.quantity}x {item.menu_items?.name}</span>
+                                                                <span>฿{item.price_at_time}</span>
+                                                            </div>
+                                                        ))}
+                                                        {booking.order_items.length > 2 && (
+                                                            <span className="text-[10px] text-[oklch(60%_0.010_28)]">
+                                                                +{booking.order_items.length - 2} more items
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">Reservation Only</span>
+                                                )}
+                                                <div className="text-xs font-bold text-[oklch(18%_0.012_28)] pt-0.5">
+                                                    ฿{Number(booking.total_amount || 0).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="p-3.5">
+                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.08_140)]">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
+                                                CONFIRMED
+                                            </span>
+                                        </td>
+
+                                        <td className="p-3.5 pr-5 text-right">
+                                            <div className="flex justify-end items-center gap-1.5">
+                                                {/* Print Kitchen Slip */}
                                                 <button 
-                                                    onClick={() => onViewSlip && onViewSlip(booking.payment_slip_url)} 
-                                                    className="p-2 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-lg shadow-sm transition-colors" 
-                                                    title="View Slip"
+                                                    type="button"
+                                                    onClick={() => onPrint && onPrint(booking, 'kitchen')} 
+                                                    className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors" 
+                                                    title="Print Kitchen Slip"
                                                 >
-                                                    <ImageIcon size={16} />
+                                                    <ChefHat size={14} />
                                                 </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+
+                                                {/* Print Customer Bill */}
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => onPrint && onPrint(booking, 'customer')} 
+                                                    className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors" 
+                                                    title="Print Customer Bill"
+                                                >
+                                                    <Printer size={14} />
+                                                </button>
+
+                                                {/* View Slip */}
+                                                {booking.payment_slip_url && (
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => onViewSlip && onViewSlip(booking.payment_slip_url)} 
+                                                        className="p-1.5 bg-[oklch(92%_0.02_220)] hover:bg-[oklch(88%_0.03_220)] border border-[oklch(82%_0.02_220)] text-[oklch(35%_0.10_220)] rounded-sm transition-colors" 
+                                                        title="View Slip"
+                                                    >
+                                                        <ImageIcon size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })
                         )}
                     </tbody>
                 </table>

@@ -59,6 +59,14 @@ export function useOrderSubmission() {
                 resultData = bookingData
                 trackingToken = bookingData.tracking_token
 
+                if (finalSlipUrl) {
+                    supabase.rpc('register_payment_slip', {
+                        p_booking_id: bookingData.id,
+                        p_file_name: finalSlipUrl,
+                        p_amount: bookingData.total_amount || 0
+                    }).catch(err => console.warn('Slips registry error:', err));
+                }
+
                 if (orderItemsPayload && orderItemsPayload.length > 0) {
                     const items = orderItemsPayload.map(item => ({
                         booking_id: bookingData.id,
