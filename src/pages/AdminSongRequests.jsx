@@ -1,623 +1,523 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Play, Check, X, ExternalLink, Calendar, DollarSign, Music, CheckCircle, Clock } from 'lucide-react'
+import { Play, Check, X, ExternalLink, Music, DollarSign, Clock, CheckCircle2, RefreshCw, Eye, Trash2, Send } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Toaster, toast } from 'sonner'
+import { toast } from 'sonner'
+import { format } from 'date-fns'
 
 const parseDonationAmount = (message) => {
-  if (!message) return 100
-  const match = message.match(/^\[Donation:\s*(\d+)\s*THB\]/)
-  return match ? parseInt(match[1], 10) : 100
+    if (!message) return 100
+    const match = message.match(/^\[Donation:\s*(\d+)\s*THB\]/)
+    return match ? parseInt(match[1], 10) : 100
 }
 
 const cleanMessage = (message) => {
-  if (!message) return ''
-  return message.replace(/^\[Donation:\s*\d+\s*THB\]\s*/, '')
+    if (!message) return ''
+    return message.replace(/^\[Donation:\s*\d+\s*THB\]\s*/, '')
 }
 
 export default function AdminSongRequests() {
-  const [requests, setRequests] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pending') // 'pending' | 'playing' | 'completed' | 'rejected' | 'all'
-  
-  // Slip Viewer Modal
-  const [viewingSlipUrl, setViewingSlipUrl] = useState(null)
+    const [requests, setRequests] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [filter, setFilter] = useState('pending') // 'pending' | 'playing' | 'completed' | 'rejected' | 'all'
+    const [viewingSlipUrl, setViewingSlipUrl] = useState(null)
 
-  // Test Request Modal States
-  const [showTestModal, setShowTestModal] = useState(false)
-  const [submittingTest, setSubmittingTest] = useState(false)
-  const [testForm, setTestForm] = useState({
-    trackName: '',
-    artistName: '',
-    requesterName: 'Admin Test',
-    message: ''
-  })
+    // Test Request Modal States
+    const [showTestModal, setShowTestModal] = useState(false)
+    const [submittingTest, setSubmittingTest] = useState(false)
+    const [testForm, setTestForm] = useState({
+        trackName: '',
+        artistName: '',
+        requesterName: 'Admin Test',
+        message: ''
+    })
 
-  useEffect(() => {
-    fetchRequests()
+    const fetchRequests = async (silent = false) => {
+        if (!silent) setLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('song_requests')
+                .select('*')
+                .order('created_at', { ascending: false })
 
-    // Real-time subscription to auto-refresh queue
-    const subscription = supabase
-      .channel('admin:song_requests')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'song_requests' }, () => {
-        fetchRequests(true)
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(subscription)
-    }
-  }, [])
-
-  const fetchRequests = async (silent = false) => {
-    if (!silent) setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('song_requests')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setRequests(data || [])
-    } catch (err) {
-      console.error(err)
-      toast.error('โหลดข้อมูลคำขอเพลงล้มเหลว')
-    } finally {
-      if (!silent) setLoading(false)
-    }
-  }
-
-  const handleUpdateStatus = async (id, status) => {
-    try {
-      const { error } = await supabase
-        .from('song_requests')
-        .update({ status })
-        .eq('id', id)
-
-      if (error) throw error
-      toast.success(`อัปเดตสถานะเป็น ${status === 'playing' ? 'กำลังเล่น' : status === 'completed' ? 'เสร็จสิ้น' : 'ปฏิเสธ'} เรียบร้อย`)
-      fetchRequests(true)
-    } catch (err) {
-      console.error(err)
-      toast.error('อัปเดตสถานะล้มเหลว')
-    }
-  }
-
-  const handleDelete = async (id) => {
-    if (!confirm('คุณต้องการลบรายการขอเพลงนี้ใช่หรือไม่? (การดำเนินการนี้จะไม่สามารถย้อนกลับได้)')) return
-    try {
-      // Fetch request first to get slip URL
-      const { data: request } = await supabase
-        .from('song_requests')
-        .select('slip_url')
-        .eq('id', id)
-        .single()
-
-      // Delete from storage if slip exists
-      if (request?.slip_url) {
-        await supabase.storage.from('slips').remove([request.slip_url])
-      }
-
-      // Delete from DB
-      const { error } = await supabase
-        .from('song_requests')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      toast.success('ลบคำขอเพลงเรียบร้อยแล้ว')
-      fetchRequests(true)
-    } catch (err) {
-      console.error(err)
-      toast.error('ลบคำขอเพลงล้มเหลว')
-    }
-  }
-
-  const handleSubmitTestRequest = async (e) => {
-    e.preventDefault()
-    if (!testForm.trackName.trim() || !testForm.artistName.trim()) {
-      return toast.error('กรุณาระบุชื่อเพลงและศิลปิน')
-    }
-    
-    setSubmittingTest(true)
-    try {
-      const mockTrackId = 'test_' + Date.now()
-      const requestData = {
-        track_id: mockTrackId,
-        track_name: testForm.trackName,
-        artist_name: testForm.artistName,
-        album_image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop',
-        track_duration_ms: 180000,
-        requester_name: testForm.requesterName || 'Admin Test',
-        message: testForm.message,
-        slip_url: null, // Nullable
-        status: 'pending'
-      }
-
-      const { error: dbError } = await supabase
-        .from('song_requests')
-        .insert(requestData)
-
-      if (dbError) throw dbError
-
-      // Send to LINE Notify
-      const lineMessage = `🧪 [TEST] ขอเพลงใหม่: ${testForm.trackName} - ${testForm.artistName}\nผู้ขอ: ${testForm.requesterName}\nข้อความ: ${testForm.message || '-'}`
-      
-      const flexPayload = {
-        type: "flex",
-        altText: `🧪 [TEST] ขอเพลง: ${testForm.trackName} - ${testForm.artistName}`,
-        contents: {
-          type: "bubble",
-          size: "mega",
-          header: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "text",
-                text: "🧪 [TEST] SONG REQUEST",
-                weight: "bold",
-                size: "sm",
-                color: "#9E2D2D"
-              }
-            ]
-          },
-          body: {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "text",
-                text: testForm.trackName,
-                weight: "bold",
-                size: "lg",
-                color: "#1A1A1A",
-                wrap: true
-              },
-              {
-                type: "text",
-                text: `${testForm.artistName} · (3:00)`,
-                size: "sm",
-                color: "#666666",
-                margin: "xs",
-                wrap: true
-              },
-              {
-                type: "separator",
-                margin: "lg",
-                color: "#E2E2E0"
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                margin: "lg",
-                spacing: "sm",
-                contents: [
-                  {
-                    type: "box",
-                    layout: "baseline",
-                    contents: [
-                      {
-                        type: "text",
-                        text: "ผู้ขอ",
-                        color: "#888888",
-                        size: "xs",
-                        flex: 1
-                      },
-                      {
-                        type: "text",
-                        text: testForm.requesterName || 'Admin Test',
-                        weight: "bold",
-                        size: "sm",
-                        color: "#1A1A1A",
-                        flex: 4,
-                        wrap: true
-                      }
-                    ]
-                  },
-                  {
-                    type: "box",
-                    layout: "baseline",
-                    contents: [
-                      {
-                        type: "text",
-                        text: "ข้อความ",
-                        color: "#888888",
-                        size: "xs",
-                        flex: 1
-                      },
-                      {
-                        type: "text",
-                        text: testForm.message || "-",
-                        size: "sm",
-                        color: "#1A1A1A",
-                        flex: 4,
-                        wrap: true
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          styles: {
-            header: {
-              backgroundColor: "#F4F4F3",
-              separator: true,
-              separatorColor: "#E2E2E0"
-            },
-            body: {
-              backgroundColor: "#FFFFFF"
-            }
-          }
+            if (error) throw error
+            setRequests(data || [])
+        } catch (err) {
+            console.error('Error fetching song requests:', err)
+            toast.error('ไม่สามารถโหลดข้อมูลคิวขอเพลงได้')
+        } finally {
+            if (!silent) setLoading(false)
         }
-      }
-
-      const { error: lineError } = await supabase.functions.invoke('send-line-notify', {
-        body: { message: lineMessage, flexPayload }
-      })
-
-      if (lineError) console.error('LINE notification failed:', lineError)
-
-      toast.success('สร้างคิวทดลองขอเพลงและส่ง LINE เรียบร้อย')
-      setShowTestModal(false)
-      setTestForm({ trackName: '', artistName: '', requesterName: 'Admin Test', message: '' })
-      fetchRequests(true)
-    } catch (err) {
-      console.error(err)
-      toast.error('สร้างคิวทดลองล้มเหลว: ' + err.message)
-    } finally {
-      setSubmittingTest(false)
     }
-  }
 
-  // Statistics
-  const pendingCount = requests.filter(r => r.status === 'pending').length
-  const playingCount = requests.filter(r => r.status === 'playing').length
-  const completedCount = requests.filter(r => r.status === 'completed').length
-  
-  // Earnings: sum donation amount of requests that are not rejected
-  const totalEarnings = requests
-    .filter(r => r.status !== 'rejected')
-    .reduce((sum, r) => sum + parseDonationAmount(r.message), 0)
+    useEffect(() => {
+        fetchRequests()
 
-  const filteredRequests = requests.filter(req => {
-    if (filter === 'all') return true
-    return req.status === filter
-  })
+        // Real-time subscription to auto-refresh queue
+        const subscription = supabase
+            .channel('admin:song_requests')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'song_requests' }, () => {
+                fetchRequests(true)
+            })
+            .subscribe()
 
-  return (
-    <div className="space-y-8 animate-fade-in pl-6 md:pl-0 text-ink">
-      <Toaster position="top-center" richColors />
+        return () => {
+            supabase.removeChannel(subscription)
+        }
+    }, [])
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
-            <Music className="text-orange-500" /> Song Requests Queue
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            จัดการคิวเพลงที่ลูกค้าขอพร้อมเงินบริจาคสนับสนุนตามความสมัครใจ
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setShowTestModal(true)} 
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 active:scale-95 text-xs font-bold text-white rounded-xl transition-all shadow-md shadow-orange-500/10"
-          >
-            สร้างคิวทดสอบ (Test Request)
-          </button>
-          <button 
-            onClick={() => fetchRequests()} 
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-bold rounded-xl transition-all"
-          >
-            รีเฟรชคิวเพลง
-          </button>
-        </div>
-      </div>
+    const handleUpdateStatus = async (id, status) => {
+        try {
+            const { error } = await supabase
+                .from('song_requests')
+                .update({ status })
+                .eq('id', id)
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {/* Earnings Card */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
-            <DollarSign size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">รายได้สะสมวันนี้</span>
-            <span className="text-2xl font-black font-mono">฿{totalEarnings.toLocaleString()}</span>
-          </div>
-        </div>
+            if (error) throw error
+            const statusLabel = status === 'playing' ? 'กำลังเล่นเพลง' : status === 'completed' ? 'เสร็จสิ้นคิว' : 'ปฏิเสธคำขอ'
+            toast.success(`อัปเดตสถานะเป็น ${statusLabel} เรียบร้อย`)
+            fetchRequests(true)
+        } catch (err) {
+            console.error('Update status error:', err)
+            toast.error('อัปเดตสถานะล้มเหลว: ' + err.message)
+        }
+    }
 
-        {/* Pending Card */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-600">
-            <Clock size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">รอการตรวจสอบ (Pending)</span>
-            <span className="text-2xl font-black font-mono">{pendingCount}</span>
-          </div>
-        </div>
+    const handleDelete = async (id) => {
+        if (!confirm('ต้องการลบคำขอเพลงนี้ใช่หรือไม่?')) return
+        try {
+            const { data: request } = await supabase
+                .from('song_requests')
+                .select('slip_url')
+                .eq('id', id)
+                .single()
 
-        {/* Playing Card */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-            <Play size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">กำลังเล่นอยู่ (Playing)</span>
-            <span className="text-2xl font-black font-mono">{playingCount}</span>
-          </div>
-        </div>
+            if (request?.slip_url) {
+                await supabase.storage.from('slips').remove([request.slip_url])
+            }
 
-        {/* Completed Card */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-600">
-            <CheckCircle size={24} />
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">เล่นเสร็จสิ้น (Completed)</span>
-            <span className="text-2xl font-black font-mono">{completedCount}</span>
-          </div>
-        </div>
-      </div>
+            const { error } = await supabase
+                .from('song_requests')
+                .delete()
+                .eq('id', id)
 
-      {/* Tabs Filter */}
-      <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-100 max-w-lg gap-1">
-        {['pending', 'playing', 'completed', 'rejected', 'all'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-xs capitalize transition-all whitespace-nowrap px-3 ${
-              filter === tab ? 'bg-black text-white shadow-md' : 'text-gray-400 hover:text-black'
-            }`}
-          >
-            {tab === 'pending' ? `Pending (${pendingCount})` : tab}
-          </button>
-        ))}
-      </div>
+            if (error) throw error
+            toast.success('ลบคำขอเพลงเรียบร้อยแล้ว')
+            fetchRequests(true)
+        } catch (err) {
+            console.error('Delete error:', err)
+            toast.error('ลบคำขอเพลงล้มเหลว: ' + err.message)
+        }
+    }
 
-      {/* Requests Queue List */}
-      <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden min-h-[300px]">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-400 text-sm">
-            <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
-            กำลังโหลดข้อมูลคิวขอเพลง...
-          </div>
-        ) : filteredRequests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-400 text-center">
-            <Music size={40} className="text-gray-200 mb-4" />
-            <p className="text-sm font-bold">ไม่มีรายการขอเพลงในหน้านี้</p>
-            <p className="text-xs text-gray-400 mt-1">เมื่อมีคนขอเพลง ข้อมูลจะปรากฏขึ้นที่นี่ในแบบเรียลไทม์</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {filteredRequests.map((req) => {
-              const durationMin = Math.floor(req.track_duration_ms / 60000)
-              const durationSec = ((req.track_duration_ms % 60000) / 1000).toFixed(0).padStart(2, '0')
-              const slipUrl = req.slip_url ? supabase.storage.from('slips').getPublicUrl(req.slip_url).data.publicUrl : null
+    const handleSubmitTestRequest = async (e) => {
+        e.preventDefault()
+        if (!testForm.trackName.trim() || !testForm.artistName.trim()) {
+            return toast.error('กรุณาระบุชื่อเพลงและศิลปิน')
+        }
 
-              return (
-                <div key={req.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:bg-gray-50/50 transition-colors">
-                  {/* Song Info */}
-                  <div className="flex gap-4 items-start flex-1 min-w-0">
-                    <img src={req.album_image} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-gray-200 shadow-sm" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-2 py-0.5 rounded-md">
-                          {durationMin}:{durationSec}
+        setSubmittingTest(true)
+        try {
+            const mockTrackId = 'test_' + Date.now()
+            const requestData = {
+                track_id: mockTrackId,
+                track_name: testForm.trackName.trim(),
+                artist_name: testForm.artistName.trim(),
+                album_image: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop',
+                track_duration_ms: 180000,
+                requester_name: testForm.requesterName.trim() || 'Admin Test',
+                message: testForm.message.trim() ? `[Donation: 100 THB] ${testForm.message.trim()}` : '[Donation: 100 THB]',
+                slip_url: null,
+                status: 'pending'
+            }
+
+            const { error: dbError } = await supabase
+                .from('song_requests')
+                .insert(requestData)
+
+            if (dbError) throw dbError
+
+            toast.success('สร้างคิวขอเพลงทดสอบเรียบร้อยแล้ว')
+            setShowTestModal(false)
+            setTestForm({ trackName: '', artistName: '', requesterName: 'Admin Test', message: '' })
+            fetchRequests(true)
+        } catch (err) {
+            console.error('Test request failed:', err)
+            toast.error('สร้างคิวทดลองล้มเหลว: ' + err.message)
+        } finally {
+            setSubmittingTest(false)
+        }
+    }
+
+    // Statistics
+    const pendingCount = requests.filter(r => r.status === 'pending').length
+    const playingCount = requests.filter(r => r.status === 'playing').length
+    const completedCount = requests.filter(r => r.status === 'completed').length
+    const totalEarnings = requests
+        .filter(r => r.status !== 'rejected')
+        .reduce((sum, r) => sum + parseDonationAmount(r.message), 0)
+
+    const filteredRequests = requests.filter(req => {
+        if (filter === 'all') return true
+        return req.status === filter
+    })
+
+    return (
+        <div className="space-y-6 font-mono">
+            {/* Header Actions Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
+                            LIVE SONG REQUESTS QUEUE
                         </span>
-                        <a 
-                          href={req.track_id.startsWith('http') ? req.track_id : `spotify:track:${req.track_id}`} 
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] bg-green-50 hover:bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors"
-                        >
-                          Spotify <ExternalLink size={10} />
-                        </a>
-                        <span className="text-[10px] text-gray-400 font-medium">
-                          {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <h3 className="font-extrabold text-sm text-gray-900 truncate leading-snug">{req.track_name}</h3>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{req.artist_name}</p>
-                      
-                      {/* Requester & Message Box */}
-                      <div className="mt-3 bg-gray-50 border border-gray-100 rounded-2xl p-3 inline-block max-w-md">
-                        <p className="text-xs text-gray-500">
-                          ผู้ขอ: <span className="font-bold text-gray-800">{req.requester_name}</span>
-                          <span className="ml-2 px-2 py-0.5 bg-green-50 text-green-700 rounded-full font-bold text-[10px]">
-                            บริจาค: ฿{parseDonationAmount(req.message)}
-                          </span>
-                        </p>
-                        {cleanMessage(req.message) && (
-                          <p className="text-xs text-gray-600 mt-1 italic font-medium">
-                            "{cleanMessage(req.message)}"
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Side: Slip and Actions */}
-                  <div className="flex items-center gap-6 self-end lg:self-auto shrink-0">
-                    {/* Payment Slip Thumbnail */}
-                    <div className="text-center">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Payment Slip</span>
-                      {slipUrl ? (
-                        <button 
-                          onClick={() => setViewingSlipUrl(slipUrl)}
-                          className="w-14 h-20 bg-gray-100 hover:bg-gray-200 rounded-xl overflow-hidden border border-gray-200 relative group transition-all"
-                        >
-                          <img src={slipUrl} alt="Slip" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-opacity">
-                            View
-                          </div>
-                        </button>
-                      ) : (
-                        <div className="w-14 h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center text-gray-300 text-[10px] font-bold">
-                          No Slip
+                        <div className="flex items-center gap-1.5 text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                            <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
+                            <span>LIVE SYNC</span>
                         </div>
-                      )}
                     </div>
+                    <h2 className="text-base font-bold uppercase text-[oklch(18%_0.012_28)] mt-1">
+                        จัดการคิวขอเพลงสด & เงินสนับสนุน (Song Requests & Tips)
+                    </h2>
+                    <p className="text-xs text-[oklch(55%_0.010_28)] mt-0.5">
+                        ตรวจสอบเพลงที่ลูกค้าขอพร้อมสลิปเงินบริจาคสนับสนุนร้าน ควบคุมคิวเพลงที่กำลังเล่น และแจ้งเตือน LINE
+                    </p>
+                </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {req.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleUpdateStatus(req.id, 'playing')}
-                            className="bg-green-500 hover:bg-green-600 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-green-500/10"
-                          >
-                            <Play size={12} fill="white" /> เล่นเพลง (Play)
-                          </button>
-                          <button
-                            onClick={() => handleUpdateStatus(req.id, 'rejected')}
-                            className="bg-gray-100 hover:bg-red-50 hover:text-red-500 active:scale-95 text-gray-600 font-bold px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-center"
-                          >
-                            ปฏิเสธ (Reject)
-                          </button>
-                        </>
-                      )}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                        type="button"
+                        onClick={() => setShowTestModal(true)}
+                        className="px-3 py-2 bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
+                    >
+                        + สร้างคิวทดสอบ
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => fetchRequests()}
+                        className="px-3 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    >
+                        <RefreshCw size={12} />
+                        <span>รีเฟรชคิว</span>
+                    </button>
+                </div>
+            </div>
 
-                      {req.status === 'playing' && (
-                        <button
-                          onClick={() => handleUpdateStatus(req.id, 'completed')}
-                          className="bg-black hover:bg-gray-800 active:scale-95 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg"
-                        >
-                          <Check size={12} /> จบคิว (Complete)
-                        </button>
-                      )}
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
+                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">เงินสนับสนุนสะสม</span>
+                    <p className="text-xl font-bold text-[oklch(45%_0.08_140)] mt-0.5">฿{totalEarnings.toLocaleString()}</p>
+                </div>
 
-                      {(req.status === 'completed' || req.status === 'rejected') && (
-                        <button
-                          onClick={() => handleDelete(req.id)}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-2 rounded-xl text-xs active:scale-95 transition-all flex items-center justify-center"
-                        >
-                          ลบรายการ (Delete)
-                        </button>
-                      )}
+                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
+                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">รอการตรวจสอบ (Pending)</span>
+                    <p className="text-xl font-bold text-[oklch(52%_0.16_28)] mt-0.5">{pendingCount} คิว</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
+                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">กำลังเล่นอยู่ (Playing)</span>
+                    <p className="text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5">{playingCount} เพลง</p>
+                </div>
+
+                <div className="bg-white p-3.5 rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xs">
+                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">เล่นเสร็จสิ้น (Completed)</span>
+                    <p className="text-xl font-bold text-[oklch(42%_0.010_28)] mt-0.5">{completedCount} คิว</p>
+                </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] text-xs w-full sm:w-max overflow-x-auto gap-1">
+                {[
+                    { id: 'pending', label: `รอตรวจสอบ (${pendingCount})` },
+                    { id: 'playing', label: `กำลังเล่น (${playingCount})` },
+                    { id: 'completed', label: `เสร็จสิ้น (${completedCount})` },
+                    { id: 'rejected', label: 'ปฏิเสธ' },
+                    { id: 'all', label: `ทั้งหมด (${requests.length})` }
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setFilter(tab.id)}
+                        className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all whitespace-nowrap ${
+                            filter === tab.id
+                                ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Song Queue List */}
+            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm shadow-2xs overflow-hidden">
+                {loading ? (
+                    <div className="text-center py-16 text-xs text-[oklch(55%_0.010_28)]">
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
+                        <p className="uppercase tracking-wider">กำลังโหลดคิวเพลง...</p>
                     </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+                ) : filteredRequests.length === 0 ? (
+                    <div className="text-center py-16 text-xs text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                        ไม่มีรายการขอเพลงในสถานะนี้
+                    </div>
+                ) : (
+                    <div className="divide-y divide-[oklch(85%_0.012_28)]">
+                        {filteredRequests.map(req => {
+                            const durationMin = req.track_duration_ms ? Math.floor(req.track_duration_ms / 60000) : 3
+                            const durationSec = req.track_duration_ms ? ((req.track_duration_ms % 60000) / 1000).toFixed(0).padStart(2, '0') : '00'
+                            const slipUrl = req.slip_url ? supabase.storage.from('slips').getPublicUrl(req.slip_url).data.publicUrl : null
+                            const donation = parseDonationAmount(req.message)
+                            const note = cleanMessage(req.message)
 
-      {/* Slip Viewer Modal */}
-      <AnimatePresence>
-        {viewingSlipUrl && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0" onClick={() => setViewingSlipUrl(null)} />
-            
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 max-w-sm w-full relative z-10 shadow-2xl flex flex-col max-h-[85vh]"
-            >
-              <button 
-                onClick={() => setViewingSlipUrl(null)}
-                className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-black rounded-full transition-colors"
-              >
-                <X size={16} />
-              </button>
-              
-              <h3 className="font-black text-sm uppercase tracking-wider text-gray-400 mb-4">Verification Slip</h3>
-              
-              <div className="flex-1 overflow-y-auto rounded-2xl border border-gray-100">
-                <img src={viewingSlipUrl} alt="Transfer Slip" className="w-full h-auto object-contain" />
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                            return (
+                                <div key={req.id} className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-[oklch(98%_0.006_28)] transition-colors">
+                                    {/* Left: Album Art & Song Info */}
+                                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                                        {req.album_image ? (
+                                            <img src={req.album_image} alt="" className="w-14 h-14 rounded-sm object-cover shrink-0 border border-[oklch(85%_0.012_28)] shadow-2xs" />
+                                        ) : (
+                                            <div className="w-14 h-14 rounded-sm bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center shrink-0 text-[oklch(55%_0.010_28)]">
+                                                <Music size={20} />
+                                            </div>
+                                        )}
 
-      {/* Test Request Creator Modal */}
-      <AnimatePresence>
-        {showTestModal && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0" onClick={() => setShowTestModal(false)} />
-            
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl p-6 max-w-sm w-full relative z-10 shadow-2xl flex flex-col"
-            >
-              <button
-                onClick={() => setShowTestModal(false)}
-                className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-black rounded-full transition-colors"
-              >
-                <X size={16} />
-              </button>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                <span className="text-[10px] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold px-1.5 py-0.2 rounded-xs border border-[oklch(85%_0.012_28)]">
+                                                    {durationMin}:{durationSec}
+                                                </span>
+                                                {req.track_id && (
+                                                    <a
+                                                        href={req.track_id.startsWith('http') ? req.track_id : `https://open.spotify.com/track/${req.track_id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] font-bold px-1.5 py-0.2 rounded-xs border border-[oklch(45%_0.08_140)] flex items-center gap-1 hover:underline"
+                                                    >
+                                                        Spotify <ExternalLink size={9} />
+                                                    </a>
+                                                )}
+                                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    {format(new Date(req.created_at), 'dd MMM, HH:mm')}
+                                                </span>
+                                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-xs border ${
+                                                    req.status === 'playing'
+                                                        ? 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                                        : req.status === 'completed'
+                                                            ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
+                                                            : req.status === 'rejected'
+                                                                ? 'bg-red-50 text-red-700 border-red-200'
+                                                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                                                }`}>
+                                                    {req.status}
+                                                </span>
+                                            </div>
 
-              <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
-                🧪 สร้างคิวเพลงทดสอบ
-              </h3>
+                                            <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] truncate">{req.track_name}</h3>
+                                            <p className="text-xs text-[oklch(55%_0.010_28)] truncate">{req.artist_name}</p>
 
-              <form onSubmit={handleSubmitTestRequest} className="space-y-4">
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ชื่อเพลง / Song Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="เช่น Cruel Summer"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors"
-                    value={testForm.trackName}
-                    onChange={(e) => setTestForm({ ...testForm, trackName: e.target.value })}
-                  />
-                </div>
+                                            {/* Requester Details & Note */}
+                                            <div className="mt-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(42%_0.010_28)]">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span>ผู้ขอ: <strong className="text-[oklch(18%_0.012_28)]">{req.requester_name}</strong></span>
+                                                    <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)] rounded-xs font-bold text-[10px]">
+                                                        Tip: ฿{donation}
+                                                    </span>
+                                                </div>
+                                                {note && (
+                                                    <p className="mt-1 text-[11px] italic text-[oklch(18%_0.012_28)]">
+                                                        "{note}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ชื่อศิลปิน / Artist Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="เช่น Taylor Swift"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors"
-                    value={testForm.artistName}
-                    onChange={(e) => setTestForm({ ...testForm, artistName: e.target.value })}
-                  />
-                </div>
+                                    {/* Right: Payment Slip & Action Controls */}
+                                    <div className="flex items-center gap-3 self-end lg:self-auto shrink-0">
+                                        {/* Slip Thumbnail */}
+                                        <div className="text-center">
+                                            {slipUrl ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setViewingSlipUrl(slipUrl)}
+                                                    className="w-12 h-16 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-sm overflow-hidden border border-[oklch(85%_0.012_28)] relative group transition-all cursor-pointer"
+                                                    title="ดูภาพสลิปโอนเงิน"
+                                                >
+                                                    <img src={slipUrl} alt="Slip" className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-opacity">
+                                                        ดูสลิป
+                                                    </div>
+                                                </button>
+                                            ) : (
+                                                <div className="w-12 h-16 bg-[oklch(97%_0.008_28)] rounded-sm border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] text-[9px]">
+                                                    ไม่มีสลิป
+                                                </div>
+                                            )}
+                                        </div>
 
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ชื่อผู้ขอ / Requester Name</label>
-                  <input
-                    type="text"
-                    placeholder="เช่น Admin Test"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors"
-                    value={testForm.requesterName}
-                    onChange={(e) => setTestForm({ ...testForm, requesterName: e.target.value })}
-                  />
-                </div>
+                                        {/* State Control Buttons */}
+                                        <div className="flex flex-col sm:flex-row gap-1.5 text-xs">
+                                            {req.status === 'pending' && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateStatus(req.id, 'playing')}
+                                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white font-bold rounded-sm flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                    >
+                                                        <Play size={11} fill="currentColor" /> เล่นเพลง
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                                                        className="px-2.5 py-1.5 bg-white hover:bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] font-bold rounded-sm cursor-pointer transition-colors"
+                                                    >
+                                                        ปฏิเสธ
+                                                    </button>
+                                                </>
+                                            )}
 
-                <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">ข้อความ / Dedication Message</label>
-                  <textarea
-                    rows={2}
-                    placeholder="ข้อความเพิ่มเติม..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-950 focus:outline-none focus:border-orange-500 transition-colors resize-none"
-                    value={testForm.message}
-                    onChange={(e) => setTestForm({ ...testForm, message: e.target.value })}
-                  />
-                </div>
+                                            {req.status === 'playing' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleUpdateStatus(req.id, 'completed')}
+                                                    className="px-3 py-1.5 bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white font-bold rounded-sm flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                >
+                                                    <Check size={12} /> จบคิวเพลง
+                                                </button>
+                                            )}
 
-                <button
-                  type="submit"
-                  disabled={submittingTest}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4.5 rounded-2xl text-xs transition-all duration-300 transform active:scale-95 disabled:opacity-50"
-                >
-                  {submittingTest ? 'กำลังส่งคำขอทดสอบ...' : 'ส่งคำขอเพลงทดสอบ (Submit Test)'}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
+                                            {(req.status === 'completed' || req.status === 'rejected') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(req.id)}
+                                                    className="px-2.5 py-1.5 bg-white hover:bg-[oklch(94%_0.02_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-sm cursor-pointer transition-colors flex items-center gap-1"
+                                                >
+                                                    <Trash2 size={12} /> ลบ
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Slip Zoom Modal */}
+            <AnimatePresence>
+                {viewingSlipUrl && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-white rounded-sm p-4 max-w-sm w-full border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col max-h-[85vh] font-mono"
+                        >
+                            <div className="flex justify-between items-center pb-2 mb-3 border-b border-[oklch(85%_0.012_28)]">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">VERIFICATION SLIP</span>
+                                <button onClick={() => setViewingSlipUrl(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto rounded-sm border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-1">
+                                <img src={viewingSlipUrl} alt="Transfer Slip" className="w-full h-auto object-contain rounded-xs" />
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Test Request Modal */}
+            <AnimatePresence>
+                {showTestModal && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-white rounded-sm max-w-sm w-full border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col font-mono"
+                        >
+                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex justify-between items-center">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">TEST BENCH</span>
+                                    <h3 className="text-sm font-bold uppercase text-[oklch(18%_0.012_28)]">สร้างคิวขอเพลงทดสอบ</h3>
+                                </div>
+                                <button onClick={() => setShowTestModal(false)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmitTestRequest} className="p-5 space-y-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ชื่อเพลง (Song Name) *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="เช่น Daylight"
+                                        value={testForm.trackName}
+                                        onChange={e => setTestForm({ ...testForm, trackName: e.target.value })}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] font-bold outline-none focus:border-black"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ศิลปิน (Artist Name) *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="เช่น David Kushner"
+                                        value={testForm.artistName}
+                                        onChange={e => setTestForm({ ...testForm, artistName: e.target.value })}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ชื่อผู้ขอ (Requester)</label>
+                                    <input
+                                        type="text"
+                                        value={testForm.requesterName}
+                                        onChange={e => setTestForm({ ...testForm, requesterName: e.target.value })}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">ข้อความฝากถึงร้าน</label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="ข้อความขอเพลง..."
+                                        value={testForm.message}
+                                        onChange={e => setTestForm({ ...testForm, message: e.target.value })}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black resize-none"
+                                    />
+                                </div>
+
+                                <div className="pt-2 border-t border-[oklch(85%_0.012_28)] flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTestModal(false)}
+                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm text-xs cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={submittingTest}
+                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm disabled:opacity-50"
+                                    >
+                                        {submittingTest ? 'กำลังสร้าง...' : 'สร้างคิวทดสอบ'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
 }

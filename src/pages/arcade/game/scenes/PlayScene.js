@@ -119,9 +119,13 @@ export default class PlayScene extends Phaser.Scene {
       loop: true
     });
 
+    // 8. Score Sensors Group (Single overlap listener to prevent memory leak)
+    this.scoreSensors = this.physics.add.group();
+    this.physics.add.overlap(this.player, this.scoreSensors, this.handleScoreSensor, null, this);
+
     this.activeSensors = [];
 
-    // 8. Tap / Input Listener
+    // 9. Tap / Input Listener
     this.input.on('pointerdown', this.flap, this);
   }
 
@@ -396,6 +400,9 @@ export default class PlayScene extends Phaser.Scene {
     scoreSensor.initialY = gapY + gap / 2;
     scoreSensor.moving = this.score >= 15;
     scoreSensor.spawnTime = this.time.now;
+    if (this.scoreSensors) {
+      this.scoreSensors.add(scoreSensor);
+    }
     if (this.activeSensors) {
       this.activeSensors.push(scoreSensor);
     }
@@ -421,62 +428,93 @@ export default class PlayScene extends Phaser.Scene {
       
       bean.setScale(1.5);
     }
+  }
 
-    // Score trigger on overlap
-    this.physics.add.overlap(this.player, scoreSensor, () => {
-      scoreSensor.destroy();
-      this.score += 1;
-      this.scoreText.setText(this.score.toString());
-      
-      // Play score sound
-      try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
+  handleScoreSensor(player, sensor) {
+    if (this.isGameOver) return;
+    if (!sensor || !sensor.active) return;
+    sensor.destroy();
 
-      // Increase speed difficulty recursively on score if not dashing
-      if (!this.isDashing) {
-        this.speedMultiplier = Math.min(1.8, 1.0 + this.score * 0.05);
+    this.score += 1;
+    this.scoreText.setText(this.score.toString());
+
+    // Play score sound
+    try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
+
+    // Floating Score Popup Effect (+1)
+    const popup = this.add.text(this.player.x + 24, this.player.y - 14, '+1', {
+      fontFamily: 'Courier New, monospace',
+      fontSize: '22px',
+      fill: '#DFFF00',
+      stroke: '#000000',
+      strokeThickness: 5,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(25);
+
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - 36,
+      alpha: 0,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 450,
+      ease: 'Quad.easeOut',
+      onComplete: () => popup.destroy()
+    });
+
+    // Increase speed difficulty recursively on score if not dashing
+    if (!this.isDashing) {
+      this.speedMultiplier = Math.min(1.8, 1.0 + this.score * 0.05);
+    }
+    
+    // Scale spawn delay to maintain horizontal obstacle gaps
+    const newDelay = 1800 / this.speedMultiplier;
+    this.spawnTimer.delay = newDelay;
+    
+    // Dynamically shorten knife spawn delay (make hazards more frequent as score goes up)
+    if (this.knifeTimer) {
+      this.knifeTimer.delay = Math.max(1200, 2800 - this.score * 120);
+    }
+    
+    // Instantly accelerate active obstacles
+    const currentSpeed = this.baseSpeed * this.speedMultiplier;
+    this.satowGroup.getChildren().forEach((child) => {
+      if (child.body) {
+        child.body.setVelocityX(currentSpeed);
       }
-      
-      // Scale spawn delay to maintain horizontal obstacle gaps
-      const newDelay = 1800 / this.speedMultiplier;
-      this.spawnTimer.delay = newDelay;
-      
-      // Dynamically shorten knife spawn delay (make hazards more frequent as score goes up)
-      if (this.knifeTimer) {
-        this.knifeTimer.delay = Math.max(1200, 2800 - this.score * 120);
-      }
-      
-      // Instantly accelerate active obstacles
-      const currentSpeed = this.baseSpeed * this.speedMultiplier;
-      this.satowGroup.getChildren().forEach((child) => {
-        if (child.body) {
-          child.body.setVelocityX(currentSpeed);
+    });
+    
+    if (this.beanGroup) {
+      this.beanGroup.getChildren().forEach((bean) => {
+        if (bean.body) {
+          bean.body.setVelocityX(currentSpeed);
         }
       });
-      
-      if (this.beanGroup) {
-        this.beanGroup.getChildren().forEach((bean) => {
-          if (bean.body) {
-            bean.body.setVelocityX(currentSpeed);
-          }
-        });
-      }
-      
-      if (this.knifeGroup) {
-        this.knifeGroup.getChildren().forEach((knife) => {
-          if (knife.body) {
-            knife.body.setVelocityX(currentSpeed * 1.5);
-          }
-        });
-      }
-
-      // Pulse score text
-      this.tweens.add({
-        targets: this.scoreText,
-        scaleX: 1.3,
-        scaleY: 1.3,
-        duration: 100,
-        yoyo: true
+    }
+    
+    if (this.knifeGroup) {
+      this.knifeGroup.getChildren().forEach((knife) => {
+        if (knife.body) {
+          knife.body.setVelocityX(currentSpeed * 1.5);
+        }
       });
+    }
+
+    if (this.scoreSensors) {
+      this.scoreSensors.getChildren().forEach((s) => {
+        if (s.body) {
+          s.body.setVelocityX(currentSpeed);
+        }
+      });
+    }
+
+    // Pulse score text
+    this.tweens.add({
+      targets: this.scoreText,
+      scaleX: 1.3,
+      scaleY: 1.3,
+      duration: 100,
+      yoyo: true
     });
   }
 

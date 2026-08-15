@@ -173,6 +173,7 @@ function App() {
                 <Route path="members" element={<AdminMarketingPage defaultTab="members" />} />
                 <Route path="promotions" element={<AdminMarketingPage defaultTab="promotions" />} />
                 <Route path="rewards" element={<AdminMarketingPage defaultTab="rewards" />} />
+                <Route path="stamps" element={<AdminMarketingPage defaultTab="stamps" />} />
                 <Route path="arcade" element={<AdminMarketingPage defaultTab="arcade" />} />
                 <Route path="songs" element={<AdminMarketingPage defaultTab="songs" />} />
                 <Route path="hausmade" element={<HausmadeAdminPage />} />

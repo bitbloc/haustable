@@ -1,33 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import { Trophy, Ticket, AlertTriangle, Users, Play, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React, { useState, useEffect } from 'react'
+import { supabase } from '../../lib/supabaseClient'
+import { Trophy, Ticket, AlertTriangle, Play, CheckCircle2, RefreshCw, X, Award, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
+import { format } from 'date-fns'
 
 export default function AdminArcade() {
-    const [leaderboard, setLeaderboard] = useState([]);
-    const [raffleTickets, setRaffleTickets] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [drawingLoading, setDrawingLoading] = useState(false);
-    const [drawResult, setDrawResult] = useState(null);
+    const [leaderboard, setLeaderboard] = useState([])
+    const [raffleTickets, setRaffleTickets] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [drawingLoading, setDrawingLoading] = useState(false)
+    const [drawResult, setDrawResult] = useState(null)
 
     const fetchData = async () => {
         try {
-            setLoading(true);
+            setLoading(true)
 
             // 1. Fetch Leaderboard
             const { data: lbData, error: lbError } = await supabase
                 .from('leaderboard')
                 .select('*')
-                .order('score', { ascending: false });
-            if (lbError) throw lbError;
-            setLeaderboard(lbData || []);
+                .order('score', { ascending: false })
+
+            if (lbError) throw lbError
+            setLeaderboard(lbData || [])
 
             // 2. Fetch current week's raffle ticket logs
-            const now = new Date();
-            const day = now.getDay();
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-            const weekStart = new Date(now.setDate(diff));
-            weekStart.setHours(0, 0, 0, 0);
+            const now = new Date()
+            const day = now.getDay()
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+            const weekStart = new Date(now.setDate(diff))
+            weekStart.setHours(0, 0, 0, 0)
 
             const { data: rfData, error: rfError } = await supabase
                 .from('arcade_rewards_log')
@@ -38,200 +42,212 @@ export default function AdminArcade() {
                     created_at,
                     profiles:profile_id (
                         display_name,
-                        nickname
+                        nickname,
+                        phone_number
                     )
                 `)
                 .eq('reward_type', 'raffle_40')
                 .gte('created_at', weekStart.toISOString())
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
 
-            if (rfError) throw rfError;
-            setRaffleTickets(rfData || []);
+            if (rfError) throw rfError
+            setRaffleTickets(rfData || [])
 
         } catch (err) {
-            console.error('Error fetching admin arcade details:', err);
-            toast.error('Failed to load arcade statistics');
+            console.error('Error fetching arcade details:', err)
+            toast.error('ไม่สามารถโหลดข้อมูลสถิติเกม Arcade ได้')
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        fetchData()
+    }, [])
 
     const handleRunDrawing = async () => {
         const confirmDraw = window.confirm(
-            "⚠️ คำเตือนสำคัญ:\n\nการสุ่มจับรางวัลประจำสัปดาห์นี้จะทำการ:\n1. มอบรางวัล 50 xhaus แก่ผู้ชนะสุ่มรายชื่อ (Raffle Draw)\n2. มอบรางวัล 50 xhaus แก่อันดับ 1 บนลีดเดอร์บอร์ด (Top Player)\n3. รีเซ็ตลีดเดอร์บอร์ดทั้งหมดเพื่อเริ่มสัปดาห์ใหม่\n\nคุณแน่ใจหรือไม่ว่าต้องการดำเนินการ?"
-        );
+            "⚠️ ยืนยันการสุ่มจับรางวัลและรีเซ็ตสัปดาห์:\n\nการดำเนินการนี้จะทำการ:\n1. มอบ 50 xhaus แก่อันดับ 1 บน Leaderboard\n2. สุ่มมอบ 50 xhaus แก่ผู้ถือตั๋วชิงโชค 1 คน\n3. รีเซ็ตตาราง Leaderboard เพื่อเริ่มสัปดาห์ใหม่\n\nคุณแน่ใจหรือไม่ว่าต้องการดำเนินการ?"
+        )
 
-        if (!confirmDraw) return;
+        if (!confirmDraw) return
 
         try {
-            setDrawingLoading(true);
-            const { data, error } = await supabase.rpc('draw_weekly_arcade_raffle_and_reset');
-            if (error) throw error;
+            setDrawingLoading(true)
+            const { data, error } = await supabase.rpc('draw_weekly_arcade_raffle_and_reset')
+            if (error) throw error
 
-            setDrawResult(data);
-            toast.success('🎉 ดำเนินการจับรางวัลและรีเซ็ตรูปแบบเรียบร้อยแล้ว!');
-            fetchData();
+            setDrawResult(data)
+            toast.success('🎉 ดำเนินการจับรางวัลและรีเซ็ตสัปดาห์เรียบร้อยแล้ว!')
+            fetchData()
         } catch (err) {
-            console.error('Error during drawing:', err);
-            toast.error(err.message || 'เกิดข้อผิดพลาดในการรันระบบจับรางวัล');
+            console.error('Error during drawing:', err)
+            toast.error(err.message || 'เกิดข้อผิดพลาดในการรันระบบจับรางวัล')
         } finally {
-            setDrawingLoading(false);
+            setDrawingLoading(false)
         }
-    };
+    }
 
     return (
-        <div className="p-6 max-w-7xl mx-auto font-sans text-neutral-900">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="space-y-6 font-mono">
+            {/* Header Actions Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Trophy className="w-6 h-6 text-yellow-500" /> ระบบสุ่มรางวัลและรีเซ็ตการเล่นเกม (Arcade Weekly Drawing)
-                    </h1>
-                    <p className="text-gray-500 text-sm">การแจกรางวัลเหรียญ xhaus ประจำสัปดาห์แก่ผู้เล่นระดับท็อปและผู้ถือตั๋วชิงโชค</p>
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-[10px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
+                            ARCADE GAMING & WEEKLY REWARDS
+                        </span>
+                    </div>
+                    <h2 className="text-base font-bold uppercase text-[oklch(18%_0.012_28)] mt-1">
+                        ระบบสุ่มรางวัล & รีเซ็ตเกมประจำสัปดาห์ (Sunday Night Draw)
+                    </h2>
+                    <p className="text-xs text-[oklch(55%_0.010_28)] mt-0.5">
+                        การแจกเหรียญ xhaus ประจำสัปดาห์แก่ผู้เล่นระดับท็อป 1 และผู้ถือตั๋วชิงโชค (บินเกิน 40 ท่อ)
+                    </p>
                 </div>
-                <button
-                    onClick={handleRunDrawing}
-                    disabled={drawingLoading}
-                    className="bg-red-650 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all cursor-pointer shadow disabled:opacity-50"
-                >
-                    <Play size={16} /> จับรางวัล & รีเซ็ตประจำสัปดาห์
-                </button>
-            </div>
 
-            {/* Warning Info */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex gap-3 text-xs leading-relaxed text-yellow-800">
-                <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-600" />
-                <div>
-                    <span className="font-bold">กติกาการแจกเหรียญ xhaus รายสัปดาห์ (Sunday Night Reset):</span>
-                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                        <li>อันดับ 1 ของตารางลีดเดอร์บอร์ด (Leaderboard) ณ สิ้นสัปดาห์ รับรางวัลพิเศษ 50 xhaus</li>
-                        <li>ผู้เล่นที่บินท่อได้เกิน 40 ท่อขึ้นไปจะได้รับ ตั๋วสุ่มสิทธิ์ (Raffle Ticket) วันละ 1 ใบ</li>
-                        <li>ระบบจะสุ่มจับผู้ชนะ 1 คนจากตั๋วทั้งหมดเพื่อรับรางวัลใหญ่ 50 xhaus คืนวันอาทิตย์</li>
-                    </ul>
-                </div>
-            </div>
-
-            {/* Draw Results Modal / Banner */}
-            {drawResult && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6 text-sm text-emerald-800 animate-fade-in relative">
-                    <button 
-                        onClick={() => setDrawResult(null)}
-                        className="absolute top-4 right-4 text-emerald-600 hover:text-emerald-950 font-bold"
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                        type="button"
+                        onClick={fetchData}
+                        className="px-3 py-2 bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-bold transition-colors cursor-pointer"
+                        title="รีเฟรชข้อมูล"
                     >
-                        ปิดผลรางวัล
+                        <RefreshCw size={13} />
                     </button>
-                    <h3 className="font-bold text-lg flex items-center gap-2 mb-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600" /> ผลการจับรางวัลรายสัปดาห์สำเร็จแล้ว!
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                        <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
-                            <p className="text-xs text-neutral-500 font-semibold font-mono">🏆 อันดับที่ 1 ประจำสัปดาห์ (Leaderboard Top Player)</p>
-                            <p className="text-lg font-black mt-1 text-[#1A1A1A]">
-                                {drawResult.top_player?.name || '-'} ({drawResult.top_player?.score || 0} คะแนน)
-                            </p>
-                            <p className="text-[11px] text-emerald-600 font-medium mt-0.5">ได้รับรางวัลพิเศษ 50 xhaus</p>
-                        </div>
-                        <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-sm">
-                            <p className="text-xs text-neutral-500 font-semibold font-mono">🎟️ ผู้สุ่มชนะตั๋วชิงโชค (Raffle Draw Winner)</p>
-                            <p className="text-lg font-black mt-1 text-[#1A1A1A]">
-                                {drawResult.raffle_winner?.name || '-'}
-                            </p>
-                            <p className="text-[11px] text-emerald-600 font-medium mt-0.5">
-                                สุ่มสิทธิ์สำเร็จจากจำนวนผู้เข้าร่วมทั้งหมด {drawResult.raffle_winner?.tickets_checked || 0} คน (รับ 50 xhaus)
-                            </p>
-                        </div>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={handleRunDrawing}
+                        disabled={drawingLoading}
+                        className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                    >
+                        <Play size={14} />
+                        <span>{drawingLoading ? 'กำลังประมวลผล...' : 'จับรางวัล & รีเซ็ตสัปดาห์'}</span>
+                    </button>
                 </div>
-            )}
+            </div>
 
-            {/* Main Content Grid */}
+            {/* Rules Info Card */}
+            <div className="bg-white border border-[oklch(85%_0.012_28)] p-4 rounded-sm text-xs text-[oklch(42%_0.010_28)] space-y-1.5">
+                <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold">
+                    <AlertTriangle size={15} />
+                    <span className="uppercase text-[11px]">กติกาการแจกเหรียญ xhaus ประจำสัปดาห์:</span>
+                </div>
+                <ul className="list-disc pl-5 space-y-1 text-[11px] text-[oklch(55%_0.010_28)]">
+                    <li><strong className="text-[oklch(18%_0.012_28)]">อันดับ 1 Leaderboard</strong> ณ สิ้นสัปดาห์: รับรางวัลพิเศษ 50 xhaus</li>
+                    <li><strong className="text-[oklch(18%_0.012_28)]">ผู้เล่นที่บินได้ 40 ท่อขึ้นไป</strong>: รับตั๋วสุ่มสิทธิ์ (Raffle Ticket) วันละ 1 ใบ</li>
+                    <li><strong className="text-[oklch(18%_0.012_28)]">การสุ่มจับรางวัล</strong>: สุ่มผู้ชนะ 1 คนจากตั๋วทั้งหมดในสัปดาห์เพื่อรับ 50 xhaus และรีเซ็ตลีดเดอร์บอร์ด</li>
+                </ul>
+            </div>
+
+            {/* Draw Result Celebration Card */}
+            <AnimatePresence>
+                {drawResult && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        className="bg-[oklch(94%_0.02_140)] border border-[oklch(45%_0.08_140)] p-4 rounded-sm text-xs text-[oklch(18%_0.012_28)] relative shadow-sm"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setDrawResult(null)}
+                            className="absolute top-3 right-3 text-[oklch(45%_0.08_140)] hover:text-black cursor-pointer"
+                        >
+                            <X size={16} />
+                        </button>
+
+                        <div className="flex items-center gap-2 text-[oklch(45%_0.08_140)] font-bold text-sm mb-3">
+                            <CheckCircle2 size={16} />
+                            <span>ผลการจับรางวัลและรีเซ็ตสัปดาห์สำเร็จเรียบร้อย!</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="bg-white p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
+                                <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)] block">
+                                    🏆 อันดับ 1 ประจำสัปดาห์ (Leaderboard Top Player)
+                                </span>
+                                <p className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                    {drawResult.top_player?.name || '-'} ({drawResult.top_player?.score || 0} คะแนน)
+                                </p>
+                                <span className="text-[11px] text-[oklch(45%_0.08_140)] font-bold mt-1 block">
+                                    ได้รับรางวัลพิเศษ 50 xhaus 🪙
+                                </span>
+                            </div>
+
+                            <div className="bg-white p-3 rounded-sm border border-[oklch(45%_0.08_140)]/40">
+                                <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)] block">
+                                    🎟️ ผู้ชนะตั๋วสุ่มลุ้นโชค (Raffle Winner)
+                                </span>
+                                <p className="text-base font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                    {drawResult.raffle_winner?.name || '-'}
+                                </p>
+                                <span className="text-[11px] text-[oklch(45%_0.08_140)] font-bold mt-1 block">
+                                    สุ่มสำเร็จจากตั๋ว {drawResult.raffle_winner?.tickets_checked || 0} ใบ (รับ 50 xhaus 🪙)
+                                </span>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Grid Layout: Leaderboard & Raffle Tickets */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                
                 {/* 1. Leaderboard Table */}
-                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-                    <div className="flex items-center gap-2 mb-4 border-b pb-3">
-                        <Trophy className="w-5 h-5 text-yellow-500" />
-                        <h2 className="font-bold text-base">คะแนนลีดเดอร์บอร์ดสัปดาห์นี้</h2>
+                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-4 shadow-2xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)] mb-3">
+                        <div className="flex items-center gap-2">
+                            <Trophy size={16} className="text-[oklch(52%_0.16_28)]" />
+                            <h3 className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                คะแนน Leaderboard สัปดาห์นี้ ({leaderboard.length})
+                            </h3>
+                        </div>
                     </div>
 
                     {loading ? (
-                        <div className="text-center py-10 text-neutral-400">กำลังโหลด...</div>
+                        <div className="text-center py-12 text-xs text-[oklch(55%_0.010_28)]">กำลังโหลด...</div>
                     ) : leaderboard.length === 0 ? (
-                        <div className="text-center py-10 text-neutral-400 bg-gray-50 border border-dashed rounded-xl">
-                            ไม่มีคะแนนลีดเดอร์บอร์ดในสัปดาห์นี้
+                        <div className="text-center py-12 bg-[oklch(98%_0.006_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)]">
+                            ยังไม่มีคะแนนการเล่นในสัปดาห์นี้
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
+                            <table className="w-full text-left text-xs border-collapse font-mono">
                                 <thead>
-                                    <tr className="border-b text-neutral-400 uppercase tracking-wider font-mono">
-                                        <th className="py-2.5 w-12 text-center">อันดับ</th>
-                                        <th className="py-2.5">ชื่อแสดงผล</th>
-                                        <th className="py-2.5 text-right pr-4">คะแนน</th>
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase text-[10px]">
+                                        <th className="py-2 px-2 w-12 text-center">อันดับ</th>
+                                        <th className="py-2 px-2">ชื่อผู้เล่น</th>
+                                        <th className="py-2 px-2 text-right">คะแนน</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y">
-                                    {leaderboard.map((item, index) => (
-                                        <tr key={item.id} className={`${index === 0 ? 'bg-yellow-50/40 font-bold' : ''}`}>
-                                            <td className="py-2.5 text-center">
-                                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
-                                            </td>
-                                            <td className="py-2.5 font-medium">{item.display_name}</td>
-                                            <td className="py-2.5 text-right pr-4 font-mono font-bold text-neutral-700">{item.score}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-
-                {/* 2. Raffle Tickets Log */}
-                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-                    <div className="flex items-center gap-2 mb-4 border-b pb-3">
-                        <Ticket className="w-5 h-5 text-blue-500" />
-                        <h2 className="font-bold text-base">ผู้มีสิทธิ์ลุ้นโชคในสัปดาห์นี้ (สุ่มแจก 50 xhaus)</h2>
-                    </div>
-
-                    {loading ? (
-                        <div className="text-center py-10 text-neutral-400">กำลังโหลด...</div>
-                    ) : raffleTickets.length === 0 ? (
-                        <div className="text-center py-10 text-neutral-400 bg-gray-50 border border-dashed rounded-xl">
-                            สัปดาห์นี้ยังไม่มีใครสะสมตั๋วสุ่ม
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr className="border-b text-neutral-400 uppercase tracking-wider font-mono">
-                                        <th className="py-2.5 pl-2">ชื่อแสดงผล</th>
-                                        <th className="py-2.5 w-24 text-center">คะแนนสะสมท่อ</th>
-                                        <th className="py-2.5 text-right pr-2">วันที่ได้ตั๋ว</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {raffleTickets.map((log) => {
-                                        const profileName = log.profiles?.nickname || log.profiles?.display_name || 'MEMBER';
+                                <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                                    {leaderboard.map((item, index) => {
+                                        const isTop1 = index === 0
+                                        const isTop3 = index < 3
                                         return (
-                                            <tr key={log.id} className="hover:bg-neutral-50/50">
-                                                <td className="py-2.5 pl-2 font-medium flex items-center gap-1.5">
-                                                    <span className="text-[10px]">🎟️</span> {profileName}
+                                            <tr 
+                                                key={item.id || index}
+                                                className={isTop1 ? 'bg-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(98%_0.006_28)]'}
+                                            >
+                                                <td className="py-2.5 px-2 text-center">
+                                                    <span className={`px-1.5 py-0.5 rounded-xs text-[10px] font-bold ${
+                                                        isTop1 
+                                                            ? 'bg-[oklch(52%_0.16_28)] text-white' 
+                                                            : isTop3 
+                                                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]' 
+                                                                : 'text-[oklch(55%_0.010_28)]'
+                                                    }`}>
+                                                        {String(index + 1).padStart(2, '0')}
+                                                    </span>
                                                 </td>
-                                                <td className="py-2.5 text-center font-mono font-semibold text-neutral-600">{log.score} ท่อ</td>
-                                                <td className="py-2.5 text-right pr-2 font-mono text-neutral-400 text-[10px]">
-                                                    {new Date(log.created_at).toLocaleDateString('en-GB', {
-                                                        day: 'numeric',
-                                                        month: 'short',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
+                                                <td className="py-2.5 px-2 font-medium text-[oklch(18%_0.012_28)]">
+                                                    {item.display_name || 'Anonymous Player'}
+                                                </td>
+                                                <td className="py-2.5 px-2 text-right font-bold text-[oklch(52%_0.16_28)]">
+                                                    {item.score} <span className="text-[10px] font-normal text-[oklch(55%_0.010_28)]">ท่อ</span>
                                                 </td>
                                             </tr>
-                                        );
+                                        )
                                     })}
                                 </tbody>
                             </table>
@@ -239,7 +255,57 @@ export default function AdminArcade() {
                     )}
                 </div>
 
+                {/* 2. Raffle Tickets Log */}
+                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-4 shadow-2xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-[oklch(85%_0.012_28)] mb-3">
+                        <div className="flex items-center gap-2">
+                            <Ticket size={16} className="text-[oklch(45%_0.08_140)]" />
+                            <h3 className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                ตั๋วสุ่มลุ้นโชคในสัปดาห์นี้ ({raffleTickets.length})
+                            </h3>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="text-center py-12 text-xs text-[oklch(55%_0.010_28)]">กำลังโหลด...</div>
+                    ) : raffleTickets.length === 0 ? (
+                        <div className="text-center py-12 bg-[oklch(98%_0.006_28)] border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)]">
+                            ยังไม่มีผู้สะสมตั๋วสุ่มในสัปดาห์นี้
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse font-mono">
+                                <thead>
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase text-[10px]">
+                                        <th className="py-2 px-2">ชื่อผู้ถือตั๋ว</th>
+                                        <th className="py-2 px-2 text-center">สถิติท่อ</th>
+                                        <th className="py-2 px-2 text-right">วันที่ได้รับ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[oklch(85%_0.012_28)]">
+                                    {raffleTickets.map(log => {
+                                        const profileName = log.profiles?.nickname || log.profiles?.display_name || 'Member'
+                                        return (
+                                            <tr key={log.id} className="hover:bg-[oklch(98%_0.006_28)]">
+                                                <td className="py-2.5 px-2 font-medium text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                                    <span className="text-[10px] text-[oklch(45%_0.08_140)]">🎟️</span>
+                                                    <span>{profileName}</span>
+                                                </td>
+                                                <td className="py-2.5 px-2 text-center font-bold text-[oklch(18%_0.012_28)]">
+                                                    {log.score}
+                                                </td>
+                                                <td className="py-2.5 px-2 text-right text-[11px] text-[oklch(55%_0.010_28)]">
+                                                    {format(new Date(log.created_at), 'dd MMM, HH:mm')}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
-    );
+    )
 }

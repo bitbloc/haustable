@@ -20,50 +20,94 @@ export default function CustomerOrderStatus() {
     const [orderItems, setOrderItems] = useState([]);
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
 
+    const [resolvedTableInfo, setResolvedTableInfo] = useState(null);
+
     useEffect(() => {
-        if (tableId) {
-            localStorage.setItem('active_customer_table_id', tableId);
-        }
-        fetchActiveOrder();
-        
-        // Setup realtime subscription
-        const sub = supabase.channel(`customer-order-${tableId}`)
-            .on('postgres_changes', { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'bookings',
-                filter: `table_id=eq.${tableId}` 
-            }, () => {
-                fetchActiveOrder(true);
-            })
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'order_items'
-            }, () => {
-                fetchActiveOrder(true);
-            })
-            .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                    console.warn(`[Realtime Status] Channel status: ${status}`, err || '');
-                }
-            });
+        let channelSub = null;
+
+        const initStatus = async () => {
+            if (tableId) {
+                localStorage.setItem('active_customer_table_id', tableId);
+            }
+            const numericId = await fetchActiveOrder();
+
+            if (numericId) {
+                // Setup realtime subscription with resolved numeric ID
+                channelSub = supabase.channel(`customer-order-${numericId}`)
+                    .on('postgres_changes', { 
+                        event: 'UPDATE', 
+                        schema: 'public', 
+                        table: 'bookings',
+                        filter: `table_id=eq.${numericId}` 
+                    }, () => {
+                        fetchActiveOrder(true);
+                    })
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'order_items'
+                    }, () => {
+                        fetchActiveOrder(true);
+                    })
+                    .subscribe((status, err) => {
+                        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                            console.warn(`[Realtime Status] Channel status: ${status}`, err || '');
+                        }
+                    });
+            }
+        };
+
+        initStatus();
 
         return () => {
-            supabase.removeChannel(sub);
+            if (channelSub) supabase.removeChannel(channelSub);
         };
     }, [tableId]);
 
     const fetchActiveOrder = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
+            // Resolve table layout to get true numeric ID and table name
+            let resolvedTable = null;
+            const cleanParam = (tableId || '').trim();
+            const isDigits = /^\d+$/.test(cleanParam);
+
+            if (isDigits) {
+                const { data } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .or(`id.eq.${parseInt(cleanParam)},table_name.ilike.${cleanParam}`)
+                    .maybeSingle();
+                resolvedTable = data;
+            } else {
+                const { data } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .ilike('table_name', cleanParam)
+                    .maybeSingle();
+                resolvedTable = data;
+            }
+
+            if (resolvedTable) {
+                setResolvedTableInfo(resolvedTable);
+                localStorage.setItem('active_customer_table_id', resolvedTable.id.toString());
+                localStorage.setItem('active_customer_table_name', resolvedTable.table_name || `Table ${resolvedTable.id}`);
+            }
+
+            const numericTableId = resolvedTable?.id || (isDigits ? parseInt(cleanParam) : null);
+            if (!numericTableId) {
+                setBooking(null);
+                setLoading(false);
+                return null;
+            }
+
             // Find active token from local storage first to query exact booking
-            const savedToken = localStorage.getItem(`table_${tableId}_token`);
+            const savedToken = localStorage.getItem(`table_${tableId}_token`) || localStorage.getItem(`table_${numericTableId}_token`);
             
             let query = supabase
                 .from('bookings')
                 .select('*, tables_layout(*)')
-                .eq('table_id', tableId)
+                .eq('table_id', numericTableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready']);
 
             if (savedToken) {
@@ -78,7 +122,7 @@ export default function CustomerOrderStatus() {
             if (bookingError || !bookingData) {
                 setBooking(null);
                 setLoading(false);
-                return;
+                return numericTableId;
             }
             setBooking(bookingData);
 
@@ -101,8 +145,11 @@ export default function CustomerOrderStatus() {
                 setPaymentQrUrl(qrData.value);
             }
 
+            return numericTableId;
+
         } catch (err) {
             console.error('Error fetching order status:', err);
+            return null;
         } finally {
             if (!silent) setLoading(false);
         }

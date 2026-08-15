@@ -130,9 +130,9 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     // 6. Play Again Button
-    const restartBtn = this.add.text(width / 2, height - 120, 'TOUCH HERE TO RESTART', {
+    const restartBtn = this.add.text(width / 2, height - 120, 'TOUCH HERE TO RESTART / เล่นใหม่', {
       fontFamily: 'Courier New, monospace',
-      fontSize: '20px',
+      fontSize: '18px',
       fill: '#DFFF00',
       stroke: '#000000',
       strokeThickness: 5,
@@ -142,26 +142,34 @@ export default class GameOverScene extends Phaser.Scene {
     // Pulse retry button
     this.tweens.add({
       targets: restartBtn,
-      scaleX: 1.1,
-      scaleY: 1.1,
+      scaleX: 1.08,
+      scaleY: 1.08,
       duration: 650,
       yoyo: true,
       repeat: -1
     });
 
-    // Make the whole screen clickable to restart (excluding QR code or specific zones if wanted,
-    // but standard Flappy Bird touch screen to restart is best)
-    this.input.on('pointerdown', () => {
-      // Stop gameover sound
+    const triggerRestart = () => {
       try { this.sound.stopAll(); } catch (e) {}
 
-      // Trigger callback to React if provided, to check/reload leaderboard
       const onGameOver = this.registry.get('onGameOver');
       if (onGameOver) {
         onGameOver(this.finalScore);
       }
 
       this.scene.start('MenuScene');
+    };
+
+    restartBtn.on('pointerdown', (pointer) => {
+      pointer.event.stopPropagation();
+      triggerRestart();
     });
+
+    // Tap background (outside claim button area) to restart if score is 0
+    if (this.finalScore === 0) {
+      this.input.on('pointerdown', () => {
+        triggerRestart();
+      });
+    }
   }
 }

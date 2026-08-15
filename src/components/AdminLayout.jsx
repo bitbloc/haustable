@@ -139,7 +139,7 @@ export default function AdminLayout() {
             path: '/admin/marketing', 
             icon: Tag, 
             label: 'Marketing & Loyalty',
-            isActive: (pathname) => pathname.startsWith('/admin/marketing') || pathname.startsWith('/admin/promotions') || pathname.startsWith('/admin/rewards') || pathname.startsWith('/admin/members') || pathname.startsWith('/admin/arcade') || pathname.startsWith('/admin/songs')
+            isActive: (pathname) => pathname.startsWith('/admin/marketing') || pathname.startsWith('/admin/promotions') || pathname.startsWith('/admin/rewards') || pathname.startsWith('/admin/members') || pathname.startsWith('/admin/arcade') || pathname.startsWith('/admin/songs') || pathname.startsWith('/admin/stamps')
         },
         { 
             path: '/admin/settings', 

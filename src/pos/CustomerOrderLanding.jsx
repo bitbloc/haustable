@@ -89,12 +89,14 @@ export default function CustomerOrderLanding() {
         qr_radius: '50'
     });
 
-    const refreshActiveBooking = async () => {
+    const refreshActiveBooking = async (resolvedId) => {
+        const targetId = resolvedId || table?.id || tableId;
+        if (!targetId) return;
         try {
             const { data: bookingData } = await supabase
                 .from('bookings')
                 .select('*, order_items(*, menu_items(*))')
-                .eq('table_id', tableId)
+                .eq('table_id', targetId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .order('booking_time', { ascending: false })
                 .limit(1)
@@ -108,50 +110,65 @@ export default function CustomerOrderLanding() {
 
     useEffect(() => {
         initPage();
-
-        const sub = supabase.channel(`landing-session-${tableId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'bookings',
-                filter: `table_id=eq.${tableId}`
-            }, () => {
-                refreshActiveBooking();
-            })
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'order_items'
-            }, () => {
-                refreshActiveBooking();
-            })
-            .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                    console.warn(`[Realtime Landing] Channel status: ${status}`, err || '');
-                }
-            });
-
-        return () => {
-            supabase.removeChannel(sub);
-        };
     }, [tableId]);
 
     const initPage = async () => {
         setLoading(true);
         try {
-            // 1. Fetch Table Layout
-            const { data: tableData, error: tableError } = await supabase
-                .from('tables_layout')
-                .select('*')
-                .eq('id', tableId)
-                .single();
+            // 1. Fetch Table Layout (Flexible: supports numeric ID or table_name like 'H1')
+            let tableData = null;
+            const cleanParam = (tableId || '').trim();
+            const isDigits = /^\d+$/.test(cleanParam);
 
-            if (tableError || !tableData) {
-                toast.error('Invalid Table QR Code');
+            if (isDigits) {
+                const { data } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .or(`id.eq.${parseInt(cleanParam)},table_name.ilike.${cleanParam}`)
+                    .maybeSingle();
+                tableData = data;
+            } else {
+                const { data } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .ilike('table_name', cleanParam)
+                    .maybeSingle();
+                tableData = data;
+            }
+
+            if (!tableData) {
+                toast.error(`ไม่พบข้อมูลโต๊ะ ${tableId}`);
                 setLoading(false);
                 return;
             }
             setTable(tableData);
+
+            // Save tableId and table_name for arcade and return navigation
+            localStorage.setItem('active_customer_table_id', tableData.id.toString());
+            localStorage.setItem('active_customer_table_name', tableData.table_name || `Table ${tableData.id}`);
+
+            // Realtime subscription using numeric table ID
+            const sub = supabase.channel(`landing-session-${tableData.id}`)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'bookings',
+                    filter: `table_id=eq.${tableData.id}`
+                }, () => {
+                    refreshActiveBooking(tableData.id);
+                })
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'order_items'
+                }, () => {
+                    refreshActiveBooking(tableData.id);
+                })
+                .subscribe((status, err) => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                        console.warn(`[Realtime Landing] Channel status: ${status}`, err || '');
+                    }
+                });
 
             // 2. Fetch App Settings
             const { data: settingsData } = await supabase
@@ -195,7 +212,7 @@ export default function CustomerOrderLanding() {
             const { data: bookingData } = await supabase
                 .from('bookings')
                 .select('*, order_items(*, menu_items(*))')
-                .eq('table_id', tableId)
+                .eq('table_id', tableData.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .order('booking_time', { ascending: false })
                 .limit(1)
@@ -534,12 +551,19 @@ export default function CustomerOrderLanding() {
         if (cart.length === 0 || submitting) return;
         setSubmitting(true);
 
+        const effectiveNumericTableId = table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
+        if (!effectiveNumericTableId) {
+            toast.error('ไม่พบรหัสโต๊ะที่ถูกต้อง กรุณาสแกน QR Code ใหม่อีกครั้ง');
+            setSubmitting(false);
+            return;
+        }
+
         try {
             // 1. Fetch latest active table session to prevent session duplication when 10 guests order concurrently
             const { data: latestTableSession } = await supabase
                 .from('bookings')
                 .select('*')
-                .eq('table_id', parseInt(tableId))
+                .eq('table_id', effectiveNumericTableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .order('booking_time', { ascending: false })
                 .limit(1)
@@ -555,7 +579,7 @@ export default function CustomerOrderLanding() {
             if (!currentBooking) {
                 const trackingToken = crypto.randomUUID();
                 const newBookingPayload = {
-                    table_id: parseInt(tableId),
+                    table_id: effectiveNumericTableId,
                     status: 'seated', // QR orders auto-accepted immediately
                     booking_type: 'walk_in',
                     booking_time: new Date().toISOString(),
@@ -637,13 +661,16 @@ export default function CustomerOrderLanding() {
     };
 
     const handleCallStaff = async () => {
+        const effectiveNumericTableId = table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
+        if (!effectiveNumericTableId) return;
+
         try {
             let currentBooking = activeBooking;
             
             if (!currentBooking) {
                 const trackingToken = crypto.randomUUID();
                 const newBookingPayload = {
-                    table_id: parseInt(tableId),
+                    table_id: effectiveNumericTableId,
                     status: 'pending',
                     booking_type: 'walk_in',
                     booking_time: new Date().toISOString(),

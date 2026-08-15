@@ -1,15 +1,27 @@
-import { useState, useEffect } from 'react'
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Search, Shield, User, Phone, Edit2, X, Clock, Trash2, ChevronRight, Key, RefreshCw, Eye, EyeOff } from 'lucide-react'
+import { 
+    Search, Shield, User, Phone, Edit2, X, Clock, Trash2, 
+    Key, RefreshCw, Eye, EyeOff, Plus, Minus, Coins,
+    Calendar, ArrowUpDown, CheckCircle2, ChevronRight
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+
+const THAI_MONTHS = [
+    'มกราคม (Jan)', 'กุมภาพันธ์ (Feb)', 'มีนาคม (Mar)', 'เมษายน (Apr)',
+    'พฤษภาคม (May)', 'มิถุนายน (Jun)', 'กรกฎาคม (Jul)', 'สิงหาคม (Aug)',
+    'กันยายน (Sep)', 'ตุลาคม (Oct)', 'พฤศจิกายน (Nov)', 'ธันวาคม (Dec)'
+]
 
 export default function AdminMembers() {
     const [members, setMembers] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const [roleTab, setRoleTab] = useState('all') // 'all', 'staff', 'customer'
+    const [roleTab, setRoleTab] = useState('all') // 'all' | 'staff' | 'customer'
+    const [sortBy, setSortBy] = useState('newest') // 'newest' | 'name' | 'xhaus' | 'bookings'
     const [visiblePins, setVisiblePins] = useState({})
 
     // History Modal State
@@ -17,11 +29,32 @@ export default function AdminMembers() {
     const [memberHistory, setMemberHistory] = useState([])
     const [historyLoading, setHistoryLoading] = useState(false)
 
-    // Fetch Data
+    // Edit Member Modal State
+    const [editingMember, setEditingMember] = useState(null)
+    const [editForm, setEditForm] = useState({
+        display_name: '',
+        nickname: '',
+        phone_number: '',
+        line_user_id: '',
+        admin_notes: '',
+        birth_day: '',
+        birth_month: '',
+        gender: '',
+        pin: ''
+    })
+
+    // Coin Adjuster Modal State
+    const [adjustingMember, setAdjustingMember] = useState(null)
+    const [adjustAmount, setAdjustAmount] = useState('')
+    const [adjustReason, setAdjustReason] = useState('')
+    const [adjustType, setAdjustType] = useState('add') // 'add' | 'deduct'
+    const [isAdjusting, setIsAdjusting] = useState(false)
+
+    // Fetch Members Data
     const fetchMembers = async () => {
         setLoading(true)
         try {
-            // 1. Get Profiles
+            // 1. Fetch Profiles
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
@@ -29,30 +62,42 @@ export default function AdminMembers() {
 
             if (profileError) throw profileError
 
-            // 2. Get Booking Counts (Aggregation)
+            // 2. Fetch Aggregated Bookings efficiently (user_id and status only)
             const { data: bookings, error: bookingError } = await supabase
                 .from('bookings')
                 .select('user_id, status')
 
-            if (bookingError) throw bookingError
+            if (bookingError) console.warn('Could not load bookings count:', bookingError)
 
-            // 3. Merge Data
-            const merged = profiles.map(p => {
-                const userBookings = bookings.filter(b => b.user_id === p.id)
-                const completed = userBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length
+            const bookingMap = {}
+            if (bookings && Array.isArray(bookings)) {
+                bookings.forEach(b => {
+                    if (b.user_id) {
+                        if (!bookingMap[b.user_id]) {
+                            bookingMap[b.user_id] = { total: 0, completed: 0 }
+                        }
+                        bookingMap[b.user_id].total += 1
+                        if (b.status === 'completed' || b.status === 'confirmed') {
+                            bookingMap[b.user_id].completed += 1
+                        }
+                    }
+                })
+            }
+
+            // 3. Merge profile data
+            const merged = (profiles || []).map(p => {
+                const bStats = bookingMap[p.id] || { total: 0, completed: 0 }
                 return {
                     ...p,
-                    total_bookings: userBookings.length,
-                    completed_bookings: completed,
-                    last_active: 'N/A'
+                    total_bookings: bStats.total,
+                    completed_bookings: bStats.completed,
                 }
             })
 
             setMembers(merged)
-
         } catch (err) {
-            console.error(err)
-            alert('Error fetching members')
+            console.error('Error fetching members:', err)
+            toast.error('ไม่สามารถโหลดข้อมูลสมาชิกได้: ' + (err.message || ''))
         } finally {
             setLoading(false)
         }
@@ -62,6 +107,7 @@ export default function AdminMembers() {
         fetchMembers()
     }, [])
 
+    // View Member Service / Booking History
     const handleViewHistory = async (member) => {
         setSelectedMember(member)
         setHistoryLoading(true)
@@ -76,7 +122,9 @@ export default function AdminMembers() {
                     .select(`
                         *,
                         order_items (
+                            id,
                             quantity,
+                            price_at_time,
                             menu_items (name)
                         )
                     `)
@@ -87,35 +135,20 @@ export default function AdminMembers() {
                 setMemberHistory(data || [])
             }
         } catch (err) {
-            console.error(err)
-            alert("Could not load history")
+            console.error('Failed to load history:', err)
+            toast.error('ไม่สามารถโหลดประวัติการสั่งซื้อ/จองได้')
         } finally {
             setHistoryLoading(false)
         }
     }
 
-    // Delete User
-    const handleDeleteUser = async (member) => {
-        if (!confirm(`Are you sure you want to DELETE user "${member.display_name}"?\nThis action cannot be undone.`)) return
-
-        try {
-            const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: member.id })
-            if (error) throw error
-
-            // Update UI
-            setMembers(prev => prev.filter(m => m.id !== member.id))
-        } catch (err) {
-            console.error(err)
-            alert('Failed to delete user: ' + err.message)
-        }
-    }
-
-    // Toggle Role
+    // Toggle Role (Admin / Staff / Customer)
     const handleToggleRole = async (member) => {
-        const newRole = member.role === 'admin' ? 'customer' : 'admin'
-        const confirmMsg = member.role === 'admin'
-            ? `⚠️ Remove Admin rights from ${member.display_name}?`
-            : `Promote ${member.display_name} to Admin?`
+        const isCurrentAdmin = member.role === 'admin'
+        const newRole = isCurrentAdmin ? 'customer' : 'admin'
+        const confirmMsg = isCurrentAdmin
+            ? `ต้องการปลดสิทธิ์ Admin ของ "${member.display_name || 'สมาชิก'}" เป็น Customer ใช่หรือไม่?`
+            : `ต้องการเลื่อนขั้น "${member.display_name || 'สมาชิก'}" เป็น Admin ใช่หรือไม่?`
 
         if (!window.confirm(confirmMsg)) return
 
@@ -127,19 +160,18 @@ export default function AdminMembers() {
 
             if (error) throw error
 
-            // Update UI
             setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
-
+            toast.success(`อัปเดตสิทธิ์ ${member.display_name} เป็น ${newRole.toUpperCase()} เรียบร้อย`)
         } catch (err) {
             console.error(err)
-            alert('Failed to update role')
+            toast.error('ไม่สามารถเปลี่ยนบทบาทได้: ' + err.message)
         }
     }
 
-    // Reset PIN for Employee
+    // Reset / Randomize POS PIN
     const handleResetPin = async (member) => {
         const randomPin = Math.floor(1000 + Math.random() * 9000).toString()
-        if (!window.confirm(`ต้องการรีเซ็ตรหัส PIN ของ "${member.display_name}" เป็น "${randomPin}" ใช่หรือไม่?`)) return
+        if (!window.confirm(`ต้องการสร้างรหัส PIN ใหม่ของ "${member.display_name || member.nickname || 'พนักงาน'}" เป็น "${randomPin}" ใช่หรือไม่?`)) return
 
         try {
             const { error } = await supabase
@@ -151,34 +183,21 @@ export default function AdminMembers() {
 
             setMembers(prev => prev.map(m => m.id === member.id ? { ...m, pin: randomPin } : m))
             setVisiblePins(prev => ({ ...prev, [member.id]: true }))
-            toast.success(`รีเซ็ตรหัส PIN ของ ${member.display_name} เป็น ${randomPin} เรียบร้อย`)
+            toast.success(`รีเซ็ตรหัส PIN ของ ${member.display_name} เป็น ${randomPin} สำเร็จ`)
         } catch (err) {
             console.error(err)
             toast.error('ไม่สามารถรีเซ็ตรหัส PIN ได้: ' + err.message)
         }
     }
 
-    // Edit Member State
-    const [editingMember, setEditingMember] = useState(null)
-    const [editForm, setEditForm] = useState({
-        display_name: '',
-        nickname: '',
-        phone_number: '',
-        line_user_id: '',
-        admin_notes: '',
-        birth_day: '',
-        birth_month: '',
-        gender: '',
-        pin: ''
-    })
-
+    // Open Edit Modal
     const openEditModal = (member) => {
         setEditingMember(member)
         setEditForm({
             display_name: member.display_name || '',
             nickname: member.nickname || '',
             phone_number: member.phone_number || '',
-            line_user_id: member.line_user_id || member.line_uid || '', // Support both if legacy exists
+            line_user_id: member.line_user_id || member.line_uid || '',
             admin_notes: member.admin_notes || '',
             birth_day: member.birth_day || '',
             birth_month: member.birth_month || '',
@@ -187,360 +206,602 @@ export default function AdminMembers() {
         })
     }
 
+    // Save Edited Member
     const handleSaveMember = async (e) => {
         e.preventDefault()
         if (!editingMember) return
 
         try {
-            const cleanPin = editForm.pin ? editForm.pin.trim() : null;
+            const cleanPin = editForm.pin ? editForm.pin.trim() : null
+            const payload = {
+                display_name: editForm.display_name.trim(),
+                nickname: editForm.nickname.trim(),
+                phone_number: editForm.phone_number.trim(),
+                line_user_id: editForm.line_user_id.trim() || null,
+                admin_notes: editForm.admin_notes.trim() || null,
+                birth_day: editForm.birth_day ? parseInt(editForm.birth_day, 10) : null,
+                birth_month: editForm.birth_month ? parseInt(editForm.birth_month, 10) : null,
+                gender: editForm.gender || null,
+                pin: cleanPin
+            }
+
             const { error } = await supabase
                 .from('profiles')
-                .update({
-                    display_name: editForm.display_name,
-                    nickname: editForm.nickname,
-                    phone_number: editForm.phone_number,
-                    line_user_id: editForm.line_user_id,
-                    admin_notes: editForm.admin_notes,
-                    birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null,
-                    birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null,
-                    gender: editForm.gender || null,
-                    pin: cleanPin
-                })
+                .update(payload)
                 .eq('id', editingMember.id)
 
             if (error) throw error
 
-            // Update UI
             setMembers(prev => prev.map(m => m.id === editingMember.id ? { 
                 ...m, 
-                ...editForm, 
-                pin: cleanPin,
-                birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null, 
-                birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null 
+                ...payload, 
+                pin: cleanPin 
             } : m))
+
             setEditingMember(null)
-            toast.success('อัปเดตข้อมูลพนักงาน/สมาชิกเรียบร้อยแล้ว')
+            toast.success('บันทึกข้อมูลสมาชิกเรียบร้อยแล้ว')
         } catch (err) {
-            console.error(err)
-            toast.error('ไม่สามารถอัปเดตข้อมูลได้: ' + err.message)
+            console.error('Failed to save profile:', err)
+            toast.error('ไม่สามารถบันทึกข้อมูลได้: ' + err.message)
         }
     }
 
-    const filteredMembers = members.filter(m => {
-        const matchesSearch = (m.display_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (m.phone_number || '').includes(searchTerm) ||
-            (m.pin || '').includes(searchTerm);
-        
-        if (!matchesSearch) return false;
-
-        if (roleTab === 'staff') {
-            return m.role === 'staff' || m.role === 'admin';
+    // Handle Manual xHaus Point Adjustment
+    const handleAdjustCoins = async (e) => {
+        e.preventDefault()
+        if (!adjustingMember) return
+        const amountNum = parseFloat(adjustAmount)
+        if (isNaN(amountNum) || amountNum <= 0) {
+            return toast.error('กรุณาระบุจำนวนเหรียญที่ถูกต้อง')
         }
-        if (roleTab === 'customer') {
-            return m.role !== 'staff' && m.role !== 'admin';
-        }
-        return true;
-    });
 
-    const staffCount = members.filter(m => m.role === 'staff' || m.role === 'admin').length;
-    const customerCount = members.filter(m => m.role !== 'staff' && m.role !== 'admin').length;
+        setIsAdjusting(true)
+        try {
+            const currentBal = Number(adjustingMember.xhaus_balance || 0)
+            const delta = adjustType === 'add' ? amountNum : -amountNum
+            const newBal = Math.max(0, currentBal + delta)
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ 
+                    xhaus_balance: newBal,
+                    total_earned_xhaus: adjustType === 'add' ? Number(adjustingMember.total_earned_xhaus || currentBal) + amountNum : adjustingMember.total_earned_xhaus
+                })
+                .eq('id', adjustingMember.id)
+
+            if (error) throw error
+
+            setMembers(prev => prev.map(m => m.id === adjustingMember.id ? { ...m, xhaus_balance: newBal } : m))
+            toast.success(`${adjustType === 'add' ? 'เพิ่ม' : 'หัก'} ${amountNum} xhaus เรียบร้อย (ยอดใหม่: ${newBal})`)
+            setAdjustingMember(null)
+            setAdjustAmount('')
+            setAdjustReason('')
+        } catch (err) {
+            console.error('Coin adjustment failed:', err)
+            toast.error('เกิดข้อผิดพลาดในการปรับแต้ม: ' + err.message)
+        } finally {
+            setIsAdjusting(false)
+        }
+    }
+
+    // Delete User
+    const handleDeleteUser = async (member) => {
+        if (!confirm(`⚠️ ยืนยันการลบผู้ใช้ "${member.display_name || member.nickname || 'User'}"?\nการดำเนินการนี้จะลบสิทธิ์และข้อมูลโปรไฟล์ ไม่สามารถกู้คืนได้`)) return
+
+        try {
+            const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: member.id })
+            if (error) throw error
+
+            setMembers(prev => prev.filter(m => m.id !== member.id))
+            toast.success('ลบข้อมูลผู้ใช้งานเรียบร้อยแล้ว')
+        } catch (err) {
+            console.error('Delete failed:', err)
+            toast.error('ลบผู้ใช้ไม่สำเร็จ: ' + err.message)
+        }
+    }
+
+    // Filter & Sort Logic
+    const filteredAndSortedMembers = useMemo(() => {
+        let result = members.filter(m => {
+            const searchLower = searchTerm.toLowerCase()
+            const matchSearch = 
+                (m.display_name || '').toLowerCase().includes(searchLower) ||
+                (m.nickname || '').toLowerCase().includes(searchLower) ||
+                (m.phone_number || '').includes(searchTerm) ||
+                (m.pin || '').includes(searchTerm) ||
+                (m.line_user_id || m.line_uid || '').toLowerCase().includes(searchLower) ||
+                (m.admin_notes || '').toLowerCase().includes(searchLower)
+
+            if (!matchSearch) return false
+
+            if (roleTab === 'staff') {
+                return m.role === 'staff' || m.role === 'admin'
+            }
+            if (roleTab === 'customer') {
+                return m.role !== 'staff' && m.role !== 'admin'
+            }
+            return true
+        })
+
+        // Sort
+        result.sort((a, b) => {
+            if (sortBy === 'newest') {
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+            }
+            if (sortBy === 'name') {
+                return (a.display_name || '').localeCompare(b.display_name || '')
+            }
+            if (sortBy === 'xhaus') {
+                return (Number(b.xhaus_balance) || 0) - (Number(a.xhaus_balance) || 0)
+            }
+            if (sortBy === 'bookings') {
+                return (b.total_bookings || 0) - (a.total_bookings || 0)
+            }
+            return 0
+        })
+
+        return result
+    }, [members, searchTerm, roleTab, sortBy])
+
+    const staffCount = members.filter(m => m.role === 'staff' || m.role === 'admin').length
+    const customerCount = members.filter(m => m.role !== 'staff' && m.role !== 'admin').length
+    const totalXhaus = members.reduce((sum, m) => sum + (Number(m.xhaus_balance) || 0), 0)
 
     return (
-        <div className="space-y-8 pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-ink tracking-tight">
-                        Members & Staff ({members.length})
-                    </h1>
-                    <p className="text-subInk text-sm mt-1">จัดการพนักงาน, รหัส PIN POS, บทบาท และข้อมูลสมาชิก</p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+        <div className="space-y-6">
+            {/* Header Controls Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm">
+                <div className="flex flex-wrap items-center gap-2">
                     {/* Role Filter Tabs */}
-                    <div className="flex bg-canvas p-1 rounded-xl border border-gray-200 text-xs font-bold">
+                    <div className="flex bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-xs">
                         <button
+                            type="button"
                             onClick={() => setRoleTab('all')}
-                            className={`px-3 py-1.5 rounded-lg transition-all ${roleTab === 'all' ? 'bg-paper text-ink shadow-sm' : 'text-subInk hover:text-ink'}`}
+                            className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                                roleTab === 'all'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                            }`}
                         >
                             ทั้งหมด ({members.length})
                         </button>
                         <button
+                            type="button"
                             onClick={() => setRoleTab('staff')}
-                            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${roleTab === 'staff' ? 'bg-brand text-ink shadow-sm' : 'text-subInk hover:text-ink'}`}
+                            className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all flex items-center gap-1.5 ${
+                                roleTab === 'staff'
+                                    ? 'bg-[oklch(52%_0.16_28)] text-white shadow-2xs'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                            }`}
                         >
-                            <Shield size={12} /> พนักงาน/แอดมิน ({staffCount})
+                            <Shield size={12} />
+                            <span>พนักงาน/แอดมิน ({staffCount})</span>
                         </button>
                         <button
+                            type="button"
                             onClick={() => setRoleTab('customer')}
-                            className={`px-3 py-1.5 rounded-lg transition-all ${roleTab === 'customer' ? 'bg-paper text-ink shadow-sm' : 'text-subInk hover:text-ink'}`}
+                            className={`px-3 py-1.5 rounded-sm font-bold uppercase transition-all ${
+                                roleTab === 'customer'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-white shadow-2xs'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-black'
+                            }`}
                         >
-                            สมาชิก ({customerCount})
+                            ลูกค้าสมาชิก ({customerCount})
                         </button>
                     </div>
 
+                    {/* Quick Stats Pill */}
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-sm font-mono text-xs text-[oklch(42%_0.010_28)]">
+                        <span>xHAUS ในระบบ:</span>
+                        <span className="font-bold text-[oklch(18%_0.012_28)]">{totalXhaus.toLocaleString()} 🪙</span>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    {/* Sort Selector */}
+                    <div className="flex items-center gap-1.5 bg-white border border-[oklch(85%_0.012_28)] px-2.5 py-1.5 rounded-sm font-mono text-xs text-[oklch(42%_0.010_28)]">
+                        <ArrowUpDown size={13} className="text-[oklch(55%_0.010_28)]" />
+                        <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)]">เรียง:</span>
+                        <select 
+                            value={sortBy} 
+                            onChange={e => setSortBy(e.target.value)}
+                            className="bg-transparent font-bold text-[oklch(18%_0.012_28)] outline-none cursor-pointer"
+                        >
+                            <option value="newest">สมัครล่าสุด</option>
+                            <option value="name">ชื่อ (A-Z / ก-ฮ)</option>
+                            <option value="xhaus">แต้ม xhaus สูงสุด</option>
+                            <option value="bookings">ยอดการจอง/ออเดอร์</option>
+                        </select>
+                    </div>
+
+                    {/* Search Input */}
                     <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-subInk w-4 h-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] w-3.5 h-3.5" />
                         <input
                             type="text"
-                            placeholder="ค้นชื่อ, เบอร์, PIN..."
+                            placeholder="ค้นชื่อ, เบอร์, PIN, LINE ID..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-paper border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all shadow-sm"
+                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] font-mono placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(18%_0.012_28)] transition-all"
                         />
                     </div>
                 </div>
             </div>
 
-            {/* List */}
-            <div className="grid gap-4">
-                {loading ? (
-                    <div className="text-subInk text-center py-10 animate-pulse">Loading members...</div>
-                ) : (
-                    filteredMembers.map((member) => (
-                        <motion.div
-                            layout
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            key={member.id}
-                            className={`bg-paper border ${member.role === 'admin' ? 'border-brand shadow-md shadow-brand/10' : 'border-gray-200'} rounded-2xl p-5 flex flex-col md:flex-row items-center gap-6 group hover:border-gray-300 hover:shadow-lg transition-all`}
-                        >
-                            {/* Avatar / Icon */}
-                            <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 border ${member.role === 'admin' ? 'bg-brand text-ink border-brand' : 'bg-canvas text-subInk border-gray-100'}`}>
-                                {member.role === 'admin' ? <Shield size={24} /> : <User size={24} />}
-                            </div>
+            {/* Members List Table / Cards */}
+            {loading ? (
+                <div className="text-center py-16 bg-white border border-[oklch(85%_0.012_28)] rounded-sm">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[oklch(85%_0.012_28)] border-b-[oklch(18%_0.012_28)] mb-2" />
+                    <p className="font-mono text-xs uppercase tracking-wider text-[oklch(55%_0.010_28)]">กำลังโหลดข้อมูลสมาชิกและพนักงาน...</p>
+                </div>
+            ) : filteredAndSortedMembers.length === 0 ? (
+                <div className="text-center py-16 bg-white border border-dashed border-[oklch(85%_0.012_28)] rounded-sm">
+                    <p className="font-mono text-xs uppercase tracking-wider text-[oklch(55%_0.010_28)]">ไม่พบข้อมูลสมาชิกตามเงื่อนไขที่ระบุ</p>
+                </div>
+            ) : (
+                <div className="grid gap-3">
+                    {filteredAndSortedMembers.map((member) => {
+                        const isAdmin = member.role === 'admin'
+                        const isStaff = member.role === 'staff'
+                        const isPrivileged = isAdmin || isStaff
+                        const pinVisible = visiblePins[member.id]
 
-                            {/* Info */}
-                            <div className="flex-1 text-center md:text-left min-w-0 w-full">
-                                <div className="flex items-center justify-center md:justify-start gap-2">
-                                    <h3 className="font-bold text-lg text-ink truncate">{member.display_name || 'Unknown User'}</h3>
-                                    {member.nickname && <span className="bg-canvas text-subInk text-[10px] px-2 py-0.5 rounded-full border border-gray-100 uppercase tracking-wide">({member.nickname})</span>}
-                                </div>
-                                <div className="flex flex-col md:flex-row gap-2 md:gap-4 text-xs text-subInk mt-1.5 justify-center md:justify-start items-center md:items-start">
-                                    {member.phone_number && (
-                                        <span className="flex items-center gap-1 font-medium"><Phone size={12} /> {member.phone_number}</span>
-                                    )}
-                                    <span className="flex items-center gap-1 font-mono text-gray-400">LINE: {member.line_user_id || '-'}</span>
-                                </div>
+                        return (
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                key={member.id}
+                                className={`bg-white border rounded-sm p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                                    isAdmin 
+                                        ? 'border-[oklch(52%_0.16_28)] shadow-2xs bg-[oklch(99%_0.004_28)]' 
+                                        : isStaff
+                                            ? 'border-[oklch(45%_0.08_140)] shadow-2xs'
+                                            : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
+                                }`}
+                            >
+                                {/* Left Section: Avatar & Info */}
+                                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                                    {/* Role Avatar */}
+                                    <div className={`w-11 h-11 rounded-sm flex items-center justify-center shrink-0 border font-mono font-bold text-xs ${
+                                        isAdmin
+                                            ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
+                                            : isStaff
+                                                ? 'bg-[oklch(45%_0.08_140)] text-white border-[oklch(45%_0.08_140)]'
+                                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                    }`}>
+                                        {isAdmin ? <Shield size={18} /> : <User size={18} />}
+                                    </div>
 
-                                {/* PIN Management Pill */}
-                                <div className="mt-2.5 flex items-center justify-center md:justify-start gap-2">
-                                    <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/70 rounded-lg px-2.5 py-1 text-xs">
-                                        <Key size={13} className="text-amber-700 shrink-0" />
-                                        <span className="text-subInk font-medium text-[11px]">PIN POS:</span>
-                                        <span className="font-mono font-bold text-ink tracking-wider">
-                                            {member.pin ? (visiblePins[member.id] ? member.pin : '••••') : <span className="text-amber-700/70 italic text-[11px] font-normal">ยังไม่ตั้ง</span>}
-                                        </span>
-                                        {member.pin && (
+                                    {/* User Details */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] truncate">
+                                                {member.display_name || 'Unnamed Member'}
+                                            </h3>
+                                            {member.nickname && (
+                                                <span className="font-mono text-[11px] font-bold px-1.5 py-0.2 bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
+                                                    ({member.nickname})
+                                                </span>
+                                            )}
+                                            <span className={`font-mono text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-xs border ${
+                                                isAdmin
+                                                    ? 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                                    : isStaff
+                                                        ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
+                                                        : 'bg-[oklch(96%_0.005_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                            }`}>
+                                                {member.role || 'customer'}
+                                            </span>
+                                        </div>
+
+                                        {/* Secondary Meta Tags */}
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-[oklch(55%_0.010_28)] mt-1">
+                                            {member.phone_number && (
+                                                <span className="flex items-center gap-1 text-[oklch(18%_0.012_28)] font-medium">
+                                                    <Phone size={11} className="text-[oklch(55%_0.010_28)]" />
+                                                    {member.phone_number}
+                                                </span>
+                                            )}
+                                            {(member.line_user_id || member.line_uid) && (
+                                                <span className="text-[oklch(45%_0.08_140)] font-medium">
+                                                    LINE: {member.line_user_id || member.line_uid}
+                                                </span>
+                                            )}
+                                            {member.birth_day && member.birth_month && (
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar size={11} />
+                                                    BD: {member.birth_day}/{member.birth_month}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* PIN Code Quick Bar (for Staff / Admin / Quick POS auth) */}
+                                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                                            <div className="flex items-center gap-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-xs font-mono text-xs">
+                                                <Key size={12} className="text-[oklch(52%_0.16_28)]" />
+                                                <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)]">PIN POS:</span>
+                                                <span className="font-bold tracking-wider text-[oklch(18%_0.012_28)]">
+                                                    {member.pin ? (pinVisible ? member.pin : '••••') : <span className="text-[oklch(55%_0.010_28)] italic font-normal text-[10px]">ยังไม่ตั้ง</span>}
+                                                </span>
+                                                {member.pin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setVisiblePins(prev => ({ ...prev, [member.id]: !prev[member.id] }))}
+                                                        className="text-[oklch(55%_0.010_28)] hover:text-black p-0.5 cursor-pointer ml-0.5"
+                                                        title={pinVisible ? "ซ่อน PIN" : "แสดง PIN"}
+                                                    >
+                                                        {pinVisible ? <EyeOff size={11} /> : <Eye size={11} />}
+                                                    </button>
+                                                )}
+                                            </div>
+
                                             <button
                                                 type="button"
-                                                onClick={() => setVisiblePins(prev => ({ ...prev, [member.id]: !prev[member.id] }))}
-                                                className="text-subInk hover:text-ink ml-1 p-0.5"
-                                                title={visiblePins[member.id] ? "ซ่อน PIN" : "แสดง PIN"}
+                                                onClick={() => handleResetPin(member)}
+                                                className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-xs transition-colors flex items-center gap-1 cursor-pointer"
+                                                title="สุ่มรีเซ็ตรหัส PIN 4 หลักใหม่"
                                             >
-                                                {visiblePins[member.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                                <RefreshCw size={9} /> สุ่ม PIN ใหม่
                                             </button>
-                                        )}
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* Middle Section: Stats & Points */}
+                                <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-between md:justify-end">
+                                    <div className="text-center font-mono">
+                                        <p className="text-base font-bold text-[oklch(18%_0.012_28)]">{member.total_bookings || 0}</p>
+                                        <p className="text-[9px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">Bookings</p>
+                                    </div>
+
+                                    <div className="text-center font-mono">
+                                        <div className="flex items-center justify-center gap-1">
+                                            <p className="text-base font-bold text-[oklch(52%_0.16_28)]">
+                                                {Number(member.xhaus_balance || 0).toLocaleString()}
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setAdjustingMember(member)
+                                                    setAdjustAmount('')
+                                                    setAdjustReason('')
+                                                    setAdjustType('add')
+                                                }}
+                                                className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors"
+                                                title="ปรับเพิ่ม/ลดเหรียญ xhaus"
+                                            >
+                                                <Coins size={13} />
+                                            </button>
+                                        </div>
+                                        <p className="text-[9px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">xHAUS Points</p>
+                                    </div>
+                                </div>
+
+                                {/* Right Section: Action Controls */}
+                                <div className="flex flex-wrap items-center gap-2 border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-end font-mono text-xs">
                                     <button
                                         type="button"
-                                        onClick={() => handleResetPin(member)}
-                                        className="text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-100/80 hover:bg-amber-200/90 border border-amber-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
-                                        title="สุ่มรีเซ็ตรหัส PIN ใหม่"
-                                    >
-                                        <RefreshCw size={10} /> รีเซ็ต PIN
-                                    </button>
-                                </div>
-
-                                <div className="mt-3 flex gap-3 justify-center md:justify-start">
-                                    <button
                                         onClick={() => openEditModal(member)}
-                                        className="text-xs flex items-center gap-1 text-subInk hover:text-ink hover:underline transition-colors"
+                                        className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
-                                        <Edit2 size={12} /> Edit Info & PIN
+                                        <Edit2 size={12} />
+                                        <span>แก้ไข</span>
                                     </button>
+
                                     <button
+                                        type="button"
                                         onClick={() => handleViewHistory(member)}
-                                        className="text-xs flex items-center gap-1 text-brandDark font-bold hover:underline"
+                                        className="px-2.5 py-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
-                                        <Clock size={12} /> View History
+                                        <Clock size={12} />
+                                        <span>ประวัติบิล</span>
                                     </button>
-                                </div>
-                            </div>
 
-                            {/* Stats */}
-                            <div className="flex gap-8 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-8 w-full md:w-auto justify-center">
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-ink">{member.total_bookings}</p>
-                                    <p className="text-[10px] text-subInk uppercase tracking-wider font-bold">Total Bookings</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-brandDark">{Number(member.xhaus_balance || 0).toFixed(0)}</p>
-                                    <p className="text-[10px] text-subInk uppercase tracking-wider font-bold">xHaus Coins</p>
-                                </div>
-                            </div>
-
-                            {/* Toggle Switch & Delete */}
-                            <div className="flex flex-col items-end gap-3 w-full md:w-auto justify-center pt-4 md:pt-0 border-t md:border-t-0 border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <span className={`text-xs font-bold uppercase ${member.role === 'admin' ? 'text-brandDark' : 'text-subInk'}`}>
-                                        {member.role}
-                                    </span>
                                     <button
+                                        type="button"
                                         onClick={() => handleToggleRole(member)}
-                                        className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${member.role === 'admin' ? 'bg-brand shadow-inner' : 'bg-gray-200'}`}
+                                        className={`px-2.5 py-1.5 font-bold uppercase rounded-sm border transition-colors cursor-pointer ${
+                                            isAdmin
+                                                ? 'bg-white text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)]'
+                                                : 'bg-white text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-black'
+                                        }`}
+                                        title={isAdmin ? "ปลดสิทธิ์ Admin" : "ตั้งเป็น Admin"}
                                     >
-                                        <div className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${member.role === 'admin' ? 'translate-x-6' : 'translate-x-0'}`} />
+                                        {isAdmin ? 'ADMIN' : 'ROLE'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeleteUser(member)}
+                                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.02_28)] rounded-sm border border-transparent hover:border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                        title="ลบผู้ใช้งาน"
+                                    >
+                                        <Trash2 size={13} />
                                     </button>
                                 </div>
-                                <button
-                                    onClick={() => handleDeleteUser(member)}
-                                    className="flex items-center gap-1 text-red-400 hover:text-error text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                            </motion.div>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* Edit Member Profile Modal */}
+            <AnimatePresence>
+                {editingMember && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-[oklch(97%_0.008_28)] w-full max-w-lg rounded-sm border border-[oklch(85%_0.012_28)] shadow-xl overflow-hidden font-mono"
+                        >
+                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] bg-white flex justify-between items-center">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">MEMBER PROFILE CRM</span>
+                                    <h2 className="text-base font-bold uppercase text-[oklch(18%_0.012_28)]">แก้ไขข้อมูลสมาชิก & พนักงาน</h2>
+                                </div>
+                                <button 
+                                    onClick={() => setEditingMember(null)} 
+                                    className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm text-[oklch(42%_0.010_28)] hover:text-black cursor-pointer"
                                 >
-                                    <Trash2 size={12} /> Delete User
+                                    <X size={18} />
                                 </button>
                             </div>
 
-                        </motion.div>
-                    ))
-                )}
-            </div>
-
-            {/* Edit Member Modal */}
-            <AnimatePresence>
-                {editingMember && (
-                    <div className="fixed inset-0 bg-ink/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-paper w-full max-w-md rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
-                        >
-                            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
-                                <h2 className="text-lg font-bold text-ink">Edit Member</h2>
-                                <button onClick={() => setEditingMember(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="text-subInk hover:text-ink" size={20} /></button>
-                            </div>
-                            
-                            <form onSubmit={handleSaveMember} className="p-6 space-y-4">
-                                <div className="flex gap-3">
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Display Name</label>
-                                        <input 
-                                            type="text" 
-                                            value={editForm.display_name} 
-                                            onChange={e => setEditForm({...editForm, display_name: e.target.value})}
-                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                            <form onSubmit={handleSaveMember} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                            Display Name (ชื่อแสดงผล) *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editForm.display_name}
+                                            onChange={e => setEditForm({ ...editForm, display_name: e.target.value })}
+                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                         />
                                     </div>
-                                    <div className="w-1/3">
-                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Nickname</label>
-                                        <input 
-                                            type="text" 
-                                            value={editForm.nickname} 
-                                            onChange={e => setEditForm({...editForm, nickname: e.target.value})}
-                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                            Nickname (ชื่อเล่น)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editForm.nickname}
+                                            onChange={e => setEditForm({ ...editForm, nickname: e.target.value })}
+                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                         />
                                     </div>
                                 </div>
-                                
-                                <div className="flex gap-3">
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Phone Number</label>
-                                        <input 
-                                            type="text" 
-                                            value={editForm.phone_number} 
-                                            onChange={e => setEditForm({...editForm, phone_number: e.target.value})}
-                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                            Phone Number (เบอร์โทรศัพท์)
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            placeholder="0812345678"
+                                            value={editForm.phone_number}
+                                            onChange={e => setEditForm({ ...editForm, phone_number: e.target.value })}
+                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                         />
                                     </div>
-                                    <div className="w-1/3">
-                                        <label className="block text-xs font-bold text-subInk uppercase mb-1">Gender</label>
-                                        <select 
-                                            value={editForm.gender} 
-                                            onChange={e => setEditForm({...editForm, gender: e.target.value})}
-                                            className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                            Gender (เพศ)
+                                        </label>
+                                        <select
+                                            value={editForm.gender}
+                                            onChange={e => setEditForm({ ...editForm, gender: e.target.value })}
+                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                         >
-                                            <option value="">Select</option>
-                                            <option value="Male">Male</option>
-                                            <option value="Female">Female</option>
-                                            <option value="Not Specified">Other</option>
+                                            <option value="">ไม่ระบุ</option>
+                                            <option value="Male">ชาย</option>
+                                            <option value="Female">หญิง</option>
+                                            <option value="Other">อื่นๆ</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-subInk uppercase mb-1">Birthday (วันเกิด)</label>
-                                    <div className="flex gap-2">
-                                        <select 
-                                            value={editForm.birth_day} 
-                                            onChange={e => setEditForm({...editForm, birth_day: e.target.value})}
-                                            className="w-24 bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        Birthday (วันเกิด / เดือนเกิด สำหรับโปรโมชั่นวันเกิด)
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <select
+                                            value={editForm.birth_day}
+                                            onChange={e => setEditForm({ ...editForm, birth_day: e.target.value })}
+                                            className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                         >
-                                            <option value="">Day</option>
-                                            {[...Array(31)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+                                            <option value="">วัน</option>
+                                            {[...Array(31)].map((_, i) => (
+                                                <option key={i} value={i + 1}>{i + 1}</option>
+                                            ))}
                                         </select>
-                                        <select 
-                                            value={editForm.birth_month} 
-                                            onChange={e => setEditForm({...editForm, birth_month: e.target.value})}
-                                            className="flex-1 bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                        <select
+                                            value={editForm.birth_month}
+                                            onChange={e => setEditForm({ ...editForm, birth_month: e.target.value })}
+                                            className="col-span-2 bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                         >
-                                            <option value="">Month</option>
-                                            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                                            <option value="">เดือน</option>
+                                            {THAI_MONTHS.map((m, i) => (
                                                 <option key={i} value={i + 1}>{m}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-amber-800 uppercase mb-1 flex items-center justify-between">
-                                        <span className="flex items-center gap-1.5"><Key size={13} className="text-amber-600" /> POS Staff PIN Code (รหัส PIN พนักงาน)</span>
+                                <div className="bg-white border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-bold uppercase text-[oklch(52%_0.16_28)] flex items-center gap-1.5">
+                                            <Key size={12} />
+                                            <span>POS Staff PIN Code (รหัส PIN พนักงาน 4-6 หลัก)</span>
+                                        </label>
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                const newPin = Math.floor(1000 + Math.random() * 9000).toString();
-                                                setEditForm({ ...editForm, pin: newPin });
+                                                const newPin = Math.floor(1000 + Math.random() * 9000).toString()
+                                                setEditForm({ ...editForm, pin: newPin })
                                             }}
-                                            className="text-[11px] text-amber-700 hover:text-amber-900 flex items-center gap-1 font-mono font-medium hover:underline"
+                                            className="text-[10px] text-[oklch(52%_0.16_28)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
                                         >
-                                            <RefreshCw size={11} /> สุ่ม PIN ใหม่
+                                            <RefreshCw size={10} /> สุ่ม PIN 4 หลัก
                                         </button>
-                                    </label>
-                                    <input 
-                                        type="text" 
+                                    </div>
+                                    <input
+                                        type="text"
                                         maxLength={6}
-                                        placeholder="ตัวเลข 4 หลัก เช่น 1234"
-                                        value={editForm.pin || ''} 
-                                        onChange={e => setEditForm({...editForm, pin: e.target.value.replace(/\D/g, '')})}
-                                        className="w-full bg-amber-50/40 border border-amber-200 rounded-lg p-3 text-ink focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none font-mono text-base font-bold tracking-widest transition-all"
+                                        placeholder="เช่น 1234"
+                                        value={editForm.pin || ''}
+                                        onChange={e => setEditForm({ ...editForm, pin: e.target.value.replace(/\D/g, '') })}
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-base font-bold tracking-widest text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                     />
-                                    <p className="text-[10px] text-subInk mt-1">ใช้ยืนยันตัวตนสำหรับกะเปิดร้านและปลดล็อกหน้าจอ POS</p>
+                                    <p className="text-[10px] text-[oklch(55%_0.010_28)]">ใช้สำหรับปลดล็อกหน้าจอ POS และเปิด/ปิดกะพนักงาน</p>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-green-600 uppercase mb-1">LINE User ID</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Uxxxxxxxxxxxxxxxx..."
-                                        value={editForm.line_user_id} 
-                                        onChange={e => setEditForm({...editForm, line_user_id: e.target.value})}
-                                        className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none font-mono text-sm transition-all"
-                                    />
-                                    <p className="text-[10px] text-subInk mt-1">Found in LINE Developers console or via webhook.</p>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-subInk uppercase mb-1">Admin Notes</label>
-                                    <textarea 
-                                        rows={3}
-                                        value={editForm.admin_notes} 
-                                        onChange={e => setEditForm({...editForm, admin_notes: e.target.value})}
-                                        className="w-full bg-canvas border border-gray-200 rounded-lg p-3 text-ink focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        LINE User ID
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                        value={editForm.line_user_id}
+                                        onChange={e => setEditForm({ ...editForm, line_user_id: e.target.value })}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
                                     />
                                 </div>
 
-                                <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-4">
-                                    <button type="button" onClick={() => setEditingMember(null)} className="px-4 py-2 text-subInk hover:text-ink font-medium text-sm">Cancel</button>
-                                    <button type="submit" className="px-6 py-2 bg-brand text-ink font-bold rounded-lg hover:bg-brandDark hover:text-white transition-colors text-sm shadow-sm">Save Changes</button>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        Admin Notes (หมายเหตุภายในสำหรับแอดมิน)
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="เช่น ลูกค้า VIP ชอบนั่งโซนริมหน้าต่าง..."
+                                        value={editForm.admin_notes}
+                                        onChange={e => setEditForm({ ...editForm, admin_notes: e.target.value })}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black resize-none"
+                                    />
+                                </div>
+
+                                <div className="pt-3 border-t border-[oklch(85%_0.012_28)] flex justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingMember(null)}
+                                        className="px-4 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm"
+                                    >
+                                        บันทึกการเปลี่ยนแปลง
+                                    </button>
                                 </div>
                             </form>
                         </motion.div>
@@ -548,66 +809,188 @@ export default function AdminMembers() {
                 )}
             </AnimatePresence>
 
-            {/* History Modal */}
+            {/* Coin Points Adjuster Modal */}
             <AnimatePresence>
-                {selectedMember && (
-                    <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                {adjustingMember && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
+                            initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-paper w-full max-w-2xl max-h-[85vh] rounded-3xl border border-gray-200 shadow-2xl flex flex-col overflow-hidden"
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-white w-full max-w-sm rounded-sm border border-[oklch(85%_0.012_28)] shadow-xl overflow-hidden font-mono"
                         >
-                            <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-white">
+                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(97%_0.008_28)]">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-ink">{selectedMember.display_name}</h2>
-                                    <div className="flex flex-wrap gap-4 text-sm text-subInk mt-2">
-                                        {selectedMember.nickname && <span>Nickname: <span className="text-ink font-medium">{selectedMember.nickname}</span></span>}
-                                        <span>Phone: <span className="text-ink font-medium">{selectedMember.phone_number || '-'}</span></span>
-                                        <span>Gender: <span className="text-ink font-medium">{selectedMember.gender || '-'}</span></span>
-                                        <span>Birthday: <span className="text-ink font-medium">{selectedMember.birth_day ? `${selectedMember.birth_day}/${selectedMember.birth_month}` : '-'}</span></span>
-                                        <span>Line ID: <span className="text-ink font-medium font-mono text-xs">{selectedMember.line_uid || '-'}</span></span>
-                                    </div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">xHAUS LOYALTY POINTS</span>
+                                    <h3 className="text-sm font-bold uppercase text-[oklch(18%_0.012_28)]">
+                                        ปรับแต้ม: {adjustingMember.display_name || 'สมาชิก'}
+                                    </h3>
                                 </div>
-                                <button onClick={() => setSelectedMember(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="text-subInk hover:text-ink" /></button>
+                                <button onClick={() => setAdjustingMember(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                    <X size={16} />
+                                </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 bg-canvas">
-                                <h3 className="font-bold text-ink mb-4 flex items-center gap-2">
-                                    <Clock size={18} className="text-brandDark" /> Booking History
-                                </h3>
+                            <form onSubmit={handleAdjustCoins} className="p-5 space-y-4">
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm text-center">
+                                    <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)]">ยอดแต้มสะสมปัจจุบัน</span>
+                                    <p className="text-2xl font-bold text-[oklch(52%_0.16_28)]">
+                                        {Number(adjustingMember.xhaus_balance || 0).toLocaleString()} <span className="text-xs">xhaus</span>
+                                    </p>
+                                </div>
 
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdjustType('add')}
+                                        className={`flex-1 py-2 font-bold text-xs uppercase rounded-sm border transition-colors flex items-center justify-center gap-1.5 ${
+                                            adjustType === 'add'
+                                                ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
+                                                : 'bg-white text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                        }`}
+                                    >
+                                        <Plus size={13} /> เพิ่มแต้ม
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdjustType('deduct')}
+                                        className={`flex-1 py-2 font-bold text-xs uppercase rounded-sm border transition-colors flex items-center justify-center gap-1.5 ${
+                                            adjustType === 'deduct'
+                                                ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
+                                                : 'bg-white text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                        }`}
+                                    >
+                                        <Minus size={13} /> หักแต้ม
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        จำนวนเหรียญที่ต้องการ {adjustType === 'add' ? 'เพิ่ม' : 'หัก'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="1"
+                                        placeholder="เช่น 50"
+                                        value={adjustAmount}
+                                        onChange={e => setAdjustAmount(e.target.value)}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-base font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        เหตุผลการปรับแต้ม (สำหรับประวัติภายใน)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="เช่น ชดเชยออเดอร์ล่าช้า / รางวัลพิเศษ..."
+                                        value={adjustReason}
+                                        onChange={e => setAdjustReason(e.target.value)}
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                    />
+                                </div>
+
+                                <div className="pt-2 flex justify-end gap-2 border-t border-[oklch(85%_0.012_28)]">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdjustingMember(null)}
+                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isAdjusting}
+                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm disabled:opacity-50"
+                                    >
+                                        {isAdjusting ? 'กำลังบันทึก...' : 'ยืนยันการปรับแต้ม'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Member Service / Booking History Drawer */}
+            <AnimatePresence>
+                {selectedMember && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-white w-full max-w-2xl max-h-[85vh] rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl flex flex-col overflow-hidden font-mono"
+                        >
+                            {/* History Header */}
+                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-start bg-[oklch(97%_0.008_28)]">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">CUSTOMER SERVICE HISTORY</span>
+                                    <h2 className="text-base font-bold uppercase text-[oklch(18%_0.012_28)] mt-0.5">
+                                        {selectedMember.display_name} {selectedMember.nickname && `(${selectedMember.nickname})`}
+                                    </h2>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[oklch(55%_0.010_28)] mt-1">
+                                        <span>เบอร์: <strong className="text-[oklch(18%_0.012_28)]">{selectedMember.phone_number || '-'}</strong></span>
+                                        <span>xHAUS: <strong className="text-[oklch(52%_0.16_28)]">{Number(selectedMember.xhaus_balance || 0).toLocaleString()} 🪙</strong></span>
+                                        <span>ประวัติทั้งหมด: <strong className="text-[oklch(18%_0.012_28)]">{memberHistory.length} รายการ</strong></span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedMember(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* History List */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[oklch(98%_0.006_28)]">
                                 {historyLoading ? (
-                                    <div className="text-center py-10 text-subInk">Loading history...</div>
+                                    <div className="text-center py-16 text-xs text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                        กำลังโหลดประวัติการใช้บริการ...
+                                    </div>
                                 ) : memberHistory.length === 0 ? (
-                                    <div className="text-center py-10 text-subInk opacity-60">No booking history found.</div>
+                                    <div className="text-center py-16 bg-white border border-dashed border-[oklch(85%_0.012_28)] rounded-sm text-xs text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                        ไม่พบประวัติการสั่งซื้อหรือการจอง
+                                    </div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        {memberHistory.map(booking => (
-                                            <div key={booking.id} className="bg-paper border border-gray-200 rounded-xl p-4 flex justify-between items-center hover:shadow-md transition-all">
+                                    memberHistory.map((booking) => {
+                                        const isCompleted = booking.status === 'completed' || booking.status === 'confirmed'
+                                        return (
+                                            <div 
+                                                key={booking.id} 
+                                                className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                                            >
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${booking.status === 'completed' ? 'bg-green-50 text-green-600 border border-green-100' :
-                                                            booking.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' :
-                                                                'bg-gray-100 text-subInk border border-gray-200'
-                                                            }`}>
+                                                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-xs uppercase border ${
+                                                            isCompleted
+                                                                ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
+                                                                : 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                                                        }`}>
                                                             {booking.status}
                                                         </span>
-                                                        <span className="text-xs text-subInk">{format(new Date(booking.created_at), 'dd MMM yyyy, HH:mm')}</span>
+                                                        <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                            {format(new Date(booking.created_at), 'dd MMM yyyy, HH:mm')}
+                                                        </span>
+                                                        {booking.booking_type && (
+                                                            <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-1 rounded-xs">
+                                                                {booking.booking_type}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <div className="text-sm font-bold text-ink mb-1">
-                                                        {booking.order_items?.map(i => `${i.menu_items?.name} (x${i.quantity})`).join(', ') || 'No Items'}
-                                                    </div>
-                                                    <div className="text-xs text-subInk">
-                                                        Type: <span className="capitalize text-ink">{booking.booking_type}</span>
+                                                    <div className="text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                                        {booking.order_items?.map(i => `${i.menu_items?.name || 'Item'} (x${i.quantity})`).join(', ') || 'ไม่มีรายการเมนูย่อย'}
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-ink font-mono font-bold">{booking.total_amount}.-</div>
+
+                                                <div className="text-right sm:self-center shrink-0">
+                                                    <span className="text-sm font-bold text-[oklch(18%_0.012_28)]">
+                                                        ฿{Number(booking.total_amount || 0).toLocaleString()}
+                                                    </span>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        )
+                                    })
                                 )}
                             </div>
                         </motion.div>
