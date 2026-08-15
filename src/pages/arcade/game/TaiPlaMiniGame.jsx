@@ -1,6 +1,6 @@
 /* Hallmark · component: TaiPlaMiniGame · genre: Retro Chunky Pixel Arcade · theme: Cute Nakhon Phanom (Wat Mahathat, Vietnam Clock Tower, Phaya Naga, Thai Fruit Cart) x Cute Calico Tai-Pla */
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, onCoinEarned }) {
@@ -21,7 +21,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
   // Smooth Game Physics & Engine References
   const gameRef = useRef({
-    catX: 80,
+    catX: 75,
     catY: 185,
     catVy: 0,
     isGrounded: true,
@@ -34,8 +34,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     particles: [],
     floatingTexts: [],
     lastSpawn: 0,
-    groundY: 188,
-    speed: 3.8,
+    groundY: 185,
+    speed: 4.0,
     frame: 0,
     scaleX: 1.0,
     scaleY: 1.0
@@ -58,39 +58,39 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       if (type === 'jump') {
         osc.type = 'square';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(580, now + 0.14);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(620, now + 0.12);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc.start(now);
-        osc.stop(now + 0.15);
+        osc.stop(now + 0.13);
       } else if (type === 'collect') {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(880.00, now + 0.05); // A5
-        osc.frequency.setValueAtTime(1174.66, now + 0.10); // D6
+        osc.frequency.setValueAtTime(880.00, now + 0.04); // A5
+        osc.frequency.setValueAtTime(1174.66, now + 0.08); // D6
         gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
         osc.start(now);
-        osc.stop(now + 0.23);
+        osc.stop(now + 0.19);
       } else if (type === 'pot_complete') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
-        osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+        osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
+        osc.frequency.setValueAtTime(1046.50, now + 0.18); // C6
         gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.start(now);
-        osc.stop(now + 0.36);
-      } else if (type === 'hit') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(280, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.28);
-        gain.gain.setValueAtTime(0.15, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
         osc.start(now);
-        osc.stop(now + 0.3);
+        osc.stop(now + 0.30);
+      } else if (type === 'hit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.26);
       }
     } catch (e) {}
   };
@@ -102,7 +102,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     setCompletedPots(0);
     setEarnedXhaus(0);
     gameRef.current = {
-      catX: 80,
+      catX: 75,
       catY: 185,
       catVy: 0,
       isGrounded: true,
@@ -115,8 +115,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       particles: [],
       floatingTexts: [],
       lastSpawn: Date.now(),
-      groundY: 188,
-      speed: 3.8,
+      groundY: 185,
+      speed: 4.0,
       frame: 0,
       scaleX: 1.0,
       scaleY: 1.0
@@ -134,28 +134,28 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
     const g = gameRef.current;
     if (g.isGrounded || g.coyoteTimer > 0) {
-      g.catVy = -12.5; // Smooth launch velocity
+      g.catVy = -11.0; // Responsive jump velocity
       g.isGrounded = false;
       g.coyoteTimer = 0;
-      g.scaleX = 0.8;
-      g.scaleY = 1.3; // Squash-Stretch launch
+      g.scaleX = 0.85;
+      g.scaleY = 1.25; // Squash-Stretch launch
       playRetroSound('jump');
 
       // Sparkle / Dust particles on jump
       for (let i = 0; i < 4; i++) {
         g.particles.push({
-          x: g.catX + 16 + (Math.random() * 12 - 6),
-          y: g.groundY + 4,
+          x: g.catX + 14 + (Math.random() * 10 - 5),
+          y: g.groundY + 2,
           vx: (Math.random() - 0.7) * 2,
           vy: -Math.random() * 2,
           size: Math.random() * 4 + 2,
           color: '#fbbf24',
-          life: 0.8
+          life: 0.7
         });
       }
     } else {
-      // Buffer jump for next 150ms
-      g.jumpBufferTimer = 0.15;
+      // Buffer jump for next 160ms
+      g.jumpBufferTimer = 0.16;
     }
   };
 
@@ -179,18 +179,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
     let lastTime = performance.now();
 
     const loop = (currentTime) => {
-      const dt = Math.min(0.04, (currentTime - lastTime) / 1000);
+      const dt = Math.min(0.035, (currentTime - lastTime) / 1000);
       lastTime = currentTime;
 
       const g = gameRef.current;
       g.frame++;
       g.distanceRun += g.speed * 1.0;
 
-      // 1. Smooth Platformer Physics
+      // 1. Platformer Physics (Weighty Arc with Fall Gravity Multiplier)
       if (g.isGrounded) {
         g.coyoteTimer = 0.08;
       } else {
@@ -199,26 +198,27 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       g.jumpBufferTimer = Math.max(0, g.jumpBufferTimer - dt);
 
-      // Smooth Gravity Curve
-      g.catVy += 32 * dt;
+      // Downward gravity is slightly stronger for snappy, fluid platforming feel
+      const gravity = g.catVy > 0 ? 28 : 23;
+      g.catVy += gravity * dt;
       g.catY += g.catVy;
 
       // Spring Interpolation for Squash & Stretch
-      g.scaleX += (1.0 - g.scaleX) * 0.18;
-      g.scaleY += (1.0 - g.scaleY) * 0.18;
+      g.scaleX += (1.0 - g.scaleX) * 0.2;
+      g.scaleY += (1.0 - g.scaleY) * 0.2;
 
       // Ground Collision
       if (g.catY >= g.groundY) {
         if (!g.isGrounded) {
-          g.scaleX = 1.28; // Landing squash
-          g.scaleY = 0.72;
+          g.scaleX = 1.25; // Landing squash
+          g.scaleY = 0.75;
           // Check buffered jump on landing
           if (g.jumpBufferTimer > 0) {
-            g.catVy = -12.5;
+            g.catVy = -11.0;
             g.jumpBufferTimer = 0;
             g.isGrounded = false;
-            g.scaleX = 0.8;
-            g.scaleY = 1.3;
+            g.scaleX = 0.85;
+            g.scaleY = 1.25;
             playRetroSound('jump');
           }
         }
@@ -230,21 +230,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       }
 
       // Smooth Acceleration
-      g.speed = Math.min(7.2, 3.8 + g.score * 0.03);
+      g.speed = Math.min(7.0, 4.0 + g.score * 0.025);
 
       // 2. Spawn Items & Mischievous Chili Demons
       const nowMs = Date.now();
-      if (nowMs - g.lastSpawn > 1280 / (g.speed / 3.8)) {
+      if (nowMs - g.lastSpawn > 1300 / (g.speed / 4.0)) {
         g.lastSpawn = nowMs;
-        const isMonster = Math.random() > 0.44;
+        const isMonster = Math.random() > 0.45;
 
         if (isMonster) {
           g.monsters.push({
             x: canvas.width + 30,
             y: g.groundY,
             type: Math.random() > 0.5 ? 'hop_chili' : 'run_chili',
-            width: 28,
-            height: 32,
+            width: 24,
+            height: 28,
             animPhase: Math.random() * Math.PI * 2
           });
         } else {
@@ -252,26 +252,38 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           const foodType = r > 0.6 ? 'satow' : (r > 0.3 ? 'fish' : 'bamboo');
           g.items.push({
             x: canvas.width + 20,
-            y: g.groundY - (Math.random() > 0.5 ? 48 : 16),
+            y: g.groundY - (Math.random() > 0.5 ? 42 : 14),
             type: foodType,
             bobOffset: Math.random() * Math.PI * 2,
-            size: 24
+            size: 22
           });
         }
       }
 
-      // 3. Update Collectible Items
+      // 3. Update Collectible Items (With Magnetic Pull)
       g.items.forEach((item, idx) => {
         item.x -= g.speed;
-        const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 4;
+        const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 3.5;
+        const currentItemY = item.y + bob;
 
-        // Collision Check with Cat (x=80, w=32, h=28)
-        const catBox = { x: g.catX + 4, y: g.catY - 24, w: 32, h: 26 };
+        // Juicy Magnetic Pull toward Cat
+        const distCatX = g.catX + 14 - (item.x + 11);
+        const distCatY = g.catY - 14 - (currentItemY + 11);
+        const dist = Math.hypot(distCatX, distCatY);
+        if (dist < 42) {
+          item.x += distCatX * 0.2;
+          item.y += distCatY * 0.2;
+        }
+
+        // Precise AABB Collision Check with Cat
+        const catBox = { left: g.catX + 4, right: g.catX + 28, top: g.catY - 24, bottom: g.catY };
+        const itemBox = { left: item.x, right: item.x + item.size, top: currentItemY, bottom: currentItemY + item.size };
+
         if (
-          catBox.x < item.x + item.size &&
-          catBox.x + catBox.w > item.x &&
-          catBox.y < item.y + bob + item.size &&
-          catBox.y + catBox.h > item.y + bob
+          catBox.right > itemBox.left &&
+          catBox.left < itemBox.right &&
+          catBox.bottom > itemBox.top &&
+          catBox.top < itemBox.bottom
         ) {
           g.items.splice(idx, 1);
           const pts = item.type === 'satow' ? 20 : (item.type === 'fish' ? 10 : 15);
@@ -294,8 +306,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               playRetroSound('pot_complete');
 
               g.floatingTexts.push({
-                x: g.catX + 18,
-                y: g.catY - 36,
+                x: g.catX + 16,
+                y: g.catY - 32,
                 text: '+0.10 XH 🥘',
                 color: '#ea580c',
                 life: 1.2
@@ -307,38 +319,40 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           });
 
           // Sparkle particles
-          for (let p = 0; p < 6; p++) {
+          for (let p = 0; p < 5; p++) {
             g.particles.push({
-              x: item.x + 12,
-              y: item.y + bob + 12,
-              vx: (Math.random() - 0.5) * 3.5,
-              vy: (Math.random() - 0.5) * 3.5,
+              x: item.x + 11,
+              y: currentItemY + 11,
+              vx: (Math.random() - 0.5) * 3,
+              vy: (Math.random() - 0.5) * 3,
               size: Math.random() * 4 + 2,
               color: item.type === 'satow' ? '#22c55e' : (item.type === 'fish' ? '#38bdf8' : '#f59e0b'),
-              life: 0.9
+              life: 0.8
             });
           }
         }
       });
       g.items = g.items.filter(i => i.x > -40);
 
-      // 4. Update Chili Demons ("ปีศาจพริก")
+      // 4. Update Chili Demons ("ปีศาจพริก") with Precise AABB Hitboxes
       for (let idx = 0; idx < g.monsters.length; idx++) {
         const mon = g.monsters[idx];
         mon.x -= g.speed;
 
         let monY = mon.y;
         if (mon.type === 'hop_chili') {
-          monY = mon.y - Math.abs(Math.sin(g.frame * 0.1 + mon.animPhase)) * 24;
+          monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
         }
 
-        // Collision Check with Cat
-        const catBox = { x: g.catX + 6, y: g.catY - 22, w: 26, h: 22 };
+        // Forgiving, player-friendly AABB collision box
+        const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 20, bottom: g.catY - 2 };
+        const monBox = { left: mon.x + 5, right: mon.x + mon.width - 5, top: monY - mon.height + 4, bottom: monY };
+
         if (
-          catBox.x < mon.x + mon.width - 4 &&
-          catBox.x + catBox.w > mon.x + 4 &&
-          catBox.y < monY &&
-          catBox.y + catBox.h > monY - mon.height + 4
+          catBox.right > monBox.left &&
+          catBox.left < monBox.right &&
+          catBox.bottom > monBox.top &&
+          catBox.top < monBox.bottom
         ) {
           playRetroSound('hit');
           setGameState('gameover');
@@ -357,307 +371,327 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-        p.life -= dt * 1.6;
+        p.life -= dt * 1.5;
       });
       g.particles = g.particles.filter(p => p.life > 0);
 
       g.floatingTexts.forEach(ft => {
-        ft.y -= 22 * dt;
+        ft.y -= 20 * dt;
         ft.life -= dt * 1.0;
       });
       g.floatingTexts = g.floatingTexts.filter(ft => ft.life > 0);
 
       // ============================================================
-      // 🎨 RETRO CHUNKY PIXEL ART RENDERING (MATCHING USER'S REFS)
+      // 🎨 RETRO CHUNKY PIXEL ART RENDERING (PROPERLY GROUND-ANCHORED)
       // ============================================================
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1. Warm Cream / Ivory Sky (Like Ref 1 & 3)
+      // 1. Warm Cream Sky (Ref 1 & 3 Palette)
       ctx.fillStyle = '#fef8e7';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Cute Smiling Sun (Ref 3 Inspiration)
-      const sunX = canvas.width - 70;
-      const sunY = 40;
-      // Sun Rays
+      // Cute Smiling Sun (Ref 3)
+      const sunX = canvas.width - 65;
+      const sunY = 38;
       ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(sunX - 18, sunY - 4, 36, 8);
-      ctx.fillRect(sunX - 4, sunY - 18, 8, 36);
-      ctx.fillRect(sunX - 14, sunY - 14, 28, 28);
-      // Sun Center Body
-      ctx.fillStyle = '#fde047';
+      ctx.fillRect(sunX - 16, sunY - 4, 32, 8);
+      ctx.fillRect(sunX - 4, sunY - 16, 8, 32);
       ctx.fillRect(sunX - 12, sunY - 12, 24, 24);
-      // Sun Cute Face
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(sunX - 10, sunY - 10, 20, 20);
       ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(sunX - 6, sunY - 4, 3, 4); // Eye L
-      ctx.fillRect(sunX + 3, sunY - 4, 3, 4); // Eye R
-      ctx.fillRect(sunX - 1, sunY + 2, 2, 2); // Mouth
+      ctx.fillRect(sunX - 5, sunY - 3, 2, 4);
+      ctx.fillRect(sunX + 3, sunY - 3, 2, 4);
+      ctx.fillRect(sunX - 1, sunY + 2, 2, 2);
 
-      // Cute Blushing Pixel Clouds (Ref 3 Inspiration)
-      const cloudShift = (g.distanceRun * 0.2) % (canvas.width + 120);
+      // Cute Blushing Pixel Clouds (Ref 3)
       const drawCuteCloud = (cx, cy) => {
-        ctx.fillStyle = '#1f1d24'; // Bold Outline
-        ctx.fillRect(cx, cy + 6, 48, 18);
-        ctx.fillRect(cx + 8, cy, 32, 26);
-        ctx.fillRect(cx + 16, cy - 4, 18, 32);
-
-        ctx.fillStyle = '#93c5fd'; // Soft Blue Fill
-        ctx.fillRect(cx + 2, cy + 8, 44, 14);
-        ctx.fillRect(cx + 10, cy + 2, 28, 22);
-        ctx.fillRect(cx + 18, cy - 2, 14, 26);
-
-        // Eyes & Blush
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cx + 14, cy + 10, 3, 3);
-        ctx.fillRect(cx + 30, cy + 10, 3, 3);
-        ctx.fillStyle = '#f43f5e'; // Pink Blush
-        ctx.fillRect(cx + 10, cy + 14, 4, 2);
-        ctx.fillRect(cx + 34, cy + 14, 4, 2);
+        ctx.fillRect(cx, cy + 6, 44, 16);
+        ctx.fillRect(cx + 8, cy, 28, 24);
+        ctx.fillRect(cx + 14, cy - 4, 16, 30);
+
+        ctx.fillStyle = '#93c5fd';
+        ctx.fillRect(cx + 2, cy + 8, 40, 12);
+        ctx.fillRect(cx + 10, cy + 2, 24, 20);
+        ctx.fillRect(cx + 16, cy - 2, 12, 24);
+
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(cx + 12, cy + 8, 3, 3);
+        ctx.fillRect(cx + 26, cy + 8, 3, 3);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(cx + 8, cy + 12, 4, 2);
+        ctx.fillRect(cx + 30, cy + 12, 4, 2);
       };
-      drawCuteCloud(canvas.width - cloudShift, 28);
-      drawCuteCloud(canvas.width - ((cloudShift + 300) % (canvas.width + 120)), 50);
 
-      // ============================================================
-      // NAKHON PHANOM LANDMARKS & THAI STREET SCENERY (REFS 2 & 3)
-      // ============================================================
-      const loopDist = (g.distanceRun * 0.9) % 2600;
+      const cloud1X = (canvas.width - ((g.distanceRun * 0.2) % (canvas.width + 120)) + canvas.width + 120) % (canvas.width + 120) - 60;
+      const cloud2X = (canvas.width - (((g.distanceRun * 0.2) + 260) % (canvas.width + 120)) + canvas.width + 120) % (canvas.width + 120) - 60;
+      drawCuteCloud(cloud1X, 26);
+      drawCuteCloud(cloud2X, 46);
 
-      // 1. 🛕 วัดมหาธาตุ (Wat Mahathat Pagoda - Chunky Pixel Art)
-      const watX = 560 - loopDist;
-      if (watX > -160 && watX < canvas.width + 100) {
-        // Base Wall
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(watX, 98, 48, 46);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(watX + 3, 101, 42, 40);
+      // Distant Lao Mountains Silhouette
+      ctx.fillStyle = '#ebd5b3';
+      ctx.beginPath();
+      ctx.moveTo(0, 145);
+      for (let mx = 0; mx <= canvas.width; mx += 20) {
+        const peak = Math.sin((mx + g.distanceRun * 0.15) * 0.02) * 14;
+        ctx.lineTo(mx, 135 + peak);
+      }
+      ctx.lineTo(canvas.width, 155);
+      ctx.lineTo(0, 155);
+      ctx.closePath();
+      ctx.fill();
 
-        // Golden Multi-Tier Pagoda
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(watX + 8, 80, 32, 20);
-        ctx.fillRect(watX + 14, 60, 20, 22);
-        ctx.fillRect(watX + 18, 40, 12, 22);
-        ctx.fillRect(watX + 22, 16, 4, 26); // Spire
-
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(watX + 11, 83, 26, 14);
-        ctx.fillRect(watX + 17, 63, 14, 16);
-        ctx.fillRect(watX + 20, 43, 8, 16);
-        ctx.fillStyle = '#fde047'; // Gold Highlight
-        ctx.fillRect(watX + 23, 18, 2, 22);
+      // Mekong River Shimmer Band
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(0, 146, canvas.width, 14);
+      ctx.fillStyle = '#bae6fd';
+      const waveShift = (g.frame * 2) % 28;
+      for (let wx = -28; wx < canvas.width; wx += 28) {
+        ctx.fillRect(wx + waveShift, 150, 14, 2);
       }
 
-      // 2. 🍉 รถเข็นผลไม้ไทย & เก้าอี้แดง (Thai Fruit Cart - Ref 2 Inspiration)
-      const cartX = 1100 - loopDist;
-      if (cartX > -160 && cartX < canvas.width + 100) {
-        // Glass Fruit Cart Body
+      // ============================================================
+      // CONTINUOUS SCENERY & LANDMARKS (FIRMLY SEATED ON GROUND y=185)
+      // ============================================================
+      const totalLoop = 1800;
+      const getSceneX = (baseX) => {
+        const scrolled = (baseX - (g.distanceRun * 0.85)) % totalLoop;
+        return ((scrolled % totalLoop) + totalLoop) % totalLoop - 100;
+      };
+
+      // 1. 🛕 วัดมหาธาตุ (Seated on Ground y=185)
+      const watX = getSceneX(200);
+      if (watX > -120 && watX < canvas.width + 80) {
+        const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cartX, 108, 46, 36);
-        ctx.fillStyle = '#0284c7'; // Blue Metal Frame
-        ctx.fillRect(cartX + 2, 110, 42, 32);
+        ctx.fillRect(watX, gy - 46, 44, 46); // Main Body
+        ctx.fillRect(watX + 6, gy - 66, 32, 20); // Mid Tier
+        ctx.fillRect(watX + 12, gy - 86, 20, 20); // Top Tier
+        ctx.fillRect(watX + 18, gy - 110, 8, 24); // Spire
 
-        // Fruit Stacks inside Cart (Watermelon, Mango, Pineapple)
-        ctx.fillStyle = '#ef4444'; // Red Watermelon
-        ctx.fillRect(cartX + 6, 114, 10, 10);
-        ctx.fillStyle = '#22c55e'; // Green Guava
-        ctx.fillRect(cartX + 18, 114, 10, 10);
-        ctx.fillStyle = '#facc15'; // Yellow Mango
-        ctx.fillRect(cartX + 30, 114, 10, 10);
+        ctx.fillStyle = '#ffffff'; // White Stupa Base
+        ctx.fillRect(watX + 3, gy - 43, 38, 43);
+        ctx.fillStyle = '#f59e0b'; // Gold Tier 1
+        ctx.fillRect(watX + 9, gy - 63, 26, 17);
+        ctx.fillStyle = '#fbbf24'; // Gold Tier 2
+        ctx.fillRect(watX + 15, gy - 83, 14, 17);
+        ctx.fillStyle = '#fde047'; // Gold Spire
+        ctx.fillRect(watX + 20, gy - 108, 4, 22);
+      }
 
-        // Cart Wheel
+      // 2. 🍉 รถเข็นผลไม้ไทย & เก้าอี้แดง (Ref 2 Inspiration - Seated on Ground y=185)
+      const cartX = getSceneX(650);
+      if (cartX > -120 && cartX < canvas.width + 80) {
+        const gy = g.groundY;
+        // Fruit Cart Body
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(cartX, gy - 44, 44, 34);
+        ctx.fillStyle = '#0284c7'; // Blue frame
+        ctx.fillRect(cartX + 2, gy - 42, 40, 30);
+
+        // Fruits inside glass case
+        ctx.fillStyle = '#ef4444'; // Watermelon
+        ctx.fillRect(cartX + 5, gy - 38, 9, 9);
+        ctx.fillStyle = '#22c55e'; // Guava
+        ctx.fillRect(cartX + 16, gy - 38, 9, 9);
+        ctx.fillStyle = '#facc15'; // Mango
+        ctx.fillRect(cartX + 27, gy - 38, 9, 9);
+
+        // Wheel on ground
         ctx.fillStyle = '#1f1d24';
         ctx.beginPath();
-        ctx.arc(cartX + 14, 148, 8, 0, Math.PI * 2);
+        ctx.arc(cartX + 14, gy - 8, 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#e2e8f0';
         ctx.beginPath();
-        ctx.arc(cartX + 14, 148, 5, 0, Math.PI * 2);
+        ctx.arc(cartX + 14, gy - 8, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Red Plastic Stool with Chili-Salt Jar (Ref 2 Inspiration)
+        // Red Plastic Chair (Ref 2)
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cartX + 48, 126, 18, 22);
-        ctx.fillStyle = '#dc2626'; // Red Plastic Chair
-        ctx.fillRect(cartX + 50, 128, 14, 18);
-        ctx.fillStyle = '#fef08a'; // Chili-Salt Glass Jar
-        ctx.fillRect(cartX + 54, 118, 6, 8);
-        ctx.fillStyle = '#f43f5e'; // Pink Jar Lid
-        ctx.fillRect(cartX + 53, 116, 8, 3);
+        ctx.fillRect(cartX + 46, gy - 24, 18, 24);
+        ctx.fillStyle = '#dc2626'; // Red
+        ctx.fillRect(cartX + 48, gy - 22, 14, 22);
+        // Salt Jar on chair
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(cartX + 52, gy - 32, 6, 8);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(cartX + 51, gy - 34, 8, 3);
       }
 
-      // 3. 🕰️ หอนาฬิกาเวียดนามอนุสรณ์ (Vietnam Clock Tower - Chunky Pixel Art)
-      const clockX = 1680 - loopDist;
-      if (clockX > -160 && clockX < canvas.width + 100) {
-        // Red Brick Tower Body
+      // 3. 🕰️ หอนาฬิกาเวียดนามอนุสรณ์ (Seated on Ground y=185)
+      const clockX = getSceneX(1100);
+      if (clockX > -120 && clockX < canvas.width + 80) {
+        const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(clockX, 68, 38, 76);
+        ctx.fillRect(clockX, gy - 80, 38, 80); // Tower
+        ctx.fillRect(clockX - 4, gy - 92, 46, 12); // Roof base
+        ctx.fillRect(clockX + 5, gy - 106, 28, 14); // Roof top
+
         ctx.fillStyle = '#e11d48'; // Pink-Red Brick
-        ctx.fillRect(clockX + 3, 71, 32, 70);
+        ctx.fillRect(clockX + 3, gy - 77, 32, 77);
+        ctx.fillStyle = '#881337'; // Dark Roof
+        ctx.fillRect(clockX - 2, gy - 90, 42, 8);
+        ctx.fillRect(clockX + 7, gy - 104, 24, 12);
 
-        // Stepped Roof
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(clockX - 4, 58, 46, 12);
-        ctx.fillRect(clockX + 6, 44, 26, 16);
-        ctx.fillStyle = '#881337';
-        ctx.fillRect(clockX - 2, 60, 42, 8);
-        ctx.fillRect(clockX + 8, 46, 22, 12);
-
-        // Clock Face with Cute Clock Hands
+        // Clock Face
         ctx.fillStyle = '#1f1d24';
         ctx.beginPath();
-        ctx.arc(clockX + 19, 86, 11, 0, Math.PI * 2);
+        ctx.arc(clockX + 19, gy - 60, 11, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(clockX + 19, 86, 8, 0, Math.PI * 2);
+        ctx.arc(clockX + 19, gy - 60, 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(clockX + 18, 81, 2, 6); // Hand
-        ctx.fillRect(clockX + 18, 86, 5, 2);
+        ctx.fillRect(clockX + 18, gy - 65, 2, 6);
+        ctx.fillRect(clockX + 18, gy - 60, 5, 2);
       }
 
-      // 4. 🐉 พญาศรีสัตตนาคราช (7-Headed Golden Naga - Chunky Pixel Art)
-      const nagaX = 2250 - loopDist;
-      if (nagaX > -180 && nagaX < canvas.width + 100) {
-        // Dark Base Pedestal
+      // 4. 🐉 พญาศรีสัตตนาคราช 7 เศียร (Seated on Ground y=185)
+      const nagaX = getSceneX(1550);
+      if (nagaX > -120 && nagaX < canvas.width + 80) {
+        const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(nagaX, 110, 56, 34);
+        ctx.fillRect(nagaX, gy - 36, 52, 36); // Base Pedestal
         ctx.fillStyle = '#334155';
-        ctx.fillRect(nagaX + 3, 113, 50, 28);
+        ctx.fillRect(nagaX + 3, gy - 33, 46, 33);
 
-        // Golden Naga Body Coils
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(nagaX + 8, 74, 38, 38);
+        ctx.fillRect(nagaX + 8, gy - 66, 34, 32); // Naga Body
         ctx.fillStyle = '#eab308'; // Gold
-        ctx.fillRect(nagaX + 11, 77, 32, 32);
+        ctx.fillRect(nagaX + 11, gy - 63, 28, 26);
 
         // 7 Heads Fan
         const headColors = ['#fde047', '#facc15', '#eab308'];
-        const heads = [6, 13, 20, 28, 36, 43, 50];
+        const heads = [4, 11, 18, 25, 32, 39, 46];
         heads.forEach((hx, i) => {
           ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(nagaX + hx - 4, 46 - (i === 3 ? 12 : (i === 2 || i === 4 ? 6 : 0)), 8, 16);
+          ctx.fillRect(nagaX + hx - 3, gy - 86 - (i === 3 ? 10 : (i === 2 || i === 4 ? 5 : 0)), 8, 18);
           ctx.fillStyle = headColors[i % 3];
-          ctx.fillRect(nagaX + hx - 2, 48 - (i === 3 ? 12 : (i === 2 || i === 4 ? 6 : 0)), 4, 12);
+          ctx.fillRect(nagaX + hx - 1, gy - 84 - (i === 3 ? 10 : (i === 2 || i === 4 ? 5 : 0)), 4, 14);
         });
 
         // Water Spout Droplets
         ctx.fillStyle = '#38bdf8';
-        const waterSpurt = (g.frame * 3) % 24;
-        ctx.fillRect(nagaX - 8 - waterSpurt, 52 + waterSpurt * 1.5, 4, 4);
-        ctx.fillRect(nagaX - 16 - waterSpurt, 66 + waterSpurt * 1.8, 5, 4);
+        const waterSpurt = (g.frame * 3) % 20;
+        ctx.fillRect(nagaX - 8 - waterSpurt, gy - 80 + waterSpurt * 1.5, 4, 4);
       }
 
       // ============================================================
-      // FOREGROUND: FLUFFY TREES & CHECKERBOARD GROUND (REF 3)
+      // TREES & CHECKERBOARD GROUND (ALL SEATED ON y=185)
       // ============================================================
-      // Cute Fluffy Trees along Path
       const drawCuteTree = (tx, isPink = false) => {
+        const gy = g.groundY;
         // Tree Trunk
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(tx + 8, 116, 12, 30);
+        ctx.fillRect(tx + 8, gy - 30, 10, 30);
         ctx.fillStyle = '#78350f';
-        ctx.fillRect(tx + 10, 118, 8, 26);
+        ctx.fillRect(tx + 10, gy - 28, 6, 28);
 
-        // Fluffy Canopy (Green or Sakura Pink like Ref 3)
-        ctx.fillStyle = '#1f1d24'; // Bold Outline
+        // Fluffy Canopy
+        ctx.fillStyle = '#1f1d24';
         ctx.beginPath();
-        ctx.arc(tx + 14, 98, 22, 0, Math.PI * 2);
-        ctx.arc(tx + 2, 106, 14, 0, Math.PI * 2);
-        ctx.arc(tx + 26, 106, 14, 0, Math.PI * 2);
+        ctx.arc(tx + 13, gy - 46, 20, 0, Math.PI * 2);
+        ctx.arc(tx + 2, gy - 38, 12, 0, Math.PI * 2);
+        ctx.arc(tx + 24, gy - 38, 12, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = isPink ? '#f472b6' : '#22c55e'; // Base Canopy
+        ctx.fillStyle = isPink ? '#f472b6' : '#22c55e';
         ctx.beginPath();
-        ctx.arc(tx + 14, 98, 19, 0, Math.PI * 2);
-        ctx.arc(tx + 2, 106, 11, 0, Math.PI * 2);
-        ctx.arc(tx + 26, 106, 11, 0, Math.PI * 2);
+        ctx.arc(tx + 13, gy - 46, 17, 0, Math.PI * 2);
+        ctx.arc(tx + 2, gy - 38, 9, 0, Math.PI * 2);
+        ctx.arc(tx + 24, gy - 38, 9, 0, Math.PI * 2);
         ctx.fill();
 
-        // Canopy Highlights
         ctx.fillStyle = isPink ? '#fbcfe8' : '#86efac';
-        ctx.fillRect(tx + 8, 86, 10, 6);
+        ctx.fillRect(tx + 8, gy - 56, 8, 5);
       };
 
-      const tree1X = 260 - (g.distanceRun * 0.9) % 900;
-      const tree2X = 720 - (g.distanceRun * 0.9) % 900;
-      if (tree1X > -80 && tree1X < canvas.width + 50) drawCuteTree(tree1X, false);
-      if (tree2X > -80 && tree2X < canvas.width + 50) drawCuteTree(tree2X, true);
+      const tree1X = getSceneX(420);
+      const tree2X = getSceneX(880);
+      const tree3X = getSceneX(1340);
+      if (tree1X > -60 && tree1X < canvas.width + 40) drawCuteTree(tree1X, false);
+      if (tree2X > -60 && tree2X < canvas.width + 40) drawCuteTree(tree2X, true);
+      if (tree3X > -60 && tree3X < canvas.width + 40) drawCuteTree(tree3X, false);
 
-      // Charming Checkerboard Grass Ground (Ref 3 Inspiration)
-      ctx.fillStyle = '#1f1d24'; // Border line
-      ctx.fillRect(0, g.groundY + 2, canvas.width, 3);
+      // Solid Ground Line & Checkered Grass
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(0, g.groundY, canvas.width, 3);
       ctx.fillStyle = '#65a30d'; // Grass Green
-      ctx.fillRect(0, g.groundY + 5, canvas.width, canvas.height - (g.groundY + 5));
+      ctx.fillRect(0, g.groundY + 3, canvas.width, canvas.height - (g.groundY + 3));
 
       // Checkerboard Pattern
       ctx.fillStyle = '#4d7c0f';
       const tileShift = (g.distanceRun * 2.4) % 24;
       for (let tx = -24; tx < canvas.width; tx += 24) {
-        ctx.fillRect(tx + tileShift, g.groundY + 5, 12, 10);
-        ctx.fillRect(tx + tileShift + 12, g.groundY + 15, 12, 15);
+        ctx.fillRect(tx + tileShift, g.groundY + 3, 12, 10);
+        ctx.fillRect(tx + tileShift + 12, g.groundY + 13, 12, 18);
       }
 
-      // Little Flowers along Grass (Ref 3 Inspiration)
+      // Little Flowers along Grass
       const drawFlower = (fx, color) => {
         ctx.fillStyle = color;
         ctx.fillRect(fx + 2, g.groundY - 6, 4, 4);
         ctx.fillRect(fx - 2, g.groundY - 4, 4, 4);
         ctx.fillRect(fx + 6, g.groundY - 4, 4, 4);
         ctx.fillRect(fx + 2, g.groundY - 2, 4, 4);
-        ctx.fillStyle = '#fde047'; // Flower Center
+        ctx.fillStyle = '#fde047';
         ctx.fillRect(fx + 2, g.groundY - 4, 4, 4);
       };
-      drawFlower(60 - (g.distanceRun * 2.4) % 200, '#f43f5e');
-      drawFlower(160 - (g.distanceRun * 2.4) % 200, '#38bdf8');
+      drawFlower(50 - (g.distanceRun * 2.4) % 220, '#f43f5e');
+      drawFlower(140 - (g.distanceRun * 2.4) % 220, '#38bdf8');
+      drawFlower(210 - (g.distanceRun * 2.4) % 220, '#e879f9');
 
       // ============================================================
-      // 🌶️ CUTE MISCHIEVOUS "ปีศาจพริก" (REF 1 SPRITE INSPIRATION)
+      // 🌶️ CUTE MISCHIEVOUS "ปีศาจพริก" (REF 1 SPRITE STYLE)
       // ============================================================
       g.monsters.forEach(mon => {
         ctx.save();
         let monY = mon.y;
         if (mon.type === 'hop_chili') {
-          monY = mon.y - Math.abs(Math.sin(g.frame * 0.1 + mon.animPhase)) * 24;
+          monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
         }
 
         const mx = mon.x;
 
-        // Shadow
+        // Shadow on ground
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.ellipse(mx + 14, mon.y + 2, 10, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(mx + 12, mon.y + 2, 10, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bold Outline (Ref 1 Style)
+        // Bold Outline
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(mx + 4, monY - 26, 20, 24);
-        ctx.fillRect(mx + 8, monY - 32, 12, 30);
-        ctx.fillRect(mx + 2, monY - 18, 24, 14);
+        ctx.fillRect(mx + 3, monY - 24, 18, 22);
+        ctx.fillRect(mx + 6, monY - 28, 12, 26);
+        ctx.fillRect(mx + 1, monY - 16, 22, 12);
 
         // Spicy Red Body
         ctx.fillStyle = '#ef4444';
-        ctx.fillRect(mx + 6, monY - 24, 16, 20);
-        ctx.fillRect(mx + 10, monY - 28, 8, 24);
-        ctx.fillRect(mx + 4, monY - 16, 20, 10);
+        ctx.fillRect(mx + 5, monY - 22, 14, 18);
+        ctx.fillRect(mx + 8, monY - 26, 8, 22);
+        ctx.fillRect(mx + 3, monY - 14, 18, 8);
 
         // Green Stem Horn
         ctx.fillStyle = '#22c55e';
-        ctx.fillRect(mx + 12, monY - 34, 4, 6);
-        ctx.fillRect(mx + 14, monY - 36, 4, 3);
+        ctx.fillRect(mx + 10, monY - 30, 4, 4);
+        ctx.fillRect(mx + 12, monY - 33, 3, 3);
 
-        // Cute Angry/Cheeky Face (Ref 1 Style)
-        ctx.fillStyle = '#ffffff'; // Big White Eyes
-        ctx.fillRect(mx + 8, monY - 18, 4, 5);
-        ctx.fillRect(mx + 16, monY - 18, 4, 5);
-        ctx.fillStyle = '#1f1d24'; // Pupils
-        ctx.fillRect(mx + 10, monY - 17, 2, 3);
-        ctx.fillRect(mx + 18, monY - 17, 2, 3);
+        // Cute Big Dot Eyes & Cheeky Smile (Ref 1 Style)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(mx + 6, monY - 16, 4, 4);
+        ctx.fillRect(mx + 14, monY - 16, 4, 4);
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(mx + 8, monY - 15, 2, 3);
+        ctx.fillRect(mx + 16, monY - 15, 2, 3);
 
-        // Little Feet (Animated Walking)
+        // Animated Feet
         const walkCycle = Math.sin(g.frame * 0.25) * 3;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(mx + 7 + walkCycle, monY - 3, 4, 4);
-        ctx.fillRect(mx + 17 - walkCycle, monY - 3, 4, 4);
+        ctx.fillRect(mx + 5 + walkCycle, monY - 3, 4, 3);
+        ctx.fillRect(mx + 15 - walkCycle, monY - 3, 4, 3);
 
         ctx.restore();
       });
@@ -667,33 +701,33 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       // ============================================================
       g.items.forEach(item => {
         ctx.save();
-        const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 4;
+        const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 3.5;
         const ix = item.x;
         const iy = item.y + bob;
 
         if (item.type === 'satow') {
-          // Cute Twisted Satow Pod
-          ctx.fillStyle = '#1f1d24'; // Bold Outline
+          // Twisted Satow Pod
+          ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 2, iy + 2, 18, 16);
-          ctx.fillStyle = '#22c55e'; // Green Pod
+          ctx.fillStyle = '#22c55e';
           ctx.fillRect(ix + 4, iy + 4, 14, 12);
-          ctx.fillStyle = '#86efac'; // Bean bumps
+          ctx.fillStyle = '#86efac';
           ctx.fillRect(ix + 6, iy + 6, 4, 4);
           ctx.fillRect(ix + 12, iy + 9, 4, 4);
         } else if (item.type === 'fish') {
-          // Cute Grilled Mackerel (Pla-Too)
+          // Grilled Mackerel (Pla-Too)
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 2, iy + 4, 18, 12);
-          ctx.fillRect(ix + 18, iy + 2, 4, 16); // Tail
-          ctx.fillStyle = '#38bdf8'; // Blue Fish
+          ctx.fillRect(ix + 18, iy + 2, 4, 16);
+          ctx.fillStyle = '#38bdf8';
           ctx.fillRect(ix + 4, iy + 6, 14, 8);
-          ctx.fillStyle = '#1f1d24'; // Cute Dot Eye
+          ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 6, iy + 8, 2, 2);
         } else {
-          // Cute Bamboo Shoot (หน่อไม้)
+          // Bamboo Shoot
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 4, iy + 2, 14, 18);
-          ctx.fillStyle = '#fde047'; // Yellow Shoot
+          ctx.fillStyle = '#fde047';
           ctx.fillRect(ix + 6, iy + 4, 10, 14);
           ctx.fillStyle = '#ca8a04';
           ctx.fillRect(ix + 6, iy + 10, 10, 2);
@@ -702,18 +736,18 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
 
       // ============================================================
-      // 🐱 "น้องไตปลา" (CUTE CHUBBY CALICO CAT - REFS 1 & 3 STYLE)
+      // 🐱 "น้องไตปลา" (CUTE CALICO CAT - PROPERLY SEATED ON GROUND)
       // ============================================================
       ctx.save();
       const catX = g.catX;
       const catY = g.catY;
       const legRun = Math.floor((g.frame / 5) % 4);
 
-      // Cute Oval Ground Shadow
-      const shadowScale = Math.max(0.4, 1.0 - (g.groundY - catY) / 120);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+      // Ground Shadow
+      const shadowScale = Math.max(0.4, 1.0 - (g.groundY - catY) / 100);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
       ctx.beginPath();
-      ctx.ellipse(catX + 16, g.groundY + 4, 14 * shadowScale, 4 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.ellipse(catX + 16, g.groundY + 2, 13 * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Apply Spring Squash & Stretch
@@ -721,52 +755,52 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       ctx.scale(g.scaleX, g.scaleY);
       ctx.translate(-(catX + 16), -catY);
 
-      // Tail (Bouncing tail like Ref 1 cat)
+      // Tail (Bouncing tail)
       ctx.fillStyle = '#1f1d24';
-      const tailWag = Math.sin(g.frame * 0.2) * 4;
+      const tailWag = Math.sin(g.frame * 0.2) * 3;
       ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
       ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
       ctx.fillRect(catX + 2 + tailWag, catY - 22, 4, 4);
 
-      // Main Cat Body: Bold Dark Outline (Ref 1 Style)
+      // Main Cat Body Outline
       ctx.fillStyle = '#1f1d24';
       ctx.fillRect(catX + 4, catY - 22, 24, 18);
       ctx.fillRect(catX + 8, catY - 26, 16, 22);
 
-      // Body Fill: Cream Base
+      // Body Fill (Cream Base)
       ctx.fillStyle = '#fef3c7';
       ctx.fillRect(catX + 6, catY - 20, 20, 14);
 
-      // Calico Orange & Black Patches (แมวเปรอะ)
-      ctx.fillStyle = '#f97316'; // Vibrant Orange Patch
+      // Calico Orange & Black Patches
+      ctx.fillStyle = '#f97316';
       ctx.fillRect(catX + 8, catY - 20, 8, 8);
       ctx.fillRect(catX + 18, catY - 14, 6, 6);
 
-      ctx.fillStyle = '#1f1d24'; // Black Patch
+      ctx.fillStyle = '#1f1d24';
       ctx.fillRect(catX + 18, catY - 20, 6, 6);
       ctx.fillRect(catX + 8, catY - 12, 6, 4);
 
       // Head: Cream Face with Cute Ears
-      ctx.fillStyle = '#1f1d24'; // Head Outline
+      ctx.fillStyle = '#1f1d24';
       ctx.fillRect(catX + 18, catY - 28, 16, 16);
-      ctx.fillRect(catX + 20, catY - 34, 4, 6); // Ear L
-      ctx.fillRect(catX + 28, catY - 34, 4, 6); // Ear R
+      ctx.fillRect(catX + 20, catY - 34, 4, 6);
+      ctx.fillRect(catX + 28, catY - 34, 4, 6);
 
-      ctx.fillStyle = '#fef3c7'; // Head Base
+      ctx.fillStyle = '#fef3c7';
       ctx.fillRect(catX + 20, catY - 26, 12, 12);
-      ctx.fillStyle = '#f97316'; // Ear Tip Orange
+      ctx.fillStyle = '#f97316';
       ctx.fillRect(catX + 21, catY - 32, 2, 4);
-      ctx.fillStyle = '#1f1d24'; // Ear Tip Black
+      ctx.fillStyle = '#1f1d24';
       ctx.fillRect(catX + 29, catY - 32, 2, 4);
 
-      // Cute Big Dot Eyes & Blushing Pink Cheeks (Ref 1 & 3 Style)
-      ctx.fillStyle = '#1f1d24'; // Eyes
+      // Eyes & Pink Cheeks
+      ctx.fillStyle = '#1f1d24';
       ctx.fillRect(catX + 28, catY - 22, 3, 4);
-      ctx.fillStyle = '#f43f5e'; // Pink Nose & Blush
+      ctx.fillStyle = '#f43f5e';
       ctx.fillRect(catX + 31, catY - 19, 2, 2);
       ctx.fillRect(catX + 24, catY - 18, 3, 2);
 
-      // Cute Animated Running Paws
+      // Animated Running Paws
       ctx.fillStyle = '#1f1d24';
       if (g.isGrounded) {
         if (legRun === 0) {
@@ -783,7 +817,6 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           ctx.fillRect(catX + 18, catY - 3, 4, 4);
         }
       } else {
-        // Tucked paws in air
         ctx.fillRect(catX + 10, catY - 5, 4, 4);
         ctx.fillRect(catX + 20, catY - 5, 4, 4);
       }
@@ -800,7 +833,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       g.floatingTexts.forEach(ft => {
         ctx.font = 'bold 14px Space Mono, monospace';
-        ctx.fillStyle = '#1f1d24'; // Text Shadow
+        ctx.fillStyle = '#1f1d24';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
