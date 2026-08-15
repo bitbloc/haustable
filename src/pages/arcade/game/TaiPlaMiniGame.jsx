@@ -1,6 +1,6 @@
-/* Hallmark · component: TaiPlaMiniGame · genre: Retro Chunky Pixel Arcade · theme: Cute Nakhon Phanom (Wat Mahathat, Vietnam Clock Tower, Phaya Naga, Thai Fruit Cart) x Cute Calico Tai-Pla */
+/* Hallmark · component: TaiPlaMiniGame · genre: Retro Chunky Pixel Arcade · theme: Cute Nakhon Phanom x Satow God Mode & Flaming Sprinter */
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins } from 'lucide-react';
+import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins, Zap, Flame } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, onCoinEarned }) {
@@ -12,6 +12,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [potIngredients, setPotIngredients] = useState({ fish: 0, satow: 0, bamboo: 0 });
   const [completedPots, setCompletedPots] = useState(0);
   const [earnedXhaus, setEarnedXhaus] = useState(0);
+  const [godModeRemaining, setGodModeRemaining] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -27,15 +28,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     isGrounded: true,
     coyoteTimer: 0,
     jumpBufferTimer: 0,
+    godModeTimer: 0, // 3 seconds invincibility upon collecting satow
     score: 0,
     distanceRun: 0,
+    lastDistanceScore: 0,
     items: [],
     monsters: [],
     particles: [],
     floatingTexts: [],
     lastSpawn: 0,
     groundY: 185,
-    speed: 4.0,
+    speed: 3.6,
     frame: 0,
     scaleX: 1.0,
     scaleY: 1.0
@@ -73,6 +76,26 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
         osc.start(now);
         osc.stop(now + 0.19);
+      } else if (type === 'god_mode') {
+        // Super Saiyan Satow Powerup Fanfare
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(554.37, now + 0.06);
+        osc.frequency.setValueAtTime(659.25, now + 0.12);
+        osc.frequency.setValueAtTime(880, now + 0.18);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.36);
+      } else if (type === 'smash') {
+        // Enemy smash hit in God Mode
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.18);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.22);
       } else if (type === 'pot_complete') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(523.25, now); // C5
@@ -101,6 +124,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     setPotIngredients({ fish: 0, satow: 0, bamboo: 0 });
     setCompletedPots(0);
     setEarnedXhaus(0);
+    setGodModeRemaining(0);
     gameRef.current = {
       catX: 75,
       catY: 185,
@@ -108,15 +132,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       isGrounded: true,
       coyoteTimer: 0,
       jumpBufferTimer: 0,
+      godModeTimer: 0,
       score: 0,
       distanceRun: 0,
+      lastDistanceScore: 0,
       items: [],
       monsters: [],
       particles: [],
       floatingTexts: [],
       lastSpawn: Date.now(),
       groundY: 185,
-      speed: 4.0,
+      speed: 3.6,
       frame: 0,
       scaleX: 1.0,
       scaleY: 1.0
@@ -134,11 +160,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
     const g = gameRef.current;
     if (g.isGrounded || g.coyoteTimer > 0) {
-      g.catVy = -11.0; // Responsive jump velocity
+      g.catVy = -11.0;
       g.isGrounded = false;
       g.coyoteTimer = 0;
       g.scaleX = 0.85;
-      g.scaleY = 1.25; // Squash-Stretch launch
+      g.scaleY = 1.25;
       playRetroSound('jump');
 
       // Sparkle / Dust particles on jump
@@ -149,12 +175,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           vx: (Math.random() - 0.7) * 2,
           vy: -Math.random() * 2,
           size: Math.random() * 4 + 2,
-          color: '#fbbf24',
+          color: g.godModeTimer > 0 ? '#eab308' : '#fbbf24',
           life: 0.7
         });
       }
     } else {
-      // Buffer jump for next 160ms
       g.jumpBufferTimer = 0.16;
     }
   };
@@ -189,7 +214,26 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.frame++;
       g.distanceRun += g.speed * 1.0;
 
-      // 1. Platformer Physics (Weighty Arc with Fall Gravity Multiplier)
+      // 1. God Mode Timer (เทพสะตอ 3 วินาที)
+      if (g.godModeTimer > 0) {
+        g.godModeTimer = Math.max(0, g.godModeTimer - dt);
+        setGodModeRemaining(Math.ceil(g.godModeTimer));
+      } else if (godModeRemaining > 0) {
+        setGodModeRemaining(0);
+      }
+
+      // Distance Milestone Score (+1 point every 150px run)
+      if (g.distanceRun - g.lastDistanceScore >= 150) {
+        g.lastDistanceScore = g.distanceRun;
+        g.score += 1;
+        setScore(g.score);
+      }
+
+      // 2. Progressive Difficulty Scaling
+      // Speed scales gently from 3.6 up to 6.8 max
+      g.speed = Math.min(6.8, 3.6 + Math.floor(g.score / 5) * 0.25);
+
+      // 3. Platformer Physics (Weighty Arc with Fall Gravity Multiplier)
       if (g.isGrounded) {
         g.coyoteTimer = 0.08;
       } else {
@@ -198,21 +242,18 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       g.jumpBufferTimer = Math.max(0, g.jumpBufferTimer - dt);
 
-      // Downward gravity is slightly stronger for snappy, fluid platforming feel
       const gravity = g.catVy > 0 ? 28 : 23;
       g.catVy += gravity * dt;
       g.catY += g.catVy;
 
-      // Spring Interpolation for Squash & Stretch
       g.scaleX += (1.0 - g.scaleX) * 0.2;
       g.scaleY += (1.0 - g.scaleY) * 0.2;
 
       // Ground Collision
       if (g.catY >= g.groundY) {
         if (!g.isGrounded) {
-          g.scaleX = 1.25; // Landing squash
+          g.scaleX = 1.25;
           g.scaleY = 0.75;
-          // Check buffered jump on landing
           if (g.jumpBufferTimer > 0) {
             g.catVy = -11.0;
             g.jumpBufferTimer = 0;
@@ -229,27 +270,40 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         }
       }
 
-      // Smooth Acceleration
-      g.speed = Math.min(7.0, 4.0 + g.score * 0.025);
-
-      // 2. Spawn Items & Mischievous Chili Demons
+      // 4. Spawn Items & Enemies (Progressive Variety: Hopping Chili + Charging Flaming Man)
       const nowMs = Date.now();
-      if (nowMs - g.lastSpawn > 1300 / (g.speed / 4.0)) {
+      const spawnInterval = Math.max(880, 1500 - g.score * 18);
+      if (nowMs - g.lastSpawn > spawnInterval) {
         g.lastSpawn = nowMs;
         const isMonster = Math.random() > 0.45;
 
         if (isMonster) {
+          // As score increases, spawn "คนหัวร้อน" (Flaming Sprinter)
+          const allowFlamer = g.score >= 5;
+          const r = Math.random();
+          let monsterType = 'hop_chili';
+
+          if (allowFlamer && r > 0.6) {
+            monsterType = 'hot_runner'; // "คนหัวร้อน" วิ่งสวนมาเร็ว!
+          } else if (r > 0.3) {
+            monsterType = 'hop_chili';
+          } else {
+            monsterType = 'run_chili';
+          }
+
           g.monsters.push({
             x: canvas.width + 30,
             y: g.groundY,
-            type: Math.random() > 0.5 ? 'hop_chili' : 'run_chili',
-            width: 24,
-            height: 28,
+            type: monsterType,
+            width: monsterType === 'hot_runner' ? 26 : 24,
+            height: monsterType === 'hot_runner' ? 34 : 28,
+            speedMultiplier: monsterType === 'hot_runner' ? 1.45 : 1.0,
             animPhase: Math.random() * Math.PI * 2
           });
         } else {
           const r = Math.random();
-          const foodType = r > 0.6 ? 'satow' : (r > 0.3 ? 'fish' : 'bamboo');
+          // Satow is special (gives God Mode!)
+          const foodType = r > 0.65 ? 'satow' : (r > 0.3 ? 'fish' : 'bamboo');
           g.items.push({
             x: canvas.width + 20,
             y: g.groundY - (Math.random() > 0.5 ? 42 : 14),
@@ -260,19 +314,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         }
       }
 
-      // 3. Update Collectible Items (With Magnetic Pull)
+      // 5. Update Collectible Items (With Magnetic Pull)
       g.items.forEach((item, idx) => {
         item.x -= g.speed;
         const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 3.5;
         const currentItemY = item.y + bob;
 
-        // Juicy Magnetic Pull toward Cat
+        // Magnetic pull toward Cat
         const distCatX = g.catX + 14 - (item.x + 11);
         const distCatY = g.catY - 14 - (currentItemY + 11);
         const dist = Math.hypot(distCatX, distCatY);
-        if (dist < 42) {
-          item.x += distCatX * 0.2;
-          item.y += distCatY * 0.2;
+        if (dist < 46) {
+          item.x += distCatX * 0.22;
+          item.y += distCatY * 0.22;
         }
 
         // Precise AABB Collision Check with Cat
@@ -286,18 +340,38 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           catBox.top < itemBox.bottom
         ) {
           g.items.splice(idx, 1);
-          const pts = item.type === 'satow' ? 20 : (item.type === 'fish' ? 10 : 15);
+
+          // Calibrated Flappy-Cat Balanced Points:
+          // Fish: +1 pt, Bamboo: +2 pts, Satow: +3 pts + 3s GOD MODE!
+          const pts = item.type === 'satow' ? 3 : (item.type === 'fish' ? 1 : 2);
           g.score += pts;
           setScore(g.score);
 
+          // Activate 3s God Mode if collecting Satow!
+          if (item.type === 'satow') {
+            g.godModeTimer = 3.0; // 3 seconds invincible
+            playRetroSound('god_mode');
+            g.floatingTexts.push({
+              x: g.catX + 10,
+              y: g.catY - 42,
+              text: '⚡ เทพสะตอ! (GOD MODE)',
+              color: '#16a34a',
+              life: 1.5
+            });
+          } else {
+            playRetroSound('collect');
+          }
+
           setPotIngredients(prev => {
             const next = { ...prev, [item.type]: prev[item.type] + 1 };
-            // Complete Pot (1 fish + 1 satow + 1 bamboo)
+            // Complete Pot (1 fish + 1 satow + 1 bamboo) = +5 Bonus PTS & +0.10 XH
             if (next.fish >= 1 && next.satow >= 1 && next.bamboo >= 1) {
               next.fish -= 1;
               next.satow -= 1;
               next.bamboo -= 1;
               setCompletedPots(cp => cp + 1);
+              g.score += 5;
+              setScore(g.score);
               setEarnedXhaus(ex => {
                 const updated = +(ex + 0.10).toFixed(2);
                 if (onCoinEarned) onCoinEarned(0.10);
@@ -308,23 +382,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               g.floatingTexts.push({
                 x: g.catX + 16,
                 y: g.catY - 32,
-                text: '+0.10 XH 🥘',
+                text: '+5 PTS // +0.10 XH 🥘',
                 color: '#ea580c',
-                life: 1.2
+                life: 1.4
               });
-            } else {
-              playRetroSound('collect');
             }
             return next;
           });
 
           // Sparkle particles
-          for (let p = 0; p < 5; p++) {
+          for (let p = 0; p < 6; p++) {
             g.particles.push({
               x: item.x + 11,
               y: currentItemY + 11,
-              vx: (Math.random() - 0.5) * 3,
-              vy: (Math.random() - 0.5) * 3,
+              vx: (Math.random() - 0.5) * 3.5,
+              vy: (Math.random() - 0.5) * 3.5,
               size: Math.random() * 4 + 2,
               color: item.type === 'satow' ? '#22c55e' : (item.type === 'fish' ? '#38bdf8' : '#f59e0b'),
               life: 0.8
@@ -334,17 +406,30 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
       g.items = g.items.filter(i => i.x > -40);
 
-      // 4. Update Chili Demons ("ปีศาจพริก") with Precise AABB Hitboxes
-      for (let idx = 0; idx < g.monsters.length; idx++) {
+      // 6. Update Enemies (Chili Demons & "คนหัวร้อน" Flaming Sprinter)
+      for (let idx = g.monsters.length - 1; idx >= 0; idx--) {
         const mon = g.monsters[idx];
-        mon.x -= g.speed;
+        mon.x -= g.speed * (mon.speedMultiplier || 1.0);
 
         let monY = mon.y;
         if (mon.type === 'hop_chili') {
           monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
         }
 
-        // Forgiving, player-friendly AABB collision box
+        // Ember smoke behind flaming sprinter
+        if (mon.type === 'hot_runner' && Math.random() > 0.5) {
+          g.particles.push({
+            x: mon.x + 18,
+            y: monY - 24,
+            vx: Math.random() * 2 + 1,
+            vy: -Math.random() * 2 - 0.5,
+            size: Math.random() * 3 + 2,
+            color: Math.random() > 0.5 ? '#f97316' : '#ef4444',
+            life: 0.6
+          });
+        }
+
+        // Forgiving AABB collision box
         const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 20, bottom: g.catY - 2 };
         const monBox = { left: mon.x + 5, right: mon.x + mon.width - 5, top: monY - mon.height + 4, bottom: monY };
 
@@ -354,6 +439,37 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           catBox.bottom > monBox.top &&
           catBox.top < monBox.bottom
         ) {
+          // IF IN GOD MODE (เทพสะตอ): SMASH ENEMY!
+          if (g.godModeTimer > 0) {
+            playRetroSound('smash');
+            g.monsters.splice(idx, 1);
+            g.score += 2; // +2 bonus for smashing
+            setScore(g.score);
+
+            g.floatingTexts.push({
+              x: mon.x,
+              y: monY - 30,
+              text: '💥 SMASH! +2',
+              color: '#facc15',
+              life: 1.2
+            });
+
+            // Explosion sparks
+            for (let p = 0; p < 12; p++) {
+              g.particles.push({
+                x: mon.x + 12,
+                y: monY - 15,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                size: Math.random() * 4 + 2,
+                color: '#facc15',
+                life: 0.8
+              });
+            }
+            continue;
+          }
+
+          // Otherwise: Player is hit -> Game Over
           playRetroSound('hit');
           setGameState('gameover');
 
@@ -367,7 +483,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       }
       g.monsters = g.monsters.filter(m => m.x > -50);
 
-      // 5. Update Particles & Floating Texts
+      // 7. Update Particles & Floating Texts
       g.particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
@@ -387,10 +503,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // 1. Warm Cream Sky (Ref 1 & 3 Palette)
-      ctx.fillStyle = '#fef8e7';
+      // If in God Mode, sky has a subtle golden aura!
+      ctx.fillStyle = g.godModeTimer > 0 ? '#fefce8' : '#fef8e7';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Cute Smiling Sun (Ref 3)
+      // Cute Smiling Sun
       const sunX = canvas.width - 65;
       const sunY = 38;
       ctx.fillStyle = '#f59e0b';
@@ -404,7 +521,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       ctx.fillRect(sunX + 3, sunY - 3, 2, 4);
       ctx.fillRect(sunX - 1, sunY + 2, 2, 2);
 
-      // Cute Blushing Pixel Clouds (Ref 3)
+      // Cute Blushing Pixel Clouds
       const drawCuteCloud = (cx, cy) => {
         ctx.fillStyle = '#1f1d24';
         ctx.fillRect(cx, cy + 6, 44, 16);
@@ -452,7 +569,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       }
 
       // ============================================================
-      // CONTINUOUS SCENERY & LANDMARKS (FIRMLY SEATED ON GROUND y=185)
+      // CONTINUOUS SCENERY & LANDMARKS (SEATED ON GROUND y=185)
       // ============================================================
       const totalLoop = 1800;
       const getSceneX = (baseX) => {
@@ -465,40 +582,37 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       if (watX > -120 && watX < canvas.width + 80) {
         const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(watX, gy - 46, 44, 46); // Main Body
-        ctx.fillRect(watX + 6, gy - 66, 32, 20); // Mid Tier
-        ctx.fillRect(watX + 12, gy - 86, 20, 20); // Top Tier
-        ctx.fillRect(watX + 18, gy - 110, 8, 24); // Spire
+        ctx.fillRect(watX, gy - 46, 44, 46);
+        ctx.fillRect(watX + 6, gy - 66, 32, 20);
+        ctx.fillRect(watX + 12, gy - 86, 20, 20);
+        ctx.fillRect(watX + 18, gy - 110, 8, 24);
 
-        ctx.fillStyle = '#ffffff'; // White Stupa Base
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(watX + 3, gy - 43, 38, 43);
-        ctx.fillStyle = '#f59e0b'; // Gold Tier 1
+        ctx.fillStyle = '#f59e0b';
         ctx.fillRect(watX + 9, gy - 63, 26, 17);
-        ctx.fillStyle = '#fbbf24'; // Gold Tier 2
+        ctx.fillStyle = '#fbbf24';
         ctx.fillRect(watX + 15, gy - 83, 14, 17);
-        ctx.fillStyle = '#fde047'; // Gold Spire
+        ctx.fillStyle = '#fde047';
         ctx.fillRect(watX + 20, gy - 108, 4, 22);
       }
 
-      // 2. 🍉 รถเข็นผลไม้ไทย & เก้าอี้แดง (Ref 2 Inspiration - Seated on Ground y=185)
+      // 2. 🍉 รถเข็นผลไม้ไทย & เก้าอี้แดง (Ref 2)
       const cartX = getSceneX(650);
       if (cartX > -120 && cartX < canvas.width + 80) {
         const gy = g.groundY;
-        // Fruit Cart Body
         ctx.fillStyle = '#1f1d24';
         ctx.fillRect(cartX, gy - 44, 44, 34);
-        ctx.fillStyle = '#0284c7'; // Blue frame
+        ctx.fillStyle = '#0284c7';
         ctx.fillRect(cartX + 2, gy - 42, 40, 30);
 
-        // Fruits inside glass case
-        ctx.fillStyle = '#ef4444'; // Watermelon
+        ctx.fillStyle = '#ef4444';
         ctx.fillRect(cartX + 5, gy - 38, 9, 9);
-        ctx.fillStyle = '#22c55e'; // Guava
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(cartX + 16, gy - 38, 9, 9);
-        ctx.fillStyle = '#facc15'; // Mango
+        ctx.fillStyle = '#facc15';
         ctx.fillRect(cartX + 27, gy - 38, 9, 9);
 
-        // Wheel on ground
         ctx.fillStyle = '#1f1d24';
         ctx.beginPath();
         ctx.arc(cartX + 14, gy - 8, 8, 0, Math.PI * 2);
@@ -508,34 +622,31 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ctx.arc(cartX + 14, gy - 8, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Red Plastic Chair (Ref 2)
         ctx.fillStyle = '#1f1d24';
         ctx.fillRect(cartX + 46, gy - 24, 18, 24);
-        ctx.fillStyle = '#dc2626'; // Red
+        ctx.fillStyle = '#dc2626';
         ctx.fillRect(cartX + 48, gy - 22, 14, 22);
-        // Salt Jar on chair
         ctx.fillStyle = '#fef08a';
         ctx.fillRect(cartX + 52, gy - 32, 6, 8);
         ctx.fillStyle = '#f43f5e';
         ctx.fillRect(cartX + 51, gy - 34, 8, 3);
       }
 
-      // 3. 🕰️ หอนาฬิกาเวียดนามอนุสรณ์ (Seated on Ground y=185)
+      // 3. 🕰️ หอนาฬิกาเวียดนามอนุสรณ์
       const clockX = getSceneX(1100);
       if (clockX > -120 && clockX < canvas.width + 80) {
         const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(clockX, gy - 80, 38, 80); // Tower
-        ctx.fillRect(clockX - 4, gy - 92, 46, 12); // Roof base
-        ctx.fillRect(clockX + 5, gy - 106, 28, 14); // Roof top
+        ctx.fillRect(clockX, gy - 80, 38, 80);
+        ctx.fillRect(clockX - 4, gy - 92, 46, 12);
+        ctx.fillRect(clockX + 5, gy - 106, 28, 14);
 
-        ctx.fillStyle = '#e11d48'; // Pink-Red Brick
+        ctx.fillStyle = '#e11d48';
         ctx.fillRect(clockX + 3, gy - 77, 32, 77);
-        ctx.fillStyle = '#881337'; // Dark Roof
+        ctx.fillStyle = '#881337';
         ctx.fillRect(clockX - 2, gy - 90, 42, 8);
         ctx.fillRect(clockX + 7, gy - 104, 24, 12);
 
-        // Clock Face
         ctx.fillStyle = '#1f1d24';
         ctx.beginPath();
         ctx.arc(clockX + 19, gy - 60, 11, 0, Math.PI * 2);
@@ -549,21 +660,20 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ctx.fillRect(clockX + 18, gy - 60, 5, 2);
       }
 
-      // 4. 🐉 พญาศรีสัตตนาคราช 7 เศียร (Seated on Ground y=185)
+      // 4. 🐉 พญาศรีสัตตนาคราช 7 เศียร
       const nagaX = getSceneX(1550);
       if (nagaX > -120 && nagaX < canvas.width + 80) {
         const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(nagaX, gy - 36, 52, 36); // Base Pedestal
+        ctx.fillRect(nagaX, gy - 36, 52, 36);
         ctx.fillStyle = '#334155';
         ctx.fillRect(nagaX + 3, gy - 33, 46, 33);
 
         ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(nagaX + 8, gy - 66, 34, 32); // Naga Body
-        ctx.fillStyle = '#eab308'; // Gold
+        ctx.fillRect(nagaX + 8, gy - 66, 34, 32);
+        ctx.fillStyle = '#eab308';
         ctx.fillRect(nagaX + 11, gy - 63, 28, 26);
 
-        // 7 Heads Fan
         const headColors = ['#fde047', '#facc15', '#eab308'];
         const heads = [4, 11, 18, 25, 32, 39, 46];
         heads.forEach((hx, i) => {
@@ -573,24 +683,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           ctx.fillRect(nagaX + hx - 1, gy - 84 - (i === 3 ? 10 : (i === 2 || i === 4 ? 5 : 0)), 4, 14);
         });
 
-        // Water Spout Droplets
         ctx.fillStyle = '#38bdf8';
         const waterSpurt = (g.frame * 3) % 20;
         ctx.fillRect(nagaX - 8 - waterSpurt, gy - 80 + waterSpurt * 1.5, 4, 4);
       }
 
       // ============================================================
-      // TREES & CHECKERBOARD GROUND (ALL SEATED ON y=185)
+      // TREES & CHECKERBOARD GROUND
       // ============================================================
       const drawCuteTree = (tx, isPink = false) => {
         const gy = g.groundY;
-        // Tree Trunk
         ctx.fillStyle = '#1f1d24';
         ctx.fillRect(tx + 8, gy - 30, 10, 30);
         ctx.fillStyle = '#78350f';
         ctx.fillRect(tx + 10, gy - 28, 6, 28);
 
-        // Fluffy Canopy
         ctx.fillStyle = '#1f1d24';
         ctx.beginPath();
         ctx.arc(tx + 13, gy - 46, 20, 0, Math.PI * 2);
@@ -619,10 +726,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       // Solid Ground Line & Checkered Grass
       ctx.fillStyle = '#1f1d24';
       ctx.fillRect(0, g.groundY, canvas.width, 3);
-      ctx.fillStyle = '#65a30d'; // Grass Green
+      ctx.fillStyle = '#65a30d';
       ctx.fillRect(0, g.groundY + 3, canvas.width, canvas.height - (g.groundY + 3));
 
-      // Checkerboard Pattern
       ctx.fillStyle = '#4d7c0f';
       const tileShift = (g.distanceRun * 2.4) % 24;
       for (let tx = -24; tx < canvas.width; tx += 24) {
@@ -645,7 +751,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       drawFlower(210 - (g.distanceRun * 2.4) % 220, '#e879f9');
 
       // ============================================================
-      // 🌶️ CUTE MISCHIEVOUS "ปีศาจพริก" (REF 1 SPRITE STYLE)
+      // 🌶️ & 🔥 ENEMIES: "ปีศาจพริก" & "คนหัวร้อน" (FLAMING SPRINTER)
       // ============================================================
       g.monsters.forEach(mon => {
         ctx.save();
@@ -659,39 +765,94 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         // Shadow on ground
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.ellipse(mx + 12, mon.y + 2, 10, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(mx + (mon.type === 'hot_runner' ? 13 : 12), mon.y + 2, 10, 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bold Outline
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(mx + 3, monY - 24, 18, 22);
-        ctx.fillRect(mx + 6, monY - 28, 12, 26);
-        ctx.fillRect(mx + 1, monY - 16, 22, 12);
+        if (mon.type === 'hot_runner') {
+          // --- 🏃 "คนหัวร้อน" (CHARGING FLAMING SPRINTER) ---
+          const runCycle = Math.floor((g.frame / 4) % 4);
 
-        // Spicy Red Body
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(mx + 5, monY - 22, 14, 18);
-        ctx.fillRect(mx + 8, monY - 26, 8, 22);
-        ctx.fillRect(mx + 3, monY - 14, 18, 8);
+          // Fiery Hair Flame (Animated)
+          const flamePulse = Math.sin(g.frame * 0.3) * 3;
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(mx + 6, monY - 26);
+          ctx.lineTo(mx + 13, monY - 38 - flamePulse);
+          ctx.lineTo(mx + 20, monY - 26);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#fde047'; // Inner Yellow Fire
+          ctx.fillRect(mx + 10, monY - 34 - flamePulse * 0.6, 6, 8);
 
-        // Green Stem Horn
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(mx + 10, monY - 30, 4, 4);
-        ctx.fillRect(mx + 12, monY - 33, 3, 3);
+          // Head (Angry Red Face)
+          ctx.fillStyle = '#1f1d24'; // Outline
+          ctx.fillRect(mx + 4, monY - 28, 18, 16);
+          ctx.fillStyle = '#ef4444'; // Red face
+          ctx.fillRect(mx + 6, monY - 26, 14, 12);
 
-        // Cute Big Dot Eyes & Cheeky Smile (Ref 1 Style)
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(mx + 6, monY - 16, 4, 4);
-        ctx.fillRect(mx + 14, monY - 16, 4, 4);
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(mx + 8, monY - 15, 2, 3);
-        ctx.fillRect(mx + 16, monY - 15, 2, 3);
+          // Angry Eyes (Slanted `< >`)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(mx + 7, monY - 22, 3, 3);
+          ctx.fillRect(mx + 15, monY - 22, 3, 3);
+          ctx.fillStyle = '#1f1d24'; // Slanted Brow
+          ctx.fillRect(mx + 6, monY - 24, 5, 2);
+          ctx.fillRect(mx + 14, monY - 24, 5, 2);
+          ctx.fillRect(mx + 8, monY - 21, 2, 2);
+          ctx.fillRect(mx + 15, monY - 21, 2, 2);
 
-        // Animated Feet
-        const walkCycle = Math.sin(g.frame * 0.25) * 3;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(mx + 5 + walkCycle, monY - 3, 4, 3);
-        ctx.fillRect(mx + 15 - walkCycle, monY - 3, 4, 3);
+          // Gritted Teeth
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(mx + 9, monY - 17, 7, 2);
+
+          // Body (Shirt with bold outline)
+          ctx.fillStyle = '#1f1d24';
+          ctx.fillRect(mx + 6, monY - 12, 14, 10);
+          ctx.fillStyle = '#b91c1c'; // Dark Red Shirt
+          ctx.fillRect(mx + 8, monY - 10, 10, 8);
+
+          // Fast Sprinting Legs (4 frames)
+          ctx.fillStyle = '#1f1d24';
+          if (runCycle === 0) {
+            ctx.fillRect(mx + 4, monY - 2, 5, 4);
+            ctx.fillRect(mx + 16, monY - 2, 5, 4);
+          } else if (runCycle === 1) {
+            ctx.fillRect(mx + 8, monY - 2, 5, 4);
+            ctx.fillRect(mx + 12, monY - 2, 5, 4);
+          } else if (runCycle === 2) {
+            ctx.fillRect(mx + 2, monY - 2, 5, 4);
+            ctx.fillRect(mx + 18, monY - 2, 5, 4);
+          } else {
+            ctx.fillRect(mx + 10, monY - 2, 5, 4);
+            ctx.fillRect(mx + 14, monY - 2, 5, 4);
+          }
+        } else {
+          // --- 🌶️ "ปีศาจพริกแกง" (CHILI DEMON) ---
+          ctx.fillStyle = '#1f1d24';
+          ctx.fillRect(mx + 3, monY - 24, 18, 22);
+          ctx.fillRect(mx + 6, monY - 28, 12, 26);
+          ctx.fillRect(mx + 1, monY - 16, 22, 12);
+
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(mx + 5, monY - 22, 14, 18);
+          ctx.fillRect(mx + 8, monY - 26, 8, 22);
+          ctx.fillRect(mx + 3, monY - 14, 18, 8);
+
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(mx + 10, monY - 30, 4, 4);
+          ctx.fillRect(mx + 12, monY - 33, 3, 3);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(mx + 6, monY - 16, 4, 4);
+          ctx.fillRect(mx + 14, monY - 16, 4, 4);
+          ctx.fillStyle = '#1f1d24';
+          ctx.fillRect(mx + 8, monY - 15, 2, 3);
+          ctx.fillRect(mx + 16, monY - 15, 2, 3);
+
+          const walkCycle = Math.sin(g.frame * 0.25) * 3;
+          ctx.fillStyle = '#1f1d24';
+          ctx.fillRect(mx + 5 + walkCycle, monY - 3, 4, 3);
+          ctx.fillRect(mx + 15 - walkCycle, monY - 3, 4, 3);
+        }
 
         ctx.restore();
       });
@@ -706,7 +867,13 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         const iy = item.y + bob;
 
         if (item.type === 'satow') {
-          // Twisted Satow Pod
+          // 🌿 Satow Pod (Glows with Super Star Aura!)
+          const satowGlow = Math.sin(g.frame * 0.2) * 2;
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.35)';
+          ctx.beginPath();
+          ctx.arc(ix + 11, iy + 10, 14 + satowGlow, 0, Math.PI * 2);
+          ctx.fill();
+
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 2, iy + 2, 18, 16);
           ctx.fillStyle = '#22c55e';
@@ -715,7 +882,6 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           ctx.fillRect(ix + 6, iy + 6, 4, 4);
           ctx.fillRect(ix + 12, iy + 9, 4, 4);
         } else if (item.type === 'fish') {
-          // Grilled Mackerel (Pla-Too)
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 2, iy + 4, 18, 12);
           ctx.fillRect(ix + 18, iy + 2, 4, 16);
@@ -724,7 +890,6 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 6, iy + 8, 2, 2);
         } else {
-          // Bamboo Shoot
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(ix + 4, iy + 2, 14, 18);
           ctx.fillStyle = '#fde047';
@@ -736,7 +901,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
 
       // ============================================================
-      // 🐱 "น้องไตปลา" (CUTE CALICO CAT - PROPERLY SEATED ON GROUND)
+      // 🐱 "น้องไตปลา" (CUTE CALICO CAT + เทพสะตอ GOD MODE AURA)
       // ============================================================
       ctx.save();
       const catX = g.catX;
@@ -750,58 +915,80 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       ctx.ellipse(catX + 16, g.groundY + 2, 13 * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // GOD MODE AURA (Golden Super Saiyan Sparkles)
+      if (g.godModeTimer > 0) {
+        const auraPulse = Math.sin(g.frame * 0.3) * 4;
+        ctx.fillStyle = 'rgba(234, 179, 8, 0.35)';
+        ctx.beginPath();
+        ctx.arc(catX + 16, catY - 14, 24 + auraPulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Trail sparkles
+        if (Math.random() > 0.4) {
+          g.particles.push({
+            x: catX + (Math.random() * 24 - 4),
+            y: catY - (Math.random() * 24 + 4),
+            vx: -Math.random() * 2 - 1,
+            vy: (Math.random() - 0.5) * 2,
+            size: Math.random() * 3 + 2,
+            color: Math.random() > 0.5 ? '#fde047' : '#22c55e',
+            life: 0.5
+          });
+        }
+      }
+
       // Apply Spring Squash & Stretch
       ctx.translate(catX + 16, catY);
       ctx.scale(g.scaleX, g.scaleY);
       ctx.translate(-(catX + 16), -catY);
 
-      // Tail (Bouncing tail)
+      // Tail
       ctx.fillStyle = '#1f1d24';
       const tailWag = Math.sin(g.frame * 0.2) * 3;
       ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
       ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
       ctx.fillRect(catX + 2 + tailWag, catY - 22, 4, 4);
 
-      // Main Cat Body Outline
-      ctx.fillStyle = '#1f1d24';
+      // Body Outline
+      ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
       ctx.fillRect(catX + 4, catY - 22, 24, 18);
       ctx.fillRect(catX + 8, catY - 26, 16, 22);
 
-      // Body Fill (Cream Base)
-      ctx.fillStyle = '#fef3c7';
+      // Body Fill
+      ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
       ctx.fillRect(catX + 6, catY - 20, 20, 14);
 
-      // Calico Orange & Black Patches
+      // Calico Patches
       ctx.fillStyle = '#f97316';
       ctx.fillRect(catX + 8, catY - 20, 8, 8);
       ctx.fillRect(catX + 18, catY - 14, 6, 6);
 
-      ctx.fillStyle = '#1f1d24';
+      ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
       ctx.fillRect(catX + 18, catY - 20, 6, 6);
       ctx.fillRect(catX + 8, catY - 12, 6, 4);
 
-      // Head: Cream Face with Cute Ears
-      ctx.fillStyle = '#1f1d24';
+      // Head
+      ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
       ctx.fillRect(catX + 18, catY - 28, 16, 16);
       ctx.fillRect(catX + 20, catY - 34, 4, 6);
       ctx.fillRect(catX + 28, catY - 34, 4, 6);
 
-      ctx.fillStyle = '#fef3c7';
+      ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
       ctx.fillRect(catX + 20, catY - 26, 12, 12);
       ctx.fillStyle = '#f97316';
       ctx.fillRect(catX + 21, catY - 32, 2, 4);
-      ctx.fillStyle = '#1f1d24';
+      ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
       ctx.fillRect(catX + 29, catY - 32, 2, 4);
 
       // Eyes & Pink Cheeks
-      ctx.fillStyle = '#1f1d24';
+      ctx.fillStyle = g.godModeTimer > 0 ? '#b45309' : '#1f1d24';
       ctx.fillRect(catX + 28, catY - 22, 3, 4);
       ctx.fillStyle = '#f43f5e';
       ctx.fillRect(catX + 31, catY - 19, 2, 2);
       ctx.fillRect(catX + 24, catY - 18, 3, 2);
 
       // Animated Running Paws
-      ctx.fillStyle = '#1f1d24';
+      ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
       if (g.isGrounded) {
         if (legRun === 0) {
           ctx.fillRect(catX + 8, catY - 3, 4, 4);
@@ -832,7 +1019,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
 
       g.floatingTexts.forEach(ft => {
-        ctx.font = 'bold 14px Space Mono, monospace';
+        ctx.font = 'bold 13px Space Mono, monospace';
         ctx.fillStyle = '#1f1d24';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
@@ -878,13 +1065,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               </span>
             </div>
             <p className="text-[11px] text-[oklch(45%_0.010_28)] font-sans">
-              กระโดดหลบปีศาจพริกแกง & สะสมวัตถุดิบปรุงแกงไตปลา รับเหรียญ xhaus
+              เก็บสะตอแปลงร่างเป็น <strong>เทพสะตอ 3 วิ</strong> ชนทะลุ & สะสมเหรียญ xhaus
             </p>
           </div>
         </div>
 
         {/* Status Score & LCD Coins Deck */}
         <div className="flex items-center gap-2.5 font-mono text-xs self-end sm:self-auto">
+          {/* God Mode Active Banner */}
+          {godModeRemaining > 0 && (
+            <div className="bg-amber-400 text-black px-2.5 py-1.5 rounded-[4px] font-bold flex items-center gap-1 animate-pulse border border-amber-500 shadow-sm text-[11px]">
+              <Zap size={13} className="text-black fill-black" />
+              <span>เทพสะตอ {godModeRemaining}s</span>
+            </div>
+          )}
+
           {/* Earned xhaus Coin display */}
           <div className="bg-[#fef9c3] border border-[#fde047] px-3 py-1.5 rounded-[4px] flex items-center gap-1.5 text-amber-950 shadow-2xs">
             <Coins size={14} className="text-amber-600" />
@@ -942,7 +1137,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               น้องไตปลา แมวเปรอะผจญภัย
             </h4>
             <p className="text-xs text-[#4b5563] font-sans max-w-sm leading-relaxed">
-              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริกแกง 🌶️</strong> และเก็บวัตถุดิบครบ 3 อย่างเพื่อรับเหรียญ <strong>xhaus</strong>
+              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก & คนหัวร้อน 🔥</strong><br/>
+              เก็บ <strong>🌿 สะตอ</strong> เพื่อแปลงเป็น <strong>เทพสะตอ 3 วินาที</strong> ชนทะลุทุกอย่าง!
             </p>
             <button
               onClick={startGame}
@@ -959,10 +1155,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             <span className="text-3xl">🌶️💥</span>
             <div>
               <h4 className="font-mono text-base font-bold text-red-600 uppercase tracking-widest mb-1">
-                โดนปีศาจพริกแกง! (GAME OVER)
+                โดนชนจนหมดพลัง! (GAME OVER)
               </h4>
               <p className="text-xs text-[#374151] font-mono">
-                SCORE: <strong className="text-[#ea580c]">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
+                FINAL SCORE: <strong className="text-[#ea580c]">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
               </p>
             </div>
 
@@ -997,20 +1193,20 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         )}
       </div>
 
-      {/* Clean Ingredients Dashboard */}
+      {/* Clean Ingredients & Guidelines Dashboard */}
       <div className="flex flex-col sm:flex-row items-center justify-between bg-[#fef8e7] border border-[#fde68a] p-3.5 rounded-[4px] text-xs font-mono gap-2">
         <div className="flex items-center gap-2 text-[#451a03]">
-          <span className="font-bold">🥘 สะสมวัตถุดิบ (เก็บครบ 3 ชนิด = +0.10 XH):</span>
+          <span className="font-bold">🥘 สะสมวัตถุดิบ (ครบ 3 อย่าง = +5 PTS & +0.10 XH):</span>
         </div>
         <div className="flex items-center gap-4 text-[11px] font-bold">
           <span className="text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
-            🐟 ปลาทู: {potIngredients.fish}/1
+            🐟 ปลาทู (+1 pt): {potIngredients.fish}/1
           </span>
           <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            🌿 สะตอ: {potIngredients.satow}/1
+            🌿 สะตอ (เทพ 3s & +3 pts): {potIngredients.satow}/1
           </span>
           <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-            🎋 หน่อไม้: {potIngredients.bamboo}/1
+            🎋 หน่อไม้ (+2 pts): {potIngredients.bamboo}/1
           </span>
         </div>
       </div>
