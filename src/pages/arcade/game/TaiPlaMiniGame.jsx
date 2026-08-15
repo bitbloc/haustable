@@ -1037,8 +1037,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   }, [gameState, soundEnabled, highScore]);
 
   const handleClaim = () => {
+    const finalScore = gameRef.current.score || score;
     if (onClaimScore) {
-      onClaimScore(score);
+      onClaimScore(finalScore);
     }
   };
 

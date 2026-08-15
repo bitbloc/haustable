@@ -363,7 +363,7 @@ export default function ArcadeLobby() {
       if (error) throw error;
     } catch (e) {
       setGpsLoading(false);
-      alert('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
+      toast.error('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
     }
   };
 
@@ -523,7 +523,7 @@ export default function ArcadeLobby() {
       });
       if (error) throw error;
     } catch (e) {
-      alert('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
+      toast.error('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
     }
   };
 
@@ -667,14 +667,16 @@ export default function ArcadeLobby() {
         }
 
         #arcade-lobby-root {
-          --color-paper: oklch(96% 0.003 80);
-          --color-paper-2: oklch(92% 0.004 80);
-          --color-paper-3: oklch(88% 0.005 80);
-          --color-rule: oklch(82% 0.008 80);
+          --color-paper: oklch(97% 0.008 28);
+          --color-paper-2: oklch(94% 0.010 28);
+          --color-paper-3: oklch(91% 0.012 28);
+          --color-rule: oklch(85% 0.012 28);
+          --color-neutral: oklch(55% 0.010 28);
+          --color-muted: oklch(42% 0.010 28);
           --color-ink: oklch(18% 0.012 28);
           --color-ink-2: oklch(35% 0.010 28);
-          --color-muted: oklch(55% 0.008 28);
           --color-accent: oklch(52% 0.16 28);
+          --color-accent-2: oklch(45% 0.08 140);
           --color-brand: oklch(52% 0.16 28);
           background-color: var(--color-paper);
           color: var(--color-ink);

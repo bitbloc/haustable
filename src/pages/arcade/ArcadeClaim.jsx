@@ -232,7 +232,7 @@ export default function ArcadeClaim() {
       if (error) throw error;
     } catch (e) {
       setGpsLoading(false);
-      alert('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
+      toast.error('เข้าสู่ระบบ LINE ล้มเหลว กรุณาลองใหม่อีกครั้ง');
     }
   };
 
@@ -246,13 +246,16 @@ export default function ArcadeClaim() {
         }
 
         #arcade-claim-root {
-          --color-paper: oklch(96% 0.003 80);      /* Braun light-grey casing */
-          --color-paper-2: oklch(92% 0.004 80);    /* Secondary elevation card */
-          --color-ink: oklch(20% 0.003 80);        /* Deep charcoal */
-          --color-ink-2: oklch(40% 0.004 80);      /* Muted lettering */
-          --color-muted: oklch(55% 0.004 80);
-          --color-rule: oklch(82% 0.004 80);       /* Hairline dividers */
-          --color-brand: oklch(62% 0.16 35);      /* Braun Dial Orange Accent */
+          --color-paper: oklch(97% 0.008 28);      /* Warm sand base */
+          --color-paper-2: oklch(94% 0.010 28);    /* Elevated surface */
+          --color-paper-3: oklch(91% 0.012 28);
+          --color-ink: oklch(18% 0.012 28);        /* Primary text */
+          --color-ink-2: oklch(35% 0.010 28);      /* Secondary text */
+          --color-neutral: oklch(55% 0.010 28);
+          --color-muted: oklch(42% 0.010 28);
+          --color-rule: oklch(85% 0.012 28);       /* Hairline dividers */
+          --color-brand: oklch(52% 0.16 28);       /* Terracotta Accent */
+          --color-accent: oklch(52% 0.16 28);
           
           --font-display: 'Space Mono', monospace;
           --font-body: 'IBM Plex Sans Thai', 'Inter', sans-serif;

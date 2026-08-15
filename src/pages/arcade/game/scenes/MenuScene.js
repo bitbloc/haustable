@@ -85,57 +85,36 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     // 3. Play Button / Instruction Text
-    // Check if user is logged in to determine button text
     const session = this.registry.get('session');
     const isLoggedIn = !!session;
 
-    if (isLoggedIn) {
-      const startText = this.add.text(width / 2, 280, 'แตะเพื่อเริ่มเล่น', {
-        fontFamily: 'Prompt, Arial, sans-serif',
-        fontSize: '18px',
-        fill: '#FFFFFF',
-        stroke: '#000000',
-        strokeThickness: 4,
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
+    const startText = this.add.text(width / 2, 275, 'แตะหน้าจอเพื่อเริ่มเล่น', {
+      fontFamily: 'Prompt, Arial, sans-serif',
+      fontSize: '20px',
+      fill: '#DFFF00',
+      stroke: '#000000',
+      strokeThickness: 5,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(5);
 
-      // Make instruction blink
-      this.tweens.add({
-        targets: startText,
-        alpha: 0.2,
-        duration: 600,
-        yoyo: true,
-        repeat: -1
-      });
-    } else {
-      // Not logged in — Show login required message
-      const lockText = this.add.text(width / 2, 270, '🔒 เข้าสู่ระบบก่อนเล่น', {
-        fontFamily: 'Prompt, Arial, sans-serif',
-        fontSize: '18px',
-        fill: '#06C755',
-        stroke: '#000000',
-        strokeThickness: 4,
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
+    const subPromptText = this.add.text(width / 2, 305, isLoggedIn ? '⚡ สมาชิกเชื่อมต่อแล้ว (สะสมเหรียญ xhaus)' : '🎮 โหมดเล่นอิสระ / บันทึกแต้ม Guest', {
+      fontFamily: 'Prompt, Arial, sans-serif',
+      fontSize: '12px',
+      fill: isLoggedIn ? '#06C755' : '#CCCCCC',
+      stroke: '#000000',
+      strokeThickness: 3,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(5);
 
-      const loginHint = this.add.text(width / 2, 300, 'แตะเพื่อ Login ด้วย LINE', {
-        fontFamily: 'Prompt, Arial, sans-serif',
-        fontSize: '14px',
-        fill: '#AAAAAA',
-        stroke: '#000000',
-        strokeThickness: 3,
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
-
-      // Pulse the lock text
-      this.tweens.add({
-        targets: [lockText, loginHint],
-        alpha: 0.3,
-        duration: 800,
-        yoyo: true,
-        repeat: -1
-      });
-    }
+    // Make instruction blink
+    this.tweens.add({
+      targets: [startText, subPromptText],
+      alpha: 0.35,
+      duration: 650,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
 
     // 4. Leaderboard Section
     this.add.text(width / 2, 345, '--- อันดับสูงสุด ---', {
