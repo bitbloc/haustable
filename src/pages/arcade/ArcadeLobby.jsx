@@ -238,7 +238,7 @@ export default function ArcadeLobby() {
     }
   };
 
-  // --- Flexible Table Resolver (Table H1 Bug Fix) ---
+  // --- Flexible Table Resolver (Table H1 Bug Fix & Active Booking Check) ---
   useEffect(() => {
     fetchLeaderboard();
     fetchRewards();
@@ -246,14 +246,14 @@ export default function ArcadeLobby() {
     if (searchParams.get('clearTable') === 'true') {
       localStorage.removeItem('active_customer_table_id');
       localStorage.removeItem('active_customer_table_name');
+      setActiveTableId(null);
+      setActiveTableName('');
+      return;
     }
     
-    const effectiveParam = queryTableId || (searchParams.get('clearTable') !== 'true' ? localStorage.getItem('active_customer_table_id') : null);
+    const effectiveParam = queryTableId || localStorage.getItem('active_customer_table_id');
     const savedName = localStorage.getItem('active_customer_table_name');
-    if (savedName) {
-      setActiveTableName(savedName);
-    }
-
+    
     if (effectiveParam) {
       const cleanParam = effectiveParam.trim();
       const isDigits = /^\d+$/.test(cleanParam);
@@ -265,18 +265,46 @@ export default function ArcadeLobby() {
         tableQuery = tableQuery.ilike('table_name', cleanParam);
       }
 
-      tableQuery.maybeSingle().then(({ data }) => {
+      tableQuery.maybeSingle().then(async ({ data }) => {
         if (data) {
           const display = data.table_name || `Table ${data.id}`;
+          
+          // If not explicitly provided in URL params, verify if there is an active booking
+          if (!queryTableId) {
+            try {
+              const { data: activeBookings } = await supabase
+                .from('bookings')
+                .select('id, status')
+                .eq('table_id', data.id)
+                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .limit(1);
+
+              if (!activeBookings || activeBookings.length === 0) {
+                // No active booking -> do not show stale table bar
+                localStorage.removeItem('active_customer_table_id');
+                localStorage.removeItem('active_customer_table_name');
+                setActiveTableId(null);
+                setActiveTableName('');
+                return;
+              }
+            } catch (e) {}
+          }
+
           setActiveTableId(data.id.toString());
           setActiveTableName(display);
           localStorage.setItem('active_customer_table_id', data.id.toString());
           localStorage.setItem('active_customer_table_name', display);
-        } else {
+        } else if (queryTableId) {
           setActiveTableId(cleanParam);
           if (!savedName) setActiveTableName(`Table ${cleanParam}`);
+        } else {
+          setActiveTableId(null);
+          setActiveTableName('');
         }
       });
+    } else {
+      setActiveTableId(null);
+      setActiveTableName('');
     }
   }, [queryTableId]);
 
@@ -662,13 +690,27 @@ export default function ArcadeLobby() {
               🎮 เล่นเกมรออาหาร โต๊ะ {activeTableName || `Table ${activeTableId}`}
             </span>
           </div>
-          <button
-            onClick={() => navigate(`/table/${activeTableId}/status`)}
-            className="btn-action px-3.5 py-1.5 rounded bg-white text-[oklch(18%_0.012_28)] hover:bg-[#F2F2EC] text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-[oklch(52%_0.16_28)]" />
-            <span>กลับไปที่โต๊ะ ({activeTableName || `Table ${activeTableId}`})</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(`/table/${activeTableId}/status`)}
+              className="btn-action px-3.5 py-1.5 rounded bg-white text-[oklch(18%_0.012_28)] hover:bg-[#F2F2EC] text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[oklch(52%_0.16_28)]" />
+              <span>กลับไปที่โต๊ะ ({activeTableName || `Table ${activeTableId}`})</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTableId(null);
+                setActiveTableName('');
+                localStorage.removeItem('active_customer_table_id');
+                localStorage.removeItem('active_customer_table_name');
+              }}
+              title="ปิดแถบแจ้งเตือนโต๊ะ"
+              className="p-1.5 rounded hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 

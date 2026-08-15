@@ -197,21 +197,13 @@ export default class MenuScene extends Phaser.Scene {
       playBGM();
     }
 
-    // 6. Input Event: Click/Touch to Start (Login-Gated)
-    this.input.once('pointerdown', () => {
-      // Re-read session from registry (may have changed since scene was created)
-      const currentSession = this.registry.get('session');
-      if (currentSession) {
-        // Logged in — start the game!
-        try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
-        this.scene.start('PlayScene');
-      } else {
-        // Not logged in — trigger LINE login from React
-        const onRequireLogin = this.registry.get('onRequireLogin');
-        if (onRequireLogin) {
-          onRequireLogin();
-        }
-      }
+    // 6. Input Event: Click/Touch to Start (Smooth start for both Member & Guest)
+    this.isStarting = false;
+    this.input.on('pointerdown', () => {
+      if (this.isStarting) return;
+      this.isStarting = true;
+      try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
+      this.scene.start('PlayScene');
     });
   }
 
