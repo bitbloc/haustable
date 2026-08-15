@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import StaffAttendanceModal from './components/staff/StaffAttendanceModal';
 import './StaffDashboard.css';
 import { toast } from 'sonner';
+import { getShortBookingId } from './utils/printerHelper';
 
 // --- Sub-Components ---
 
@@ -194,7 +195,7 @@ export default function StaffDashboard() {
                 id: o.id,
                 type: 'order',
                 title: `Table ${o.tables_layout?.table_name || 'Pickup'}`,
-                subtitle: `Order #${o.id.toString().slice(0,4)}`,
+                subtitle: `Order #${getShortBookingId(o)}`,
                 status: o.status,
                 statusType: o.status,
                 statusColor: getStatusColor(o.status),

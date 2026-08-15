@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { toast } from 'sonner';
+import { getShortBookingId } from '../utils/printerHelper';
 
 const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
     const [tables, setTables] = useState([]);
@@ -163,7 +164,17 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
     }, []);
 
     const filteredTables = tables.filter(table => {
-        const matchesSearch = table.table_name.toLowerCase().includes(searchQuery.toLowerCase());
+        if (!searchQuery.trim()) {
+            return statusFilter === 'all' || table.status === statusFilter;
+        }
+        const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
+        const tableName = table.table_name.toLowerCase();
+        const booking = table.booking;
+        const shortId = booking ? getShortBookingId(booking).toLowerCase() : '';
+        const tokenStr = (booking?.tracking_token || '').toLowerCase();
+        const custName = (booking?.profiles?.display_name || booking?.customer_name || booking?.pickup_contact_name || booking?.customer_note || '').toLowerCase();
+
+        const matchesSearch = tableName.includes(q) || shortId.includes(q) || tokenStr.includes(q) || custName.includes(q);
         const matchesStatus = statusFilter === 'all' || table.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -550,7 +561,9 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                                             {/* Center row: Table Info */}
                                             <div className="flex flex-col items-center gap-1 my-3 select-none">
                                                  <span className="font-mono font-black text-2xl tracking-tighter">{table.table_name}</span>
-                                                 <span className="text-[9px] font-mono font-bold tracking-widest text-[#767673] uppercase">TABLE UNIT</span>
+                                                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : 'text-[#767673]'}`}>
+                                                     {table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT'}
+                                                 </span>
                                             </div>
                                             
                                             {/* Bottom row: Capacity / Timing */}

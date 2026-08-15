@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabaseClient';
 import POSLayout from './POSLayout';
 import POSTableGrid from './POSTableGrid';
 import POSMenuGrid from './POSMenuGrid';
-import POSPickupGrid from './POSPickupGrid';
 import POSOrderPanel from './POSOrderPanel';
 import { usePOSOrder } from '../hooks/usePOSOrder';
 import { Toaster, toast } from 'sonner';
@@ -2260,9 +2259,6 @@ export default function POSDashboard() {
                                 refreshKey={refreshKey} 
                             />
                         )}
-                        {view === 'pickup' && (
-                            <POSPickupGrid onSelectOrder={handleSelectPickupOrder} hasPendingOrders={hasPendingOrders} refreshKey={refreshKey} />
-                        )}
                         {view === 'crm' && (
                             <POSCRMPanel 
                                 onAttachToOrder={(member) => {
@@ -2281,6 +2277,7 @@ export default function POSDashboard() {
                                     openSlipOrSilentPrint(booking, slipType);
                                 }}
                                 onViewSlipImage={(url) => setViewSlipImageUrl(url)}
+                                onSelectOrder={handleSelectOpenBill}
                                 refreshKey={refreshKey}
                             />
                         )}

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
+import { getShortBookingId } from '../utils/printerHelper';
 
 const POSOrderPanel = React.memo(function POSOrderPanel({ 
     order, 
@@ -613,7 +614,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             {/* Order Header */}
             <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between shrink-0">
                 <div>
-                    <h3 className="font-mono font-bold text-xs tracking-wider uppercase">Order Details</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-mono font-bold text-xs tracking-wider uppercase">Order Details</h3>
+                        {booking && (
+                            <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-1.5 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20">
+                                #{getShortBookingId(booking)}
+                            </span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-[10px] text-[#767673] font-bold font-mono uppercase tracking-tight">
                             {order.table ? `TABLE: ${order.table.table_name}` : (booking?.booking_type === 'pickup' ? 'PICK-UP ORDER' : 'WALK-IN ORDER')}

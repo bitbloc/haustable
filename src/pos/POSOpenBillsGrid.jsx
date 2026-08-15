@@ -19,6 +19,7 @@ import {
     Image as ImageIcon
 } from 'lucide-react';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
+import { getShortBookingId } from '../utils/printerHelper';
 
 export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey }) {
     const [orders, setOrders] = useState([]);
@@ -127,13 +128,17 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
         // Search query
         if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
+        const shortId = getShortBookingId(order).toLowerCase();
+        const tokenStr = (order.tracking_token || '').toLowerCase();
         const tableName = order.tables_layout?.table_name?.toLowerCase() || '';
         const custName = (order.profiles?.display_name || order.customer_name || order.pickup_contact_name || order.customer_note || '').toLowerCase();
         const remark = (order.staff_remark || '').toLowerCase();
         const idStr = String(order.id).toLowerCase();
+        const itemsList = order.order_items || [];
+        const itemsStr = itemsList.map(i => i.menu_items?.name || i.name || '').join(' ').toLowerCase();
 
-        return tableName.includes(q) || custName.includes(q) || remark.includes(q) || idStr.includes(q);
+        return tableName.includes(q) || custName.includes(q) || remark.includes(q) || idStr.includes(q) || tokenStr.includes(q) || shortId.includes(q) || itemsStr.includes(q);
     });
 
     const formatElapsedTime = (isoString) => {
@@ -358,6 +363,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                     DIRECT BILL
                                                 </span>
                                             )}
+
+                                            <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 px-1.5 py-0.5 rounded border border-[oklch(52%_0.16_28)]/20">
+                                                #{getShortBookingId(order)}
+                                            </span>
 
                                             {hasUnsentItems && (
                                                 <span className="bg-red-100 text-red-700 border border-red-200 text-[8px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">

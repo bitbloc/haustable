@@ -1024,7 +1024,7 @@ export default function SlipModal({ booking, type, onClose }) {
             })
             const link = document.createElement('a')
             link.href = dataUrl
-            link.download = `${activeTab}-ticket-${String(booking.id).slice(0, 8)}.png`
+            link.download = `${activeTab}-ticket-${getShortBookingId(booking)}.png`
             link.click()
         } catch (err) {
             console.error(err)

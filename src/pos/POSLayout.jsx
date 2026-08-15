@@ -4,13 +4,12 @@ import {
     UtensilsCrossed, 
     Users, 
     Settings, 
-    LogOut,
-    ChevronLeft,
-    Clock,
-    BarChart3,
-    ShoppingBag,
-    ReceiptText,
-    Globe
+    LogOut, 
+    ChevronLeft, 
+    Clock, 
+    BarChart3, 
+    ReceiptText, 
+    Globe 
 } from 'lucide-react';
 import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
 import { getCurrentShift } from '../utils/shiftHelper';
@@ -104,12 +103,6 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                             label="Open Bills"
                         />
                         <NavIcon 
-                            icon={ShoppingBag} 
-                            active={activeView === 'pickup'} 
-                            onClick={() => onViewChange('pickup')} 
-                            label="Pick-up"
-                        />
-                        <NavIcon 
                             icon={Globe} 
                             active={activeView === 'online_hub'} 
                             onClick={() => onViewChange('online_hub')} 
@@ -157,7 +150,6 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                         <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
                             {activeView === 'tables' ? 'TABLE REGISTRY' : 
                              activeView === 'open_bills' ? 'OPEN BILLS REGISTRY / บิลเปิดอยู่ทั้งหมด' :
-                             activeView === 'pickup' ? 'PICK-UP ORDERS' :
                              activeView === 'online_hub' ? 'ONLINE ORDERS HUB / ออเดอร์ออนไลน์' :
                              activeView === 'menu' ? (selectedTable ? `ORDER ENTRY : ${selectedTable.table_name}` : 'ORDER ENTRY : DIRECT BILL') : 
                              activeView === 'reports' ? 'REPORTS & SHIFT LOG' : 

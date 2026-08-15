@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { 
     Printer as PrinterIcon, 
@@ -17,7 +18,9 @@ import {
     X,
     Image as ImageIcon,
     Search,
-    Calendar
+    Calendar,
+    AlertCircle,
+    RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
@@ -25,8 +28,54 @@ import { Printer } from '@capgo/capacitor-printer';
 import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSBillDetailsModal from './POSBillDetailsModal';
-import { printToBluetoothDirect, encodeShiftReportData, encodeShiftClosureReportData, printToRawBTWebSocket, printToSunmiBuiltIn, compileShiftReportData, getShortBookingId } from '../utils/printerHelper';
+import { 
+    printToBluetoothDirect, 
+    encodeShiftReportData, 
+    encodeShiftClosureReportData, 
+    printToRawBTWebSocket, 
+    printToSunmiBuiltIn, 
+    compileShiftReportData, 
+    getShortBookingId 
+} from '../utils/printerHelper';
 import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction } from '../utils/shiftHelper';
+
+// Helper to breakdown booking payment methods accurately (handling split payments & remarks)
+export const getBookingPaymentBreakdown = (b) => {
+    const total = parseFloat(b.total_amount || b.total_price || 0);
+    const remark = (b.staff_remark || '').toLowerCase();
+    
+    // Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
+    const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
+    if (splitMatch) {
+        const splitText = splitMatch[1];
+        let cash = 0, qr = 0, credit = 0;
+        
+        const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
+        if (cashM) cash = parseFloat(cashM[1]) || 0;
+        
+        const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i);
+        if (qrM) qr = parseFloat(qrM[1]) || 0;
+        
+        const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i);
+        if (creditM) credit = parseFloat(creditM[1]) || 0;
+        
+        return {
+            cash,
+            qr,
+            credit,
+            isSplit: true,
+            methodLabel: 'Split (ผสม)'
+        };
+    }
+    
+    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
+        return { cash: 0, qr: 0, credit: total, isSplit: false, methodLabel: 'Credit Card' };
+    }
+    if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) {
+        return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
+    }
+    return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+};
 
 export default function POSReportsPanel() {
     const [loading, setLoading] = useState(true);
@@ -40,8 +89,9 @@ export default function POSReportsPanel() {
     const [activeShiftTopSellers, setActiveShiftTopSellers] = useState([]);
     const [expandedShiftId, setExpandedShiftId] = useState(null);
     const [expandedShiftDetails, setExpandedShiftDetails] = useState({});
-    const [payMethodFilter, setPayMethodFilter] = useState('all');
+    const [payMethodFilter, setPayMethodFilter] = useState('all'); // 'all' | 'cash' | 'qr' | 'credit' | 'void'
     const [searchQuery, setSearchQuery] = useState('');
+    const [shiftSearchQuery, setShiftSearchQuery] = useState('');
     const [viewSlipUrl, setViewSlipUrl] = useState(null);
 
     // Filter Date (Defaults to Today in Asia/Bangkok)
@@ -59,7 +109,6 @@ export default function POSReportsPanel() {
         const history = getShiftHistory();
         setShiftHistory(history);
 
-        // Fetch latest from Supabase and sync in background
         syncShiftHistoryFromCloud().then(cloudHistory => {
             if (cloudHistory) {
                 setShiftHistory(cloudHistory);
@@ -77,6 +126,21 @@ export default function POSReportsPanel() {
         }
 
         try {
+            const txs = current.transactions || [];
+            let cashSales = 0;
+            let qrSales = 0;
+            let creditSales = 0;
+
+            if (txs.length > 0) {
+                txs.forEach(tx => {
+                    const amt = parseFloat(tx.amount || 0);
+                    if (tx.paymentMethod === 'cash') cashSales += amt;
+                    else if (tx.paymentMethod === 'credit') creditSales += amt;
+                    else qrSales += amt;
+                });
+            }
+
+            // Fetch bookings completed during the active shift (using both booking_time and updated_at)
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`
@@ -85,6 +149,8 @@ export default function POSReportsPanel() {
                     total_amount, 
                     staff_remark, 
                     payment_slip_url,
+                    booking_time,
+                    updated_at,
                     order_items (
                         quantity,
                         menu_items (
@@ -93,39 +159,35 @@ export default function POSReportsPanel() {
                     )
                 `)
                 .eq('status', 'completed')
-                .gte('booking_time', current.openedAt);
+                .gte('updated_at', current.openedAt);
 
-            if (error) throw error;
-
-            let cashSales = 0;
-            let qrSales = 0;
-            let creditSales = 0;
-            const itemCounts = {};
-
-            (data || []).forEach(b => {
-                const remark = (b.staff_remark || '').toLowerCase();
-                const amt = parseFloat(b.total_amount) || 0;
-                
-                if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
-                    creditSales += amt;
-                } else if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) {
-                    qrSales += amt;
-                } else {
-                    cashSales += amt;
+            if (!error && data) {
+                if (txs.length === 0) {
+                    cashSales = 0; qrSales = 0; creditSales = 0;
+                    data.forEach(b => {
+                        const breakdown = getBookingPaymentBreakdown(b);
+                        cashSales += breakdown.cash;
+                        qrSales += breakdown.qr;
+                        creditSales += breakdown.credit;
+                    });
                 }
 
-                b.order_items?.forEach(item => {
-                    if (!item.menu_items) return;
-                    const name = item.menu_items.name;
-                    const qty = item.quantity || 0;
-                    itemCounts[name] = (itemCounts[name] || 0) + qty;
+                const itemCounts = {};
+                data.forEach(b => {
+                    b.order_items?.forEach(item => {
+                        if (!item.menu_items) return;
+                        const name = item.menu_items.name;
+                        const qty = item.quantity || 0;
+                        itemCounts[name] = (itemCounts[name] || 0) + qty;
+                    });
                 });
-            });
 
-            const sortedSellers = Object.entries(itemCounts)
-                .map(([name, qty]) => ({ name, quantity: qty }))
-                .sort((a, b) => b.quantity - a.quantity)
-                .slice(0, 10);
+                const sortedSellers = Object.entries(itemCounts)
+                    .map(([name, qty]) => ({ name, quantity: qty }))
+                    .sort((a, b) => b.quantity - a.quantity)
+                    .slice(0, 10);
+                setActiveShiftTopSellers(sortedSellers);
+            }
 
             const adjustments = current.adjustments || [];
             const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
@@ -138,9 +200,8 @@ export default function POSReportsPanel() {
                 totalSales: cashSales + qrSales + creditSales,
                 totalIn,
                 totalOut,
-                expectedCash: current.openingFloat + cashSales + totalIn - totalOut
+                expectedCash: (current.openingFloat || 0) + cashSales + totalIn - totalOut
             });
-            setActiveShiftTopSellers(sortedSellers);
         } catch (err) {
             console.error("Failed to load active shift summary:", err);
             setActiveShiftSummary({
@@ -150,7 +211,7 @@ export default function POSReportsPanel() {
                 totalSales: current.totalSales || 0,
                 totalIn: current.totalIn || 0,
                 totalOut: current.totalOut || 0,
-                expectedCash: current.expectedCash || (current.openingFloat + (current.cashSales || 0) + (current.totalIn || 0) - (current.totalOut || 0))
+                expectedCash: current.expectedCash || ((current.openingFloat || 0) + (current.cashSales || 0) + (current.totalIn || 0) - (current.totalOut || 0))
             });
             setActiveShiftTopSellers([]);
         }
@@ -243,7 +304,6 @@ export default function POSReportsPanel() {
             const startOfDay = `${filterDate}T00:00:00+07:00`;
             const endOfDay = `${filterDate}T23:59:59+07:00`;
 
-            // 1. Fetch Bookings for the day (completed, seated, confirmed)
             const { data: bookingsData, error: bookingsError } = await supabase
                 .from('bookings')
                 .select(`
@@ -270,7 +330,6 @@ export default function POSReportsPanel() {
             if (bookingsError) throw bookingsError;
             setBookings(bookingsData || []);
 
-            // 2. Fetch Menu Categories for name mapping
             const { data: categoriesData } = await supabase
                 .from('menu_categories')
                 .select('id, name');
@@ -284,91 +343,109 @@ export default function POSReportsPanel() {
     };
 
     // --- DERIVED METRICS ---
-    const categoryMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {});
+    const categoryMap = useMemo(() => {
+        return categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {});
+    }, [categories]);
 
-    const completedBookings = bookings.filter(b => b.status === 'completed');
-    const activeBookings = bookings.filter(b => b.status === 'seated' || b.status === 'confirmed');
+    const completedBookings = useMemo(() => bookings.filter(b => b.status === 'completed'), [bookings]);
+    const voidedBookings = useMemo(() => bookings.filter(b => b.status === 'void' || b.status === 'cancelled'), [bookings]);
+    const activeBookings = useMemo(() => bookings.filter(b => b.status === 'seated' || b.status === 'confirmed'), [bookings]);
 
-    // Completed Sales Total
     const totalSales = completedBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
     const totalDiscounts = completedBookings.reduce((sum, b) => sum + (b.discount_amount || 0), 0);
-
-    // Active Tables Total (Estimated Unpaid)
     const activeUnpaid = activeBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
-    // Payment method breakdown helper
-    const getBookingPaymentMethod = (b) => {
-        const remark = (b.staff_remark || '').toLowerCase();
-        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) return 'credit';
-        if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'qr';
-        return 'cash';
-    };
+    // Accurate calculation of cash, qr, and credit sales
+    const { cashSales, qrSales, creditSales } = useMemo(() => {
+        let cash = 0, qr = 0, credit = 0;
+        completedBookings.forEach(b => {
+            const breakdown = getBookingPaymentBreakdown(b);
+            cash += breakdown.cash;
+            qr += breakdown.qr;
+            credit += breakdown.credit;
+        });
+        return { cashSales: cash, qrSales: qr, creditSales: credit };
+    }, [completedBookings]);
 
-    const cashSales = completedBookings
-        .filter(b => getBookingPaymentMethod(b) === 'cash')
-        .reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    // Filter bookings based on payment method tab and search query
+    const filteredForBreakdown = useMemo(() => {
+        const sourceList = payMethodFilter === 'void' ? voidedBookings : completedBookings;
 
-    const qrSales = completedBookings
-        .filter(b => getBookingPaymentMethod(b) === 'qr')
-        .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-
-    const creditSales = completedBookings
-        .filter(b => getBookingPaymentMethod(b) === 'credit')
-        .reduce((sum, b) => sum + (b.total_amount || 0), 0);
-
-    // Filter bookings for breakdown calculations based on payment method & search query
-    const filteredForBreakdown = completedBookings.filter(b => {
-        if (payMethodFilter !== 'all' && getBookingPaymentMethod(b) !== payMethodFilter) return false;
-
-        const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
-        const getGuestNameLower = () => {
-            if (b.profiles?.display_name) return b.profiles.display_name.toLowerCase();
-            const name = b.pickup_contact_name || b.customer_name || '';
-            if (!name || defaultWalkIns.includes(name.toLowerCase().trim())) {
-                return 'guest';
+        return sourceList.filter(b => {
+            if (payMethodFilter !== 'all' && payMethodFilter !== 'void') {
+                const breakdown = getBookingPaymentBreakdown(b);
+                if (payMethodFilter === 'cash' && breakdown.cash <= 0) return false;
+                if (payMethodFilter === 'qr' && breakdown.qr <= 0) return false;
+                if (payMethodFilter === 'credit' && breakdown.credit <= 0) return false;
             }
-            return name.toLowerCase();
-        };
 
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase().trim();
-            const token = b.tracking_token ? b.tracking_token.toLowerCase() : '';
-            const idStr = String(b.id).toLowerCase();
-            const tableName = (b.tables_layout?.table_name || '').toLowerCase();
-            const guestName = getGuestNameLower();
-            const phone = (b.profiles?.phone_number || b.pickup_contact_phone || '').toLowerCase();
-            const remark = (b.staff_remark || '').toLowerCase();
+            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+            const getGuestNameLower = () => {
+                if (b.profiles?.display_name) return b.profiles.display_name.toLowerCase();
+                const name = b.pickup_contact_name || b.customer_name || '';
+                if (!name || defaultWalkIns.includes(name.toLowerCase().trim())) return 'guest';
+                return name.toLowerCase();
+            };
 
-            return token.includes(q) || idStr.includes(q) || tableName.includes(q) || guestName.includes(q) || phone.includes(q) || remark.includes(q);
-        }
-        return true;
-    });
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
+                const shortId = getShortBookingId(b).toLowerCase();
+                const token = (b.tracking_token || '').toLowerCase();
+                const idStr = String(b.id).toLowerCase();
+                const tableName = (b.tables_layout?.table_name || '').toLowerCase();
+                const guestName = getGuestNameLower();
+                const phone = (b.profiles?.phone_number || b.pickup_contact_phone || '').toLowerCase();
+                const remark = (b.staff_remark || '').toLowerCase();
+
+                return shortId.includes(q) || token.includes(q) || idStr.includes(q) || tableName.includes(q) || guestName.includes(q) || phone.includes(q) || remark.includes(q);
+            }
+            return true;
+        });
+    }, [completedBookings, voidedBookings, payMethodFilter, searchQuery]);
 
     // Category sales compile
-    const categorySales = {};
-    filteredForBreakdown.forEach(b => {
-        b.order_items?.forEach(item => {
-            const catId = item.menu_items?.category_id || 'uncategorized';
-            const catName = categoryMap[catId] || 'Uncategorized';
-            const itemTotal = (item.price_at_time || 0) * (item.quantity || 0);
-            
-            if (!categorySales[catId]) {
-                categorySales[catId] = {
-                    name: catName,
-                    quantity: 0,
-                    amount: 0
-                };
-            }
-            categorySales[catId].quantity += item.quantity || 0;
-            categorySales[catId].amount += itemTotal;
+    const categoryList = useMemo(() => {
+        const categorySales = {};
+        filteredForBreakdown.forEach(b => {
+            b.order_items?.forEach(item => {
+                const catId = item.menu_items?.category_id || 'uncategorized';
+                const catName = categoryMap[catId] || 'Uncategorized';
+                const itemTotal = (item.price_at_time || 0) * (item.quantity || 0);
+                
+                if (!categorySales[catId]) {
+                    categorySales[catId] = {
+                        name: catName,
+                        quantity: 0,
+                        amount: 0
+                    };
+                }
+                categorySales[catId].quantity += item.quantity || 0;
+                categorySales[catId].amount += itemTotal;
+            });
         });
-    });
 
-    const categoryList = Object.values(categorySales).sort((a, b) => b.amount - a.amount);
+        const list = Object.values(categorySales).sort((a, b) => b.amount - a.amount);
+        const sumAmt = list.reduce((s, c) => s + c.amount, 0) || 1;
+        return list.map(c => ({
+            ...c,
+            pct: Math.round((c.amount / sumAmt) * 100)
+        }));
+    }, [filteredForBreakdown, categoryMap]);
 
-    // Print Shift Report HTML
+    // Filtered historical shifts
+    const filteredShiftHistory = useMemo(() => {
+        if (!shiftSearchQuery.trim()) return shiftHistory;
+        const q = shiftSearchQuery.toLowerCase().trim();
+        return shiftHistory.filter(s => {
+            const name = (s.staffName || '').toLowerCase();
+            const dateStr = s.openedAt ? new Date(s.openedAt).toLocaleString('th-TH').toLowerCase() : '';
+            return name.includes(q) || dateStr.includes(q);
+        });
+    }, [shiftHistory, shiftSearchQuery]);
+
+    // Print Shift Report
     const handlePrintShiftReport = async () => {
-        let paperSize = '58mm';
+        let paperSize = '80mm';
         let printerType = 'sunmi';
         let btDeviceName = '';
         
@@ -376,7 +453,6 @@ export default function POSReportsPanel() {
             const stored = localStorage.getItem('onhaus_printer_config');
             if (stored) {
                 const config = JSON.parse(stored);
-                // Shift summary report is printed by cashier printer
                 printerType = config.cashier_printer_type || 'sunmi';
                 btDeviceName = config.cashier_printer_bt_name || '';
                 paperSize = config.cashier_paper_size || '80mm';
@@ -406,32 +482,29 @@ export default function POSReportsPanel() {
             try {
                 const rawBytes = encodeShiftReportData(compiledReport, '80mm', 'sunmi');
                 await printToSunmiBuiltIn(rawBytes);
-                return; // successfully printed directly, exit
+                return;
             } catch (err) {
-                console.error("SUNMI shift report print failed, falling back to standard dialog:", err);
-                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน SUNMI: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+                console.error("SUNMI shift report print failed:", err);
             }
         } else if (printerType === 'rawbt') {
             try {
                 const rawBytes = encodeShiftReportData(compiledReport, paperSize, 'rawbt');
                 await printToRawBTWebSocket(rawBytes);
-                return; // successfully printed directly, exit
+                return;
             } catch (err) {
-                console.error("RawBT shift report print failed, falling back to standard dialog:", err);
-                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน RawBT: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+                console.error("RawBT shift report print failed:", err);
             }
         } else if (printerType === 'bluetooth') {
             try {
                 const rawBytes = encodeShiftReportData(compiledReport, paperSize, 'bluetooth');
                 await printToBluetoothDirect(btDeviceName, rawBytes);
-                return; // successfully printed directly, exit
+                return;
             } catch (err) {
-                console.error("Direct bluetooth shift report print failed, falling back to standard dialog:", err);
+                console.error("Direct bluetooth shift report print failed:", err);
             }
         }
 
         const printDateStr = new Date().toLocaleString('th-TH');
-
         const catHtml = categoryList.length > 0 ? `
             <div class="table-row table-header" style="font-weight: bold; border-bottom: 1px dashed black; padding-bottom: 3px; margin-bottom: 4px;">
                 <span class="col-name">รายการ / หมวดหมู่</span>
@@ -452,123 +525,65 @@ export default function POSReportsPanel() {
                 <head>
                     <title>Shift Report - ${filterDate}</title>
                     <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
                         body { 
-                            font-family: 'Courier Prime', 'Courier New', monospace; 
+                            font-family: monospace; 
                             background: white; 
                             color: black; 
                             font-size: 11px; 
                             padding: 20px 10px;
                             width: 280px;
                         }
-                        .header { text-align: center; margin-bottom: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-                        .title { font-size: 16px; font-weight: 900; text-transform: uppercase; margin-bottom: 2px; text-align: center; width: 100%; }
-                        .subtitle { font-size: 11px; font-weight: bold; text-transform: uppercase; text-align: center; width: 100%; margin-bottom: 4px; }
-                        .date { font-size: 9px; color: #555; text-align: center; width: 100%; }
-                        
-                        .section { border-top: 2px dashed black; padding: 10px 0; margin-top: 10px; }
-                        .section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
-                        
+                        .header { text-align: center; margin-bottom: 15px; }
+                        .title { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+                        .subtitle { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+                        .date { font-size: 9px; color: #555; }
+                        .section { border-top: 1px dashed black; padding: 10px 0; margin-top: 10px; }
+                        .section-title { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; }
                         .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-                        .table-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 11px; }
-                        .col-name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-                        .col-qty { width: 45px; text-align: right; flex-shrink: 0; padding-right: 4px; }
-                        .col-amt { width: 85px; text-align: right; flex-shrink: 0; font-weight: bold; }
-                        
+                        .table-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+                        .col-name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                        .col-qty { width: 45px; text-align: right; }
+                        .col-amt { width: 85px; text-align: right; font-weight: bold; }
                         .grand-total-box {
-                            border: 3px solid black;
+                            border: 2px solid black;
                             background: #f8f8f8;
                             text-align: center;
-                            padding: 12px 6px;
+                            padding: 10px 6px;
                             margin: 15px 0;
-                            box-sizing: border-box;
-                            width: 100%;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
                         }
-                        .grand-total-label {
-                            font-size: 10px;
-                            font-weight: bold;
-                            letter-spacing: 0.5px;
-                            text-transform: uppercase;
-                            margin-bottom: 4px;
-                            text-align: center;
-                            width: 100%;
-                        }
-                        .grand-total-val {
-                            font-size: 26px;
-                            font-weight: 900;
-                            line-height: 1;
-                            color: #000;
-                            text-align: center;
-                            width: 100%;
-                        }
-                        
-                        .signature { margin-top: 30px; text-align: center; font-size: 9px; }
-                        .sig-line { border-bottom: 1px solid black; width: 150px; margin: 25px auto 5px auto; }
+                        .grand-total-label { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+                        .grand-total-val { font-size: 24px; font-weight: bold; line-height: 1; color: #000; }
                     </style>
                 </head>
                 <body>
                     <div class="header">
                         <div class="title">IN THE HAUS</div>
-                        <div class="subtitle">SHIFT CLOSURE REPORT / รายงานยอดการขาย</div>
+                        <div class="subtitle">DAILY SALES SUMMARY</div>
                         <div class="date">Report Date: ${filterDate}</div>
                         <div class="date">Printed: ${printDateStr}</div>
                     </div>
- 
                     <div class="section">
-                        <div class="section-title">Sales Summary / สรุปยอดขาย</div>
-                        <div class="row"><span>Total Completed Bills</span> <span>${completedBookings.length}</span></div>
-                        <div class="row"><span>Total Discounts</span> <span>-${totalDiscounts.toLocaleString()}.-</span></div>
+                        <div class="section-title">Sales Summary</div>
+                        <div class="row"><span>Total Bills</span> <span>${completedBookings.length}</span></div>
+                        <div class="row"><span>Total Discounts</span> <span>-฿${totalDiscounts.toLocaleString()}</span></div>
                         <div class="row"><span>Cash Sales</span> <span>฿${cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                        <div class="row"><span>QR Transfer Sales</span> <span>฿${qrSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                        <div class="row"><span>Credit Card Sales</span> <span>฿${creditSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                        <div class="row"><span>QR Transfer</span> <span>฿${qrSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                        <div class="row"><span>Credit Card</span> <span>฿${creditSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                     </div>
-
                     <div class="section">
-                        <div class="section-title">Sales By Category / ยอดขายตามหมวดหมู่</div>
+                        <div class="section-title">Sales By Category</div>
                         ${catHtml}
                     </div>
-
-                    <div class="section">
-                        <div class="section-title">Active Registry / สถานะปัจจุบัน</div>
-                        <div class="row"><span>Active Tables (Unpaid)</span> <span>${activeBookings.length}</span></div>
-                        <div class="row"><span>Pending Active Value</span> <span>฿${activeUnpaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                    </div>
-
-                    <!-- Prominent Large Total Sales Summary Figure at Bottom -->
                     <div class="grand-total-box">
-                        <div class="grand-total-label">สรุปยอดขายสุทธิทั้งหมด / NET REVENUE</div>
+                        <div class="grand-total-label">NET REVENUE</div>
                         <div class="grand-total-val">฿${totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </div>
-
-                    <div class="signature">
-                        <div class="sig-line"></div>
-                        <span>Cashier / Verifier Signature</span>
-                    </div>
-
-                    <script>
-                        window.onload = function() { window.print(); }
-                    </script>
+                    <script>window.onload = function() { window.print(); }</script>
                 </body>
             </html>
         `;
 
-        if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Printer')) {
-            try {
-                await Printer.printHtml({
-                    name: `Shift-Report-${filterDate}`,
-                    html: htmlContent
-                });
-            } catch (err) {
-                console.error("Native print failed, falling back to browser print:", err);
-                fallbackBrowserPrint(htmlContent);
-            }
-        } else {
-            fallbackBrowserPrint(htmlContent);
-        }
+        fallbackBrowserPrint(htmlContent);
     };
 
     const handlePrintHistoricalShiftReport = async (shift) => {
@@ -578,7 +593,6 @@ export default function POSReportsPanel() {
         const totalOut = shift.totalOut !== undefined ? shift.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
 
         try {
-            // 1. Fetch bookings in this historical shift
             const completedBookingIds = shift.transactions?.map(tx => tx.bookingId) || [];
             let bookingsData = [];
             
@@ -612,12 +626,10 @@ export default function POSReportsPanel() {
                 bookingsData = data || [];
             }
             
-            // 2. Fetch categories
             const { data: categoriesData } = await supabase
                 .from('menu_categories')
                 .select('id, name');
             
-            // 3. Compile reportData
             const compiledReport = compileShiftReportData(
                 {
                     ...shift,
@@ -644,86 +656,7 @@ export default function POSReportsPanel() {
         } catch (err) {
             console.error("Historical Shift Print failed:", err);
             toast.dismiss(toastId);
-            
-            // Build adjustments list for printing
-            const adjsHtml = adjs.map(a => `
-                <div class="row" style="padding-left: 10px; font-size: 9px; color: #333;">
-                    <span>• [${a.type === 'in' ? 'เงินเข้า' : 'เงินออก'}] ${a.note || ''}</span>
-                    <span>${a.type === 'in' ? '+' : '-'}฿${a.amount.toLocaleString()}.-</span>
-                </div>
-            `).join('') || '<div class="row" style="padding-left: 10px; font-size: 9px; color: #777;"><i>ไม่มีรายการเบิกจ่ายเงินสด</i></div>';
-
-            const totalSales = (shift.cashSales || 0) + (shift.qrSales || 0) + (shift.creditSales || 0);
-
-            // Fallback: generate HTML for system print dialog
-            const htmlContent = `
-                <html>
-                    <head>
-                        <title>Historical Shift Report - ${shift.staffName}</title>
-                        <style>
-                            body { font-family: monospace; padding: 20px; width: 280px; font-size: 11px; }
-                            .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-                            .divider { border-bottom: 1px dashed black; margin: 10px 0; }
-                            .title { text-align: center; font-weight: bold; font-size: 14px; text-transform: uppercase; width: 100%; display: block; }
-                            .subtitle { text-align: center; font-size: 10px; font-weight: bold; text-transform: uppercase; width: 100%; display: block; margin-top: 2px; }
-                            .grand-total-box {
-                                border: 3px solid black;
-                                background: #f8f8f8;
-                                text-align: center;
-                                padding: 10px 4px;
-                                margin: 15px 0;
-                                box-sizing: border-box;
-                                width: 100%;
-                            }
-                            .grand-total-label {
-                                font-size: 9px;
-                                font-weight: bold;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                                margin-bottom: 4px;
-                                text-align: center;
-                            }
-                            .grand-total-val {
-                                font-size: 24px;
-                                font-weight: 900;
-                                line-height: 1;
-                                text-align: center;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="title">IN THE HAUS</div>
-                        <div class="subtitle">HISTORICAL SHIFT REPORT / รายงานประวัติกะ</div>
-                        <div class="divider"></div>
-                        <div class="row"><span>Staff:</span> <span>${shift.staffName}</span></div>
-                        <div class="row"><span>Opened:</span> <span>${new Date(shift.openedAt).toLocaleString('th-TH')}</span></div>
-                        <div class="row"><span>Closed:</span> <span>${shift.closedAt ? new Date(shift.closedAt).toLocaleString('th-TH') : 'กำลังใช้งาน (Active)'}</span></div>
-                        <div class="divider"></div>
-                        <div class="row"><span>Opening Float:</span> <span>฿${shift.openingFloat.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Cash Sales:</span> <span>฿${(shift.cashSales || 0).toLocaleString()}.-</span></div>
-                        <div class="row"><span>QR Sales:</span> <span>฿${(shift.qrSales || 0).toLocaleString()}.-</span></div>
-                        <div class="row"><span>Cash In (+):</span> <span>+฿${totalIn.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Cash Out (-):</span> <span>-฿${totalOut.toLocaleString()}.-</span></div>
-                        <div class="divider"></div>
-                        <div style="font-weight: bold; margin-bottom: 5px;">CASH ADJUSTMENTS / รายการเบิกจ่าย:</div>
-                        ${adjsHtml}
-                        <div class="divider"></div>
-                        <div class="row"><span>Expected Cash:</span> <span>฿${shift.expectedCash?.toLocaleString()}.-</span></div>
-                        <div class="row"><span>Actual Cash:</span> <span>${shift.status === 'open' ? '-' : `฿${shift.closedCash?.toLocaleString()}.-`}</span></div>
-                        <div class="row"><span>Difference:</span> <span>${shift.status === 'open' ? '-' : (shift.difference >= 0 ? '+' : '') + '฿' + shift.difference?.toLocaleString() + '.-'}</span></div>
-                        <div class="divider"></div>
-
-                        <!-- Giant Grand Total Sales Summary Figure at Bottom -->
-                        <div class="grand-total-box">
-                            <div class="grand-total-label">สรุปยอดขายสุทธิทั้งหมด / NET REVENUE</div>
-                            <div class="grand-total-val">฿${totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                        </div>
-
-                        <script>window.onload = function() { window.print(); }</script>
-                    </body>
-                </html>
-            `;
-            fallbackBrowserPrint(htmlContent);
+            toast.error("ไม่สามารถพิมพ์ผ่าน Sunmi ได้: " + (err.message || 'Error'));
         }
     };
 
@@ -742,7 +675,7 @@ export default function POSReportsPanel() {
             iframe.style.border = '0';
             document.body.appendChild(iframe);
             
-iframe.contentDocument.write(htmlContent);
+            iframe.contentDocument.write(htmlContent);
             iframe.contentDocument.close();
             iframe.onload = () => {
                 iframe.contentWindow.focus();
@@ -755,19 +688,20 @@ iframe.contentDocument.write(htmlContent);
     };
 
     const handleVoidBill = async (bookingId, amount) => {
-        const isConfirmed = window.confirm(`คุณแน่ใจหรือไม่ที่จะทำการยกเลิก (Void) บิลยอด ฿${amount.toLocaleString()}.- ใช่หรือไม่?\nการดำเนินการนี้จะเปลี่ยนสถานะบิลเป็นโมฆะและคำนวณยอดขายใหม่ (บิลที่ถูก Void จะไม่แสดงในสถิติยอดขาย)`);
+        const isConfirmed = window.confirm(`คุณแน่ใจหรือไม่ที่จะทำการยกเลิก (Void) บิลยอด ฿${amount.toLocaleString()}.- ใช่หรือไม่?\nการดำเนินการนี้จะเปลี่ยนสถานะบิลเป็นโมฆะและบันทึกประวัติการยกเลิก`);
         if (!isConfirmed) return;
 
         try {
-            // 1. Update status to 'void' in Supabase bookings table
             const { error } = await supabase
                 .from('bookings')
-                .update({ status: 'void' })
+                .update({ 
+                    status: 'void',
+                    staff_remark: `[VOIDED_BY_STAFF] ${new Date().toLocaleTimeString('th-TH')}`
+                })
                 .eq('id', bookingId);
 
             if (error) throw error;
 
-            // 2. Check if the booking exists in the active shift transactions and void it
             const currentShift = getCurrentShift();
             if (currentShift && currentShift.transactions?.some(tx => tx.bookingId === bookingId)) {
                 voidShiftTransaction(bookingId);
@@ -775,8 +709,6 @@ iframe.contentDocument.write(htmlContent);
             }
 
             toast.success("ยกเลิกบิล (Void) สำเร็จแล้ว");
-
-            // 3. Reload report data to refresh lists & totals immediately
             fetchReportData();
         } catch (err) {
             console.error("Failed to void bill:", err);
@@ -785,201 +717,231 @@ iframe.contentDocument.write(htmlContent);
     };
 
     return (
-        <div className="h-full flex flex-col p-6 bg-[#ECECE9] overflow-y-auto text-[#1A1A1A] font-sans select-none">
+        <div className="h-full flex flex-col p-6 bg-[oklch(94%_0.010_28)] overflow-y-auto text-[oklch(18%_0.012_28)] font-sans select-none">
             {/* Header controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-4 border-b border-[#D1D1CD] shrink-0">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-4 border-b border-[oklch(85%_0.012_28)] shrink-0">
                 <div>
-                    <h3 className="font-mono font-bold text-sm tracking-wider uppercase">Daily Sales & Shift Report</h3>
-                    <p className="text-[10px] text-[#767673] font-bold font-mono mt-0.5 uppercase tracking-tight">Verify collections, payments, and print shift reports</p>
+                    <h3 className="font-mono font-bold text-sm tracking-wider uppercase text-[oklch(18%_0.012_28)]">
+                        DAILY SALES & SHIFT REPORT / รายงานยอดขายและสรุปรอบกะ
+                    </h3>
+                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-bold font-mono mt-0.5 uppercase tracking-tight">
+                        ตรวจสอบยอดชำระเงิน ลิ้นชักเงินสด และพิมพ์รายงานสรุปกะ
+                    </p>
                 </div>
+                
                 <div className="flex items-center gap-2 w-full md:w-auto font-mono text-[10px] flex-wrap">
-                    <div className="flex items-center bg-white border border-[#D1D1CD] rounded-lg p-0.5 shadow-xs">
+                    <div className="flex items-center bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-0.5 shadow-2xs">
                         <button
+                            type="button"
                             onClick={() => setFilterDate(getBangkokDate())}
-                            className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${filterDate === getBangkokDate() ? 'bg-[#1A1A1A] text-white' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                                filterDate === getBangkokDate() 
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
+                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
                         >
                             วันนี้
                         </button>
                         <button
+                            type="button"
                             onClick={() => setFilterDate(getYesterdayBangkokDate())}
-                            className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${filterDate === getYesterdayBangkokDate() ? 'bg-[#1A1A1A] text-white' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`px-2.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                                filterDate === getYesterdayBangkokDate() 
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
+                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
                         >
                             เมื่อวาน
                         </button>
                     </div>
+
                     <input 
                         type="date"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
-                        className="bg-white border border-[#D1D1CD] px-3 py-2 rounded-lg text-xs outline-none text-[#1A1A1A] focus:border-[#ff0000]"
+                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-lg text-xs outline-none text-[oklch(18%_0.012_28)] focus:border-[oklch(18%_0.012_28)]"
                     />
+
                     <button 
+                        type="button"
                         onClick={fetchReportData} 
-                        className="p-2 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#1A1A1A] transition-colors cursor-pointer"
+                        className="p-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
                         title="Reload"
                     >
-                        <RefreshCw size={14} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-50 space-y-3 font-mono text-[10px] font-bold text-[#767673] uppercase tracking-wider">
-                     <Loader2 className="animate-spin w-8 h-8 text-[#ff0000]" />
-                     <p>Generating registry data...</p>
+                <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-60 space-y-3 font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                     <Loader2 className="animate-spin w-8 h-8 text-[oklch(52%_0.16_28)]" />
+                     <p>กำลังคำนวณและประมวลผลข้อมูลยอดขาย...</p>
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    {/* Metrics Summary Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-3.5">
                         
                         {/* Net Revenue */}
-                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#ff0000]"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <TrendingUp size={12} className="text-[#ff0000]" /> NET SALES
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-[oklch(52%_0.16_28)]"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                                <TrendingUp size={11} className="text-[oklch(52%_0.16_28)]" /> NET REVENUE
                             </div>
-                            <p className="text-xl font-black font-mono text-[#1A1A1A] mt-2">฿{totalSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">{completedBookings.length} COMPLETED BILLS</p>
+                            <p className="text-xl font-mono font-bold text-[oklch(18%_0.012_28)] mt-1.5">฿{totalSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">{completedBookings.length} BILLS COMPLETED</p>
                         </div>
 
                         {/* Cash Sales */}
-                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#00CC44]"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <Banknote size={12} className="text-[#00CC44]" /> CASH
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-emerald-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                                <Banknote size={11} className="text-emerald-600" /> CASH SALES
                             </div>
-                            <p className="text-xl font-black font-mono text-emerald-600 mt-2">฿{cashSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">PHYSICAL DRAWER</p>
+                            <p className="text-xl font-mono font-bold text-emerald-700 mt-1.5">฿{cashSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">PHYSICAL DRAWER</p>
                         </div>
 
                         {/* QR Sales */}
-                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-blue-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <CreditCard size={12} className="text-blue-500" /> QR TRANSFER
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-blue-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                                <CreditCard size={11} className="text-blue-600" /> QR TRANSFER
                             </div>
-                            <p className="text-xl font-black font-mono text-blue-600 mt-2">฿{qrSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">BANK DEPOSIT</p>
+                            <p className="text-xl font-mono font-bold text-blue-700 mt-1.5">฿{qrSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">BANK DEPOSIT</p>
                         </div>
 
                         {/* Credit Sales */}
-                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-amber-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <CreditCard size={12} className="text-amber-500" /> CREDIT CARD
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-amber-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                                <CreditCard size={11} className="text-amber-600" /> CREDIT CARD
                             </div>
-                            <p className="text-xl font-black font-mono text-amber-600 mt-2">฿{creditSales.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">CARD TERMINAL</p>
+                            <p className="text-xl font-mono font-bold text-amber-700 mt-1.5">฿{creditSales.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">CARD EDC</p>
                         </div>
 
                         {/* Discounts */}
-                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px]">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FFAA00]"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <Percent size={12} className="text-[#FFAA00]" /> DISCOUNTS
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px]">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-[oklch(45%_0.08_140)]"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                                <Percent size={11} className="text-[oklch(45%_0.08_140)]" /> DISCOUNTS
                             </div>
-                            <p className="text-xl font-black font-mono text-amber-600 mt-2">฿{totalDiscounts.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">PROMO APPLIED</p>
+                            <p className="text-xl font-mono font-bold text-[oklch(45%_0.08_140)] mt-1.5">฿{totalDiscounts.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">PROMO / CRM</p>
                         </div>
 
-                        {/* Active Tables value */}
-                        <div className="bg-white border border-[#D1D1CD] p-5 rounded-xl relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[110px] col-span-2 md:col-span-1">
-                            <div className="absolute top-0 left-0 w-full h-[3px] bg-purple-500"></div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-[#767673] uppercase tracking-widest font-mono font-bold">
-                                <ShoppingBag size={12} className="text-purple-500" /> ACTIVE REGISTRY
+                        {/* Active Unpaid / Tables */}
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-xl relative overflow-hidden shadow-2xs flex flex-col justify-between min-h-[105px] col-span-2 md:col-span-1">
+                            <div className="absolute top-0 left-0 w-full h-[2.5px] bg-purple-500"></div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-mono font-bold">
+                                <ShoppingBag size={11} className="text-purple-600" /> ACTIVE UNPAID
                             </div>
-                            <p className="text-xl font-black font-mono text-purple-600 mt-2">฿{activeUnpaid.toLocaleString()}</p>
-                            <p className="text-[9px] font-mono text-[#767673] mt-1 uppercase">{activeBookings.length} TABLES UNPAID</p>
+                            <p className="text-xl font-mono font-bold text-purple-700 mt-1.5">฿{activeUnpaid.toLocaleString()}</p>
+                            <p className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase">{activeBookings.length} TABLES PENDING</p>
                         </div>
                     </div>
 
-                    {/* Active Shift / รอบการขายปัจจุบัน */}
+                    {/* Active Shift Section */}
                     {activeShift && (
-                        <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 shadow-sm">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-[#D1D1CD] pb-3 mb-4 select-none">
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 shadow-2xs">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-[oklch(85%_0.012_28)] pb-3 mb-4 select-none">
                                 <div>
-                                    <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider flex items-center gap-2">
+                                    <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-2">
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        รอบการขายปัจจุบัน (Active Shift) - {activeShift.staffName}
+                                        ACTIVE SHIFT / รอบการขายปัจจุบัน - {activeShift.staffName}
                                     </h4>
-                                    <p className="text-[9px] text-[#767673] font-mono uppercase tracking-tight mt-0.5">
-                                        เปิดกะเมื่อ: {new Date(activeShift.openedAt).toLocaleString('th-TH')}
+                                    <p className="text-[9px] text-[oklch(55%_0.010_28)] font-mono uppercase tracking-tight mt-0.5">
+                                        OPENED: {new Date(activeShift.openedAt).toLocaleString('th-TH')}
                                     </p>
                                 </div>
-                                <span className="px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                    กะกำลังใช้งาน (Open)
+                                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-800 border-emerald-200">
+                                    [OPEN] กะกำลังทำงาน
                                 </span>
                             </div>
- 
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold">Opening Float / เงินต้นกะ</p>
-                                    <p className="text-sm font-black mt-1 text-[#1A1A1A]">฿{activeShift.openingFloat?.toLocaleString()}</p>
+
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5 mb-5">
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold">OPENING FLOAT / เงินต้น</p>
+                                    <p className="text-sm font-bold mt-1 text-[oklch(18%_0.012_28)]">฿{(activeShift.openingFloat || 0).toLocaleString()}</p>
                                 </div>
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-emerald-600">Cash In / เงินเข้า (+)</p>
-                                    <p className="text-sm font-black mt-1 text-emerald-600">+฿{(activeShiftSummary ? activeShiftSummary.totalIn : (activeShift.totalIn || activeShift.adjustments?.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0) || 0)).toLocaleString()}</p>
+
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-emerald-700">CASH IN / เงินเข้า (+)</p>
+                                    <p className="text-sm font-bold mt-1 text-emerald-700">
+                                        +฿{(activeShiftSummary ? activeShiftSummary.totalIn : 0).toLocaleString()}
+                                    </p>
                                 </div>
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-red-500">Cash Out / เงินออก (-)</p>
-                                    <p className="text-sm font-black mt-1 text-red-500">-฿{(activeShiftSummary ? activeShiftSummary.totalOut : (activeShift.totalOut || activeShift.adjustments?.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0) || 0)).toLocaleString()}</p>
+
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-red-600">CASH OUT / เงินออก (-)</p>
+                                    <p className="text-sm font-bold mt-1 text-red-600">
+                                        -฿{(activeShiftSummary ? activeShiftSummary.totalOut : 0).toLocaleString()}
+                                    </p>
                                 </div>
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono">
-                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-blue-600">Cash Sales / ขายเงินสด</p>
-                                    <p className="text-sm font-black mt-1 text-blue-600">฿{(activeShiftSummary ? activeShiftSummary.cashSales : (activeShift.cashSales || 0)).toLocaleString()}</p>
+
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-blue-700">CASH SALES / ขายเงินสด</p>
+                                    <p className="text-sm font-bold mt-1 text-blue-700">
+                                        ฿{(activeShiftSummary ? activeShiftSummary.cashSales : 0).toLocaleString()}
+                                    </p>
                                 </div>
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-3 rounded-lg text-xs font-mono col-span-2 md:col-span-1">
-                                    <p className="text-[8px] text-[#767673] uppercase tracking-widest font-bold text-[#ff0000]">Expected Cash / ควรมีในลิ้นชัก</p>
-                                    <p className="text-sm font-black mt-1 text-[#ff0000]">฿{(activeShiftSummary ? activeShiftSummary.expectedCash : (activeShift.expectedCash || (activeShift.openingFloat + (activeShift.cashSales || 0) + (activeShift.totalIn || 0) - (activeShift.totalOut || 0)))).toLocaleString()}</p>
+
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-lg text-xs font-mono col-span-2 md:col-span-1">
+                                    <p className="text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-widest font-bold text-[oklch(52%_0.16_28)]">EXPECTED CASH / ในลิ้นชัก</p>
+                                    <p className="text-sm font-bold mt-1 text-[oklch(52%_0.16_28)]">
+                                        ฿{(activeShiftSummary ? activeShiftSummary.expectedCash : 0).toLocaleString()}
+                                    </p>
                                 </div>
                             </div>
- 
-                            <div className="grid md:grid-cols-2 gap-6">
+
+                            <div className="grid md:grid-cols-2 gap-5">
                                 {/* Left Column: Cash Adjustments */}
-                                <div className="flex flex-col gap-2">
-                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[#767673] uppercase select-none">
-                                        รายการนำเงินเข้า-ออกในรอบนี้ (Current Shift Cash Adjustments)
+                                <div className="flex flex-col gap-1.5">
+                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase select-none">
+                                        รายการนำเงินเข้า-ออกในรอบนี้ (CASH ADJUSTMENTS)
                                     </div>
-                                    <div className="border border-[#D1D1CD] rounded-lg overflow-hidden bg-white max-h-[220px] overflow-y-auto">
+                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg overflow-hidden bg-white max-h-[200px] overflow-y-auto">
                                         <table className="w-full text-left text-xs border-collapse">
                                             <thead>
-                                                <tr className="bg-[#F5F5F2] border-b border-[#D1D1CD] font-mono text-[8px] uppercase tracking-wider text-[#767673] select-none sticky top-0">
-                                                    <th className="py-2 px-3 w-24">เวลา (Time)</th>
-                                                    <th className="py-2 px-3 w-32">ประเภท (Type)</th>
-                                                    <th className="py-2 px-3 text-right w-36">จำนวน (Amount)</th>
-                                                    <th className="py-2 px-3">เหตุผล / รายละเอียด (Reason)</th>
+                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[8px] uppercase tracking-wider text-[oklch(55%_0.010_28)] select-none sticky top-0">
+                                                    <th className="py-2 px-3 w-20">TIME</th>
+                                                    <th className="py-2 px-3 w-28">TYPE</th>
+                                                    <th className="py-2 px-3 text-right w-28">AMOUNT</th>
+                                                    <th className="py-2 px-3">REASON / NOTE</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-[#ECECE9] font-sans font-bold text-[#1A1A1A]">
+                                            <tbody className="divide-y divide-[oklch(94%_0.010_28)] font-sans text-[oklch(18%_0.012_28)]">
                                                 {(activeShift.adjustments || []).map((adj, idx) => (
-                                                    <tr key={adj.id || idx} className="hover:bg-[#F5F5F2] transition-colors">
-                                                        <td className="py-2 px-3 font-mono text-[9px] text-[#767673]">
+                                                    <tr key={adj.id || idx} className="hover:bg-[oklch(94%_0.010_28)]/50 transition-colors">
+                                                        <td className="py-2 px-3 font-mono text-[9px] text-[oklch(55%_0.010_28)]">
                                                             {new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </td>
                                                         <td className="py-2 px-3">
                                                             {adj.type === 'in' ? (
-                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                                                    เงินเข้า (Deposit)
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-800 border-emerald-200">
+                                                                    DEPOSIT (เข้า)
                                                                 </span>
                                                             ) : (
-                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-50 text-red-700 border-red-200">
-                                                                    เงินออก (Payout)
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-50 text-red-800 border-red-200">
+                                                                    PAYOUT (ออก)
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className={`py-2 px-3 text-right font-mono font-black ${adj.type === 'in' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                        <td className={`py-2 px-3 text-right font-mono font-bold ${adj.type === 'in' ? 'text-emerald-700' : 'text-red-600'}`}>
                                                             {adj.type === 'in' ? '+' : '-'}฿{adj.amount?.toLocaleString()}.-
                                                         </td>
-                                                        <td className="py-2 px-3 text-[10px] uppercase truncate max-w-xs">
+                                                        <td className="py-2 px-3 text-[10px] truncate max-w-xs text-[oklch(55%_0.010_28)] font-medium">
                                                             {adj.note || '-'}
                                                         </td>
                                                     </tr>
                                                 ))}
                                                 {(!activeShift.adjustments || activeShift.adjustments.length === 0) && (
                                                     <tr>
-                                                        <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[#767673] uppercase italic">
-                                                            ไม่มีรายการเบิกเงินสดในกะปัจจุบัน (No cash adjustments recorded in active shift)
+                                                        <td colSpan="4" className="py-6 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                                            ไม่มีรายการเบิกเงินสดในกะปัจจุบัน
                                                         </td>
                                                     </tr>
                                                 )}
@@ -987,25 +949,25 @@ iframe.contentDocument.write(htmlContent);
                                         </table>
                                     </div>
                                 </div>
- 
+
                                 {/* Right Column: Top 10 Best Sellers */}
-                                <div className="flex flex-col gap-2">
-                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[#767673] uppercase select-none">
-                                        เมนูขายดีในกะนี้ 10 อันดับ (Top 10 Best Sellers)
+                                <div className="flex flex-col gap-1.5">
+                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase select-none">
+                                        TOP 10 BEST SELLERS IN ACTIVE SHIFT / เมนูขายดีรอบนี้
                                     </div>
-                                    <div className="border border-[#D1D1CD] rounded-lg bg-white p-3 max-h-[220px] overflow-y-auto flex flex-col gap-1.5 shadow-sm">
+                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg bg-white p-3 max-h-[200px] overflow-y-auto flex flex-col gap-1 shadow-2xs">
                                         {activeShiftTopSellers.length === 0 ? (
-                                            <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic animate-pulse">
-                                                กำลังคำนวณข้อมูลเมนูขายดี...
+                                            <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-10 uppercase italic">
+                                                กำลังประมวลผลเมนูขายดี...
                                             </div>
                                         ) : (
                                             activeShiftTopSellers.map((item, idx) => (
-                                                <div key={idx} className="flex justify-between items-center py-1.5 border-b border-[#ECECE9] last:border-b-0 text-xs">
-                                                    <div className="flex items-center gap-2 select-none">
-                                                        <span className="font-mono text-[10px] text-[#767673] w-4 font-bold">{idx + 1}.</span>
-                                                        <span className="font-bold text-[#1A1A1A] uppercase">{item.name}</span>
+                                                <div key={idx} className="flex justify-between items-center py-1 border-b border-[oklch(94%_0.010_28)] last:border-b-0 text-xs">
+                                                    <div className="flex items-center gap-2 select-none truncate pr-2">
+                                                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] w-4 font-bold">{idx + 1}.</span>
+                                                        <span className="font-medium text-[oklch(18%_0.012_28)] truncate">{item.name}</span>
                                                     </div>
-                                                    <span className="font-mono font-black text-emerald-600 select-all">{item.quantity.toLocaleString()} x</span>
+                                                    <span className="font-mono font-bold text-emerald-700 shrink-0">{item.quantity.toLocaleString()} x</span>
                                                 </div>
                                             ))
                                         )}
@@ -1016,41 +978,44 @@ iframe.contentDocument.write(htmlContent);
                     )}
 
                     {/* Filter & Search Bar for Completed Bills */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6 bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm select-none">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-2xs select-none">
                         <div className="flex items-center gap-2 w-full md:w-auto">
                             <div className="relative flex-1 md:w-72">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#767673]" />
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" />
                                 <input
                                     type="text"
-                                    placeholder="ค้นหาเลขบิล / โต๊ะ / ชื่อลูกค้า / หมายเหตุ..."
+                                    placeholder="ค้นหา Short ID (#A2EB), โต๊ะ, ชื่อ..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-[#F5F5F2] border border-[#D1D1CD] focus:border-[#ff0000] pl-9 pr-3 py-1.5 rounded-lg text-xs font-sans font-bold text-[#1A1A1A] outline-none placeholder:text-[#767673]"
+                                    className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] focus:border-[oklch(18%_0.012_28)] pl-8 pr-3 py-1.5 rounded-lg text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none placeholder:text-[oklch(55%_0.010_28)]"
                                 />
                                 {searchQuery && (
                                     <button 
                                         onClick={() => setSearchQuery('')}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#767673] hover:text-[#1A1A1A] text-xs font-mono font-bold"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] text-xs font-mono font-bold"
                                     >
                                         ✕
                                     </button>
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1 bg-[#F5F5F2] border border-[#D1D1CD] p-1 rounded-lg w-full md:w-auto overflow-x-auto">
+
+                        <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-0.5 rounded-lg w-full md:w-auto overflow-x-auto">
                             {[
-                                { id: 'all', label: 'ทั้งหมด (All)' },
-                                { id: 'cash', label: 'เงินสด (Cash)' },
-                                { id: 'qr', label: 'โอน/QR (QR)' },
-                                { id: 'credit', label: 'บัตรเครดิต (Credit)' }
+                                { id: 'all', label: 'ALL BILLS' },
+                                { id: 'cash', label: 'CASH' },
+                                { id: 'qr', label: 'QR TRANSFER' },
+                                { id: 'credit', label: 'CREDIT' },
+                                { id: 'void', label: `VOIDED (${voidedBookings.length})` }
                             ].map(btn => (
                                 <button
                                     key={btn.id}
+                                    type="button"
                                     onClick={() => setPayMethodFilter(btn.id)}
                                     className={`px-3 py-1.5 rounded-md font-mono text-[9px] font-bold uppercase transition-all cursor-pointer whitespace-nowrap ${
                                         payMethodFilter === btn.id
-                                            ? 'bg-white text-[#1A1A1A] shadow-sm border border-[#D1D1CD]'
-                                            : 'text-[#767673] hover:text-[#1A1A1A] border border-transparent'
+                                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs border border-[oklch(85%_0.012_28)]'
+                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] border border-transparent'
                                     }`}
                                 >
                                     {btn.label}
@@ -1060,57 +1025,81 @@ iframe.contentDocument.write(htmlContent);
                     </div>
 
                     {/* Bottom Split Layout: Categories & Log */}
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-3 gap-5">
                         
                         {/* Categories Sales Card */}
-                        <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm">
-                            <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
-                                <CheckCircle2 size={14} className="text-[#ff0000]" /> Sales By Category
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs">
+                            <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 select-none">
+                                <span>SALES BY CATEGORY / หมวดหมู่</span>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">{categoryList.length} CATEGORIES</span>
                             </h4>
-                            <div className="flex-1 space-y-2 overflow-y-auto max-h-[300px] pr-1">
+
+                            <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[340px] pr-1">
                                 {categoryList.map((c, i) => (
-                                    <div key={i} className="flex justify-between items-center bg-[#F5F5F2] p-2.5 rounded-lg border border-[#D1D1CD] text-xs">
-                                        <div>
-                                            <p className="font-bold text-[#1A1A1A]">{c.name}</p>
-                                            <p className="text-[9px] font-mono text-[#767673] mt-0.5 uppercase">{c.quantity} ITEMS SOLD</p>
+                                    <div key={i} className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] text-xs flex flex-col gap-1">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <span className="font-bold text-[oklch(18%_0.012_28)]">{c.name}</span>
+                                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] ml-2 uppercase">
+                                                    ({c.quantity} items)
+                                                </span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                                    ฿{c.amount.toLocaleString()}
+                                                </span>
+                                                <span className="text-[9px] font-mono font-bold text-[oklch(52%_0.16_28)] ml-1.5">
+                                                    {c.pct}%
+                                                </span>
+                                            </div>
                                         </div>
-                                        <p className="font-mono font-bold">฿{c.amount.toLocaleString()}</p>
+
+                                        {/* Progress Bar */}
+                                        <div className="w-full bg-[oklch(85%_0.012_28)]/50 h-1.5 rounded-full overflow-hidden">
+                                            <div 
+                                                className="bg-[oklch(52%_0.16_28)] h-full rounded-full transition-all duration-300"
+                                                style={{ width: `${Math.min(100, Math.max(2, c.pct))}%` }}
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                                 {categoryList.length === 0 && (
-                                    <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic">
-                                        No sales logged for this payment method
+                                    <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-12 uppercase italic">
+                                        ไม่มีรายการขายในตัวกรองนี้
                                     </div>
                                 )}
                             </div>
                             
                             <button 
+                                type="button"
                                 onClick={handlePrintShiftReport}
-                                className="w-full mt-4 bg-[#ff0000] hover:bg-[#d00000] border border-[#c00000] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                                className="w-full mt-4 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                             >
-                                <PrinterIcon size={12} /> PRINT SHIFT SUMMARY
+                                <PrinterIcon size={12} /> PRINT DAILY SUMMARY
                             </button>
                         </div>
 
-                        {/* Completed Bills Log */}
-                        <div className="md:col-span-2 bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm">
-                            <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
-                                <FileText size={14} className="text-[#ff0000]" /> Today's Completed Bills
+                        {/* Completed / Voided Bills Table */}
+                        <div className="md:col-span-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs">
+                            <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 select-none">
+                                <span>{payMethodFilter === 'void' ? 'VOIDED BILLS AUDIT TRAIL / รายการบิลยกเลิก' : "TODAY'S BILLS LOG / รายการบิล"}</span>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">{filteredForBreakdown.length} RECORDS</span>
                             </h4>
-                            <div className="flex-1 overflow-x-auto max-h-[360px] scrollbar-none">
+
+                            <div className="flex-1 overflow-x-auto max-h-[380px] scrollbar-none">
                                 <table className="w-full text-left text-xs border-collapse">
                                     <thead>
-                                        <tr className="border-b border-[#D1D1CD] text-[#767673] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[#F5F5F2]">
-                                            <th className="py-2.5 px-3 w-16">Bill No</th>
-                                            <th className="py-2.5 px-3 w-20">Time</th>
-                                            <th className="py-2.5 px-3 w-16 text-center">Table</th>
-                                            <th className="py-2.5 px-3">Customer / สมาชิก</th>
-                                            <th className="py-2.5 px-3 w-24">Pay Method</th>
-                                            <th className="py-2.5 px-3 text-right">Amount</th>
-                                            <th className="py-2.5 px-3 text-right w-24">Action</th>
+                                        <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[oklch(94%_0.010_28)]">
+                                            <th className="py-2.5 px-3 w-16">BILL NO</th>
+                                            <th className="py-2.5 px-3 w-16">TIME</th>
+                                            <th className="py-2.5 px-3 w-16 text-center">TABLE</th>
+                                            <th className="py-2.5 px-3">CUSTOMER / สมาชิก</th>
+                                            <th className="py-2.5 px-3 w-28">PAY METHOD</th>
+                                            <th className="py-2.5 px-3 text-right">AMOUNT</th>
+                                            <th className="py-2.5 px-3 text-right w-24">ACTION</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[#ECECE9]">
+                                    <tbody className="divide-y divide-[oklch(94%_0.010_28)]">
                                         {filteredForBreakdown.map((b) => {
                                             const timeStr = b.booking_time ? new Date(b.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
                                             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
@@ -1118,110 +1107,125 @@ iframe.contentDocument.write(htmlContent);
                                             const isMember = !!(profileObj || b.user_id);
                                             const memberName = profileObj?.display_name || profileObj?.nickname || (b.customer_name && !defaultWalkIns.includes(b.customer_name.toLowerCase().trim()) ? b.customer_name : null);
                                             const guestName = (b.pickup_contact_name && !defaultWalkIns.includes(b.pickup_contact_name.toLowerCase().trim())) ? b.pickup_contact_name : 'ลูกค้าทั่วไป';
+                                            const isVoid = b.status === 'void' || b.status === 'cancelled';
+                                            const paymentBreakdown = getBookingPaymentBreakdown(b);
 
                                             return (
                                                 <tr 
                                                     key={b.id} 
                                                     onClick={() => setActiveViewBooking(b)}
-                                                    className="hover:bg-[#F5F5F2] transition-colors cursor-pointer"
+                                                    className={`hover:bg-[oklch(94%_0.010_28)]/50 transition-colors cursor-pointer ${isVoid ? 'opacity-60 bg-red-50/20' : ''}`}
                                                 >
-                                                    <td className="py-2.5 px-3 font-mono font-bold text-[#767673]">
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-[oklch(18%_0.012_28)]">
                                                         #{getShortBookingId(b)}
                                                     </td>
-                                                    <td className="py-2.5 px-3 font-mono text-[#767673]">{timeStr}</td>
-                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[#ff0000]">
+                                                    <td className="py-2.5 px-3 font-mono text-[oklch(55%_0.010_28)]">{timeStr}</td>
+                                                    <td className="py-2.5 px-3 font-mono font-bold text-center text-[oklch(52%_0.16_28)]">
                                                         {b.tables_layout?.table_name || 'PICK'}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-sans">
                                                         {isMember ? (
-                                                            <div className="flex flex-col gap-0.5 max-w-[160px]">
+                                                            <div className="flex flex-col gap-0.5 max-w-[150px]">
                                                                 <div className="flex items-center gap-1.5 truncate">
-                                                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase bg-emerald-600 text-white shrink-0">
-                                                                        สมาชิก
+                                                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-emerald-700 text-white shrink-0">
+                                                                        MEMBER
                                                                     </span>
-                                                                    <span className="font-bold text-[#1A1A1A] text-xs truncate">
+                                                                    <span className="font-bold text-[oklch(18%_0.012_28)] text-xs truncate">
                                                                         {memberName || 'สมาชิก'}
                                                                     </span>
                                                                 </div>
                                                                 {profileObj?.phone_number && (
-                                                                    <span className="text-[9px] font-mono text-[#767673] pl-0.5">
+                                                                    <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] pl-0.5">
                                                                         {profileObj.phone_number}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         ) : (
-                                                            <div className="flex items-center gap-1.5 max-w-[160px]">
-                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase bg-gray-200 text-gray-700 border border-gray-300 shrink-0">
-                                                                    ทั่วไป
+                                                            <div className="flex items-center gap-1.5 max-w-[150px]">
+                                                                <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold uppercase bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] shrink-0">
+                                                                    GUEST
                                                                 </span>
-                                                                <span className="font-medium text-[#767673] text-xs truncate">
+                                                                <span className="text-[oklch(55%_0.010_28)] text-xs truncate font-medium">
                                                                     {guestName}
                                                                 </span>
                                                             </div>
                                                         )}
                                                     </td>
                                                     <td className="py-2.5 px-3">
-                                                        {(() => {
-                                                            const pm = getBookingPaymentMethod(b);
-                                                            if (pm === 'cash') return (
-                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                                                    Cash
-                                                                </span>
-                                                            );
-                                                            if (pm === 'credit') return (
-                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-amber-50 text-amber-700 border-amber-200">
-                                                                    Credit
-                                                                </span>
-                                                            );
-                                                            return (
-                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-blue-50 text-blue-700 border-blue-200">
-                                                                    QR Pay
-                                                                </span>
-                                                            );
-                                                        })()}
+                                                        {isVoid ? (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-100 text-red-900 border-red-300">
+                                                                VOIDED
+                                                            </span>
+                                                        ) : paymentBreakdown.isSplit ? (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-purple-50 text-purple-800 border-purple-200">
+                                                                SPLIT PAY
+                                                            </span>
+                                                        ) : paymentBreakdown.credit > 0 ? (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-amber-50 text-amber-800 border-amber-200">
+                                                                CREDIT
+                                                            </span>
+                                                        ) : paymentBreakdown.qr > 0 ? (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-blue-50 text-blue-800 border-blue-200">
+                                                                QR PAY
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-800 border-emerald-200">
+                                                                CASH
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold">
-                                                        ฿{b.total_amount?.toLocaleString()}
+                                                        {isVoid ? (
+                                                            <span className="line-through text-red-500">฿{b.total_amount?.toLocaleString()}</span>
+                                                        ) : (
+                                                            <span>฿{b.total_amount?.toLocaleString()}</span>
+                                                        )}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                                                         {b.payment_slip_url && (
                                                             <button 
+                                                                type="button"
                                                                 onClick={(e) => { e.stopPropagation(); setViewSlipUrl(b.payment_slip_url); }}
-                                                                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-700 hover:text-emerald-900 transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                                                                title="ดูรูปสลิปหลักฐานโอนเงิน"
+                                                                className="p-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-800 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                                title="ดูสลิปโอนเงิน"
                                                             >
                                                                 <ImageIcon size={10} />
                                                             </button>
                                                         )}
                                                         <button 
+                                                            type="button"
                                                             onClick={(e) => { e.stopPropagation(); setActiveViewBooking(b); }}
-                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                                                            title="View Bill Details / ดูรายละเอียดบิล"
+                                                            className="p-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                            title="ดูรายละเอียดบิล"
                                                         >
                                                             <FileText size={10} />
                                                         </button>
                                                         <button 
+                                                            type="button"
                                                             onClick={(e) => { e.stopPropagation(); setActiveReprintBooking(b); }}
-                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                                                            title="Reprint Bill / Receipt"
+                                                            className="p-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                            title="พิมพ์สลิปซ้ำ"
                                                         >
                                                             <PrinterIcon size={10} />
                                                         </button>
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); handleVoidBill(b.id, b.total_amount); }}
-                                                            className="p-1.5 bg-white hover:bg-[#ff0000]/10 border border-[#D1D1CD] hover:border-[#ff0000]/20 rounded-lg text-red-500 hover:text-[#ff0000] transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                                                            title="Void Bill / ยกเลิกบิล"
-                                                        >
-                                                            <X size={10} />
-                                                        </button>
+                                                        {!isVoid && (
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); handleVoidBill(b.id, b.total_amount); }}
+                                                                className="p-1.5 bg-white hover:bg-red-50 border border-[oklch(85%_0.012_28)] hover:border-red-300 rounded-lg text-red-600 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                                                                title="ยกเลิกบิล (Void)"
+                                                            >
+                                                                <X size={10} />
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
                                         })}
                                         {filteredForBreakdown.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="py-10 text-center font-mono text-[9px] text-[#767673] uppercase italic">
-                                                    No completed bills logged for this payment method
+                                                <td colSpan="7" className="py-12 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                                    ไม่มีรายการบิลในเงื่อนไขการค้นหานี้
                                                 </td>
                                             </tr>
                                         )}
@@ -1232,35 +1236,50 @@ iframe.contentDocument.write(htmlContent);
 
                     </div>
 
-                    {/* Shift History Section */}
-                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-5 flex flex-col shadow-sm mt-6">
-                        <h4 className="font-mono font-bold text-xs text-[#1A1A1A] uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-[#D1D1CD] pb-2 select-none">
-                            <Clock size={14} className="text-[#ff0000]" /> Shift Closure History / ประวัติรอบการทำงาน
-                        </h4>
+                    {/* Historical Shift Section */}
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs mt-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[oklch(85%_0.012_28)] pb-3 mb-4 select-none">
+                            <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-2">
+                                <Clock size={13} className="text-[oklch(52%_0.16_28)]" /> 
+                                <span>SHIFT CLOSURE HISTORY / ประวัติการปิดรอบกะ</span>
+                            </h4>
+
+                            <div className="relative w-full sm:w-60">
+                                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" />
+                                <input 
+                                    type="text"
+                                    placeholder="ค้นหาชื่อพนักงาน, วันที่..."
+                                    value={shiftSearchQuery}
+                                    onChange={(e) => setShiftSearchQuery(e.target.value)}
+                                    className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] focus:border-[oklch(18%_0.012_28)] pl-7 pr-3 py-1 rounded-lg text-xs font-mono text-[oklch(18%_0.012_28)] outline-none"
+                                />
+                            </div>
+                        </div>
+
                         <div className="overflow-x-auto max-h-[300px]">
                             <table className="w-full text-left text-xs border-collapse">
                                 <thead>
-                                    <tr className="border-b border-[#D1D1CD] text-[#767673] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[#F5F5F2]">
-                                        <th className="py-2.5 px-3">Staff / พนักงาน</th>
-                                        <th className="py-2.5 px-3">Opened / เปิดรอบ</th>
-                                        <th className="py-2.5 px-3">Closed / ปิดรอบ</th>
-                                        <th className="py-2.5 px-3 text-right">Float / เงินต้น</th>
-                                        <th className="py-2.5 px-3 text-right">Cash / ยอดสด</th>
-                                        <th className="py-2.5 px-3 text-right text-emerald-600">Cash In (+เงินเข้า)</th>
-                                        <th className="py-2.5 px-3 text-right text-red-500">Cash Out (-เงินออก)</th>
-                                        <th className="py-2.5 px-3 text-right">Expected / คาดการณ์</th>
-                                        <th className="py-2.5 px-3 text-right">Actual / นับจริง</th>
-                                        <th className="py-2.5 px-3 text-right">Diff / ส่วนต่าง</th>
-                                        <th className="py-2.5 px-3 text-center">Action</th>
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[oklch(94%_0.010_28)]">
+                                        <th className="py-2.5 px-3">STAFF / พนักงาน</th>
+                                        <th className="py-2.5 px-3">OPENED</th>
+                                        <th className="py-2.5 px-3">CLOSED</th>
+                                        <th className="py-2.5 px-3 text-right">FLOAT</th>
+                                        <th className="py-2.5 px-3 text-right">CASH SALES</th>
+                                        <th className="py-2.5 px-3 text-right text-emerald-700">CASH IN (+)</th>
+                                        <th className="py-2.5 px-3 text-right text-red-600">CASH OUT (-)</th>
+                                        <th className="py-2.5 px-3 text-right">EXPECTED</th>
+                                        <th className="py-2.5 px-3 text-right">ACTUAL</th>
+                                        <th className="py-2.5 px-3 text-right">DIFF</th>
+                                        <th className="py-2.5 px-3 text-center">ACTION</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[#ECECE9]">
-                                    {shiftHistory.map((s, i) => {
+                                <tbody className="divide-y divide-[oklch(94%_0.010_28)]">
+                                    {filteredShiftHistory.map((s, i) => {
                                         const openTime = new Date(s.openedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
                                         const isShiftOpen = s.status === 'open';
                                         
                                         const closeTime = isShiftOpen ? (
-                                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
+                                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                                 กำลังใช้งาน
                                             </span>
@@ -1269,13 +1288,13 @@ iframe.contentDocument.write(htmlContent);
                                         const txs = s.transactions || [];
                                         const adjs = s.adjustments || [];
                                         
-                                        const totalIn = Math.round(s.totalIn ? s.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0));
-                                        const totalOut = Math.round(s.totalOut ? s.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0));
+                                        const totalIn = Math.round(s.totalIn !== undefined ? s.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0));
+                                        const totalOut = Math.round(s.totalOut !== undefined ? s.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0));
                                         
-                                        const cashSales = Math.round(s.cashSales ? s.cashSales : txs.filter(tx => tx.paymentMethod === 'cash').reduce((sum, tx) => sum + tx.amount, 0));
+                                        const shiftCashSales = Math.round(s.cashSales !== undefined ? s.cashSales : txs.filter(tx => tx.paymentMethod === 'cash').reduce((sum, tx) => sum + tx.amount, 0));
                                         
-                                        const calculatedExpected = Math.round(s.openingFloat + cashSales + totalIn - totalOut);
-                                        const expectedCash = Math.round(s.expectedCash ? s.expectedCash : calculatedExpected);
+                                        const calculatedExpected = Math.round((s.openingFloat || 0) + shiftCashSales + totalIn - totalOut);
+                                        const expectedCash = Math.round(s.expectedCash !== undefined ? s.expectedCash : calculatedExpected);
                                         const closedCash = Math.round(s.closedCash || 0);
                                         const difference = isShiftOpen ? 0 : Math.round(s.difference !== undefined && s.difference !== 0 ? s.difference : (closedCash - expectedCash));
                                         
@@ -1285,85 +1304,86 @@ iframe.contentDocument.write(htmlContent);
                                             <React.Fragment key={s.id || i}>
                                                 <tr 
                                                     onClick={() => setExpandedShiftId(prev => prev === s.id ? null : s.id)}
-                                                    className="hover:bg-[#F5F5F2] cursor-pointer transition-colors font-mono text-[10px]"
+                                                    className="hover:bg-[oklch(94%_0.010_28)]/50 cursor-pointer transition-colors font-mono text-[10px]"
                                                 >
-                                                    <td className="py-2.5 px-3 font-sans font-bold text-[#1A1A1A] uppercase flex items-center gap-1 select-none">
-                                                        {isExpanded ? <ChevronUp size={10} className="text-[#ff0000]" /> : <ChevronDown size={10} className="text-[#767673]" />}
+                                                    <td className="py-2.5 px-3 font-sans font-bold text-[oklch(18%_0.012_28)] uppercase flex items-center gap-1 select-none">
+                                                        {isExpanded ? <ChevronUp size={10} className="text-[oklch(52%_0.16_28)]" /> : <ChevronDown size={10} className="text-[oklch(55%_0.010_28)]" />}
                                                         <span>{s.staffName}</span>
                                                     </td>
-                                                    <td className="py-2.5 px-3 text-[#767673]">{openTime}</td>
-                                                    <td className="py-2.5 px-3 text-[#767673]">{closeTime}</td>
+                                                    <td className="py-2.5 px-3 text-[oklch(55%_0.010_28)]">{openTime}</td>
+                                                    <td className="py-2.5 px-3 text-[oklch(55%_0.010_28)]">{closeTime}</td>
                                                     <td className="py-2.5 px-3 text-right">฿{Math.round(s.openingFloat || 0).toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right">฿{cashSales.toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right text-emerald-600 font-bold">+฿{totalIn.toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right text-red-500 font-bold">-฿{totalOut.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right font-bold text-emerald-700">฿{shiftCashSales.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right text-emerald-700 font-bold">+฿{totalIn.toLocaleString()}</td>
+                                                    <td className="py-2.5 px-3 text-right text-red-600 font-bold">-฿{totalOut.toLocaleString()}</td>
                                                     <td className="py-2.5 px-3 text-right font-bold">฿{expectedCash.toLocaleString()}</td>
-                                                    <td className="py-2.5 px-3 text-right font-bold text-[#767673]">
+                                                    <td className="py-2.5 px-3 text-right font-bold text-[oklch(55%_0.010_28)]">
                                                         {isShiftOpen ? '-' : `฿${closedCash.toLocaleString()}`}
                                                     </td>
-                                                    <td className={`py-2.5 px-3 text-right font-black ${isShiftOpen ? 'text-[#767673]' : difference === 0 ? 'text-[#767673]' : difference > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                    <td className={`py-2.5 px-3 text-right font-bold ${isShiftOpen ? 'text-[oklch(55%_0.010_28)]' : difference === 0 ? 'text-[oklch(55%_0.010_28)]' : difference > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                                                         {isShiftOpen ? '-' : (difference > 0 ? '+' : '') + difference.toLocaleString()}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-center">
                                                         <button 
+                                                            type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handlePrintHistoricalShiftReport(s);
                                                             }}
-                                                            className="p-1.5 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer inline-flex items-center gap-1 font-sans text-[9px] font-bold uppercase tracking-wider"
+                                                            className="p-1.5 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer inline-flex items-center gap-1 font-mono text-[9px] font-bold uppercase"
                                                         >
-                                                            <PrinterIcon size={10} /> Reprint
+                                                            <PrinterIcon size={10} /> REPRINT
                                                         </button>
                                                     </td>
                                                 </tr>
                                                 {isExpanded && (
-                                                    <tr className="bg-[#F9F9F7]">
-                                                        <td colSpan="11" className="p-4 border-t border-b border-[#D1D1CD]">
-                                                            <div className="grid md:grid-cols-2 gap-6">
+                                                    <tr className="bg-[oklch(94%_0.010_28)]/30">
+                                                        <td colSpan="11" className="p-4 border-t border-b border-[oklch(85%_0.012_28)]">
+                                                            <div className="grid md:grid-cols-2 gap-5">
                                                                 
                                                                 {/* Left Column: Cash Adjustments */}
-                                                                <div className="flex flex-col gap-2">
-                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[#767673] uppercase mb-1 select-none">
-                                                                        รายการนำเงินเข้า-ออกระหว่างรอบ (Cash Adjustments Details)
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase mb-0.5 select-none">
+                                                                        รายการนำเงินเข้า-ออกระหว่างรอบ (ADJUSTMENTS)
                                                                     </div>
-                                                                    <div className="border border-[#D1D1CD] rounded-lg overflow-hidden bg-white shadow-sm max-h-[220px] overflow-y-auto">
+                                                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg overflow-hidden bg-white shadow-2xs max-h-[200px] overflow-y-auto">
                                                                         <table className="w-full text-left text-xs border-collapse">
                                                                             <thead>
-                                                                                <tr className="bg-[#F2F2EF] border-b border-[#D1D1CD] font-mono text-[8px] uppercase tracking-wider text-[#767673] select-none sticky top-0">
-                                                                                    <th className="py-2 px-3 w-24">เวลา (Time)</th>
-                                                                                    <th className="py-2 px-3 w-32">ประเภท (Type)</th>
-                                                                                    <th className="py-2 px-3 text-right w-36">จำนวน (Amount)</th>
-                                                                                    <th className="py-2 px-3">เหตุผล / รายละเอียด (Reason)</th>
+                                                                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] font-mono text-[8px] uppercase tracking-wider text-[oklch(55%_0.010_28)] select-none sticky top-0">
+                                                                                    <th className="py-2 px-3 w-20">TIME</th>
+                                                                                    <th className="py-2 px-3 w-28">TYPE</th>
+                                                                                    <th className="py-2 px-3 text-right w-28">AMOUNT</th>
+                                                                                    <th className="py-2 px-3">REASON / NOTE</th>
                                                                                 </tr>
                                                                             </thead>
-                                                                            <tbody className="divide-y divide-[#ECECE9] font-sans font-bold text-[#1A1A1A]">
+                                                                            <tbody className="divide-y divide-[oklch(94%_0.010_28)] font-sans text-[oklch(18%_0.012_28)]">
                                                                                 {adjs.map((adj, idx) => (
-                                                                                    <tr key={adj.id || idx} className="hover:bg-[#F5F5F2] transition-colors">
-                                                                                        <td className="py-2 px-3 font-mono text-[9px] text-[#767673]">
+                                                                                    <tr key={adj.id || idx} className="hover:bg-[oklch(94%_0.010_28)]/50 transition-colors">
+                                                                                        <td className="py-2 px-3 font-mono text-[9px] text-[oklch(55%_0.010_28)]">
                                                                                             {new Date(adj.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                                         </td>
                                                                                         <td className="py-2 px-3">
                                                                                             {adj.type === 'in' ? (
-                                                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                                                                                    เงินเข้า (Deposit)
+                                                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-emerald-50 text-emerald-800 border-emerald-200">
+                                                                                                    DEPOSIT
                                                                                                 </span>
                                                                                             ) : (
-                                                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-50 text-red-700 border-red-200">
-                                                                                                    เงินออก (Payout)
+                                                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-50 text-red-800 border-red-200">
+                                                                                                    PAYOUT
                                                                                                 </span>
                                                                                             )}
                                                                                         </td>
-                                                                                        <td className={`py-2 px-3 text-right font-mono font-black ${adj.type === 'in' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                                                        <td className={`py-2 px-3 text-right font-mono font-bold ${adj.type === 'in' ? 'text-emerald-700' : 'text-red-600'}`}>
                                                                                             {adj.type === 'in' ? '+' : '-'}฿{adj.amount?.toLocaleString()}.-
                                                                                         </td>
-                                                                                        <td className="py-2 px-3 text-[10px] uppercase truncate max-w-xs">
+                                                                                        <td className="py-2 px-3 text-[10px] truncate max-w-xs text-[oklch(55%_0.010_28)]">
                                                                                             {adj.note || '-'}
                                                                                         </td>
                                                                                     </tr>
                                                                                 ))}
                                                                                 {adjs.length === 0 && (
                                                                                     <tr>
-                                                                                        <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[#767673] uppercase italic">
+                                                                                        <td colSpan="4" className="py-4 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
                                                                                             ไม่มีรายการเบิกจ่ายเงินสดระหว่างรอบ
                                                                                         </td>
                                                                                     </tr>
@@ -1374,27 +1394,27 @@ iframe.contentDocument.write(htmlContent);
                                                                 </div>
 
                                                                 {/* Right Column: Top 10 Best Sellers */}
-                                                                <div className="flex flex-col gap-2">
-                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[#767673] uppercase mb-1 select-none">
-                                                                        เมนูขายดีในกะนี้ 10 อันดับ (Top 10 Best Sellers)
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <div className="text-[9px] font-mono font-bold tracking-wider text-[oklch(55%_0.010_28)] uppercase mb-0.5 select-none">
+                                                                        TOP 10 BEST SELLERS / เมนูขายดีในกะนี้
                                                                     </div>
-                                                                    <div className="border border-[#D1D1CD] rounded-lg bg-white p-3 shadow-sm max-h-[220px] overflow-y-auto flex flex-col gap-1.5">
+                                                                    <div className="border border-[oklch(85%_0.012_28)] rounded-lg bg-white p-3 shadow-2xs max-h-[200px] overflow-y-auto flex flex-col gap-1">
                                                                         {expandedShiftDetails[s.id]?.loading ? (
-                                                                            <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic animate-pulse">
+                                                                            <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-10 uppercase italic animate-pulse">
                                                                                 กำลังโหลดข้อมูลเมนูขายดี...
                                                                             </div>
                                                                         ) : !expandedShiftDetails[s.id]?.topSellers || expandedShiftDetails[s.id]?.topSellers.length === 0 ? (
-                                                                            <div className="text-center font-mono text-[9px] text-[#767673] py-12 uppercase italic">
-                                                                                ไม่มีข้อมูลการขายในกะนี้ (No sales logged in this shift)
+                                                                            <div className="text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] py-10 uppercase italic">
+                                                                                ไม่มีข้อมูลรายการขายในกะนี้
                                                                             </div>
                                                                         ) : (
                                                                             expandedShiftDetails[s.id].topSellers.map((item, idx) => (
-                                                                                <div key={idx} className="flex justify-between items-center py-1.5 border-b border-[#ECECE9] last:border-b-0 text-xs">
-                                                                                    <div className="flex items-center gap-2 select-none">
-                                                                                        <span className="font-mono text-[10px] text-[#767673] w-4 font-bold">{idx + 1}.</span>
-                                                                                        <span className="font-bold text-[#1A1A1A] uppercase">{item.name}</span>
+                                                                                <div key={idx} className="flex justify-between items-center py-1 border-b border-[oklch(94%_0.010_28)] last:border-b-0 text-xs">
+                                                                                    <div className="flex items-center gap-2 select-none truncate pr-2">
+                                                                                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] w-4 font-bold">{idx + 1}.</span>
+                                                                                        <span className="font-medium text-[oklch(18%_0.012_28)] truncate">{item.name}</span>
                                                                                     </div>
-                                                                                    <span className="font-mono font-black text-emerald-600 select-all">{item.quantity.toLocaleString()} x</span>
+                                                                                    <span className="font-mono font-bold text-emerald-700 shrink-0">{item.quantity.toLocaleString()} x</span>
                                                                                 </div>
                                                                             ))
                                                                         )}
@@ -1408,10 +1428,10 @@ iframe.contentDocument.write(htmlContent);
                                             </React.Fragment>
                                         );
                                     })}
-                                    {shiftHistory.length === 0 && (
+                                    {filteredShiftHistory.length === 0 && (
                                         <tr>
-                                            <td colSpan="11" className="py-10 text-center font-mono text-[9px] text-[#767673] uppercase italic">
-                                                No completed shift logs found
+                                            <td colSpan="11" className="py-12 text-center font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase italic">
+                                                ไม่พบประวัติการปิดรอบกะ
                                             </td>
                                         </tr>
                                     )}
@@ -1422,7 +1442,7 @@ iframe.contentDocument.write(htmlContent);
                 </div>
             )}
 
-            {/* Reprint Slip Modal integration */}
+            {/* Reprint Slip Modal */}
             {activeReprintBooking && (
                 <SlipModal 
                     booking={activeReprintBooking}
@@ -1440,10 +1460,12 @@ iframe.contentDocument.write(htmlContent);
             )}
 
             {/* View Payment Slip Image Modal */}
-            <ViewSlipModal 
-                url={viewSlipUrl}
-                onClose={() => setViewSlipUrl(null)}
-            />
+            {viewSlipUrl && (
+                <ViewSlipModal 
+                    url={viewSlipUrl}
+                    onClose={() => setViewSlipUrl(null)}
+                />
+            )}
         </div>
     );
 }

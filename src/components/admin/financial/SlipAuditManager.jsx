@@ -363,8 +363,9 @@ export default function SlipAuditManager({
 
         // 2. Search query filter
         if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase().trim();
+            const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
             result = result.filter(o => {
+                const shortId = getShortBookingId(o).toLowerCase();
                 const token = (o.tracking_token || '').toLowerCase();
                 const idStr = String(o.id).toLowerCase();
                 const table = (o.tables_layout?.table_name || '').toLowerCase();
@@ -374,7 +375,7 @@ export default function SlipAuditManager({
                 const itemsList = getBookingItems(o);
                 const itemsStr = itemsList.map(i => getItemName(i)).join(' ').toLowerCase();
 
-                return token.includes(q) || idStr.includes(q) || table.includes(q) || name.includes(q) || phone.includes(q) || remark.includes(q) || itemsStr.includes(q);
+                return shortId.includes(q) || token.includes(q) || idStr.includes(q) || table.includes(q) || name.includes(q) || phone.includes(q) || remark.includes(q) || itemsStr.includes(q);
             });
         }
 
