@@ -45,6 +45,314 @@ async function verifySignature(body: string, signature: string, secret: string) 
   return base64Signature === signature
 }
 
+async function scanReceiptImageWithGemini(
+  base64Image: string,
+  apiKey: string,
+  preferredModel: string = 'gemini-2.0-flash'
+): Promise<any> {
+  const systemInstruction = `
+You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
+Analyze the provided image.
+Determine if the image is a receipt, tax invoice, cash bill, payment voucher, fuel receipt, utility bill, Makro bill, supermarket bill, or bank transfer slip for an expense.
+
+If the image is NOT a receipt/bill/slip/invoice (e.g. food photo, selfie, random picture, sticker, meme, greeting):
+Return ONLY:
+{
+  "is_receipt": false
+}
+
+If it IS a receipt, bill, tax invoice, delivery slip, or expense slip:
+Extract and return ONLY a valid JSON object matching this schema:
+{
+  "is_receipt": true,
+  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์', 'ค่าน้ำมัน ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าแก้วและบรรจุภัณฑ์')",
+  "amount": 0.00, // Total payable amount (number, no commas)
+  "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing, use today's date
+  "category": "raw_material", // EXACTLY ONE OF: 'raw_material' (Makro, Lotus, Big C, fresh food, beverages, ingredients), 'marketing' (Facebook, TikTok, IG, Google ads), 'fuel_logistics' (gasoline, PTT, Shell, Bangchak, Lalamove, Grab), 'utilities' (electricity, water, internet), 'rent' (store rent), 'staff_wages' (payroll, wages), 'equipment_supplies' (cups, bags, tableware), 'maintenance' (repairs, HomePro, hardware), 'software_service' (POS, music, subscriptions), 'other' (misc)
+  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ปั๊ม ปตท. (PTT)', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
+  "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
+  "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
+  "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, utility bills), false otherwise
+  "payment_method": "TRANSFER", // 'TRANSFER', 'CASH', or 'CREDIT'
+  "notes": "Brief summary of purchased line items in Thai (e.g. 'หมูสามชั้น 3kg, นม 4 แกลลอน, ผักสลัด')",
+  "confidence": 0.95 // Confidence score from 0.0 to 1.0
+}
+
+Category Rules:
+- Makro, Lotus, Big C, Foodland, fresh markets, meat, vegetables, milk, coffee beans, syrups, seasoning -> 'raw_material'
+- Facebook, TikTok, Instagram, Google Ads, LINE Ads, marketing agencies -> 'marketing'
+- PTT, Shell, Bangchak, Caltex, gasoline, diesel, Lalamove, GrabExpress -> 'fuel_logistics'
+- MEA (การไฟฟ้า), PEA, MWA (การประปา), PWA, True, AIS, 3BB, TOT -> 'utilities'
+- Rent, landlord, lease -> 'rent'
+- Cups, plastic lids, straw, packaging, takeout boxes, napkins, cleaning supplies -> 'equipment_supplies'
+- Electrician, plumbing, HomePro, repairs, hardware -> 'maintenance'
+- Spotify, Canva, POS software, monthly subscriptions -> 'software_service'
+`;
+
+  const requestBody = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: 'Please analyze this receipt and extract structured expense and tax information in Thai.' },
+          {
+            inline_data: {
+              mime_type: 'image/jpeg',
+              data: base64Image
+            }
+          }
+        ]
+      }
+    ],
+    system_instruction: {
+      parts: [{ text: systemInstruction }]
+    },
+    generationConfig: {
+      response_mime_type: 'application/json',
+      temperature: 0.1
+    }
+  };
+
+  const candidateModels = Array.from(new Set([
+    preferredModel,
+    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-pro'
+  ]));
+
+  let lastError: any = null;
+
+  for (const model of candidateModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.warn(`[Gemini ${model}] failed with status ${response.status}:`, errText);
+        if (response.status === 404 || errText.toLowerCase().includes('not found')) {
+          continue;
+        }
+        lastError = new Error(`Gemini API Error: ${errText}`);
+        continue;
+      }
+
+      const resJson = await response.json();
+      const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) continue;
+
+      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      return parsed;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('Failed to scan receipt with Gemini AI');
+}
+
+function createReceiptFlexMessage(expense: any, dateFormatted: string) {
+  const categoryLabels: Record<string, string> = {
+    'raw_material': '🛒 วัตถุดิบ & ของสด (MAKRO)',
+    'marketing': '📣 ค่ายิงแอด & การตลาด',
+    'fuel_logistics': '⛽ ค่าน้ำมัน & ค่าส่งของ',
+    'utilities': '⚡ ค่าน้ำ / ไฟ / เน็ต',
+    'rent': '🏠 ค่าเช่าสถานที่',
+    'staff_wages': '👥 ค่าจ้าง / เงินเดือน',
+    'equipment_supplies': '📦 ของใช้ & บรรจุภัณฑ์',
+    'maintenance': '🔧 ซ่อมบำรุง & ตกแต่ง',
+    'software_service': '💻 ค่าบริการ & ซอฟต์แวร์',
+    'other': '📌 อื่นๆ / เบ็ดเตล็ด'
+  };
+
+  const docTypeLabels: Record<string, string> = {
+    'tax_invoice': 'ใบกำกับภาษีเต็มรูป (TAX INVOICE)',
+    'cash_bill': 'บิลเงินสด (CASH BILL)',
+    'receipt_voucher': 'ใบสำคัญรับเงิน (VOUCHER)',
+    'slip_only': 'สลิปโอนเงิน (TRANSFER SLIP)'
+  };
+
+  const categoryText = categoryLabels[expense.category] || expense.category;
+  const docTypeText = docTypeLabels[expense.doc_type] || expense.doc_type;
+  const vendorDisplay = (expense.vendor_name || 'ไม่ระบุร้านค้า').toUpperCase();
+  const amountStr = `฿${Number(expense.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const detailRows: any[] = [
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "หมวดหมู่", color: "#666666", size: "xs", flex: 3 },
+        { type: "text", text: categoryText, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5, wrap: true }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: "วันที่เอกสาร", color: "#666666", size: "xs", flex: 3 },
+        { type: "text", text: dateFormatted, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5 }
+      ]
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: "ประเภทเอกสาร", color: "#666666", size: "xs", flex: 3 },
+        { type: "text", text: docTypeText, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5, wrap: true }
+      ]
+    }
+  ];
+
+  if (expense.vat_included && expense.vat_amount > 0) {
+    detailRows.push({
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: "ภาษีมูลค่าเพิ่ม (VAT 7%)", color: "#666666", size: "xs", flex: 4 },
+        { type: "text", text: `฿${Number(expense.vat_amount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: "#2D804E", size: "xs", weight: "bold", align: "end", flex: 4 }
+      ]
+    });
+  }
+
+  if (expense.vendor_tax_id) {
+    detailRows.push({
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: "เลขผู้เสียภาษี", color: "#666666", size: "xs", flex: 3 },
+        { type: "text", text: expense.vendor_tax_id, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5 }
+      ]
+    });
+  }
+
+  if (expense.payment_method) {
+    const payMap: Record<string, string> = {
+      'TRANSFER': 'โอนเงิน (TRANSFER)',
+      'CASH': 'เงินสด (CASH)',
+      'CREDIT': 'บัตรเครดิต (CREDIT)'
+    };
+    detailRows.push({
+      type: "box",
+      layout: "horizontal",
+      margin: "sm",
+      contents: [
+        { type: "text", text: "วิธีชำระเงิน", color: "#666666", size: "xs", flex: 3 },
+        { type: "text", text: payMap[expense.payment_method] || expense.payment_method, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5 }
+      ]
+    });
+  }
+
+  if (expense.notes) {
+    detailRows.push({
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      backgroundColor: "#F9F9F8",
+      cornerRadius: "sm",
+      paddingAll: "sm",
+      contents: [
+        { type: "text", text: "รายการสินค้า / หมายเหตุ:", color: "#888888", size: "xxs", weight: "bold" },
+        { type: "text", text: expense.notes, color: "#1A1A1A", size: "xs", wrap: true, margin: "xs" }
+      ]
+    });
+  }
+
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "20px",
+      contents: [
+        { type: "text", text: "RECEIPT RECORDED (AI)", weight: "bold", color: "#1A1A1A", size: "sm" },
+        { type: "text", text: "ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ", color: "#666666", size: "xs", margin: "xs" }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "20px",
+      contents: [
+        // Status indicator
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "box",
+              layout: "vertical",
+              width: "4px",
+              backgroundColor: "#2D804E",
+              cornerRadius: "sm",
+              contents: []
+            },
+            {
+              type: "box",
+              layout: "vertical",
+              margin: "md",
+              contents: [
+                { type: "text", text: "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว", color: "#2D804E", weight: "bold", size: "xs" },
+                { type: "text", text: vendorDisplay, weight: "bold", color: "#1A1A1A", size: "sm", margin: "xs", wrap: true },
+                { type: "text", text: expense.title || 'ค่าใช้จ่ายร้าน', color: "#666666", size: "xs", margin: "xs", wrap: true }
+              ]
+            }
+          ]
+        },
+        { type: "separator", margin: "md", color: "#E2E2E0" },
+        // Total Amount stark box
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "md",
+          backgroundColor: "#F9F9F8",
+          cornerRadius: "md",
+          paddingAll: "md",
+          contents: [
+            { type: "text", text: "ยอดสุทธิ", weight: "bold", size: "sm", color: "#1A1A1A", gravity: "center", flex: 4 },
+            { type: "text", text: amountStr, weight: "bold", size: "lg", color: "#9E2D2D", align: "end", gravity: "center", flex: 6 }
+          ]
+        },
+        { type: "separator", margin: "md", color: "#E2E2E0" },
+        ...detailRows,
+        { type: "separator", margin: "md", color: "#E2E2E0" },
+        {
+          type: "text",
+          text: "ตรวจสอบและดูภาพสลิปต้นฉบับได้ที่เมนู บัญชีและภาษี (Admin Tax Hub)",
+          color: "#888888",
+          size: "xxs",
+          align: "center",
+          margin: "md",
+          wrap: true
+        }
+      ]
+    },
+    styles: {
+      header: {
+        backgroundColor: "#F4F4F3",
+        separator: true,
+        separatorColor: "#E2E2E0"
+      },
+      body: {
+        backgroundColor: "#FFFFFF"
+      }
+    }
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -1614,8 +1922,416 @@ Deno.serve(async (req) => {
                 messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลราคากลางได้: ' + err.message }]
               }),
             })
+          }
+          continue
+        }
+
+        // --- NEW: Daily Expenses Summary Command (stexp / stexpense) ---
+        if (text === 'stexp' || text === 'stexpense' || text === 'stexpenses') {
+          console.log('Processing stexp command...')
+          try {
+            const now = new Date()
+            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+            const todayStr = thNow.toISOString().split('T')[0]
+
+            let titleDateStr = ''
+            try {
+              titleDateStr = thNow.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+            } catch {
+              titleDateStr = todayStr
+            }
+
+            const { data: expenses, error } = await supabaseAdmin
+              .from('store_expenses')
+              .select('*')
+              .eq('expense_date', todayStr)
+              .order('created_at', { ascending: false })
+
+            if (error) throw error
+
+            let totalAmount = 0
+            let totalVat = 0
+            ;(expenses || []).forEach((exp: any) => {
+              totalAmount += Number(exp.amount) || 0
+              totalVat += Number(exp.vat_amount) || 0
+            })
+
+            let messages = []
+
+            if (!expenses || expenses.length === 0) {
+              messages.push({
+                type: "flex",
+                altText: `🧾 สรุปค่าใช้จ่ายวันนี้ (${titleDateStr}): ยังไม่มีรายการ`,
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "ยังไม่มีการบันทึกค่าใช้จ่ายในวันนี้ 📭", color: "#888888", size: "sm", align: "center", weight: "bold" },
+                      { type: "text", text: "ส่งภาพสลิป/ใบเสร็จเข้ามาในกลุ่มเพื่อบันทึกอัตโนมัติได้ทันที", color: "#aaaaaa", size: "xs", align: "center", margin: "sm", wrap: true }
+                    ]
+                  },
+                  styles: {
+                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
+                    body: { backgroundColor: "#FFFFFF" }
+                  }
+                }
+              })
+            } else {
+              const flexContents: any[] = []
+
+              expenses.slice(0, 8).forEach((exp: any, index: number) => {
+                const vendor = exp.vendor_name || 'ไม่ระบุ'
+                const title = exp.title || 'ค่าใช้จ่าย'
+                const amt = Number(exp.amount) || 0
+
+                flexContents.push({
+                  type: "box",
+                  layout: "horizontal",
+                  margin: "md",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      flex: 7,
+                      contents: [
+                        { type: "text", text: vendor.toUpperCase(), weight: "bold", size: "xs", color: "#1A1A1A", wrap: true },
+                        { type: "text", text: title, size: "xxs", color: "#666666", wrap: true, margin: "xs" }
+                      ]
+                    },
+                    {
+                      type: "text",
+                      text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      weight: "bold",
+                      size: "sm",
+                      color: "#9E2D2D",
+                      align: "end",
+                      gravity: "center",
+                      flex: 3
+                    }
+                  ]
+                })
+
+                if (index < Math.min(expenses.length, 8) - 1) {
+                  flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                }
+              })
+
+              if (expenses.length > 8) {
+                flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                flexContents.push({
+                  type: "text",
+                  text: `...แสดง 8 จากทั้งหมด ${expenses.length} รายการ`,
+                  color: "#888888",
+                  size: "xxs",
+                  align: "center",
+                  margin: "sm"
+                })
+              }
+
+              messages.push({
+                type: "flex",
+                altText: `🧾 สรุปค่าใช้จ่ายวันนี้ (${titleDateStr}): ฿${totalAmount.toLocaleString('th-TH')}`,
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#1A1A1A", size: "sm" },
+                      { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    paddingAll: "20px",
+                    contents: [
+                      {
+                        type: "box",
+                        layout: "horizontal",
+                        backgroundColor: "#F9F9F8",
+                        cornerRadius: "md",
+                        paddingAll: "md",
+                        contents: [
+                          {
+                            type: "box",
+                            layout: "vertical",
+                            flex: 5,
+                            contents: [
+                              { type: "text", text: "ยอดรวมค่าใช้จ่ายวันนี้", weight: "bold", size: "xs", color: "#1A1A1A" },
+                              { type: "text", text: `(${expenses.length} รายการ)`, color: "#666666", size: "xxs", margin: "xs" }
+                            ]
+                          },
+                          {
+                            type: "text",
+                            text: `฿${totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                            weight: "bold",
+                            size: "lg",
+                            color: "#9E2D2D",
+                            align: "end",
+                            gravity: "center",
+                            flex: 5
+                          }
+                        ]
+                      },
+                      { type: "separator", margin: "md", color: "#E2E2E0" },
+                      { type: "text", text: "รายการที่บันทึกวันนี้", weight: "bold", size: "xs", color: "#888888", margin: "md" },
+                      ...flexContents
+                    ]
+                  },
+                  styles: {
+                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
+                    body: { backgroundColor: "#FFFFFF" }
+                  }
+                }
+              })
+            }
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: messages
+              }),
+            })
+          } catch (err: any) {
+            console.error('stexp Command Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย: ' + err.message }]
+              })
+            })
+          }
+          continue
         }
       }
+
+      // --- NEW: Image Message Handler for Receipt OCR & Auto Expense Recording ---
+      if (event.type === 'message' && event.message.type === 'image') {
+        const messageId = event.message.id
+        const replyToken = event.replyToken
+        console.log(`Processing receipt image event. Message ID: ${messageId}`)
+
+        try {
+          // 1. Download image binary from LINE Content API
+          const lineImgUrl = `https://api-data.line.me/v2/bot/message/${messageId}/content`
+          const imgResp = await fetch(lineImgUrl, {
+            headers: { 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` }
+          })
+
+          if (!imgResp.ok) {
+            const errTxt = await imgResp.text()
+            console.error('Failed to download image from LINE API:', errTxt)
+            continue
+          }
+
+          const imageBuffer = await imgResp.arrayBuffer()
+          const imageBytes = new Uint8Array(imageBuffer)
+
+          // 2. Convert to Base64 (Chunked to prevent stack overflow)
+          let binary = ''
+          const len = imageBytes.byteLength
+          const chunkSize = 8192
+          for (let i = 0; i < len; i += chunkSize) {
+            const chunk = imageBytes.subarray(i, Math.min(i + chunkSize, len))
+            binary += String.fromCharCode.apply(null, chunk as any)
+          }
+          const base64Image = btoa(binary)
+
+          // 3. Upload image to Supabase Storage (receipts bucket)
+          const now = new Date()
+          const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+          const folder = thNow.toISOString().slice(0, 7)
+          const fileName = `${folder}/${Date.now()}_${messageId}.jpg`
+          let receiptImageUrl = ''
+
+          try {
+            const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+              .from('receipts')
+              .upload(fileName, imageBytes, {
+                contentType: 'image/jpeg',
+                upsert: true
+              })
+
+            if (!uploadErr && uploadData) {
+              const { data: urlData } = supabaseAdmin.storage.from('receipts').getPublicUrl(fileName)
+              receiptImageUrl = urlData?.publicUrl || ''
+            } else if (uploadErr) {
+              console.error('Receipt upload error to Supabase Storage:', uploadErr)
+            }
+          } catch (stErr) {
+            console.error('Storage upload exception:', stErr)
+          }
+
+          // 4. Retrieve Gemini API Key & Preferred Model
+          let geminiApiKey = Deno.env.get('GEMINI_API_KEY') || ''
+          if (!geminiApiKey) {
+            const { data: keyRow } = await supabaseAdmin
+              .from('app_settings')
+              .select('value')
+              .eq('key', 'gemini_api_key')
+              .maybeSingle()
+            geminiApiKey = keyRow?.value || ''
+          }
+
+          let preferredModel = 'gemini-2.0-flash'
+          const { data: modelRow } = await supabaseAdmin
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'gemini_model')
+            .maybeSingle()
+          if (modelRow?.value) preferredModel = modelRow.value
+
+          if (!geminiApiKey) {
+            console.warn('Gemini API key is not configured in app_settings or environment.')
+            continue
+          }
+
+          // 5. Call Gemini AI Vision OCR
+          const ocrResult = await scanReceiptImageWithGemini(base64Image, geminiApiKey, preferredModel)
+          console.log('Gemini OCR Result:', JSON.stringify(ocrResult))
+
+          if (!ocrResult || ocrResult.is_receipt === false) {
+            console.log('Image is not recognized as a receipt/expense slip. Skipping silent.')
+            continue
+          }
+
+          const amount = Number(ocrResult.amount) || 0
+          if (amount <= 0) {
+            console.log('Parsed amount is 0 or invalid. Skipping.')
+            continue
+          }
+
+          let vatAmount = 0
+          if (ocrResult.vat_included) {
+            vatAmount = parseFloat(((amount * 7) / 107).toFixed(2))
+          }
+
+          const rawDate = ocrResult.expense_date || thNow.toISOString().slice(0, 10)
+          const title = ocrResult.title || 'ค่าใช้จ่ายร้าน'
+          const category = ocrResult.category || 'raw_material'
+          const vendorName = ocrResult.vendor_name || 'ไม่ระบุ'
+          const vendorTaxId = (ocrResult.vendor_tax_id || '').replace(/\D/g, '') || null
+          const docType = ocrResult.doc_type || 'tax_invoice'
+          const paymentMethod = ocrResult.payment_method || 'TRANSFER'
+          const notes = ocrResult.notes || ''
+
+          // 6. Insert into store_expenses table
+          const { data: inserted, error: insertErr } = await supabaseAdmin
+            .from('store_expenses')
+            .insert([{
+              expense_date: rawDate,
+              title: title,
+              category: category,
+              vendor_name: vendorName,
+              vendor_tax_id: vendorTaxId,
+              doc_type: docType,
+              amount: amount,
+              vat_included: ocrResult.vat_included ?? true,
+              vat_amount: vatAmount,
+              receipt_image_url: receiptImageUrl || null,
+              payment_method: paymentMethod,
+              notes: notes,
+              created_at: new Date().toISOString()
+            }])
+            .select()
+            .single()
+
+          if (insertErr) {
+            console.error('Error inserting into store_expenses:', insertErr)
+            throw insertErr
+          }
+
+          console.log('Successfully inserted store_expense:', inserted?.id)
+
+          // 7. Format Date for Display
+          let dateFormatted = rawDate
+          try {
+            const d = new Date(rawDate)
+            dateFormatted = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+          } catch {
+            dateFormatted = rawDate
+          }
+
+          // 8. Build Flex Message Response
+          const flexBubble = createReceiptFlexMessage(inserted || {
+            expense_date: rawDate,
+            title,
+            category,
+            vendor_name: vendorName,
+            vendor_tax_id: vendorTaxId,
+            doc_type: docType,
+            amount,
+            vat_included: ocrResult.vat_included ?? true,
+            vat_amount: vatAmount,
+            payment_method: paymentMethod,
+            notes
+          }, dateFormatted)
+
+          // 9. Reply to LINE Group / User
+          const replyResp = await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+            },
+            body: JSON.stringify({
+              replyToken: replyToken,
+              messages: [{
+                type: 'flex',
+                altText: `🧾 บันทึกค่าใช้จ่าย: ${vendorName} (฿${amount.toLocaleString('th-TH')})`,
+                contents: flexBubble
+              }]
+            }),
+          })
+
+          if (!replyResp.ok) {
+            const errTxt = await replyResp.text()
+            console.error('Failed to send LINE reply for receipt:', errTxt)
+            const targetId = event.source.groupId || event.source.roomId || event.source.userId
+            if (targetId) {
+              await fetch('https://api.line.me/v2/bot/message/push', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                },
+                body: JSON.stringify({
+                  to: targetId,
+                  messages: [{
+                    type: 'flex',
+                    altText: `🧾 บันทึกค่าใช้จ่าย: ${vendorName} (฿${amount.toLocaleString('th-TH')})`,
+                    contents: flexBubble
+                  }]
+                })
+              })
+            }
+          }
+        } catch (imgErr: any) {
+          console.error('Error in image receipt handler:', imgErr)
+        }
       }
     }
 
