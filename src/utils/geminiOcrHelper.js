@@ -76,15 +76,20 @@ export async function saveGeminiPreferredModel(modelName) {
     }
 }
 
+import { parseReceiptUrls, urlToBase64 } from './receiptImageHelper';
+
+export { parseReceiptUrls, urlToBase64 };
+
 /**
- * Rotates a base64 image by specified degrees (e.g. 90, 180, 270) using canvas
- * @param {string} base64Str - Image data URL
+ * Rotates a base64 or URL image by specified degrees (e.g. 90, 180, 270) using canvas
+ * @param {string} base64Str - Image data URL or HTTP URL
  * @param {number} degrees - Degrees to rotate clockwise (default 90)
  * @returns {Promise<string>} Rotated base64 image data URL
  */
 export function rotateImageBase64(base64Str, degrees = 90) {
     return new Promise((resolve, reject) => {
         const img = new Image();
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -109,7 +114,7 @@ export function rotateImageBase64(base64Str, degrees = 90) {
 /**
  * Scan receipt image(s) using Gemini Vision AI with Auto-Fallback Cascade
  * Supports single image or multiple images in a set (multi-page invoices, bill + slip)
- * @param {string|string[]} base64Image - Single data URL or array of data URLs/base64 strings
+ * @param {string|string[]} base64Image - Single data URL/HTTP URL or array of URLs
  * @param {string} customApiKey - Optional custom API key
  * @param {string} preferredModel - Optional model override
  * @returns {Promise<Object>} Parsed structured receipt data
@@ -120,11 +125,18 @@ export async function scanReceiptWithGemini(base64Image, customApiKey = null, pr
         throw new Error('MISSING_API_KEY');
     }
 
-    const imagesArray = Array.isArray(base64Image) ? base64Image : [base64Image];
+    const rawArray = Array.isArray(base64Image) ? base64Image : parseReceiptUrls(base64Image);
+    const resolvedImages = await Promise.all(
+        rawArray.map(img => (typeof img === 'string' && img.startsWith('http') ? urlToBase64(img) : img))
+    );
+    const imagesArray = resolvedImages.filter(Boolean);
+    if (imagesArray.length === 0) {
+        throw new Error('NO_IMAGES_PROVIDED');
+    }
     const isMultiPage = imagesArray.length > 1;
 
     const imageParts = imagesArray.map(img => {
-        const match = img.match(/^data:([^;]+);base64,(.+)$/);
+        const match = typeof img === 'string' ? img.match(/^data:([^;]+);base64,(.+)$/) : null;
         const mimeType = match ? match[1] : 'image/jpeg';
         const rawBase64 = match ? match[2] : img;
         return {

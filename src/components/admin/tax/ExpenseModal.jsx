@@ -24,6 +24,12 @@ import {
     getGeminiPreferredModel, 
     saveGeminiPreferredModel 
 } from '../../../utils/geminiOcrHelper';
+import { 
+    parseReceiptUrls, 
+    joinReceiptUrls, 
+    compressImageFile, 
+    uploadReceiptToStorage 
+} from '../../../utils/receiptImageHelper';
 import { checkDuplicateExpense } from '../../../utils/duplicateDetector';
 import { toast } from 'sonner';
 
@@ -56,6 +62,7 @@ export default function ExpenseModal({
     const [geminiModel, setGeminiModel] = useState('gemini-3.7-flash');
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
     const [imagePreviewZoom, setImagePreviewZoom] = useState(false);
+    const [zoomPageIndex, setZoomPageIndex] = useState(0);
     const [compareImage, setCompareImage] = useState(null);
     const [existingExpensesList, setExistingExpensesList] = useState(() => {
         try {
@@ -73,19 +80,19 @@ export default function ExpenseModal({
     const handleRotateImage = async (degrees = 90) => {
         if (!receiptImage) return;
         try {
-            const isMulti = receiptImage.includes(',');
-            const imagesList = isMulti ? receiptImage.split(',').map(s => s.trim()).filter(Boolean) : [receiptImage];
+            const imagesList = parseReceiptUrls(receiptImage);
+            if (imagesList.length === 0) return;
             
             toast.info(`กำลังหมุนภาพ ${degrees}°...`);
             const rotatedList = await Promise.all(
                 imagesList.map(img => rotateImageBase64(img, degrees))
             );
-            const newCombined = rotatedList.join(',');
+            const newCombined = joinReceiptUrls(rotatedList);
             setReceiptImage(newCombined);
             toast.success(`หมุนภาพเรียบร้อย กำลังสแกน OCR ใหม่...`);
             
             // Auto re-scan rotated image
-            handleAiScan(rotatedList.length > 1 ? rotatedList : rotatedList[0]);
+            handleAiScan(rotatedList);
         } catch (err) {
             console.error('Rotate image error:', err);
             toast.error('ไม่สามารถหมุนภาพได้: ' + err.message);
@@ -156,9 +163,11 @@ export default function ExpenseModal({
             return;
         }
 
-        const imagesParam = typeof imageToScan === 'string' && imageToScan.includes(',')
-            ? imageToScan.split(',').map(s => s.trim()).filter(Boolean)
-            : imageToScan;
+        const imagesParam = parseReceiptUrls(imageToScan);
+        if (imagesParam.length === 0) {
+            toast.warning('ไม่พบรูปภาพใบเสร็จ');
+            return;
+        }
 
         setIsAiScanning(true);
         setAiScannedSuccess(false);
@@ -211,55 +220,35 @@ export default function ExpenseModal({
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
 
-        const processFile = (file) => {
-            return new Promise((resolve) => {
-                if (file.size > 15 * 1024 * 1024) {
-                    toast.error(`ไฟล์ ${file.name} มีขนาดเกิน 15MB`);
+        try {
+            // 1. Process local compression for immediate zero-latency UI preview & OCR
+            const compressedResults = await Promise.all(
+                files.map(file => compressImageFile(file, 1800, 0.90))
+            );
+
+            const base64List = compressedResults.map(r => r.base64);
+            const initialCombined = joinReceiptUrls(base64List);
+            setReceiptImage(initialCombined);
+            setZoomPageIndex(0);
+            toast.success(`แนบภาพเอกสาร ${files.length} แผ่นเรียบร้อย`);
+
+            // 2. Auto Trigger AI Scan if enabled
+            if (autoScanEnabled && !existingExpense) {
+                handleAiScan(base64List);
+            }
+
+            // 3. Concurrently upload to Supabase Storage in background for persistent public URLs
+            Promise.all(compressedResults.map(r => uploadReceiptToStorage(r.blob))).then(uploadedUrls => {
+                const validUrls = uploadedUrls.filter(Boolean);
+                if (validUrls.length === files.length) {
+                    setReceiptImage(joinReceiptUrls(validUrls));
                 }
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1800;
-                        const MAX_HEIGHT = 1800;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.90);
-                        resolve(compressedBase64);
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
+            }).catch(err => {
+                console.warn('Storage background upload non-fatal:', err);
             });
-        };
-
-        const compressedList = await Promise.all(files.map(processFile));
-        const combined = compressedList.join(',');
-        setReceiptImage(combined);
-        toast.success(`แนบภาพเอกสาร ${compressedList.length} แผ่นเรียบร้อย`);
-
-        // Auto Trigger AI Scan if enabled
-        if (autoScanEnabled && !existingExpense) {
-            handleAiScan(compressedList.length > 1 ? compressedList : compressedList[0]);
+        } catch (err) {
+            console.error('Image upload error:', err);
+            toast.error('เกิดข้อผิดพลาดในการโหลดรูปภาพ: ' + err.message);
         }
     };
 
@@ -422,74 +411,84 @@ export default function ExpenseModal({
                             </div>
 
                             {/* Scanning Viewport */}
-                            {receiptImage ? (
-                                <div className="relative border border-[var(--color-rule)] bg-black/5 aspect-[4/5] w-full flex items-center justify-center overflow-hidden group">
-                                    <img 
-                                        src={receiptImage.split(',')[0]} 
-                                        alt="Receipt Attachment" 
-                                        className="w-full h-full object-contain cursor-zoom-in"
-                                        onClick={() => setImagePreviewZoom(true)}
-                                    />
+                            {receiptImage ? (() => {
+                                const parsedUrls = parseReceiptUrls(receiptImage);
+                                const primaryUrl = parsedUrls[0];
+                                return (
+                                    <div className="relative border border-[var(--color-rule)] bg-black/5 aspect-[4/5] w-full flex items-center justify-center overflow-hidden group">
+                                        <img 
+                                            src={primaryUrl} 
+                                            alt="Receipt Attachment" 
+                                            className="w-full h-full object-contain cursor-zoom-in"
+                                            onClick={() => {
+                                                setZoomPageIndex(0);
+                                                setImagePreviewZoom(true);
+                                            }}
+                                        />
 
-                                    {receiptImage.includes(',') && (
-                                        <div className="absolute top-2 left-2 bg-black/80 text-white font-mono text-[9px] font-bold px-2 py-0.5 border border-white/20">
-                                            ชุด {receiptImage.split(',').length} แผ่น
-                                        </div>
-                                    )}
+                                        {parsedUrls.length > 1 && (
+                                            <div className="absolute top-2 left-2 bg-black/80 text-white font-mono text-[9px] font-bold px-2 py-0.5 border border-white/20">
+                                                ชุด {parsedUrls.length} แผ่น
+                                            </div>
+                                        )}
 
-                                    {/* Optical Scanning Sweep Animation */}
-                                    {isAiScanning && (
-                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent)]/30 to-transparent animate-pulse border-y-2 border-[var(--color-accent)] pointer-events-none flex items-center justify-center">
-                                            <div className="bg-black/80 text-white font-mono text-[11px] font-bold px-3 py-1 tracking-widest flex items-center gap-2 shadow-2xl">
-                                                <Loader2 size={13} className="animate-spin text-[var(--color-accent)]" />
-                                                <span>GEMINI_VISION_OCR_ACTIVE</span>
+                                        {/* Optical Scanning Sweep Animation */}
+                                        {isAiScanning && (
+                                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent)]/30 to-transparent animate-pulse border-y-2 border-[var(--color-accent)] pointer-events-none flex items-center justify-center">
+                                                <div className="bg-black/80 text-white font-mono text-[11px] font-bold px-3 py-1 tracking-widest flex items-center gap-2 shadow-2xl">
+                                                    <Loader2 size={13} className="animate-spin text-[var(--color-accent)]" />
+                                                    <span>GEMINI_VISION_OCR_ACTIVE</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Overlay Actions */}
-                                    {!isAiScanning && (
-                                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-1 p-1 bg-black/80 backdrop-blur-xs shadow-lg">
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setImagePreviewZoom(true)}
-                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-white hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors cursor-pointer"
-                                                >
-                                                    <ZoomIn size={12} />
-                                                    <span>INSPECT</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRotateImage(90)}
-                                                    title="หมุนภาพ 90 องศา (สำหรับบิลแนวนอน)"
-                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-amber-300 hover:text-amber-100 flex items-center gap-1 transition-colors cursor-pointer"
-                                                >
-                                                    <RotateCw size={11} />
-                                                    <span>หมุน 90°</span>
-                                                </button>
+                                        {/* Overlay Actions */}
+                                        {!isAiScanning && (
+                                            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-1 p-1 bg-black/80 backdrop-blur-xs shadow-lg">
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setZoomPageIndex(0);
+                                                            setImagePreviewZoom(true);
+                                                        }}
+                                                        className="px-2 py-1 text-[10px] font-mono font-bold text-white hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors cursor-pointer"
+                                                    >
+                                                        <ZoomIn size={12} />
+                                                        <span>INSPECT</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRotateImage(90)}
+                                                        title="หมุนภาพ 90 องศา (สำหรับบิลแนวนอน)"
+                                                        className="px-2 py-1 text-[10px] font-mono font-bold text-amber-300 hover:text-amber-100 flex items-center gap-1 transition-colors cursor-pointer"
+                                                    >
+                                                        <RotateCw size={11} />
+                                                        <span>หมุน 90°</span>
+                                                    </button>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleAiScan()}
+                                                        className="px-2.5 py-1 text-[10px] font-mono font-bold bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors cursor-pointer"
+                                                    >
+                                                        <Sparkles size={11} />
+                                                        <span>RE-SCAN</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="px-2 py-1 text-[10px] font-mono font-bold text-gray-300 hover:text-white border border-white/20 transition-colors cursor-pointer"
+                                                    >
+                                                        REPLACE
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleAiScan()}
-                                                    className="px-2.5 py-1 text-[10px] font-mono font-bold bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors cursor-pointer"
-                                                >
-                                                    <Sparkles size={11} />
-                                                    <span>RE-SCAN</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-gray-300 hover:text-white border border-white/20 transition-colors cursor-pointer"
-                                                >
-                                                    REPLACE
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
+                                        )}
+                                    </div>
+                                );
+                            })() : (
                                 <div className="border-2 border-dashed border-[var(--color-rule)] hover:border-[var(--color-ink)] transition-colors aspect-[4/5] w-full flex flex-col items-center justify-center gap-3 bg-[var(--color-paper)] p-5 text-center">
                                     <div className="w-12 h-12 border border-[var(--color-rule)] flex items-center justify-center text-[var(--color-neutral)]">
                                         <Camera size={22} />
@@ -810,90 +809,160 @@ export default function ExpenseModal({
             </div>
 
             {/* FULL RECEIPT ZOOM INSPECTION MODAL */}
-            {imagePreviewZoom && receiptImage && (
-                <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/90 p-4 font-sans">
-                    <div className="relative max-w-4xl max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl">
-                        <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800 gap-3">
-                            <span className="font-bold">RECEIPT OPTICAL INSPECTION // {vendorName}</span>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleRotateImage(90)}
-                                    className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-mono text-[11px] font-bold flex items-center gap-1.5 border border-zinc-600 transition-colors cursor-pointer"
-                                >
-                                    <RotateCw size={13} />
-                                    <span>หมุน 90° (ROTATE)</span>
-                                </button>
-                                <button 
-                                    onClick={() => setImagePreviewZoom(false)} 
-                                    className="text-zinc-400 hover:text-white p-1 cursor-pointer"
-                                >
+            {imagePreviewZoom && receiptImage && (() => {
+                const zoomUrls = parseReceiptUrls(receiptImage);
+                return (
+                    <div 
+                        className="fixed inset-0 z-[220] flex items-center justify-center bg-black/90 p-4 font-sans"
+                        onClick={() => setImagePreviewZoom(false)}
+                    >
+                        <div 
+                            className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800 gap-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="font-bold">RECEIPT OPTICAL INSPECTION // {vendorName}</span>
+                                    {zoomUrls.length > 1 && (
+                                        <span className="bg-zinc-800 text-emerald-400 px-2 py-0.5 text-[10px] font-bold border border-zinc-700">
+                                            PAGE {zoomPageIndex + 1} OF {zoomUrls.length}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRotateImage(90)}
+                                        className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-mono text-[11px] font-bold flex items-center gap-1.5 border border-zinc-600 transition-colors cursor-pointer"
+                                    >
+                                        <RotateCw size={13} />
+                                        <span>หมุน 90° (ROTATE)</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => setImagePreviewZoom(false)} 
+                                        className="text-zinc-400 hover:text-white p-1 cursor-pointer"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-zinc-950 relative min-h-[400px]">
+                                <img 
+                                    src={zoomUrls[zoomPageIndex] || zoomUrls[0]} 
+                                    alt={`Zoomed Receipt Page ${zoomPageIndex + 1}`} 
+                                    className="max-w-full max-h-[75vh] object-contain shadow-md" 
+                                />
+
+                                {zoomUrls.length > 1 && zoomPageIndex > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setZoomPageIndex(prev => Math.max(0, prev - 1))}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
+                                    >
+                                        ◀ PREV
+                                    </button>
+                                )}
+
+                                {zoomUrls.length > 1 && zoomPageIndex < zoomUrls.length - 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setZoomPageIndex(prev => Math.min(zoomUrls.length - 1, prev + 1))}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
+                                    >
+                                        NEXT ▶
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Thumbnail Navigation */}
+                            {zoomUrls.length > 1 && (
+                                <div className="p-2 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
+                                    {zoomUrls.map((url, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setZoomPageIndex(idx)}
+                                            className={`w-12 h-12 border transition-all cursor-pointer overflow-hidden p-0.5 ${
+                                                zoomPageIndex === idx
+                                                    ? 'border-emerald-400 ring-2 ring-emerald-500/50 scale-105'
+                                                    : 'border-zinc-700 opacity-60 hover:opacity-100'
+                                            }`}
+                                        >
+                                            <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* DUPLICATE SIDE-BY-SIDE COMPARISON MODAL */}
+            {compareImage && (() => {
+                const compUrls = parseReceiptUrls(compareImage);
+                const currentUrls = parseReceiptUrls(receiptImage);
+                return (
+                    <div 
+                        className="fixed inset-0 z-[230] flex items-center justify-center bg-black/95 p-4 font-sans text-xs"
+                        onClick={() => setCompareImage(null)}
+                    >
+                        <div 
+                            className="relative w-full max-w-5xl max-h-[92vh] flex flex-col border border-zinc-700 bg-zinc-950 text-white overflow-hidden shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-3.5 bg-zinc-900 flex justify-between items-center font-mono text-xs border-b border-zinc-800">
+                                <span className="font-bold flex items-center gap-2 text-amber-400">
+                                    <AlertTriangle size={15} />
+                                    SIDE-BY-SIDE RECEIPT COMPARISON (เปรียบเทียบบิลเดิม vs บิลใหม่)
+                                </span>
+                                <button onClick={() => setCompareImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
                                     <X size={18} />
                                 </button>
                             </div>
-                        </div>
-                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-zinc-950">
-                            <img src={receiptImage.split(',')[0]} alt="Zoomed Receipt" className="max-w-full max-h-[80vh] object-contain shadow-md" />
-                        </div>
-                    </div>
-                </div>
-            )}
 
-            {/* DUPLICATE SIDE-BY-SIDE COMPARISON MODAL */}
-            {compareImage && (
-                <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/95 p-4 font-sans text-xs">
-                    <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col border border-zinc-700 bg-zinc-950 text-white overflow-hidden shadow-2xl">
-                        <div className="p-3.5 bg-zinc-900 flex justify-between items-center font-mono text-xs border-b border-zinc-800">
-                            <span className="font-bold flex items-center gap-2 text-amber-400">
-                                <AlertTriangle size={15} />
-                                SIDE-BY-SIDE RECEIPT COMPARISON (เปรียบเทียบบิลเดิม vs บิลใหม่)
-                            </span>
-                            <button onClick={() => setCompareImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
-                                <X size={18} />
-                            </button>
-                        </div>
+                            <div className="flex-1 overflow-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Left: Previous Saved Receipt */}
+                                <div className="border border-zinc-800 bg-black p-3 flex flex-col items-center">
+                                    <span className="font-mono text-[10px] text-zinc-400 font-bold uppercase mb-2">
+                                        [1] บิลเดิมที่เคยบันทึกไว้ในระบบ (EXISTING RECORD)
+                                    </span>
+                                    <div className="flex-1 flex items-center justify-center w-full min-h-[300px]">
+                                        <img src={compUrls[0]} alt="Old Receipt" className="max-w-full max-h-[60vh] object-contain" />
+                                    </div>
+                                </div>
 
-                        <div className="flex-1 overflow-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Left: Previous Saved Receipt */}
-                            <div className="border border-zinc-800 bg-black p-3 flex flex-col items-center">
-                                <span className="font-mono text-[10px] text-zinc-400 font-bold uppercase mb-2">
-                                    [1] บิลเดิมที่เคยบันทึกไว้ในระบบ (EXISTING RECORD)
-                                </span>
-                                <div className="flex-1 flex items-center justify-center w-full">
-                                    <img src={compareImage} alt="Old Receipt" className="max-w-full max-h-[60vh] object-contain" />
+                                {/* Right: Current Candidate Receipt */}
+                                <div className="border border-zinc-800 bg-black p-3 flex flex-col items-center">
+                                    <span className="font-mono text-[10px] text-amber-400 font-bold uppercase mb-2">
+                                        [2] บิลใหม่ที่กำลังสแกน / กรอกอยู่ (CURRENT CANDIDATE)
+                                    </span>
+                                    <div className="flex-1 flex items-center justify-center w-full min-h-[300px]">
+                                        {currentUrls[0] ? (
+                                            <img src={currentUrls[0]} alt="New Receipt" className="max-w-full max-h-[60vh] object-contain" />
+                                        ) : (
+                                            <span className="text-zinc-600 font-mono text-xs">ไม่มีรูปภาพบิลใหม่</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Right: Current Candidate Receipt */}
-                            <div className="border border-zinc-800 bg-black p-3 flex flex-col items-center">
-                                <span className="font-mono text-[10px] text-amber-400 font-bold uppercase mb-2">
-                                    [2] บิลใหม่ที่กำลังสแกน / กรอกอยู่ (CURRENT CANDIDATE)
+                            <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center font-mono">
+                                <span className="text-zinc-400 text-[11px]">
+                                    หากเป็นคนละใบเสร็จ ให้กดปิดหน้าต่างนี้แล้วกด &quot;SAVE EXPENSE RECORD&quot; ได้ตามปกติ
                                 </span>
-                                <div className="flex-1 flex items-center justify-center w-full">
-                                    {receiptImage ? (
-                                        <img src={receiptImage} alt="New Receipt" className="max-w-full max-h-[60vh] object-contain" />
-                                    ) : (
-                                        <span className="text-zinc-600 font-mono text-xs">ไม่มีรูปภาพบิลใหม่</span>
-                                    )}
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setCompareImage(null)}
+                                    className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs cursor-pointer"
+                                >
+                                    เข้าใจแล้ว / ปิดหน้าต่าง (CLOSE)
+                                </button>
                             </div>
                         </div>
-
-                        <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center font-mono">
-                            <span className="text-zinc-400 text-[11px]">
-                                หากเป็นคนละใบเสร็จ ให้กดปิดหน้าต่างนี้แล้วกด &quot;SAVE EXPENSE RECORD&quot; ได้ตามปกติ
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => setCompareImage(null)}
-                                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs cursor-pointer"
-                            >
-                                เข้าใจแล้ว / ปิดหน้าต่าง (CLOSE)
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* GEMINI API KEY SETUP MODAL */}
             {showApiKeyModal && (

@@ -8,12 +8,15 @@ import {
     Edit2, 
     X, 
     RotateCcw,
+    RotateCw,
+    ExternalLink,
     AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
 import { findDuplicateClusters } from '../../../utils/duplicateDetector';
+import { parseReceiptUrls } from '../../../utils/receiptImageHelper';
 import { toast } from 'sonner';
 
 export default function ExpensesTab({ 
@@ -45,10 +48,21 @@ export default function ExpensesTab({
     const [searchQuery, setSearchQuery] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
     const [previewPageIndex, setPreviewPageIndex] = useState(0);
+    const [previewRotation, setPreviewRotation] = useState(0);
 
     const previewUrls = useMemo(() => {
-        if (!previewImage) return [];
-        return previewImage.split(',').map(s => s.trim()).filter(Boolean);
+        return parseReceiptUrls(previewImage);
+    }, [previewImage]);
+
+    // Handle Escape key to close modal
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && previewImage) {
+                setPreviewImage(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [previewImage]);
 
     const loadExpenses = useCallback(async () => {
@@ -551,25 +565,30 @@ export default function ExpensesTab({
                                                 )}
                                             </td>
                                             <td className="p-3 border-r border-[var(--color-rule)] text-center">
-                                                {exp.receipt_image_url ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setPreviewImage(exp.receipt_image_url);
-                                                            setPreviewPageIndex(0);
-                                                        }}
-                                                        className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 bg-white"
-                                                    >
-                                                        VIEW
-                                                        {exp.receipt_image_url.includes(',') && (
-                                                            <span className="bg-[var(--color-ink)] text-white text-[8px] px-1 py-0.2 rounded-xs font-mono">
-                                                                {exp.receipt_image_url.split(',').length}P
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-gray-300 text-[10px]">-</span>
-                                                )}
+                                                {(() => {
+                                                    const urls = parseReceiptUrls(exp.receipt_image_url);
+                                                    if (urls.length === 0) {
+                                                        return <span className="text-gray-300 text-[10px]">-</span>;
+                                                    }
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setPreviewImage(exp.receipt_image_url);
+                                                                setPreviewPageIndex(0);
+                                                                setPreviewRotation(0);
+                                                            }}
+                                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 bg-white"
+                                                        >
+                                                            VIEW
+                                                            {urls.length > 1 && (
+                                                                <span className="bg-[var(--color-ink)] text-white text-[8px] px-1 py-0.2 rounded-xs font-mono">
+                                                                    {urls.length}P
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="p-3 border-r border-[var(--color-rule)] text-right font-black text-xs text-[var(--color-ink)]">
                                                 ฿{Number(exp.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -608,8 +627,14 @@ export default function ExpensesTab({
 
             {/* LIGHTBOX MODAL */}
             {previewImage && previewUrls.length > 0 && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4">
-                    <div className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl">
+                <div 
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div 
+                        className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800">
                             <div className="flex items-center gap-3">
                                 <span>RECEIPT OPTICAL INSPECTOR</span>
@@ -619,9 +644,20 @@ export default function ExpensesTab({
                                     </span>
                                 )}
                             </div>
-                            <button onClick={() => setPreviewImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
-                                <X size={18} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPreviewRotation(prev => (prev + 90) % 360)}
+                                    className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1 border border-zinc-700 cursor-pointer"
+                                    title="หมุน 90 องศา"
+                                >
+                                    <RotateCw size={12} />
+                                    <span>หมุน 90°</span>
+                                </button>
+                                <button onClick={() => setPreviewImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-auto p-4 flex items-center justify-center relative min-h-[400px]">
@@ -629,13 +665,17 @@ export default function ExpensesTab({
                                 src={previewUrls[previewPageIndex] || previewUrls[0]} 
                                 alt={`Receipt Page ${previewPageIndex + 1}`} 
                                 className="max-w-full max-h-[75vh] object-contain transition-all duration-200" 
+                                style={{ transform: previewRotation ? `rotate(${previewRotation}deg)` : 'none' }}
                             />
 
                             {/* Previous Button */}
                             {previewUrls.length > 1 && previewPageIndex > 0 && (
                                 <button
                                     type="button"
-                                    onClick={() => setPreviewPageIndex(prev => Math.max(0, prev - 1))}
+                                    onClick={() => {
+                                        setPreviewPageIndex(prev => Math.max(0, prev - 1));
+                                        setPreviewRotation(0);
+                                    }}
                                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
                                 >
                                     ◀ PREV
@@ -646,7 +686,10 @@ export default function ExpensesTab({
                             {previewUrls.length > 1 && previewPageIndex < previewUrls.length - 1 && (
                                 <button
                                     type="button"
-                                    onClick={() => setPreviewPageIndex(prev => Math.min(previewUrls.length - 1, prev + 1))}
+                                    onClick={() => {
+                                        setPreviewPageIndex(prev => Math.min(previewUrls.length - 1, prev + 1));
+                                        setPreviewRotation(0);
+                                    }}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
                                 >
                                     NEXT ▶
@@ -661,7 +704,10 @@ export default function ExpensesTab({
                                     <button
                                         key={idx}
                                         type="button"
-                                        onClick={() => setPreviewPageIndex(idx)}
+                                        onClick={() => {
+                                            setPreviewPageIndex(idx);
+                                            setPreviewRotation(0);
+                                        }}
                                         className={`w-12 h-12 border transition-all cursor-pointer overflow-hidden p-0.5 ${
                                             previewPageIndex === idx
                                                 ? 'border-emerald-400 ring-2 ring-emerald-500/50 scale-105'
