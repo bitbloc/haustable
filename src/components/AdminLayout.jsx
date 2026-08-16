@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import './AdminLayout.css'
 
