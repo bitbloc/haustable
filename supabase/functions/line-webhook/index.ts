@@ -67,24 +67,21 @@ async function scanReceiptImageWithGemini(
 
   const systemInstruction = `
 You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
-You are provided with ${imagesArray.length} image(s). ${isMultiPage ? `These ${imagesArray.length} images are part of a SINGLE multi-page receipt set, tax invoice set, or bill + transfer slip combination (e.g. Page 1, Page 2 of the same Makro/Lotus bill, or invoice + bank slip).` : ''}
+You are provided with ${imagesArray.length} image(s) sent by staff/management via LINE chat. ${isMultiPage ? `These ${imagesArray.length} images are part of a SINGLE multi-page receipt set, tax invoice set, or bill + transfer slip combination (e.g. Page 1, Page 2 of the same Makro/Lotus bill, or invoice + bank slip).` : ''}
 Analyze all provided images TOGETHER as a single cohesive expense record.
 
-Determine if the images represent a receipt, tax invoice, cash bill, payment voucher, fuel receipt, cooking gas bill, utility bill, Makro bill, supermarket bill, or bank transfer slip for an expense.
+CRITICAL INSTRUCTIONS FOR HORIZONTAL / ROTATED / SIDEWAYS PHOTOS (แนวนอน / ตะแคงข้าง 90° / 270° / กลับหัว 180°):
+- Staff members taking photos on smartphones frequently send receipts in HORIZONTAL (แนวนอน / landscape), ROTATED SIDEWAYS (90° clockwise or counter-clockwise), or angled orientation.
+- You MUST automatically detect the text orientation, rotate your reading perspective mentally, and scan all 4 directions (horizontal, vertical, rotated).
+- Any photo showing a paper receipt, thermal cash slip, Makro / Lotus / Big C / 7-Eleven bill, PTT gas receipt, utility bill, cooking gas receipt, market cash voucher, or bank transfer slip IS ALWAYS AN EXPENSE RECEIPT ("is_receipt": true).
+- NEVER fail, return is_receipt: false, or return 0.00 simply because the photo was taken horizontally or sideways.
 
-If the images are NOT a receipt/bill/slip/invoice (e.g. food photo, selfie, random picture, sticker, meme, greeting):
-Return ONLY:
-{
-  "is_receipt": false
-}
-
-If it IS a receipt, bill, tax invoice, delivery slip, or expense slip:
 Extract and return ONLY a valid JSON object matching this schema:
 {
-  "is_receipt": true,
+  "is_receipt": true, // Set to true for ANY bill, slip, invoice, receipt, or transaction voucher in any orientation. Set to false ONLY for random unrelated photos (e.g. selfie, food plate without bill, meme, cat, sticker).
   "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด')",
-  "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set (do NOT sum page subtotals if one page shows the grand total; extract the final net amount).
-  "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing, use today's date
+  "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set in Thai Baht (do NOT sum page subtotals if one page shows the grand total; extract the final net amount). Search for 'Total', 'ยอดสุทธิ', 'ยอดรวม', 'รวมทั้งสิ้น', 'จำนวนเงิน', 'BAHT', 'THB' in any orientation.
+  "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing or year in Buddhist Era (2569 -> 2026), convert to Gregorian YYYY-MM-DD. If missing, use today's date
   "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
   "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
   "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
@@ -2284,14 +2281,11 @@ Deno.serve(async (req) => {
           const ocrResult = await scanReceiptImageWithGemini(base64List, geminiApiKey, preferredModel)
           console.log('Gemini OCR Multi-Page Result:', JSON.stringify(ocrResult))
 
-          if (!ocrResult || ocrResult.is_receipt === false) {
-            console.log('Image(s) not recognized as receipt/expense slip. Skipping silent.')
-            continue
-          }
+          const amount = Number(ocrResult?.amount) || 0
+          const hasReceiptIndicator = ocrResult?.is_receipt === true || amount > 0 || (ocrResult?.vendor_name && ocrResult?.vendor_name !== 'ไม่ระบุ')
 
-          const amount = Number(ocrResult.amount) || 0
-          if (amount <= 0) {
-            console.log('Parsed amount is 0 or invalid. Skipping.')
+          if (!ocrResult || !hasReceiptIndicator || amount <= 0) {
+            console.log('Image(s) not recognized as valid expense receipt or amount <= 0. Skipping.')
             continue
           }
 

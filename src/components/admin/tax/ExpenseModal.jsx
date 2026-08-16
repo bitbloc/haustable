@@ -1,4 +1,3 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     X, 
@@ -8,15 +7,18 @@ import {
     Key, 
     ZoomIn, 
     RotateCcw,
+    RotateCw,
     Sparkles,
     ShieldCheck,
     FileText,
-    AlertTriangle
+    AlertTriangle,
+    Upload
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { EXPENSE_CATEGORIES, VENDOR_PRESETS } from '../../../utils/expenseConstants';
 import { 
     scanReceiptWithGemini, 
+    rotateImageBase64,
     saveGeminiApiKey, 
     GEMINI_SUPPORTED_MODELS, 
     getGeminiPreferredModel, 
@@ -65,6 +67,30 @@ export default function ExpenseModal({
     });
 
     const fileInputRef = useRef(null);
+    const cameraInputRef = useRef(null);
+
+    // Rotate Image (90 degrees clockwise) and auto re-scan
+    const handleRotateImage = async (degrees = 90) => {
+        if (!receiptImage) return;
+        try {
+            const isMulti = receiptImage.includes(',');
+            const imagesList = isMulti ? receiptImage.split(',').map(s => s.trim()).filter(Boolean) : [receiptImage];
+            
+            toast.info(`กำลังหมุนภาพ ${degrees}°...`);
+            const rotatedList = await Promise.all(
+                imagesList.map(img => rotateImageBase64(img, degrees))
+            );
+            const newCombined = rotatedList.join(',');
+            setReceiptImage(newCombined);
+            toast.success(`หมุนภาพเรียบร้อย กำลังสแกน OCR ใหม่...`);
+            
+            // Auto re-scan rotated image
+            handleAiScan(rotatedList.length > 1 ? rotatedList : rotatedList[0]);
+        } catch (err) {
+            console.error('Rotate image error:', err);
+            toast.error('ไม่สามารถหมุนภาพได้: ' + err.message);
+        }
+    };
 
     // Initial preferred model & fresh expenses load
     useEffect(() => {
@@ -187,16 +213,16 @@ export default function ExpenseModal({
 
         const processFile = (file) => {
             return new Promise((resolve) => {
-                if (file.size > 12 * 1024 * 1024) {
-                    toast.error(`ไฟล์ ${file.name} มีขนาดเกิน 12MB`);
+                if (file.size > 15 * 1024 * 1024) {
+                    toast.error(`ไฟล์ ${file.name} มีขนาดเกิน 15MB`);
                 }
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1400;
-                        const MAX_HEIGHT = 1400;
+                        const MAX_WIDTH = 1800;
+                        const MAX_HEIGHT = 1800;
                         let width = img.width;
                         let height = img.height;
 
@@ -217,7 +243,7 @@ export default function ExpenseModal({
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.90);
                         resolve(compressedBase64);
                     };
                     img.src = event.target.result;
@@ -365,19 +391,34 @@ export default function ExpenseModal({
                     {/* LEFT CHAMBER: Optical Scanner & Receipt Preview (5 Columns) */}
                     <div className="lg:col-span-5 p-4 sm:p-5 bg-[var(--color-paper-2)] flex flex-col justify-between space-y-4">
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
-                                    [01] OPTICAL ATTACHMENT
+                            {/* Viewport Header */}
+                            <div className="flex items-center justify-between font-mono text-[10px] pb-1 border-b border-[var(--color-rule)]">
+                                <span className="font-bold text-[var(--color-neutral)] uppercase flex items-center gap-1.5">
+                                    <Camera size={12} />
+                                    OPTICAL_SCANNER // ATTACHMENT
                                 </span>
-                                <label className="flex items-center gap-1.5 font-mono text-[10px] text-[var(--color-neutral)] cursor-pointer select-none">
-                                    <input
-                                        type="checkbox"
-                                        checked={autoScanEnabled}
-                                        onChange={(e) => setAutoScanEnabled(e.target.checked)}
-                                        className="accent-[var(--color-accent)] w-3 h-3"
-                                    />
-                                    <span>AUTO SCAN</span>
-                                </label>
+                                <div className="flex items-center gap-2">
+                                    {receiptImage && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRotateImage(90)}
+                                            title="หมุนภาพ 90 องศาตามเข็มนาฬิกา (สำหรับบิลแนวนอน)"
+                                            className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-white text-[var(--color-ink)] font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                                        >
+                                            <RotateCw size={11} className="text-[var(--color-accent)]" />
+                                            <span>หมุน 90°</span>
+                                        </button>
+                                    )}
+                                    <label className="flex items-center gap-1 cursor-pointer text-[var(--color-neutral)] hover:text-[var(--color-ink)]">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoScanEnabled}
+                                            onChange={(e) => setAutoScanEnabled(e.target.checked)}
+                                            className="accent-[var(--color-accent)] w-3 h-3"
+                                        />
+                                        <span>AUTO SCAN</span>
+                                    </label>
+                                </div>
                             </div>
 
                             {/* Scanning Viewport */}
@@ -399,7 +440,7 @@ export default function ExpenseModal({
                                     {/* Optical Scanning Sweep Animation */}
                                     {isAiScanning && (
                                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent)]/30 to-transparent animate-pulse border-y-2 border-[var(--color-accent)] pointer-events-none flex items-center justify-center">
-                                            <div className="bg-black/80 text-white font-mono text-[11px] font-bold px-3 py-1 tracking-widest flex items-center gap-2">
+                                            <div className="bg-black/80 text-white font-mono text-[11px] font-bold px-3 py-1 tracking-widest flex items-center gap-2 shadow-2xl">
                                                 <Loader2 size={13} className="animate-spin text-[var(--color-accent)]" />
                                                 <span>GEMINI_VISION_OCR_ACTIVE</span>
                                             </div>
@@ -408,20 +449,31 @@ export default function ExpenseModal({
 
                                     {/* Overlay Actions */}
                                     {!isAiScanning && (
-                                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-1 p-1 bg-black/70 backdrop-blur-xs">
-                                            <button
-                                                type="button"
-                                                onClick={() => setImagePreviewZoom(true)}
-                                                className="px-2 py-1 text-[10px] font-mono font-bold text-white hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors"
-                                            >
-                                                <ZoomIn size={12} />
-                                                <span>INSPECT</span>
-                                            </button>
+                                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-1 p-1 bg-black/80 backdrop-blur-xs shadow-lg">
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setImagePreviewZoom(true)}
+                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-white hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors cursor-pointer"
+                                                >
+                                                    <ZoomIn size={12} />
+                                                    <span>INSPECT</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRotateImage(90)}
+                                                    title="หมุนภาพ 90 องศา (สำหรับบิลแนวนอน)"
+                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-amber-300 hover:text-amber-100 flex items-center gap-1 transition-colors cursor-pointer"
+                                                >
+                                                    <RotateCw size={11} />
+                                                    <span>หมุน 90°</span>
+                                                </button>
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     type="button"
                                                     onClick={() => handleAiScan()}
-                                                    className="px-2.5 py-1 text-[10px] font-mono font-bold bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors"
+                                                    className="px-2.5 py-1 text-[10px] font-mono font-bold bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors cursor-pointer"
                                                 >
                                                     <Sparkles size={11} />
                                                     <span>RE-SCAN</span>
@@ -429,7 +481,7 @@ export default function ExpenseModal({
                                                 <button
                                                     type="button"
                                                     onClick={() => fileInputRef.current?.click()}
-                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-gray-300 hover:text-white border border-white/20 transition-colors"
+                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-gray-300 hover:text-white border border-white/20 transition-colors cursor-pointer"
                                                 >
                                                     REPLACE
                                                 </button>
@@ -438,32 +490,59 @@ export default function ExpenseModal({
                                     )}
                                 </div>
                             ) : (
-                                <div 
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="border-2 border-dashed border-[var(--color-rule)] hover:border-[var(--color-ink)] transition-colors aspect-[4/5] w-full flex flex-col items-center justify-center gap-3 cursor-pointer bg-[var(--color-paper)] group p-6 text-center"
-                                >
-                                    <div className="w-12 h-12 rounded-none border border-[var(--color-rule)] group-hover:border-[var(--color-ink)] flex items-center justify-center text-[var(--color-neutral)] group-hover:text-[var(--color-ink)] transition-all">
-                                        <Camera size={20} />
+                                <div className="border-2 border-dashed border-[var(--color-rule)] hover:border-[var(--color-ink)] transition-colors aspect-[4/5] w-full flex flex-col items-center justify-center gap-3 bg-[var(--color-paper)] p-5 text-center">
+                                    <div className="w-12 h-12 border border-[var(--color-rule)] flex items-center justify-center text-[var(--color-neutral)]">
+                                        <Camera size={22} />
                                     </div>
                                     <div>
                                         <span className="font-mono text-xs font-bold tracking-wider text-[var(--color-ink)] block uppercase">
                                             SNAP OR DROP RECEIPT
                                         </span>
                                         <span className="font-mono text-[10px] text-[var(--color-muted)] mt-1 block">
-                                            MAKRO / FUEL / UTILITY / SLIP (1-5 แผ่น)
+                                            MAKRO / FUEL / UTILITY / SLIP (รองรับทั้งแนวตั้ง &amp; แนวนอน)
                                         </span>
                                     </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2 w-full max-w-xs">
+                                        <button
+                                            type="button"
+                                            onClick={() => cameraInputRef.current?.click()}
+                                            className="flex-1 min-w-[110px] px-3 py-2 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-mono text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all uppercase"
+                                        >
+                                            <Camera size={13} />
+                                            <span>ถ่ายรูป</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="flex-1 min-w-[110px] px-3 py-2 bg-white border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] font-mono text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all uppercase"
+                                        >
+                                            <Upload size={13} />
+                                            <span>เลือกไฟล์</span>
+                                        </button>
+                                    </div>
+
                                     <div className="font-mono text-[9px] text-[var(--color-accent)] uppercase tracking-wider font-bold border-t border-[var(--color-rule)] pt-2 mt-1">
-                                        + GEMINI AUTO-CATEGORIZATION
+                                        + GEMINI AUTO-CATEGORIZATION &amp; AUTO-ROTATION
                                     </div>
                                 </div>
                             )}
 
+                            {/* Standard File Inputs (Gallery & Native Camera) */}
                             <input
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
                                 multiple
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+                            <input
+                                ref={cameraInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
                                 onChange={handleImageUpload}
                                 className="hidden"
                             />
@@ -733,15 +812,28 @@ export default function ExpenseModal({
             {/* FULL RECEIPT ZOOM INSPECTION MODAL */}
             {imagePreviewZoom && receiptImage && (
                 <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/90 p-4 font-sans">
-                    <div className="relative max-w-4xl max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden">
-                        <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800">
-                            <span>RECEIPT OPTICAL INSPECTION // {vendorName}</span>
-                            <button onClick={() => setImagePreviewZoom(false)} className="text-white hover:text-red-400 p-1 cursor-pointer">
-                                <X size={18} />
-                            </button>
+                    <div className="relative max-w-4xl max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl">
+                        <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800 gap-3">
+                            <span className="font-bold">RECEIPT OPTICAL INSPECTION // {vendorName}</span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleRotateImage(90)}
+                                    className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-amber-300 font-mono text-[11px] font-bold flex items-center gap-1.5 border border-zinc-600 transition-colors cursor-pointer"
+                                >
+                                    <RotateCw size={13} />
+                                    <span>หมุน 90° (ROTATE)</span>
+                                </button>
+                                <button 
+                                    onClick={() => setImagePreviewZoom(false)} 
+                                    className="text-zinc-400 hover:text-white p-1 cursor-pointer"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-                            <img src={receiptImage} alt="Zoomed Receipt" className="max-w-full max-h-[80vh] object-contain" />
+                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-zinc-950">
+                            <img src={receiptImage.split(',')[0]} alt="Zoomed Receipt" className="max-w-full max-h-[80vh] object-contain shadow-md" />
                         </div>
                     </div>
                 </div>

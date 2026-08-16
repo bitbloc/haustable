@@ -77,6 +77,36 @@ export async function saveGeminiPreferredModel(modelName) {
 }
 
 /**
+ * Rotates a base64 image by specified degrees (e.g. 90, 180, 270) using canvas
+ * @param {string} base64Str - Image data URL
+ * @param {number} degrees - Degrees to rotate clockwise (default 90)
+ * @returns {Promise<string>} Rotated base64 image data URL
+ */
+export function rotateImageBase64(base64Str, degrees = 90) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            const rad = (degrees * Math.PI) / 180;
+            const isPerpendicular = Math.abs(degrees % 180) === 90;
+
+            canvas.width = isPerpendicular ? img.height : img.width;
+            canvas.height = isPerpendicular ? img.width : img.height;
+
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(rad);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+            resolve(canvas.toDataURL('image/jpeg', 0.90));
+        };
+        img.onerror = (err) => reject(err);
+        img.src = base64Str;
+    });
+}
+
+/**
  * Scan receipt image(s) using Gemini Vision AI with Auto-Fallback Cascade
  * Supports single image or multiple images in a set (multi-page invoices, bill + slip)
  * @param {string|string[]} base64Image - Single data URL or array of data URLs/base64 strings
@@ -109,6 +139,11 @@ export async function scanReceiptWithGemini(base64Image, customApiKey = null, pr
 You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
 You are provided with ${imagesArray.length} image(s). ${isMultiPage ? 'These images are part of a SINGLE multi-page receipt set, tax invoice set, or bill + transfer slip combination (e.g. Page 1, Page 2 of the same Makro/Lotus bill, or invoice + bank slip).' : ''}
 Analyze all provided images TOGETHER as a single cohesive expense record.
+
+CRITICAL ORIENTATION & ROTATION INSTRUCTIONS (แนวนอน / หมุนข้าง / ตะแคง / กลับหัว):
+- Receipts, invoices, and slips are often photographed HORIZONTALLY (แนวนอน / landscape), ROTATED SIDEWAYS (90° clockwise, 90° counter-clockwise / 270°), or at an angle.
+- You MUST automatically detect text orientation and read text in ANY orientation (horizontal, vertical, rotated 90°, 180°, 270°).
+- NEVER fail, return blank, or hallucinate missing data just because the receipt was captured horizontally or sideways. Mentally orient the document to read all lines correctly.
 
 Extract and return ONLY a valid JSON object matching this schema:
 {
