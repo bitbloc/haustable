@@ -58,7 +58,7 @@ const SOCIAL_MOCK_DATA = [
         id: 1,
         source: 'instagram',
         user: { name: 'Pimchaya T.', handle: '@pim.pimp' },
-        text: 'แกงส้มใต้รสจัดจ้านสะใจมากค่าาา ทานคู่กับข้าวสวยร้อนๆ คือที่สุด! หรอยแรงนิ 🌶️🐟 ปล. ร้านแต่งสวยแนวลอฟต์ดิบๆ เท่มากกก @inthehaus.th',
+        text: 'แกงส้มใต้รสจัดจ้านสะใจมากค่าาา ทานคู่กับข้าวสวยร้อนๆ คือที่สุด! หรอยแรงนิ 🌶️🐟 ปล. ร้านแต่งสวยแนวลอฟต์ดิบๆ เท่มากกก @inthehausth',
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: '2 hours ago',
         likes: 142,
