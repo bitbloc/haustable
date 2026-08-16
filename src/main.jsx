@@ -6,9 +6,13 @@ import { LanguageProvider } from './context/LanguageContext.jsx'
 import { Capacitor } from '@capacitor/core'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { logger } from './utils/logger.js'
+import { initWmaNativeBridge } from './utils/wmaNativeBridge.js'
 
 // Initialize local crash reporting and debug logs
 logger.init();
+
+// Initialize native WMA thermal printer socket bridge (for Sunmi D2s Plus)
+initWmaNativeBridge();
 
 // Notify Capgo that the app is ready (to prevent rollback on update)
 if (Capacitor.isNativePlatform()) {

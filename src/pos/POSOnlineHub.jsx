@@ -86,6 +86,14 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         }
     };
 
+    const isOrderLineman = (b) => {
+        if (!b) return false;
+        const sourceLower = (b.source || '').toLowerCase();
+        const remarkLower = (b.staff_remark || '').toLowerCase();
+        const nameLower = (b.customer_name || '').toLowerCase();
+        return sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
+    };
+
     const fetchOnlineData = async () => {
         try {
             setLoading(true);
@@ -104,10 +112,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             const onlineRelevant = (data || []).filter(b => {
                 const sourceLower = (b.source || '').toLowerCase();
                 const remarkLower = (b.staff_remark || '').toLowerCase();
-                const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online');
+                const isLineman = isOrderLineman(b);
+                const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman;
                 const hasSlip = !!b.payment_slip_url;
                 const isOnlinePickup = b.booking_type === 'pickup' && isOnlineSource;
-                return isOnlineSource || hasSlip || isOnlinePickup;
+                return isOnlineSource || hasSlip || isOnlinePickup || isLineman;
             });
 
             setOrders(onlineRelevant);
@@ -133,11 +142,12 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     const b = payload.new;
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
-                    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online');
+                    const isLineman = isOrderLineman(b);
+                    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman;
                     const hasSlip = !!b.payment_slip_url;
                     const isOnlinePickup = b.booking_type === 'pickup' && isOnlineSource;
                     
-                    if (isOnlineSource || hasSlip || isOnlinePickup) {
+                    if (isOnlineSource || hasSlip || isOnlinePickup || isLineman) {
                         setPersistentAlert(b);
                         playAlert();
                         fetchOnlineData();
@@ -243,8 +253,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         }
 
         if (channelFilter === 'slips' && !order.payment_slip_url) return false;
-        if (channelFilter === 'bookings' && order.booking_type !== 'dine_in') return false;
-        if (channelFilter === 'pickups' && order.booking_type !== 'pickup') return false;
+        if (channelFilter === 'lineman' && !isOrderLineman(order)) return false;
+        if (channelFilter === 'bookings' && (order.booking_type !== 'dine_in' || isOrderLineman(order))) return false;
+        if (channelFilter === 'pickups' && (order.booking_type !== 'pickup' || isOrderLineman(order))) return false;
 
         return true;
     };
@@ -273,23 +284,25 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
     // Active column groups (without confusing card duplicates)
     const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status === 'pending');
-    const newBookings = activeOrders.filter(o => o.booking_type === 'dine_in' && (!o.payment_slip_url || o.status !== 'pending'));
-    const onlinePickups = activeOrders.filter(o => o.booking_type === 'pickup' && (!o.payment_slip_url || o.status !== 'pending'));
+    const linemanOrders = activeOrders.filter(o => isOrderLineman(o));
+    const newBookings = activeOrders.filter(o => !isOrderLineman(o) && o.booking_type === 'dine_in' && (!o.payment_slip_url || o.status !== 'pending'));
+    const onlinePickups = activeOrders.filter(o => !isOrderLineman(o) && o.booking_type === 'pickup' && (!o.payment_slip_url || o.status !== 'pending'));
 
     const renderCard = (order, typeBadge) => {
         const shortId = getShortBookingId(order);
+        const isLineman = isOrderLineman(order);
         const orderTimeStr = order.created_at ? new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : null;
         const bookingTimeStr = new Date(order.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer', 'ลูกค้าทั่วไป'];
         const name = order.profiles?.display_name 
             || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
             || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
-            || 'Guest';
+            || (isLineman ? `LINE MAN #${shortId}` : 'Guest');
         const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
         const isPickup = order.booking_type === 'pickup';
         const items = order.order_items || [];
         const tableName = order.tables_layout?.table_name;
-        const isPaid = (order.deposit_amount >= order.total_amount && order.total_amount > 0) || order.status === 'paid';
+        const isPaid = (order.deposit_amount >= order.total_amount && order.total_amount > 0) || order.status === 'paid' || isLineman;
         const isPending = order.status === 'pending';
         const isReady = order.status === 'ready';
 
@@ -299,7 +312,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 flex flex-col gap-3 shadow-2xs hover:border-[oklch(18%_0.012_28)] transition-colors"
+                className={`bg-[oklch(97%_0.008_28)] border rounded-xl p-4 flex flex-col gap-3 shadow-2xs transition-colors ${
+                    isLineman 
+                        ? 'border-[oklch(45%_0.08_140)]/40 hover:border-[oklch(45%_0.08_140)]' 
+                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                }`}
             >
                 {/* Header: Short ID, Channel, Status */}
                 <div className="flex justify-between items-start gap-2 border-b border-[oklch(85%_0.012_28)] pb-2.5">
@@ -308,11 +325,17 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             #{shortId}
                         </span>
 
-                        <span className={`font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
-                            isPickup ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-[#1A1A1A] text-white'
-                        }`}>
-                            {isPickup ? 'PICK-UP' : `TABLE ${tableName || 'TBA'}`}
-                        </span>
+                        {isLineman ? (
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)]/40">
+                                LINE MAN
+                            </span>
+                        ) : (
+                            <span className={`font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                                isPickup ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-[#1A1A1A] text-white'
+                            }`}>
+                                {isPickup ? 'PICK-UP' : `TABLE ${tableName || 'TBA'}`}
+                            </span>
+                        )}
 
                         {order.payment_slip_url && (
                             <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-300 px-1.5 py-0.5 rounded">
@@ -325,7 +348,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
                         }`}>
-                            {isPaid ? 'PAID' : 'UNPAID'}
+                            {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : 'UNPAID'}
                         </span>
                     </div>
 
@@ -336,8 +359,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     </div>
                 </div>
 
-                {/* Customer Details */}
-                <div className="space-y-0.5">
+                {/* Customer & Rider Details */}
+                <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-sm font-bold text-[oklch(18%_0.012_28)] truncate">
                         <User size={13} className="text-[oklch(55%_0.010_28)] shrink-0" />
                         <span className="truncate">{name}</span>
@@ -348,30 +371,47 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             <span>{phone}</span>
                         </div>
                     )}
+                    {order.staff_remark && (order.staff_remark.includes('Rider:') || order.staff_remark.includes('ไรเดอร์')) && (
+                        <div className="text-[11px] font-mono text-[oklch(45%_0.08_140)] font-bold bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] truncate">
+                            🛵 {order.staff_remark.replace(/\[LINEMAN:[^\]]+\]\s*/i, '')}
+                        </div>
+                    )}
                 </div>
 
                 {/* Order Items Preview */}
                 {items.length > 0 ? (
-                    <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] text-xs font-sans space-y-1">
+                    <div className="bg-[oklch(94%_0.010_28)] p-2.5 rounded-lg border border-[oklch(85%_0.012_28)] text-xs font-sans space-y-1.5">
                         <div className="font-mono text-[9px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
                             ITEMS ({items.reduce((s, i) => s + (i.quantity || 1), 0)} TOTAL):
                         </div>
-                        <ul className="space-y-0.5">
-                            {items.slice(0, 3).map((item, idx) => (
-                                <li key={item.id || idx} className="flex justify-between items-center text-[oklch(18%_0.012_28)]">
-                                    <span className="truncate pr-2 font-medium">
-                                        <strong className="font-mono font-bold mr-1">{item.quantity}x</strong> 
-                                        {item.menu_items?.name || item.name || 'Item'}
-                                    </span>
-                                    <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] shrink-0">
-                                        ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}
-                                    </span>
+                        <ul className="space-y-1.5">
+                            {items.slice(0, 4).map((item, idx) => (
+                                <li key={item.id || idx} className="text-[oklch(18%_0.012_28)]">
+                                    <div className="flex justify-between items-center">
+                                        <span className="truncate pr-2 font-medium">
+                                            <strong className="font-mono font-bold mr-1">{item.quantity}x</strong> 
+                                            {item.menu_items?.name || item.name || 'Item'}
+                                        </span>
+                                        <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] shrink-0">
+                                            ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    {/* Options & Modifiers */}
+                                    {item.selected_options && item.selected_options.length > 0 && (
+                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono pl-4">
+                                            {item.selected_options.map((opt, oIdx) => (
+                                                <span key={oIdx} className="inline-block mr-1.5">
+                                                    • {opt.name || opt.choice || opt}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </li>
                             ))}
                         </ul>
-                        {items.length > 3 && (
+                        {items.length > 4 && (
                             <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)] text-right pt-0.5 font-bold">
-                                + อีก {items.length - 3} รายการ...
+                                + อีก {items.length - 4} รายการ...
                             </div>
                         )}
                     </div>
@@ -390,7 +430,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 {/* Amount Totals */}
                 <div className="flex items-center justify-between pt-1 border-t border-[oklch(85%_0.012_28)] font-mono text-xs">
                     <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider font-bold">
-                        TOTAL DUE
+                        {isLineman ? 'PLATFORM TOTAL' : 'TOTAL DUE'}
                     </span>
                     <span className="font-bold text-[oklch(18%_0.012_28)]">
                         ฿{(order.total_amount || 0).toLocaleString()}
@@ -462,20 +502,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {/* Dine-in pending */}
-                    {order.booking_type === 'dine_in' && order.status === 'pending' && !order.payment_slip_url && (
-                        <button
-                            type="button"
-                            onClick={() => updateBookingStatus(order.id, 'confirmed')}
-                            className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                        >
-                            <Check size={12} />
-                            <span>CONFIRM DINE-IN</span>
-                        </button>
-                    )}
-
-                    {/* Pickup pending */}
-                    {order.booking_type === 'pickup' && order.status === 'pending' && !order.payment_slip_url && (
+                    {/* LINE MAN Actions */}
+                    {isLineman && (order.status === 'confirmed' || order.status === 'pending') && (
                         <button
                             type="button"
                             onClick={() => {
@@ -491,8 +519,59 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {/* Pickup seated/confirmed/preparing */}
-                    {order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'confirmed') && (
+                    {isLineman && order.status === 'seated' && (
+                        <button
+                            type="button"
+                            onClick={() => updateBookingStatus(order.id, 'ready')}
+                            className="flex-1 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <Check size={12} />
+                            <span>READY FOR RIDER</span>
+                        </button>
+                    )}
+
+                    {isLineman && order.status === 'ready' && (
+                        <button
+                            type="button"
+                            onClick={() => updateBookingStatus(order.id, 'completed')}
+                            className="flex-1 py-2 rounded-lg bg-[oklch(45%_0.08_140)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <CheckCircle2 size={12} />
+                            <span>RIDER PICKED UP</span>
+                        </button>
+                    )}
+
+                    {/* Standard Dine-in pending */}
+                    {!isLineman && order.booking_type === 'dine_in' && order.status === 'pending' && !order.payment_slip_url && (
+                        <button
+                            type="button"
+                            onClick={() => updateBookingStatus(order.id, 'confirmed')}
+                            className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <Check size={12} />
+                            <span>CONFIRM DINE-IN</span>
+                        </button>
+                    )}
+
+                    {/* Standard Pickup pending */}
+                    {!isLineman && order.booking_type === 'pickup' && order.status === 'pending' && !order.payment_slip_url && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                updateBookingStatus(order.id, 'seated');
+                                if (onOpenSlipModal && items.length > 0) {
+                                    onOpenSlipModal(order, 'kitchen');
+                                }
+                            }}
+                            className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <Check size={12} />
+                            <span>ACCEPT & COOK</span>
+                        </button>
+                    )}
+
+                    {/* Standard Pickup seated/confirmed/preparing */}
+                    {!isLineman && order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'confirmed') && (
                         <button
                             type="button"
                             onClick={() => updateBookingStatus(order.id, 'ready')}
@@ -503,8 +582,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {/* Pickup ready */}
-                    {order.booking_type === 'pickup' && order.status === 'ready' && (
+                    {/* Standard Pickup ready */}
+                    {!isLineman && order.booking_type === 'pickup' && order.status === 'ready' && (
                         isPaid ? (
                             <button
                                 type="button"
@@ -659,6 +738,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                         <button
                             type="button"
+                            onClick={() => setChannelFilter('lineman')}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'lineman' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                        >
+                            LINE MAN
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setChannelFilter('slips')}
                             className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${channelFilter === 'slips' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
                         >
@@ -711,27 +797,27 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </div>
                     </div>
 
-                    {/* Column 2: Dine-in Reservations */}
+                    {/* Column 2: LINE MAN Orders */}
                     <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(85%_0.012_28)] p-3.5 shadow-2xs">
                         <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
                             <div className="flex items-center gap-1.5">
                                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                    DINE-IN BOOKINGS / จองโต๊ะ
+                                    LINE MAN / เดลิเวอรี
                                 </span>
                             </div>
-                            <span className="bg-[oklch(18%_0.012_28)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
-                                {newBookings.length}
+                            <span className="bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)]/30 text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                                {linemanOrders.length}
                             </span>
                         </div>
 
                         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
-                            {newBookings.length === 0 ? (
+                            {linemanOrders.length === 0 ? (
                                 <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
-                                    ไม่มีรายการจองโต๊ะค้างอยู่
+                                    ไม่มีออเดอร์ LINE MAN ค้างอยู่
                                 </div>
                             ) : (
                                 <AnimatePresence>
-                                    {newBookings.map(o => renderCard(o, 'DINE-IN BOOKING'))}
+                                    {linemanOrders.map(o => renderCard(o, o.status === 'ready' ? 'READY' : 'PREPARING'))}
                                 </AnimatePresence>
                             )}
                         </div>
@@ -758,6 +844,32 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             ) : (
                                 <AnimatePresence>
                                     {onlinePickups.map(o => renderCard(o, o.status === 'ready' ? 'READY' : 'PREPARING'))}
+                                </AnimatePresence>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Column 4: Dine-in Reservations */}
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(85%_0.012_28)] p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                    DINE-IN BOOKINGS / จองโต๊ะ
+                                </span>
+                            </div>
+                            <span className="bg-[oklch(18%_0.012_28)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                                {newBookings.length}
+                            </span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
+                            {newBookings.length === 0 ? (
+                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                    ไม่มีรายการจองโต๊ะค้างอยู่
+                                </div>
+                            ) : (
+                                <AnimatePresence>
+                                    {newBookings.map(o => renderCard(o, 'DINE-IN BOOKING'))}
                                 </AnimatePresence>
                             )}
                         </div>
@@ -810,12 +922,12 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             exit={{ scale: 0.95, y: 10 }}
                             className="bg-[oklch(97%_0.008_28)] rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden border-2 border-[oklch(52%_0.16_28)] font-sans"
                         >
-                            <div className="bg-[oklch(52%_0.16_28)] p-5 text-center text-white flex flex-col items-center">
+                            <div className={`${isOrderLineman(persistentAlert) ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(52%_0.16_28)]'} p-5 text-center text-white flex flex-col items-center`}>
                                 <span className="font-mono text-[10px] font-bold uppercase tracking-widest bg-black/20 px-2 py-0.5 rounded mb-1">
-                                    INCOMING NOTIFICATION
+                                    {isOrderLineman(persistentAlert) ? 'LINE MAN DELIVERY' : 'INCOMING NOTIFICATION'}
                                 </span>
                                 <h2 className="text-xl font-bold tracking-tight uppercase">
-                                    NEW ONLINE ORDER
+                                    {isOrderLineman(persistentAlert) ? '🛵 NEW DELIVERY ORDER' : 'NEW ONLINE ORDER'}
                                 </h2>
                                 <span className="font-mono text-sm font-bold mt-1">
                                     #{getShortBookingId(persistentAlert)}
@@ -827,7 +939,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     {persistentAlert.profiles?.display_name || persistentAlert.pickup_contact_name || persistentAlert.customer_name || 'Online Customer'}
                                 </p>
                                 <p className="text-[oklch(55%_0.010_28)] font-mono text-xs">
-                                    {persistentAlert.booking_type === 'pickup' ? '[PICK-UP ORDER]' : '[DINE-IN RESERVATION]'}
+                                    {isOrderLineman(persistentAlert) 
+                                        ? `[LINE MAN PREPAID · ฿${(persistentAlert.total_amount || 0).toLocaleString()}]` 
+                                        : (persistentAlert.booking_type === 'pickup' ? '[PICK-UP ORDER]' : '[DINE-IN RESERVATION]')}
                                     {persistentAlert.payment_slip_url ? ' · WITH SLIP' : ''}
                                 </p>
                                 

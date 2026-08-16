@@ -1,6 +1,8 @@
 package com.inthehaus.pos;
 
 import android.os.Bundle;
+import android.util.Base64;
+import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -10,9 +12,17 @@ import android.content.Context;
 import android.view.Display;
 import android.hardware.display.DisplayManager;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+
 public class MainActivity extends BridgeActivity {
     
     private SecondaryDisplayPresentation presentation;
+    private ServerSocket wmaServerSocket;
+    private Thread wmaServerThread;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -46,6 +56,93 @@ public class MainActivity extends BridgeActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        // Start native WMA ESC/POS Virtual Printer Bridge Server on Port 9100
+        startWmaBridgeServer();
+    }
+
+    private void startWmaBridgeServer() {
+        wmaServerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    wmaServerSocket = new ServerSocket(9100);
+                    Log.i("WmaBridge", "🚀 WMA Virtual Printer Bridge listening on Port 9100");
+                    while (!Thread.currentThread().isInterrupted() && wmaServerSocket != null && !wmaServerSocket.isClosed()) {
+                        try {
+                            final Socket clientSocket = wmaServerSocket.accept();
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    handleWmaClientSocket(clientSocket);
+                                }
+                            }).start();
+                        } catch (Exception e) {
+                            if (wmaServerSocket != null && !wmaServerSocket.isClosed()) {
+                                Log.w("WmaBridge", "Socket accept warning: " + e.getMessage());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("WmaBridge", "Could not open ServerSocket on Port 9100: " + e.getMessage());
+                }
+            }
+        });
+        wmaServerThread.start();
+    }
+
+    private void handleWmaClientSocket(Socket socket) {
+        try {
+            socket.setSoTimeout(600); // Wait for all print stream packets
+            InputStream in = socket.getInputStream();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] temp = new byte[1024];
+            int read;
+            try {
+                while ((read = in.read(temp)) != -1) {
+                    buffer.write(temp, 0, read);
+                }
+            } catch (SocketTimeoutException ste) {
+                // Stream read timeout - packet completed
+            }
+
+            final byte[] rawBytes = buffer.toByteArray();
+            if (rawBytes.length > 0) {
+                final String base64Data = Base64.encodeToString(rawBytes, Base64.NO_WRAP);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            WebView webView = getBridge().getWebView();
+                            if (webView != null) {
+                                String js = "if (window.onWmaRawPrintStream) { window.onWmaRawPrintStream('" + base64Data + "'); } else { window.dispatchEvent(new CustomEvent('wma_raw_print_stream', { detail: '" + base64Data + "' })); }";
+                                webView.evaluateJavascript(js, null);
+                            }
+                        } catch (Exception e) {
+                            Log.e("WmaBridge", "Error dispatching to WebView: " + e.getMessage());
+                        }
+                    }
+                });
+            }
+            socket.close();
+        } catch (Exception e) {
+            Log.w("WmaBridge", "Client handling error: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        try {
+            if (wmaServerSocket != null) {
+                wmaServerSocket.close();
+                wmaServerSocket = null;
+            }
+            if (wmaServerThread != null) {
+                wmaServerThread.interrupt();
+                wmaServerThread = null;
+            }
+        } catch (Exception e) {}
+        super.onDestroy();
     }
 
     private static class SecondaryDisplayPresentation extends Presentation {

@@ -720,18 +720,22 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const noteLower = (booking.customer_note || '').toLowerCase();
     const sourceLower = (booking.source || '').toLowerCase();
     
-    // Check category: Online Pickup vs Online Table Booking vs Walk-in Pickup vs IN HAUS Dine-In vs Split Payment
+    // Check category: LINE MAN Delivery vs Online Pickup vs Online Table Booking vs Walk-in Pickup vs IN HAUS Dine-In vs Split Payment
+    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || (booking.customer_name || '').toLowerCase().includes('line man');
     const isSplitOrder = remarkLower.includes('split');
-    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online');
-    const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr');
+    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || isLineman;
+    const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr') || isLineman;
     
-    const isOnlinePickup = isOnlineSource && isPickupOrder;
-    const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr';
+    const isOnlinePickup = isOnlineSource && isPickupOrder && !isLineman;
+    const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr' && !isLineman;
 
     let orderBannerTitle = '';
     let orderBannerSub = '';
 
-    if (isSplitOrder) {
+    if (isLineman) {
+        orderBannerTitle = 'LINE MAN DELIVERY';
+        orderBannerSub = '(ออเดอร์เดลิเวอรี LINE MAN)';
+    } else if (isSplitOrder) {
         orderBannerTitle = 'SPLIT PAYMENT RECEIPT';
         orderBannerSub = '(ใบเสร็จแบ่งชำระเงิน)';
     } else if (isOnlinePickup) {
@@ -787,7 +791,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     if (isKitchenTab) {
         let serviceType = 'IN HAUS DINE-IN (ทานที่ร้าน)';
-        if (isOnlinePickup) {
+        if (isLineman) {
+            serviceType = 'LINE MAN (เดลิเวอรี)';
+        } else if (isOnlinePickup) {
             serviceType = 'ONLINE PICKUP (รับกลับออนไลน์)';
         } else if (isOnlineBooking) {
             serviceType = 'ONLINE BOOKING (จองโต๊ะออนไลน์)';
@@ -809,7 +815,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(`พนักงานรับ: ${staffName ? staffName.toUpperCase() : 'SYSTEM'}`)
                .line(`เวลาสั่ง: ${dateStr}`);
 
-        if (isOnlineSource) {
+        if (isOnlineSource && !isLineman) {
             encoder.line(`เวลานัดหมาย: ${formattedBookingTimeStr}`);
         }
 
@@ -830,7 +836,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     // Meta info (Proof / Evidence details)
     if (!isKitchenTab) {
         let channelText = 'IN HAUS (หน้าร้าน)';
-        if (isOnlinePickup || isOnlineBooking) {
+        if (isLineman) {
+            channelText = 'LINE MAN (เดลิเวอรี)';
+        } else if (isOnlinePickup || isOnlineBooking) {
             channelText = 'ONLINE (ออนไลน์)';
         } else if (isPickupOrder) {
             channelText = 'IN-HAUS (หน้าร้าน)';
@@ -839,11 +847,11 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('left')
                .bold(true)
                .line(`ช่องทาง: ${channelText}`)
-               .line(`ประเภทบริการ: ${isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : (isOnlineBooking ? 'จองโต๊ะออนไลน์ (RESERVATION)' : 'ทานที่ร้าน (DINE-IN)')}`)
+               .line(`ประเภทบริการ: ${isLineman ? 'เดลิเวอรี (LINE MAN)' : (isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : (isOnlineBooking ? 'จองโต๊ะออนไลน์ (RESERVATION)' : 'ทานที่ร้าน (DINE-IN)'))}`)
                .bold(false)
                .line(`วันที่-เวลา: ${dateStr}`);
 
-        if (isOnlineSource) {
+        if (isOnlineSource && !isLineman) {
             encoder.line(`เวลานัดหมาย: ${formattedBookingTimeStr}`);
         }
 
