@@ -58,6 +58,7 @@ export default function AdminTaxHub() {
     // Expense Modals
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
+    const [expensesKey, setExpensesKey] = useState(0);
 
     // Fetch Invoices
     const fetchInvoices = async () => {
@@ -488,6 +489,7 @@ export default function AdminTaxHub() {
                 {/* TAB 2: STORE EXPENSES & MAKRO PURCHASES */}
                 {activeTab === 'expenses' && (
                     <ExpensesTab
+                        key={expensesKey}
                         monthlyPosRevenue={currentMonthPosRevenue}
                         onOpenCreateModal={() => {
                             setEditingExpense(null);
@@ -560,7 +562,8 @@ export default function AdminTaxHub() {
                     onSaveSuccess={() => {
                         setShowExpenseModal(false);
                         setEditingExpense(null);
-                        fetchInvoices();
+                        setActiveTab('expenses');
+                        setExpensesKey(k => k + 1);
                     }}
                 />
             )}

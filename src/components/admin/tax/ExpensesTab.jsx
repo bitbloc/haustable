@@ -1,14 +1,13 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
     Plus, 
     Download, 
     Search, 
     Trash2, 
     Edit2, 
-    X,
-    ExternalLink,
-    Sparkles
+    X, 
+    RotateCcw
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
@@ -29,6 +28,8 @@ export default function ExpensesTab({
         }
     });
 
+    const [loading, setLoading] = useState(false);
+
     const [selectedMonth, setSelectedMonth] = useState(() => {
         const d = new Date();
         const y = d.getFullYear();
@@ -36,40 +37,43 @@ export default function ExpensesTab({
         return `${y}-${m}`;
     });
 
+    const [isAllPeriods, setIsAllPeriods] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
 
-    useEffect(() => {
-        let isMounted = true;
-        const loadExpenses = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('store_expenses')
-                    .select('*')
-                    .order('expense_date', { ascending: false });
+    const loadExpenses = useCallback(async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('store_expenses')
+                .select('*')
+                .order('expense_date', { ascending: false });
 
-                if (isMounted && !error && data && data.length > 0) {
-                    setExpenses(data);
-                    localStorage.setItem('onhaus_store_expenses', JSON.stringify(data));
-                }
-            } catch {
-                // Fallback to local
+            if (!error && data) {
+                setExpenses(data);
+                localStorage.setItem('onhaus_store_expenses', JSON.stringify(data));
+            } else {
+                const local = localStorage.getItem('onhaus_store_expenses');
+                if (local) setExpenses(JSON.parse(local));
             }
-        };
-
-        loadExpenses();
-
-        return () => {
-            isMounted = false;
-        };
+        } catch {
+            const local = localStorage.getItem('onhaus_store_expenses');
+            if (local) setExpenses(JSON.parse(local));
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadExpenses();
+    }, [loadExpenses]);
 
     // Filtered Expenses
     const filteredExpenses = useMemo(() => {
         return expenses.filter(exp => {
             const expMonth = (exp.expense_date || '').slice(0, 7);
-            const matchesMonth = !selectedMonth || expMonth === selectedMonth;
+            const matchesMonth = isAllPeriods || !selectedMonth || expMonth === selectedMonth;
 
             const matchesCategory = categoryFilter === 'all' || exp.category === categoryFilter;
 
@@ -81,7 +85,7 @@ export default function ExpensesTab({
 
             return matchesMonth && matchesCategory && matchesSearch;
         });
-    }, [expenses, selectedMonth, categoryFilter, searchQuery]);
+    }, [expenses, selectedMonth, isAllPeriods, categoryFilter, searchQuery]);
 
     // Monthly Aggregates
     const monthlyStats = useMemo(() => {
@@ -138,7 +142,7 @@ export default function ExpensesTab({
     // Export CSV
     const handleExportCsv = () => {
         if (filteredExpenses.length === 0) {
-            toast.warning('ไม่พบข้อมูลค่าใช้จ่ายในเดือนนี้');
+            toast.warning('ไม่พบข้อมูลค่าใช้จ่ายในงวดที่เลือก');
             return;
         }
 
@@ -184,14 +188,15 @@ export default function ExpensesTab({
             `"รวม ${monthlyStats.count} รายการ"`
         ];
 
+        const periodLabel = isAllPeriods ? 'ALL_PERIODS' : selectedMonth;
         const csvLines = [
-            `"รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน (Store Expenses & COGS Ledger) - ประจำงวด ${selectedMonth}"`,
+            `"รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน (Store Expenses & COGS Ledger) - ประจำงวด ${periodLabel}"`,
             headers.join(','),
             ...rows.map(r => r.join(',')),
             summaryRow.join(',')
         ];
 
-        downloadCsvFile(csvLines.join('\r\n'), `Store_Expenses_${selectedMonth}.csv`);
+        downloadCsvFile(csvLines.join('\r\n'), `Store_Expenses_${periodLabel}.csv`);
         toast.success('ดาวน์โหลดรายงานค่าใช้จ่ายเรียบร้อย');
     };
 
@@ -211,7 +216,7 @@ export default function ExpensesTab({
                             ฿{Number(monthlyPosRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </div>
                         <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
-                            PERIOD: {selectedMonth}
+                            PERIOD: {isAllPeriods ? 'ALL TIME' : selectedMonth}
                         </span>
                     </div>
                 </div>
@@ -289,7 +294,7 @@ export default function ExpensesTab({
                 {/* Major Categories Spread (8 Cols) */}
                 <div className="md:col-span-8 p-4 sm:p-5 space-y-3 bg-[var(--color-paper-2)]">
                     <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
-                        EXPENDITURE BY CATEGORY // {selectedMonth}
+                        EXPENDITURE BY CATEGORY // {isAllPeriods ? 'ALL TIME' : selectedMonth}
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
                         {EXPENSE_CATEGORIES.map(cat => {
@@ -312,12 +317,33 @@ export default function ExpensesTab({
             {/* 3. Brutalist Filter & Control Toolbar */}
             <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
                 <div className="flex flex-wrap items-center gap-2">
-                    <input
-                        type="month"
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
-                    />
+                    
+                    {/* Period Mode Selector */}
+                    <div className="flex border border-[var(--color-rule)]">
+                        <button
+                            type="button"
+                            onClick={() => setIsAllPeriods(false)}
+                            className={`px-3 py-1.5 transition-colors ${!isAllPeriods ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                        >
+                            BY MONTH
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsAllPeriods(true)}
+                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${isAllPeriods ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                        >
+                            ALL TIME ({expenses.length})
+                        </button>
+                    </div>
+
+                    {!isAllPeriods && (
+                        <input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
+                        />
+                    )}
 
                     <select
                         value={categoryFilter}
@@ -344,6 +370,16 @@ export default function ExpensesTab({
 
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={loadExpenses}
+                        disabled={loading}
+                        className="px-3 py-1.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px]"
+                        title="โหลดข้อมูลใหม่จากเซิร์ฟเวอร์"
+                    >
+                        <RotateCcw size={12} className={loading ? 'animate-spin' : ''} />
+                        <span>RELOAD</span>
+                    </button>
+
+                    <button
                         onClick={handleExportCsv}
                         className="px-3 py-1.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px]"
                     >
@@ -360,6 +396,22 @@ export default function ExpensesTab({
                     </button>
                 </div>
             </div>
+
+            {/* Empty State Banner Alert if other month has records */}
+            {filteredExpenses.length === 0 && expenses.length > 0 && !isAllPeriods && (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 font-mono text-xs flex items-center justify-between">
+                    <span>
+                        ⚠️ ไม่พบรายการในงวด [{selectedMonth}] แต่พบ <strong>{expenses.length} รายการในงวดอื่น</strong>
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setIsAllPeriods(true)}
+                        className="px-3 py-1 bg-amber-900 text-white font-bold rounded text-[11px] cursor-pointer hover:bg-black"
+                    >
+                        ดูรายการทั้งหมด (VIEW ALL) &rarr;
+                    </button>
+                </div>
+            )}
 
             {/* 4. Tabular Ledger Grid */}
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden">
@@ -380,7 +432,7 @@ export default function ExpensesTab({
                             {filteredExpenses.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="p-12 text-center text-[var(--color-muted)] font-mono text-xs">
-                                        NO EXPENSE RECORDS FOUND FOR PERIOD [{selectedMonth}]
+                                        {loading ? 'LOADING EXPENSE LEDGER...' : `NO EXPENSE RECORDS FOUND FOR PERIOD [${isAllPeriods ? 'ALL TIME' : selectedMonth}]`}
                                     </td>
                                 </tr>
                             ) : (
