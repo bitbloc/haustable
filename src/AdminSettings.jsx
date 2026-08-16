@@ -3,6 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy } from 'lucide-react'
 import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
+import DataPurgePanel from './components/admin/DataPurgePanel'
 import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from './utils/printerHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
@@ -769,6 +770,7 @@ export default function AdminSettings() {
                     { id: 'integrations', label: '⚙️ APIs & QR', desc: 'INTEGRATIONS', icon: Terminal },
                     { id: 'printers', label: '🖨 เครื่องพิมพ์ & สลิป', desc: 'HARDWARE & RECEIPTS', icon: QrCode },
                     { id: 'crm', label: '🪙 CRM & xhaus Coins', desc: 'LOYALTY PROGRAM', icon: Coins },
+                    { id: 'data_purge', label: '🧹 ล้างข้อมูลทดสอบ', desc: 'GO-LIVE RESET', icon: Trash2 },
                     { id: 'debug', label: '🔧 Debug Logs', desc: 'SYSTEM LOGS', icon: AlertTriangle }
                 ].map(tab => {
                     const IconComp = tab.icon;
@@ -2907,6 +2909,11 @@ export default function AdminSettings() {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* TAB 8: System Test Data Purge */}
+                {activeSettingsTab === 'data_purge' && (
+                    <DataPurgePanel />
                 )}
             </div>
     )
