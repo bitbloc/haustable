@@ -130,11 +130,15 @@ export default function ExpenseModal({
             return;
         }
 
+        const imagesParam = typeof imageToScan === 'string' && imageToScan.includes(',')
+            ? imageToScan.split(',').map(s => s.trim()).filter(Boolean)
+            : imageToScan;
+
         setIsAiScanning(true);
         setAiScannedSuccess(false);
 
         try {
-            const data = await scanReceiptWithGemini(imageToScan, null, geminiModel);
+            const data = await scanReceiptWithGemini(imagesParam, null, geminiModel);
             
             // Auto-fill all fields
             if (data.title) setTitle(data.title);
@@ -176,55 +180,61 @@ export default function ExpenseModal({
         }
     };
 
-    // Handle Image Upload / Compression
-    const handleImageUpload = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    // Handle Image Upload / Compression (Supports Multiple Images / Multi-Page)
+    const handleImageUpload = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
-        if (file.size > 12 * 1024 * 1024) {
-            toast.error('ขนาดไฟล์เกิน 12MB กรุณาเลือกรูปขนาดเล็กลง');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1400;
-                const MAX_HEIGHT = 1400;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
+        const processFile = (file) => {
+            return new Promise((resolve) => {
+                if (file.size > 12 * 1024 * 1024) {
+                    toast.error(`ไฟล์ ${file.name} มีขนาดเกิน 12MB`);
                 }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 1400;
+                        const MAX_HEIGHT = 1400;
+                        let width = img.width;
+                        let height = img.height;
 
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
 
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-                setReceiptImage(compressedBase64);
-                toast.success('แนบภาพใบเสร็จเรียบร้อย');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
 
-                // Auto Trigger AI Scan if enabled
-                if (autoScanEnabled && !existingExpense) {
-                    handleAiScan(compressedBase64);
-                }
-            };
-            img.src = event.target.result;
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                        resolve(compressedBase64);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
         };
-        reader.readAsDataURL(file);
+
+        const compressedList = await Promise.all(files.map(processFile));
+        const combined = compressedList.join(',');
+        setReceiptImage(combined);
+        toast.success(`แนบภาพเอกสาร ${compressedList.length} แผ่นเรียบร้อย`);
+
+        // Auto Trigger AI Scan if enabled
+        if (autoScanEnabled && !existingExpense) {
+            handleAiScan(compressedList.length > 1 ? compressedList : compressedList[0]);
+        }
     };
 
     // Save Expense
@@ -374,11 +384,17 @@ export default function ExpenseModal({
                             {receiptImage ? (
                                 <div className="relative border border-[var(--color-rule)] bg-black/5 aspect-[4/5] w-full flex items-center justify-center overflow-hidden group">
                                     <img 
-                                        src={receiptImage} 
+                                        src={receiptImage.split(',')[0]} 
                                         alt="Receipt Attachment" 
                                         className="w-full h-full object-contain cursor-zoom-in"
                                         onClick={() => setImagePreviewZoom(true)}
                                     />
+
+                                    {receiptImage.includes(',') && (
+                                        <div className="absolute top-2 left-2 bg-black/80 text-white font-mono text-[9px] font-bold px-2 py-0.5 border border-white/20">
+                                            ชุด {receiptImage.split(',').length} แผ่น
+                                        </div>
+                                    )}
 
                                     {/* Optical Scanning Sweep Animation */}
                                     {isAiScanning && (
@@ -434,7 +450,7 @@ export default function ExpenseModal({
                                             SNAP OR DROP RECEIPT
                                         </span>
                                         <span className="font-mono text-[10px] text-[var(--color-muted)] mt-1 block">
-                                            MAKRO / FUEL / UTILITY / SLIP
+                                            MAKRO / FUEL / UTILITY / SLIP (1-5 แผ่น)
                                         </span>
                                     </div>
                                     <div className="font-mono text-[9px] text-[var(--color-accent)] uppercase tracking-wider font-bold border-t border-[var(--color-rule)] pt-2 mt-1">
@@ -447,7 +463,7 @@ export default function ExpenseModal({
                                 ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
-                                capture="environment"
+                                multiple
                                 onChange={handleImageUpload}
                                 className="hidden"
                             />

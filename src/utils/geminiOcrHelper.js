@@ -77,8 +77,9 @@ export async function saveGeminiPreferredModel(modelName) {
 }
 
 /**
- * Scan receipt image using Gemini Vision AI with Auto-Fallback Cascade
- * @param {string} base64Image - Data URL or base64 string of receipt
+ * Scan receipt image(s) using Gemini Vision AI with Auto-Fallback Cascade
+ * Supports single image or multiple images in a set (multi-page invoices, bill + slip)
+ * @param {string|string[]} base64Image - Single data URL or array of data URLs/base64 strings
  * @param {string} customApiKey - Optional custom API key
  * @param {string} preferredModel - Optional model override
  * @returns {Promise<Object>} Parsed structured receipt data
@@ -89,19 +90,30 @@ export async function scanReceiptWithGemini(base64Image, customApiKey = null, pr
         throw new Error('MISSING_API_KEY');
     }
 
-    // Extract mime type and raw base64 data
-    const match = base64Image.match(/^data:([^;]+);base64,(.+)$/);
-    const mimeType = match ? match[1] : 'image/jpeg';
-    const rawBase64 = match ? match[2] : base64Image;
+    const imagesArray = Array.isArray(base64Image) ? base64Image : [base64Image];
+    const isMultiPage = imagesArray.length > 1;
+
+    const imageParts = imagesArray.map(img => {
+        const match = img.match(/^data:([^;]+);base64,(.+)$/);
+        const mimeType = match ? match[1] : 'image/jpeg';
+        const rawBase64 = match ? match[2] : img;
+        return {
+            inline_data: {
+                mime_type: mimeType,
+                data: rawBase64
+            }
+        };
+    });
 
     const systemInstruction = `
 You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
-Analyze the provided image of a receipt, tax invoice, delivery slip, utility bill, fuel receipt, cooking gas bill, supermarket receipt, or bank transfer slip.
+You are provided with ${imagesArray.length} image(s). ${isMultiPage ? 'These images are part of a SINGLE multi-page receipt set, tax invoice set, or bill + transfer slip combination (e.g. Page 1, Page 2 of the same Makro/Lotus bill, or invoice + bank slip).' : ''}
+Analyze all provided images TOGETHER as a single cohesive expense record.
 
 Extract and return ONLY a valid JSON object matching this schema:
 {
-  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์', 'ค่าแกัสหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่ายิงแอด Facebook Ads')",
-  "amount": 0.00, // Total payable amount (number, no commas)
+  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแกัสหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่ายิงแอด Facebook Ads')",
+  "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set (do NOT sum page subtotals if one page shows the grand total; extract the final net amount).
   "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing, use today's date
   "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
   "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Facebook Ads')",
@@ -109,7 +121,7 @@ Extract and return ONLY a valid JSON object matching this schema:
   "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
   "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, power bills), false otherwise
   "payment_method": "TRANSFER", // DEFAULT IS ALWAYS 'TRANSFER'. Use 'CASH' only if explicitly marked as cash payment, or 'CREDIT' if marked as credit card.
-  "notes": "Brief summary of purchased line items in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
+  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
   "confidence": 0.95 // Confidence score from 0.0 to 1.0
 }
 
@@ -125,6 +137,11 @@ Category Rules:
 - Maintenance & Repairs (ช่างไฟ, ช่างประปา, ล้างแอร์, ซ่อมตู้เย็น, HomePro, ไทวัสดุ, ดูโฮม) -> 'maintenance'
 - Software & Subscriptions (Spotify, Canva, POS, ระบบรายเดือน) -> 'software_service'
 
+Multi-Page Rules:
+- If multiple pages have separate line items, combine the line items into the 'notes' field.
+- Do NOT double-count totals across pages if one page is a subtotal and another is the grand total.
+- If one page is an invoice and another is a bank transfer slip, verify that the amounts match, use the invoice vendor and tax details, and set payment_method to 'TRANSFER'.
+
 Payment Method Rules:
 - DEFAULT: 'TRANSFER' (Mobile banking, PromptPay QR, KPlus, SCB Easy, Krungthai NEXT, KKP, ttb, Bank Transfer slip, etc.)
 - Use 'CASH' ONLY if the bill explicitly states cash payment / จ่ายเงินสด.
@@ -136,13 +153,8 @@ Payment Method Rules:
             {
                 role: 'user',
                 parts: [
-                    { text: 'Please analyze this receipt and extract structured expense and tax information in Thai.' },
-                    {
-                        inline_data: {
-                            mime_type: mimeType,
-                            data: rawBase64
-                        }
-                    }
+                    { text: `Please analyze these ${imagesArray.length} receipt/invoice/slip image(s) together as one single cohesive document set and extract structured expense and tax information in Thai.` },
+                    ...imageParts
                 ]
             }
         ],

@@ -44,6 +44,12 @@ export default function ExpensesTab({
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
+    const [previewPageIndex, setPreviewPageIndex] = useState(0);
+
+    const previewUrls = useMemo(() => {
+        if (!previewImage) return [];
+        return previewImage.split(',').map(s => s.trim()).filter(Boolean);
+    }, [previewImage]);
 
     const loadExpenses = useCallback(async () => {
         setLoading(true);
@@ -548,10 +554,18 @@ export default function ExpensesTab({
                                                 {exp.receipt_image_url ? (
                                                     <button
                                                         type="button"
-                                                        onClick={() => setPreviewImage(exp.receipt_image_url)}
-                                                        className="px-1.5 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[10px] font-bold cursor-pointer"
+                                                        onClick={() => {
+                                                            setPreviewImage(exp.receipt_image_url);
+                                                            setPreviewPageIndex(0);
+                                                        }}
+                                                        className="px-2 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[10px] font-bold cursor-pointer inline-flex items-center gap-1 bg-white"
                                                     >
                                                         VIEW
+                                                        {exp.receipt_image_url.includes(',') && (
+                                                            <span className="bg-[var(--color-ink)] text-white text-[8px] px-1 py-0.2 rounded-xs font-mono">
+                                                                {exp.receipt_image_url.split(',').length}P
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 ) : (
                                                     <span className="text-gray-300 text-[10px]">-</span>
@@ -593,18 +607,72 @@ export default function ExpensesTab({
             </div>
 
             {/* LIGHTBOX MODAL */}
-            {previewImage && (
+            {previewImage && previewUrls.length > 0 && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4">
-                    <div className="relative max-w-3xl max-h-[90vh] flex flex-col border border-white/20 bg-black overflow-hidden">
+                    <div className="relative max-w-4xl w-full max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden shadow-2xl">
                         <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800">
-                            <span>RECEIPT OPTICAL INSPECTOR</span>
+                            <div className="flex items-center gap-3">
+                                <span>RECEIPT OPTICAL INSPECTOR</span>
+                                {previewUrls.length > 1 && (
+                                    <span className="bg-zinc-800 text-emerald-400 px-2 py-0.5 text-[10px] font-bold border border-zinc-700">
+                                        PAGE {previewPageIndex + 1} OF {previewUrls.length}
+                                    </span>
+                                )}
+                            </div>
                             <button onClick={() => setPreviewImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
                                 <X size={18} />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-                            <img src={previewImage} alt="Receipt Preview" className="max-w-full max-h-[80vh] object-contain" />
+
+                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center relative min-h-[400px]">
+                            <img 
+                                src={previewUrls[previewPageIndex] || previewUrls[0]} 
+                                alt={`Receipt Page ${previewPageIndex + 1}`} 
+                                className="max-w-full max-h-[75vh] object-contain transition-all duration-200" 
+                            />
+
+                            {/* Previous Button */}
+                            {previewUrls.length > 1 && previewPageIndex > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setPreviewPageIndex(prev => Math.max(0, prev - 1))}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
+                                >
+                                    ◀ PREV
+                                </button>
+                            )}
+
+                            {/* Next Button */}
+                            {previewUrls.length > 1 && previewPageIndex < previewUrls.length - 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setPreviewPageIndex(prev => Math.min(previewUrls.length - 1, prev + 1))}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-zinc-800 text-white px-3 py-2 border border-white/20 font-mono text-xs cursor-pointer shadow-lg"
+                                >
+                                    NEXT ▶
+                                </button>
+                            )}
                         </div>
+
+                        {/* Thumbnail Navigation Bar */}
+                        {previewUrls.length > 1 && (
+                            <div className="p-2 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-2 overflow-x-auto">
+                                {previewUrls.map((url, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setPreviewPageIndex(idx)}
+                                        className={`w-12 h-12 border transition-all cursor-pointer overflow-hidden p-0.5 ${
+                                            previewPageIndex === idx
+                                                ? 'border-emerald-400 ring-2 ring-emerald-500/50 scale-105'
+                                                : 'border-zinc-700 opacity-60 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <img src={url} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

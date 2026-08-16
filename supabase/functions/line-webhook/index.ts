@@ -46,16 +46,33 @@ async function verifySignature(body: string, signature: string, secret: string) 
 }
 
 async function scanReceiptImageWithGemini(
-  base64Image: string,
+  base64ImagesInput: string | string[],
   apiKey: string,
   preferredModel: string = 'gemini-3.7-flash'
 ): Promise<any> {
+  const imagesArray = Array.isArray(base64ImagesInput) ? base64ImagesInput : [base64ImagesInput];
+  const isMultiPage = imagesArray.length > 1;
+
+  const imageParts = imagesArray.map(b64 => {
+    const match = b64.match(/^data:([^;]+);base64,(.+)$/);
+    const mimeType = match ? match[1] : 'image/jpeg';
+    const rawBase64 = match ? match[2] : b64;
+    return {
+      inline_data: {
+        mime_type: mimeType,
+        data: rawBase64
+      }
+    };
+  });
+
   const systemInstruction = `
 You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
-Analyze the provided image.
-Determine if the image is a receipt, tax invoice, cash bill, payment voucher, fuel receipt, cooking gas bill, utility bill, Makro bill, supermarket bill, or bank transfer slip for an expense.
+You are provided with ${imagesArray.length} image(s). ${isMultiPage ? `These ${imagesArray.length} images are part of a SINGLE multi-page receipt set, tax invoice set, or bill + transfer slip combination (e.g. Page 1, Page 2 of the same Makro/Lotus bill, or invoice + bank slip).` : ''}
+Analyze all provided images TOGETHER as a single cohesive expense record.
 
-If the image is NOT a receipt/bill/slip/invoice (e.g. food photo, selfie, random picture, sticker, meme, greeting):
+Determine if the images represent a receipt, tax invoice, cash bill, payment voucher, fuel receipt, cooking gas bill, utility bill, Makro bill, supermarket bill, or bank transfer slip for an expense.
+
+If the images are NOT a receipt/bill/slip/invoice (e.g. food photo, selfie, random picture, sticker, meme, greeting):
 Return ONLY:
 {
   "is_receipt": false
@@ -65,8 +82,8 @@ If it IS a receipt, bill, tax invoice, delivery slip, or expense slip:
 Extract and return ONLY a valid JSON object matching this schema:
 {
   "is_receipt": true,
-  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่าแก้วและบรรจุภัณฑ์')",
-  "amount": 0.00, // Total payable amount (number, no commas)
+  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด')",
+  "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set (do NOT sum page subtotals if one page shows the grand total; extract the final net amount).
   "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing, use today's date
   "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
   "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
@@ -74,7 +91,7 @@ Extract and return ONLY a valid JSON object matching this schema:
   "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
   "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, power bills), false otherwise
   "payment_method": "TRANSFER", // DEFAULT IS ALWAYS 'TRANSFER'. Use 'CASH' only if explicitly marked as cash payment, or 'CREDIT' if marked as credit card.
-  "notes": "Brief summary of purchased line items in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
+  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
   "confidence": 0.95 // Confidence score from 0.0 to 1.0
 }
 
@@ -90,6 +107,11 @@ Category Rules:
 - Maintenance & Repairs (ช่างไฟ, ช่างประปา, ล้างแอร์, ซ่อมตู้เย็น, HomePro, ไทวัสดุ, ดูโฮม) -> 'maintenance'
 - Software & Subscriptions (Spotify, Canva, POS, ระบบรายเดือน) -> 'software_service'
 
+Multi-Page Rules:
+- If multiple pages have separate line items, combine all line items into the 'notes' field.
+- Do NOT double-count totals across pages if one page is a subtotal and another is the grand total. Extract only the single final payable amount.
+- If one page is an invoice and another is a bank transfer slip, verify that the amounts match, use the invoice vendor and tax details, and set payment_method to 'TRANSFER'.
+
 Payment Method Rules:
 - DEFAULT: 'TRANSFER' (Mobile banking, PromptPay QR, KPlus, SCB Easy, Krungthai NEXT, KKP, ttb, Bank Transfer slip, etc.)
 - Use 'CASH' ONLY if the bill explicitly states cash payment / จ่ายเงินสด.
@@ -101,13 +123,8 @@ Payment Method Rules:
       {
         role: 'user',
         parts: [
-          { text: 'Please analyze this receipt and extract structured expense and tax information in Thai.' },
-          {
-            inline_data: {
-              mime_type: 'image/jpeg',
-              data: base64Image
-            }
-          }
+          { text: `Please analyze these ${imagesArray.length} receipt/invoice/slip image(s) together as one single cohesive document set and extract structured expense and tax information in Thai.` },
+          ...imageParts
         ]
       }
     ],
@@ -169,7 +186,7 @@ Payment Method Rules:
   throw lastError || new Error('Failed to scan receipt with Gemini AI');
 }
 
-function createReceiptFlexMessage(expense: any, dateFormatted: string) {
+function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount: number = 1) {
   const categoryLabels: Record<string, string> = {
     'raw_material': '🛒 วัตถุดิบ & ของสด (MAKRO/ตลาด)',
     'marketing': '📣 ค่ายิงแอด & การตลาด',
@@ -195,10 +212,27 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string) {
   const vendorDisplay = (expense.vendor_name || 'ไม่ระบุร้านค้า').toUpperCase();
   const amountStr = `฿${Number(expense.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const detailRows: any[] = [
+  const headerTitle = pageCount > 1 ? `RECEIPT RECORDED · ${pageCount} PAGES (AI)` : "RECEIPT RECORDED (AI)";
+  const headerSubtitle = pageCount > 1 ? `เอกสารชุด ${pageCount} แผ่น (วิเคราะห์รวมเป็น 1 บิล)` : "ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ";
+
+  const detailRows: any[] = [];
+
+  if (pageCount > 1) {
+    detailRows.push({
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        { type: "text", text: "จำนวนหน้าเอกสาร", color: "#666666", size: "xs", flex: 4 },
+        { type: "text", text: `${pageCount} แผ่น (ชุดเดียวกัน)`, color: "#2D804E", size: "xs", weight: "bold", align: "end", flex: 4 }
+      ]
+    });
+  }
+
+  detailRows.push(
     {
       type: "box",
       layout: "horizontal",
+      margin: pageCount > 1 ? "sm" : "none",
       contents: [
         { type: "text", text: "หมวดหมู่", color: "#666666", size: "xs", flex: 3 },
         { type: "text", text: categoryText, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5, wrap: true }
@@ -222,7 +256,7 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string) {
         { type: "text", text: docTypeText, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5, wrap: true }
       ]
     }
-  ];
+  );
 
   if (expense.vat_included && expense.vat_amount > 0) {
     detailRows.push({
@@ -288,8 +322,8 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string) {
       layout: "vertical",
       paddingAll: "20px",
       contents: [
-        { type: "text", text: "RECEIPT RECORDED (AI)", weight: "bold", color: "#1A1A1A", size: "sm" },
-        { type: "text", text: "ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ", color: "#666666", size: "xs", margin: "xs" }
+        { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
+        { type: "text", text: headerSubtitle, color: "#666666", size: "xs", margin: "xs" }
       ]
     },
     body: {
@@ -315,7 +349,7 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string) {
               layout: "vertical",
               margin: "md",
               contents: [
-                { type: "text", text: "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว", color: "#2D804E", weight: "bold", size: "xs" },
+                { type: "text", text: pageCount > 1 ? `บันทึกชุดเอกสาร (${pageCount} แผ่น) เข้าหลังบ้านเรียบร้อยแล้ว` : "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว", color: "#2D804E", weight: "bold", size: "xs" },
                 { type: "text", text: vendorDisplay, weight: "bold", color: "#1A1A1A", size: "sm", margin: "xs", wrap: true },
                 { type: "text", text: expense.title || 'ค่าใช้จ่ายร้าน', color: "#666666", size: "xs", margin: "xs", wrap: true }
               ]
@@ -2138,64 +2172,91 @@ Deno.serve(async (req) => {
         }
       }
 
-      // --- NEW: Image Message Handler for Receipt OCR & Auto Expense Recording ---
-      if (event.type === 'message' && event.message.type === 'image') {
-        const messageId = event.message.id
-        const replyToken = event.replyToken
-        console.log(`Processing receipt image event. Message ID: ${messageId}`)
+    // --- Image Message Handler for Receipt OCR & Auto Expense Recording (Supports Multi-Page Batches) ---
+    const imageEvents = events.filter((e: any) => e.type === 'message' && e.message?.type === 'image')
+    if (imageEvents.length > 0) {
+      const groupedImages: { [key: string]: any[] } = {}
+      imageEvents.forEach((ev: any) => {
+        const key = ev.source?.groupId || ev.source?.roomId || ev.source?.userId || 'default'
+        if (!groupedImages[key]) groupedImages[key] = []
+        groupedImages[key].push(ev)
+      })
+
+      for (const [sourceKey, evList] of Object.entries(groupedImages)) {
+        const pageCount = evList.length
+        console.log(`Processing receipt batch for ${sourceKey}: ${pageCount} image(s)`)
 
         try {
-          // 1. Download image binary from LINE Content API
-          const lineImgUrl = `https://api-data.line.me/v2/bot/message/${messageId}/content`
-          const imgResp = await fetch(lineImgUrl, {
-            headers: { 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` }
+          // 1. Download all images in parallel
+          const downloadPromises = evList.map(async (ev: any, idx: number) => {
+            const messageId = ev.message.id
+            const lineImgUrl = `https://api-data.line.me/v2/bot/message/${messageId}/content`
+            const imgResp = await fetch(lineImgUrl, {
+              headers: { 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` }
+            })
+
+            if (!imgResp.ok) {
+              const errTxt = await imgResp.text()
+              console.error(`Failed to download image ${messageId} from LINE API:`, errTxt)
+              return null
+            }
+
+            const imageBuffer = await imgResp.arrayBuffer()
+            const imageBytes = new Uint8Array(imageBuffer)
+
+            // Convert to Base64 (Chunked to prevent stack overflow)
+            let binary = ''
+            const len = imageBytes.byteLength
+            const chunkSize = 8192
+            for (let i = 0; i < len; i += chunkSize) {
+              const chunk = imageBytes.subarray(i, Math.min(i + chunkSize, len))
+              binary += String.fromCharCode.apply(null, chunk as any)
+            }
+            const base64Image = btoa(binary)
+
+            // Upload to Supabase Storage (receipts bucket)
+            const now = new Date()
+            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+            const folder = thNow.toISOString().slice(0, 7)
+            const fileName = `${folder}/${Date.now()}_${idx}_${messageId}.jpg`
+            let receiptImageUrl = ''
+
+            try {
+              const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
+                .from('receipts')
+                .upload(fileName, imageBytes, {
+                  contentType: 'image/jpeg',
+                  upsert: true
+                })
+
+              if (!uploadErr && uploadData) {
+                const { data: urlData } = supabaseAdmin.storage.from('receipts').getPublicUrl(fileName)
+                receiptImageUrl = urlData?.publicUrl || ''
+              } else if (uploadErr) {
+                console.error('Receipt upload error to Supabase Storage:', uploadErr)
+              }
+            } catch (stErr) {
+              console.error('Storage upload exception:', stErr)
+            }
+
+            return {
+              base64: base64Image,
+              imageUrl: receiptImageUrl,
+              replyToken: ev.replyToken,
+              source: ev.source
+            }
           })
 
-          if (!imgResp.ok) {
-            const errTxt = await imgResp.text()
-            console.error('Failed to download image from LINE API:', errTxt)
-            continue
-          }
+          const downloadedItems = (await Promise.all(downloadPromises)).filter(Boolean) as any[]
+          if (downloadedItems.length === 0) continue
 
-          const imageBuffer = await imgResp.arrayBuffer()
-          const imageBytes = new Uint8Array(imageBuffer)
+          const base64List = downloadedItems.map(d => d.base64)
+          const imageUrlList = downloadedItems.map(d => d.imageUrl).filter(Boolean)
+          const receiptImageUrl = imageUrlList.length > 0 ? imageUrlList.join(',') : null
+          const latestItem = downloadedItems[downloadedItems.length - 1]
+          const replyToken = latestItem.replyToken
 
-          // 2. Convert to Base64 (Chunked to prevent stack overflow)
-          let binary = ''
-          const len = imageBytes.byteLength
-          const chunkSize = 8192
-          for (let i = 0; i < len; i += chunkSize) {
-            const chunk = imageBytes.subarray(i, Math.min(i + chunkSize, len))
-            binary += String.fromCharCode.apply(null, chunk as any)
-          }
-          const base64Image = btoa(binary)
-
-          // 3. Upload image to Supabase Storage (receipts bucket)
-          const now = new Date()
-          const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
-          const folder = thNow.toISOString().slice(0, 7)
-          const fileName = `${folder}/${Date.now()}_${messageId}.jpg`
-          let receiptImageUrl = ''
-
-          try {
-            const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
-              .from('receipts')
-              .upload(fileName, imageBytes, {
-                contentType: 'image/jpeg',
-                upsert: true
-              })
-
-            if (!uploadErr && uploadData) {
-              const { data: urlData } = supabaseAdmin.storage.from('receipts').getPublicUrl(fileName)
-              receiptImageUrl = urlData?.publicUrl || ''
-            } else if (uploadErr) {
-              console.error('Receipt upload error to Supabase Storage:', uploadErr)
-            }
-          } catch (stErr) {
-            console.error('Storage upload exception:', stErr)
-          }
-
-          // 4. Retrieve Gemini API Key & Preferred Model
+          // 2. Retrieve Gemini API Key & Preferred Model
           let geminiApiKey = Deno.env.get('GEMINI_API_KEY') || ''
           if (!geminiApiKey) {
             const { data: keyRow } = await supabaseAdmin
@@ -2219,12 +2280,12 @@ Deno.serve(async (req) => {
             continue
           }
 
-          // 5. Call Gemini AI Vision OCR
-          const ocrResult = await scanReceiptImageWithGemini(base64Image, geminiApiKey, preferredModel)
-          console.log('Gemini OCR Result:', JSON.stringify(ocrResult))
+          // 3. Call Gemini AI Vision OCR with all images in batch
+          const ocrResult = await scanReceiptImageWithGemini(base64List, geminiApiKey, preferredModel)
+          console.log('Gemini OCR Multi-Page Result:', JSON.stringify(ocrResult))
 
           if (!ocrResult || ocrResult.is_receipt === false) {
-            console.log('Image is not recognized as a receipt/expense slip. Skipping silent.')
+            console.log('Image(s) not recognized as receipt/expense slip. Skipping silent.')
             continue
           }
 
@@ -2239,8 +2300,13 @@ Deno.serve(async (req) => {
             vatAmount = parseFloat(((amount * 7) / 107).toFixed(2))
           }
 
+          const now = new Date()
+          const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
           const rawDate = ocrResult.expense_date || thNow.toISOString().slice(0, 10)
-          const title = ocrResult.title || 'ค่าใช้จ่ายร้าน'
+          let title = ocrResult.title || 'ค่าใช้จ่ายร้าน'
+          if (pageCount > 1 && !title.includes('ชุด') && !title.includes('แผ่น')) {
+            title = `${title} (ชุด ${pageCount} แผ่น)`
+          }
           const category = ocrResult.category || 'raw_material'
           const vendorName = ocrResult.vendor_name || 'ไม่ระบุ'
           const vendorTaxId = (ocrResult.vendor_tax_id || '').replace(/\D/g, '') || null
@@ -2248,7 +2314,7 @@ Deno.serve(async (req) => {
           const paymentMethod = ocrResult.payment_method || 'TRANSFER'
           const notes = ocrResult.notes || ''
 
-          // 6. Insert into store_expenses table
+          // 4. Insert into store_expenses table
           const { data: inserted, error: insertErr } = await supabaseAdmin
             .from('store_expenses')
             .insert([{
@@ -2261,7 +2327,7 @@ Deno.serve(async (req) => {
               amount: amount,
               vat_included: ocrResult.vat_included ?? true,
               vat_amount: vatAmount,
-              receipt_image_url: receiptImageUrl || null,
+              receipt_image_url: receiptImageUrl,
               payment_method: paymentMethod,
               notes: notes,
               created_at: new Date().toISOString()
@@ -2274,9 +2340,9 @@ Deno.serve(async (req) => {
             throw insertErr
           }
 
-          console.log('Successfully inserted store_expense:', inserted?.id)
+          console.log('Successfully inserted multi-page store_expense:', inserted?.id)
 
-          // 7. Format Date for Display
+          // 5. Format Date for Display
           let dateFormatted = rawDate
           try {
             const d = new Date(rawDate)
@@ -2285,7 +2351,7 @@ Deno.serve(async (req) => {
             dateFormatted = rawDate
           }
 
-          // 8. Build Flex Message Response
+          // 6. Build Flex Message Response
           const flexBubble = createReceiptFlexMessage(inserted || {
             expense_date: rawDate,
             title,
@@ -2298,9 +2364,9 @@ Deno.serve(async (req) => {
             vat_amount: vatAmount,
             payment_method: paymentMethod,
             notes
-          }, dateFormatted)
+          }, dateFormatted, pageCount)
 
-          // 9. Reply to LINE Group / User
+          // 7. Reply to LINE Group / User
           const replyResp = await fetch('https://api.line.me/v2/bot/message/reply', {
             method: 'POST',
             headers: {
@@ -2320,7 +2386,7 @@ Deno.serve(async (req) => {
           if (!replyResp.ok) {
             const errTxt = await replyResp.text()
             console.error('Failed to send LINE reply for receipt:', errTxt)
-            const targetId = event.source.groupId || event.source.roomId || event.source.userId
+            const targetId = latestItem.source?.groupId || latestItem.source?.roomId || latestItem.source?.userId
             if (targetId) {
               await fetch('https://api.line.me/v2/bot/message/push', {
                 method: 'POST',
@@ -2339,10 +2405,11 @@ Deno.serve(async (req) => {
               })
             }
           }
-        } catch (imgErr: any) {
-          console.error('Error in image receipt handler:', imgErr)
+        } catch (batchErr: any) {
+          console.error('Error in batch image receipt handler:', batchErr)
         }
       }
+    }
     }
 
     return new Response('OK', { headers: corsHeaders })
