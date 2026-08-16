@@ -104,6 +104,13 @@ Category Rules:
 - Maintenance & Repairs (ช่างไฟ, ช่างประปา, ล้างแอร์, ซ่อมตู้เย็น, HomePro, ไทวัสดุ, ดูโฮม) -> 'maintenance'
 - Software & Subscriptions (Spotify, Canva, POS, ระบบรายเดือน) -> 'software_service'
 
+Special Rules for Online Ads & Google Ads Statement (ใบแจ้งยอด Google Ads / Facebook Ads):
+- In "Google Statement" / "Google Ads" monthly account statements:
+  * Look for "การชำระเงินทั้งหมดที่ได้รับ" (Total payments received / e.g. -฿5,389.12) — this is the ACTUAL cash/credit card amount billed and paid in this billing cycle. Extract this absolute positive number (e.g. 5389.12) as "amount".
+  * If payments received is 0, use "กิจกรรมใหม่ทั้งหมด" (Total new activity / actual ad spend incurred during the month).
+  * ABSOLUTELY FORBIDDEN: NEVER extract "ยอดเงินสุดท้ายในสกุลเงิน THB" (Ending balance / carryover balance) or "ยอดเงินเริ่มต้น" (Beginning balance) as the "amount".
+  * Set vendor_name to "Google Ads", category to "marketing", doc_type to "receipt_voucher".
+
 Multi-Page Rules:
 - If multiple pages have separate line items, combine all line items into the 'notes' field.
 - Do NOT double-count totals across pages if one page is a subtotal and another is the grand total. Extract only the single final payable amount.
