@@ -4,19 +4,11 @@ import {
     Plus, 
     Download, 
     Search, 
-    Calendar, 
-    DollarSign, 
-    TrendingUp, 
-    TrendingDown, 
-    PieChart, 
-    FileText, 
-    Image as ImageIcon, 
     Trash2, 
     Edit2, 
-    CheckCircle2, 
-    AlertCircle, 
     X,
-    ExternalLink
+    ExternalLink,
+    Sparkles
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
@@ -103,14 +95,15 @@ export default function ExpensesTab({
             byCategory[cat] = (byCategory[cat] || 0) + Number(e.amount || 0);
         });
 
-        // Grade A, B, C breakdown
+        // Tax proof grade breakdown
         const gradeA = filteredExpenses.filter(e => e.doc_type === 'tax_invoice').reduce((s, e) => s + Number(e.amount || 0), 0);
         const gradeB = filteredExpenses.filter(e => e.doc_type === 'cash_bill').reduce((s, e) => s + Number(e.amount || 0), 0);
         const gradeC = filteredExpenses.filter(e => e.doc_type === 'receipt_voucher' || e.doc_type === 'slip_only').reduce((s, e) => s + Number(e.amount || 0), 0);
 
+        // Real Net Profit
         const rawMaterialCost = byCategory['raw_material'] || 0;
-        const netProfit = (monthlyPosRevenue || 0) - totalExpense;
-        const foodCostPct = monthlyPosRevenue > 0 ? ((rawMaterialCost / monthlyPosRevenue) * 100) : 0;
+        const netProfit = Number(monthlyPosRevenue || 0) - totalExpense;
+        const foodCostPct = monthlyPosRevenue > 0 ? (rawMaterialCost / monthlyPosRevenue) * 100 : 0;
 
         return {
             totalExpense,
@@ -199,112 +192,116 @@ export default function ExpensesTab({
         ];
 
         downloadCsvFile(csvLines.join('\r\n'), `Store_Expenses_${selectedMonth}.csv`);
-        toast.success('ดาวน์โหลดรายงานค่าใช้จ่ายเรียบร้อยแล้ว');
+        toast.success('ดาวน์โหลดรายงานค่าใช้จ่ายเรียบร้อย');
     };
 
     return (
-        <div className="space-y-6">
-            {/* Top Overview: Real Net Profit & Financial Performance Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Gross Revenue from POS */}
-                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 shadow-sm">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
-                        รายรับรวมจาก POS (Gross Revenue)
+        <div className="space-y-6 font-sans text-[var(--color-ink)]">
+            
+            {/* 1. Structural Metric Grid: Rams High-Contrast Performance Readout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-[var(--color-rule)] divide-y sm:divide-y-0 sm:divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
+                
+                {/* Metric 01: Gross POS Revenue */}
+                <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                        [01] POS GROSS REVENUE
                     </span>
-                    <div className="font-mono font-black text-xl text-zinc-950 mt-1">
-                        ฿{Number(monthlyPosRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
-                        ยอดขายประจำงวด {selectedMonth}
-                    </span>
-                </div>
-
-                {/* Total Store Expenses */}
-                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 shadow-sm">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
-                        ค่าใช้จ่ายร้านรวม (Total Expenses)
-                    </span>
-                    <div className="font-mono font-black text-xl text-red-600 mt-1">
-                        ฿{monthlyStats.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
-                        Makro + ค่าน้ำไฟ + ค่าเช่า ({monthlyStats.count} รายการ)
-                    </span>
-                </div>
-
-                {/* Real Net Profit */}
-                <div className={`rounded-2xl p-4 shadow-sm border ${monthlyStats.netProfit >= 0 ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950' : 'bg-red-50/70 border-red-300 text-red-950'}`}>
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider block opacity-75">
-                        กำไรสุทธิจริง (Real Net Profit)
-                    </span>
-                    <div className="font-mono font-black text-2xl mt-1">
-                        ฿{monthlyStats.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span className="text-[10px] font-mono mt-0.5 block opacity-75">
-                        {monthlyStats.netProfit >= 0 ? '✓ ผลประกอบการกำไรเป็นบวก' : '⚠️ รายจ่ายสูงกว่ารายรับ'}
-                    </span>
-                </div>
-
-                {/* Food Cost COGS % */}
-                <div className="bg-[#1A1A1A] text-white rounded-2xl p-4 shadow-sm flex flex-col justify-between">
                     <div>
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                            Food & Drink Cost % (ต้นทุน Makro)
+                        <div className="font-mono font-black text-2xl tracking-tight">
+                            ฿{Number(monthlyPosRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </div>
+                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
+                            PERIOD: {selectedMonth}
                         </span>
-                        <div className="font-mono font-black text-xl text-amber-400 mt-1">
+                    </div>
+                </div>
+
+                {/* Metric 02: Total Operating Expenses */}
+                <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                        [02] TOTAL STORE EXPENSES
+                    </span>
+                    <div>
+                        <div className="font-mono font-black text-2xl tracking-tight text-[var(--color-accent)]">
+                            ฿{monthlyStats.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </div>
+                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
+                            {monthlyStats.count} TRANSACTIONS
+                        </span>
+                    </div>
+                </div>
+
+                {/* Metric 03: Real Net Profit */}
+                <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2 bg-[var(--color-paper-2)]">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                        [03] REAL NET OPERATING PROFIT
+                    </span>
+                    <div>
+                        <div className={`font-mono font-black text-2xl tracking-tight ${monthlyStats.netProfit >= 0 ? 'text-[var(--color-ink)]' : 'text-red-600'}`}>
+                            ฿{monthlyStats.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </div>
+                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
+                            {monthlyStats.netProfit >= 0 ? 'PROFITABLE (+NET)' : 'DEFICIT (-NET)'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Metric 04: Food Cost Ratio */}
+                <div className="p-4 sm:p-5 flex flex-col justify-between space-y-2 bg-[var(--color-ink)] text-[var(--color-paper)]">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-paper)]/70">
+                        [04] FOOD &amp; DRINK COGS RATIO
+                    </span>
+                    <div>
+                        <div className="font-mono font-black text-2xl tracking-tight text-amber-300">
                             {monthlyStats.foodCostPct.toFixed(1)}%
                         </div>
+                        <span className="font-mono text-[10px] text-[var(--color-paper)]/60 mt-0.5 block">
+                            TARGET BENCHMARK: 30-35%
+                        </span>
                     </div>
-                    <span className="text-[10px] text-zinc-400 font-mono">
-                        เป้าหมายธุรกิจคาเฟ่/ร้านอาหาร: 30 - 35%
-                    </span>
                 </div>
             </div>
 
-            {/* Tax Deductible Proof Grades & Category Breakdown Ribbon */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Proof Grades Card */}
-                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 shadow-sm space-y-2.5">
-                    <div className="flex items-center gap-2 border-b border-zinc-200 pb-2">
-                        <FileText size={16} className="text-zinc-700" />
-                        <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-900">
-                            ความน่าเชื่อถือเอกสารยื่นภาษี (Tax Proofs)
-                        </span>
-                    </div>
-
-                    <div className="space-y-2 text-xs font-mono">
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950">
-                            <span>🥇 เกรด A (ใบกำกับ Makro/น้ำไฟ):</span>
-                            <strong>฿{monthlyStats.gradeA.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+            {/* 2. Secondary Analytics Strip: Tax Proof Grade + Category Spread */}
+            <div className="grid grid-cols-1 md:grid-cols-12 border border-[var(--color-rule)] divide-y md:divide-y-0 md:divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
+                
+                {/* Proof Reliability (4 Cols) */}
+                <div className="md:col-span-4 p-4 sm:p-5 space-y-3">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
+                        TAX DEDUCTION PROOF GRADES
+                    </span>
+                    <div className="space-y-2 font-mono text-xs">
+                        <div className="flex justify-between items-center py-1 border-b border-[var(--color-rule)]/60">
+                            <span className="text-[var(--color-neutral)]">GRADE A (FULL TAX INV):</span>
+                            <span className="font-bold">฿{monthlyStats.gradeA.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-800">
-                            <span>🥈 เกรด B (บิลเงินสด + สลิป):</span>
-                            <strong>฿{monthlyStats.gradeB.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                        <div className="flex justify-between items-center py-1 border-b border-[var(--color-rule)]/60">
+                            <span className="text-[var(--color-neutral)]">GRADE B (CASH BILL + SLIP):</span>
+                            <span className="font-bold">฿{monthlyStats.gradeB.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-800">
-                            <span>🥉 เกรด C (ใบสำคัญรับเงิน/สลิป):</span>
-                            <strong>฿{monthlyStats.gradeC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                        <div className="flex justify-between items-center py-1">
+                            <span className="text-[var(--color-neutral)]">GRADE C (PAYMENT VOUCHER):</span>
+                            <span className="font-bold">฿{monthlyStats.gradeC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Major Categories Breakdown */}
-                <div className="md:col-span-2 bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
-                    <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-900 block border-b border-zinc-200 pb-2">
-                        สัดส่วนค่าใช้จ่ายหลักประจำงวด {selectedMonth}
+                {/* Major Categories Spread (8 Cols) */}
+                <div className="md:col-span-8 p-4 sm:p-5 space-y-3 bg-[var(--color-paper-2)]">
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
+                        EXPENDITURE BY CATEGORY // {selectedMonth}
                     </span>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 font-mono text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
                         {EXPENSE_CATEGORIES.map(cat => {
                             const val = monthlyStats.byCategory[cat.id] || 0;
                             return (
-                                <div key={cat.id} className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-200 flex flex-col justify-between">
-                                    <span className="text-[10px] text-zinc-500 block truncate" title={cat.label}>
+                                <div key={cat.id} className="p-2 border border-[var(--color-rule)] bg-[var(--color-paper)] flex flex-col justify-between min-h-[52px]">
+                                    <span className="text-[9px] text-[var(--color-muted)] truncate" title={cat.label}>
                                         {cat.label}
                                     </span>
-                                    <strong className={`text-xs sm:text-sm block mt-1 ${val > 0 ? 'text-zinc-950 font-black' : 'text-zinc-400 font-medium'}`}>
-                                        ฿{val.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                    </strong>
+                                    <span className={`font-bold mt-1 ${val > 0 ? 'text-[var(--color-ink)]' : 'text-gray-400'}`}>
+                                        ฿{val.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                    </span>
                                 </div>
                             );
                         })}
@@ -312,35 +309,35 @@ export default function ExpensesTab({
                 </div>
             </div>
 
-            {/* Control & Filter Toolbar */}
-            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-                <div className="flex flex-wrap items-center gap-3">
+            {/* 3. Brutalist Filter & Control Toolbar */}
+            <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                <div className="flex flex-wrap items-center gap-2">
                     <input
                         type="month"
                         value={selectedMonth}
                         onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono font-bold focus:border-zinc-900 focus:outline-none bg-white"
+                        className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                     />
 
                     <select
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono focus:border-zinc-900 focus:outline-none bg-white"
+                        className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs focus:border-[var(--color-ink)] focus:outline-none"
                     >
-                        <option value="all">ทุกหมวดหมู่ค่าใช้จ่าย</option>
+                        <option value="all">ALL CATEGORIES</option>
                         {EXPENSE_CATEGORIES.map(c => (
                             <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
                     </select>
 
                     <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                         <input
                             type="text"
-                            placeholder="ค้นหาชื่อรายการ / ร้านค้า..."
+                            placeholder="FILTER VENDOR / NOTES..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 pr-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono w-44 sm:w-60 focus:border-zinc-900 focus:outline-none bg-white"
+                            className="pl-7 pr-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs w-48 sm:w-60 focus:border-[var(--color-ink)] focus:outline-none"
                         />
                     </div>
                 </div>
@@ -348,137 +345,144 @@ export default function ExpensesTab({
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleExportCsv}
-                        className="px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px]"
                     >
-                        <Download size={14} />
-                        <span>Export CSV / บัญชี</span>
+                        <Download size={13} />
+                        <span>EXPORT CSV</span>
                     </button>
 
                     <button
                         onClick={onOpenCreateModal}
-                        className="px-4 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                        className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm"
                     >
-                        <Plus size={15} />
-                        <span>บันทึกค่าใช้จ่าย & ถ่ายรูปบิล</span>
+                        <Plus size={14} />
+                        <span>+ LOG EXPENSE</span>
                     </button>
                 </div>
             </div>
 
-            {/* Expenses Ledger Table */}
-            <div className="bg-white border border-[#D1D1CD] rounded-2xl overflow-hidden shadow-sm">
-                <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex justify-between items-center">
-                    <h3 className="font-bold text-sm text-zinc-950 font-mono">
-                        สมุดบันทึกค่าใช้จ่ายและต้นทุนร้าน (Expenses & Purchases Ledger)
-                    </h3>
-                    <span className="text-xs font-mono text-zinc-500">
-                        จำนวน {filteredExpenses.length} รายการ
-                    </span>
-                </div>
-
+            {/* 4. Tabular Ledger Grid */}
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                    <table className="w-full text-left border-collapse font-mono text-xs">
                         <thead>
-                            <tr className="bg-zinc-100 border-b border-zinc-300 font-mono text-[10px] uppercase text-zinc-700">
-                                <th className="p-3 w-10 text-center">No.</th>
-                                <th className="p-3 w-24">วันที่จ่าย</th>
-                                <th className="p-3">รายการค่าใช้จ่าย</th>
-                                <th className="p-3 w-40">หมวดหมู่</th>
-                                <th className="p-3 w-36">ร้านค้า / ผู้รับ</th>
-                                <th className="p-3 w-28 text-center">หลักฐาน</th>
-                                <th className="p-3 text-right w-32">จำนวนเงิน</th>
-                                <th className="p-3 text-center w-20">รูปบิล</th>
-                                <th className="p-3 text-center w-20">จัดการ</th>
+                            <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-[10px] text-[var(--color-neutral)] tracking-wider uppercase font-bold">
+                                <th className="p-3 border-r border-[var(--color-rule)] w-28">DATE</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] min-w-[180px]">TITLE / VENDOR</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-36">CATEGORY</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-28 text-center">PROOF GRADE</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-24 text-center">RECEIPT</th>
+                                <th className="p-3 border-r border-[var(--color-rule)] w-32 text-right">AMOUNT (THB)</th>
+                                <th className="p-3 w-20 text-center">ACTIONS</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-200">
-                            {filteredExpenses.map((exp, idx) => {
-                                const catObj = EXPENSE_CATEGORIES.find(c => c.id === exp.category);
-                                const isGradeA = exp.doc_type === 'tax_invoice';
-
-                                return (
-                                    <tr key={exp.id || idx} className="hover:bg-zinc-50 transition-colors">
-                                        <td className="p-3 text-center font-mono text-zinc-400">{idx + 1}</td>
-                                        <td className="p-3 font-mono">{exp.expense_date}</td>
-                                        <td className="p-3">
-                                            <div className="font-semibold text-zinc-900">{exp.title}</div>
-                                            {exp.notes && <div className="text-[10px] text-zinc-400 font-mono">{exp.notes}</div>}
-                                        </td>
-                                        <td className="p-3 font-mono text-[11px] text-zinc-700">
-                                            {catObj?.label || exp.category}
-                                        </td>
-                                        <td className="p-3 font-medium text-zinc-800">
-                                            {exp.vendor_name || '-'}
-                                        </td>
-                                        <td className="p-3 text-center font-mono">
-                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                                                isGradeA ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-100 text-zinc-700'
-                                            }`}>
-                                                {isGradeA ? 'ใบกำกับภาษี (A)' : 'บิลเงินสด (B)'}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-right font-mono font-bold text-sm text-zinc-950">
-                                            ฿{Number(exp.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            {exp.receipt_image_url ? (
-                                                <button
-                                                    onClick={() => setPreviewImage(exp.receipt_image_url)}
-                                                    className="p-1.5 text-zinc-700 hover:text-[oklch(52%_0.16_28)] transition-colors cursor-pointer bg-zinc-100 hover:bg-zinc-200 rounded-lg inline-flex items-center gap-1"
-                                                    title="ดูรูปใบเสร็จ / บิล Makro"
-                                                >
-                                                    <ImageIcon size={14} />
-                                                    <span className="font-mono text-[9px] font-bold">ดูรูป</span>
-                                                </button>
-                                            ) : (
-                                                <span className="text-[10px] font-mono text-zinc-400">-</span>
-                                            )}
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <button
-                                                    onClick={() => onOpenEditModal && onOpenEditModal(exp)}
-                                                    className="p-1 text-zinc-500 hover:text-zinc-950 transition-colors cursor-pointer"
-                                                    title="แก้ไข"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(exp.id, exp.title)}
-                                                    className="p-1 text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
-                                                    title="ลบ"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-
-                            {filteredExpenses.length === 0 && (
+                        <tbody className="divide-y divide-[var(--color-rule)]">
+                            {filteredExpenses.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="p-12 text-center text-zinc-400 font-mono">
-                                        ยังไม่มีการบันทึกค่าใช้จ่ายในเดือนนี้ (กด "บันทึกค่าใช้จ่าย & ถ่ายรูปบิล" เพื่อเริ่มต้น)
+                                    <td colSpan={7} className="p-12 text-center text-[var(--color-muted)] font-mono text-xs">
+                                        NO EXPENSE RECORDS FOUND FOR PERIOD [{selectedMonth}]
                                     </td>
                                 </tr>
+                            ) : (
+                                filteredExpenses.map((exp) => {
+                                    const catObj = EXPENSE_CATEGORIES.find(c => c.id === exp.category);
+                                    return (
+                                        <tr key={exp.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
+                                            <td className="p-3 border-r border-[var(--color-rule)] text-[11px] text-[var(--color-neutral)]">
+                                                {exp.expense_date}
+                                            </td>
+                                            <td className="p-3 border-r border-[var(--color-rule)]">
+                                                <div className="font-sans font-bold text-xs text-[var(--color-ink)]">
+                                                    {exp.title}
+                                                </div>
+                                                <div className="text-[10px] text-[var(--color-muted)] flex items-center gap-2 mt-0.5">
+                                                    <span>{exp.vendor_name || 'ไม่ระบุผู้ขาย'}</span>
+                                                    {exp.vendor_tax_id && (
+                                                        <span>• TAX: {exp.vendor_tax_id}</span>
+                                                    )}
+                                                </div>
+                                                {exp.notes && (
+                                                    <div className="text-[9px] text-[var(--color-neutral)] italic mt-0.5 truncate max-w-sm">
+                                                        {exp.notes}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="p-3 border-r border-[var(--color-rule)] text-[11px]">
+                                                <span className="px-1.5 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold text-[10px]">
+                                                    {catObj?.label || exp.category}
+                                                </span>
+                                            </td>
+                                            <td className="p-3 border-r border-[var(--color-rule)] text-center text-[10px]">
+                                                {exp.doc_type === 'tax_invoice' && (
+                                                    <span className="text-[var(--color-ink)] font-bold">GRADE A (INV)</span>
+                                                )}
+                                                {exp.doc_type === 'cash_bill' && (
+                                                    <span className="text-[var(--color-neutral)]">GRADE B (CASH)</span>
+                                                )}
+                                                {(exp.doc_type === 'receipt_voucher' || exp.doc_type === 'slip_only') && (
+                                                    <span className="text-[var(--color-muted)]">GRADE C (SLIP)</span>
+                                                )}
+                                            </td>
+                                            <td className="p-3 border-r border-[var(--color-rule)] text-center">
+                                                {exp.receipt_image_url ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewImage(exp.receipt_image_url)}
+                                                        className="px-1.5 py-0.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[10px] font-bold cursor-pointer"
+                                                    >
+                                                        VIEW
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-gray-300 text-[10px]">-</span>
+                                                )}
+                                            </td>
+                                            <td className="p-3 border-r border-[var(--color-rule)] text-right font-black text-xs text-[var(--color-ink)]">
+                                                ฿{Number(exp.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                {exp.vat_included && (
+                                                    <div className="text-[9px] text-[var(--color-muted)] font-normal">
+                                                        VAT: ฿{Number(exp.vat_amount || 0).toFixed(2)}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button
+                                                        onClick={() => onOpenEditModal(exp)}
+                                                        className="p-1 hover:text-[var(--color-ink)] text-[var(--color-neutral)] cursor-pointer"
+                                                        title="แก้ไข"
+                                                    >
+                                                        <Edit2 size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(exp.id, exp.title)}
+                                                        className="p-1 hover:text-red-600 text-[var(--color-neutral)] cursor-pointer"
+                                                        title="ลบ"
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {/* Receipt Image Preview Modal */}
+            {/* LIGHTBOX MODAL */}
             {previewImage && (
-                <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto font-sans">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-zinc-300">
-                        <div className="p-4 bg-[#1A1A1A] text-white flex justify-between items-center shrink-0">
-                            <span className="font-mono font-bold text-xs">รูปถ่ายใบเสร็จ / บิล Makro / สลิปโอนเงิน</span>
-                            <button onClick={() => setPreviewImage(null)} className="p-1 text-white hover:bg-white/10 rounded cursor-pointer">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4">
+                    <div className="relative max-w-3xl max-h-[90vh] flex flex-col border border-white/20 bg-black overflow-hidden">
+                        <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800">
+                            <span>RECEIPT OPTICAL INSPECTOR</span>
+                            <button onClick={() => setPreviewImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
                                 <X size={18} />
                             </button>
                         </div>
-                        <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-zinc-900">
-                            <img src={previewImage} alt="Receipt Full View" className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-lg" />
+                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+                            <img src={previewImage} alt="Receipt Preview" className="max-w-full max-h-[80vh] object-contain" />
                         </div>
                     </div>
                 </div>

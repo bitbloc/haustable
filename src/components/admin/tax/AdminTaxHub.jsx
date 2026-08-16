@@ -8,23 +8,17 @@ import {
     Receipt, 
     Printer, 
     Search, 
-    Calendar, 
-    Building2, 
-    TrendingUp, 
-    AlertCircle, 
     RotateCcw,
     X,
-    CheckCircle2,
-    Eye,
-    Trash2,
-    Download,
-    BookOpen
+    BookOpen,
+    ShoppingCart,
+    ShieldAlert
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
 import { toast } from 'sonner';
 
-// Sub-tabs
+// Sub Tabs Components
 import SalesTaxReportTab from './SalesTaxReportTab';
 import WithholdingTaxTab from './WithholdingTaxTab';
 import TaxSettingsTab from './TaxSettingsTab';
@@ -32,30 +26,25 @@ import ExpensesTab from './ExpensesTab';
 import TaxInvoiceModal from './TaxInvoiceModal';
 import TaxInvoicePrintView from './TaxInvoicePrintView';
 import ExpenseModal from './ExpenseModal';
-import { ShoppingCart } from 'lucide-react';
 
-export default function AdminTaxHub({ defaultTab = 'invoices' }) {
-    const [activeTab, setActiveTab] = useState(defaultTab); // 'invoices' | 'sales_tax' | 'wht' | 'settings'
-    const [loading, setLoading] = useState(false);
-    
-    // Invoices Ledger State
+export default function AdminTaxHub() {
+    // Navigation Sub-tab
+    const [activeTab, setActiveTab] = useState('invoices'); // 'invoices' | 'expenses' | 'sales_tax' | 'wht' | 'settings'
+
+    // Data State
     const [invoices, setInvoices] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [companySettings, setCompanySettings] = useState({});
     const [allYearBookings, setAllYearBookings] = useState([]);
+
+    // Filter & Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'issued' | 'cancelled'
     const [monthFilter, setMonthFilter] = useState(() => {
         const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    });
-
-    // Company Tax Settings State
-    const [companySettings, setCompanySettings] = useState(() => {
-        try {
-            const local = localStorage.getItem('onhaus_tax_settings');
-            return local ? JSON.parse(local) : {};
-        } catch {
-            return {};
-        }
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}`;
     });
 
     // Modals
@@ -70,41 +59,8 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
 
-    // Calculate current month's POS completed revenue
-    const currentMonthPosRevenue = React.useMemo(() => {
-        const targetMonth = monthFilter || new Date().toISOString().slice(0, 7);
-        return allYearBookings
-            .filter(b => (b.booking_time || b.created_at || '').startsWith(targetMonth))
-            .reduce((sum, b) => sum + Number(b.total_amount || b.total_price || 0), 0);
-    }, [allYearBookings, monthFilter]);
-
-    useEffect(() => {
-        fetchCompanySettings();
-        fetchInvoices();
-        fetchYearBookings();
-    }, []);
-
-    // 1. Fetch Company Settings from Supabase app_settings
-    const fetchCompanySettings = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('app_settings')
-                .select('key, value')
-                .like('key', 'tax_%');
-
-            if (!error && data && data.length > 0) {
-                const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
-                setCompanySettings(prev => ({ ...prev, ...settingsMap }));
-                localStorage.setItem('onhaus_tax_settings', JSON.stringify(settingsMap));
-            }
-        } catch (err) {
-            console.warn('Error loading tax settings from db:', err);
-        }
-    };
-
-    // 2. Fetch Invoices from Supabase & LocalStorage
+    // Fetch Invoices
     const fetchInvoices = async () => {
-        setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('tax_invoices')
@@ -121,51 +77,101 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
         } catch {
             const local = localStorage.getItem('onhaus_tax_invoices');
             if (local) setInvoices(JSON.parse(local));
-        } finally {
-            setLoading(false);
         }
     };
 
-    // 3. Fetch Completed Bookings of Current Year (for Revenue Analysis)
-    const fetchYearBookings = async () => {
-        try {
-            const currentYear = new Date().getFullYear();
-            const { data, error } = await supabase
-                .from('bookings')
-                .select('id, booking_time, created_at, status, total_amount, total_price, customer_name, pickup_contact_name')
-                .gte('created_at', `${currentYear}-01-01T00:00:00+07:00`)
-                .eq('status', 'completed');
+    // Initial Load
+    useEffect(() => {
+        let isMounted = true;
+        
+        const loadInitialData = async () => {
+            setLoading(true);
+            try {
+                // 1. Fetch Company Tax Settings
+                const { data: settingsData } = await supabase
+                    .from('app_settings')
+                    .select('key, value');
 
-            if (!error && data) {
-                setAllYearBookings(data);
+                if (isMounted && settingsData) {
+                    const mapped = {};
+                    settingsData.forEach(item => {
+                        mapped[item.key] = item.value;
+                    });
+                    setCompanySettings(mapped);
+                    localStorage.setItem('onhaus_tax_settings', JSON.stringify(mapped));
+                }
+            } catch {
+                if (isMounted) {
+                    const localSettings = localStorage.getItem('onhaus_tax_settings');
+                    if (localSettings) setCompanySettings(JSON.parse(localSettings));
+                }
             }
-        } catch {
-            // Fallback gracefully
-        }
-    };
 
-    // Filter invoices in Tab 1
+            // 2. Fetch Invoices
+            await fetchInvoices();
+
+            // 3. Fetch POS Bookings for Annual VAT Threshold (1.8M Tracker)
+            try {
+                const currentYear = new Date().getFullYear();
+                const startOfYear = `${currentYear}-01-01T00:00:00.000Z`;
+                const endOfYear = `${currentYear}-12-31T23:59:59.999Z`;
+
+                const { data: bookingsData } = await supabase
+                    .from('bookings')
+                    .select('id, booking_date, grand_total, total_amount, subtotal, status, payment_status, is_paid')
+                    .gte('booking_date', startOfYear)
+                    .lte('booking_date', endOfYear);
+
+                if (isMounted && bookingsData) {
+                    setAllYearBookings(bookingsData);
+                }
+            } catch {
+                // Fallback
+            }
+
+            if (isMounted) setLoading(false);
+        };
+
+        loadInitialData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
+
+    // Filter Invoices
     const filteredInvoices = invoices.filter(inv => {
-        const invMonth = (inv.issued_at || inv.created_at || '').slice(0, 7);
+        const invMonth = (inv.issued_at || '').slice(0, 7);
         const matchesMonth = !monthFilter || invMonth === monthFilter;
+
+        const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
 
         const q = searchQuery.toLowerCase().trim();
         const matchesSearch = !q || 
             (inv.invoice_number || '').toLowerCase().includes(q) ||
             (inv.customer_name || '').toLowerCase().includes(q) ||
-            (inv.customer_tax_id || '').includes(q);
+            (inv.customer_tax_id || '').includes(q) ||
+            (inv.booking_id || '').toLowerCase().includes(q);
 
-        const matchesStatus = statusFilter === 'all' 
-            ? true 
-            : (statusFilter === 'issued' ? inv.status !== 'cancelled' : inv.status === 'cancelled');
-
-        return matchesMonth && matchesSearch && matchesStatus;
+        return matchesMonth && matchesStatus && matchesSearch;
     });
 
-    const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
+    // Calculate current month's POS Revenue
+    const currentMonthPosRevenue = React.useMemo(() => {
+        if (!allYearBookings || allYearBookings.length === 0) return 0;
+        return allYearBookings
+            .filter(b => {
+                const bMonth = (b.booking_date || '').slice(0, 7);
+                const isPaid = b.payment_status === 'COMPLETED' || b.payment_status === 'PAID' || b.is_paid === true || b.status === 'completed';
+                return bMonth === monthFilter && isPaid;
+            })
+            .reduce((s, b) => s + Number(b.grand_total || b.total_amount || b.subtotal || 0), 0);
+    }, [allYearBookings, monthFilter]);
 
-    // Void / Cancel Invoice
-    const handleConfirmCancelInvoice = async () => {
+    // Handle Document Cancellation
+    const handleConfirmCancel = async () => {
         if (!cancellationTarget) return;
         if (!cancellationReason.trim()) {
             toast.error('กรุณาระบุเหตุผลการยกเลิกเอกสาร');
@@ -175,6 +181,7 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
         try {
             const updatedPayload = {
                 status: 'cancelled',
+                cancelled_at: new Date().toISOString(),
                 cancellation_reason: cancellationReason.trim()
             };
 
@@ -200,39 +207,38 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] p-4 sm:p-8 font-sans">
-            {/* Master Workbench Container */}
+        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] p-3 sm:p-6 lg:p-8 font-sans">
             <div className="max-w-7xl mx-auto space-y-6">
                 
-                {/* Header Banner - Dieter Rams / Thai Modern Grid */}
-                <div className="bg-white border border-[var(--color-rule)] rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-1">
+                {/* 1. Structural Header: Dieter Rams Tabular Container */}
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-0.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white">
-                                THAI TAX & INVOICE HUB
+                            <span className="px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider bg-[var(--color-ink)] text-[var(--color-paper)]">
+                                TAX//OPERATING SYSTEM
                             </span>
-                            <span className="font-mono text-xs text-[var(--color-neutral)]">
-                                {isVatRegistered ? 'โหมดภาษีมูลค่าเพิ่ม (VAT 7%)' : 'โหมดปกติ (Non-VAT / ออกใบเสร็จรับเงินทางการ)'}
+                            <span className="font-mono text-[10px] text-[var(--color-neutral)] uppercase tracking-wider">
+                                {isVatRegistered ? '[STATUS: VAT 7% REGISTERED]' : '[STATUS: NON-VAT / OFFICIAL RECEIPTS]'}
                             </span>
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 font-serif">
-                            ระบบภาษี & ออกใบเสร็จ / ใบกำกับภาษี
+                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-ink)] font-mono uppercase">
+                            TAX MANAGEMENT &amp; INVOICE WORKBENCH
                         </h1>
-                        <p className="text-xs text-[var(--color-neutral)] max-w-2xl leading-relaxed">
-                            บริหารจัดการเอกสารภาษี ออกใบเสร็จรับเงิน/ใบกำกับภาษีเต็มรูปแบบ จัดทำรายงานภาษีขาย (ภ.พ.30) และภาษีหัก ณ ที่จ่าย (50 ทวิ) ตามเกณฑ์สรรพากร
+                        <p className="text-xs text-[var(--color-neutral)] font-mono max-w-2xl leading-relaxed">
+                            ระบบออกเอกสารภาษี ใบเสร็จรับเงิน/ใบกำกับภาษีเต็มรูป (ม.86/4 &amp; 105), บันทึกค่าใช้จ่าย Makro ด้วย AI, รายงานภาษีขาย (ภ.พ.30) และ 50 ทวิ
                         </p>
                     </div>
 
-                    {/* Quick CTAs */}
-                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    {/* Quick CTA Actions */}
+                    <div className="flex items-center gap-2 flex-wrap font-mono text-xs">
                         <a
                             href="/manuals/thai_tax_guide_and_system_manual.html"
                             target="_blank"
                             rel="noreferrer"
-                            className="px-3.5 py-2.5 bg-white hover:bg-zinc-100 text-zinc-800 border border-zinc-300 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                            className="px-3 py-2 bg-[var(--color-paper)] hover:bg-white text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-[11px] flex items-center gap-1.5 transition-colors"
                         >
-                            <BookOpen size={15} className="text-zinc-600" />
-                            <span>คู่มือภาษี & ระบบ (PDF)</span>
+                            <BookOpen size={14} className="text-[var(--color-neutral)]" />
+                            <span>MANUAL (PDF)</span>
                         </a>
 
                         <button
@@ -240,10 +246,10 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
                                 setEditingExpense(null);
                                 setShowExpenseModal(true);
                             }}
-                            className="px-4 py-2.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-xl font-mono font-bold text-xs flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                            className="px-3.5 py-2 bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] text-white font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                         >
-                            <ShoppingCart size={15} />
-                            <span>+ บันทึกบิล Makro / ค่าน้ำไฟ</span>
+                            <ShoppingCart size={14} />
+                            <span>+ LOG EXPENSE (MAKRO)</span>
                         </button>
 
                         <button
@@ -252,192 +258,210 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
                                 setSelectedBookingForInvoice(null);
                                 setShowInvoiceModal(true);
                             }}
-                            className="px-4 py-2.5 bg-[#1A1A1A] hover:bg-black text-white rounded-xl font-mono font-bold text-xs flex items-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                            className="px-4 py-2 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                         >
-                            <Plus size={16} />
-                            <span>{isVatRegistered ? 'ออกใบกำกับภาษีใหม่' : 'ออกใบเสร็จรับเงินใหม่'}</span>
+                            <Plus size={15} />
+                            <span>{isVatRegistered ? '+ NEW TAX INVOICE' : '+ NEW RECEIPT'}</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Tab Navigation Strip */}
-                <div className="border-b border-[var(--color-rule)] flex flex-wrap gap-2 text-xs font-mono">
+                {/* 2. Structural Tab Navigation Strip */}
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[var(--color-rule)] font-mono text-xs font-bold">
                     <button
                         onClick={() => setActiveTab('invoices')}
-                        className={`px-4 py-2.5 border-b-2 font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'invoices' ? 'border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-white/60 rounded-t-lg' : 'border-transparent text-zinc-600 hover:text-zinc-900'}`}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                            activeTab === 'invoices' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
                     >
-                        <Receipt size={15} />
-                        <span>รายการเอกสารทั้งหมด ({invoices.length})</span>
+                        <Receipt size={14} />
+                        <span>INVOICES ({invoices.length})</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('expenses')}
-                        className={`px-4 py-2.5 border-b-2 font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'expenses' ? 'border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-white/60 rounded-t-lg' : 'border-transparent text-zinc-600 hover:text-zinc-900'}`}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                            activeTab === 'expenses' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
                     >
-                        <ShoppingCart size={15} />
-                        <span>ค่าใช้จ่ายร้าน & บิล Makro</span>
+                        <ShoppingCart size={14} />
+                        <span>EXPENSES &amp; MAKRO</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('sales_tax')}
-                        className={`px-4 py-2.5 border-b-2 font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'sales_tax' ? 'border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-white/60 rounded-t-lg' : 'border-transparent text-zinc-600 hover:text-zinc-900'}`}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                            activeTab === 'sales_tax' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
                     >
-                        <FileSpreadsheet size={15} />
-                        <span>{isVatRegistered ? 'รายงานภาษีขาย (ภ.พ.30)' : 'รายงานยอดขาย & เกณฑ์ 1.8M'}</span>
+                        <FileSpreadsheet size={14} />
+                        <span>{isVatRegistered ? 'ภ.พ.30 REPORT' : '1.8M TRACKER'}</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('wht')}
-                        className={`px-4 py-2.5 border-b-2 font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'wht' ? 'border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-white/60 rounded-t-lg' : 'border-transparent text-zinc-600 hover:text-zinc-900'}`}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                            activeTab === 'wht' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
                     >
-                        <FileText size={15} />
-                        <span>ภาษีหัก ณ ที่จ่าย (50 ทวิ)</span>
+                        <FileText size={14} />
+                        <span>WHT 50 ทวิ</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('settings')}
-                        className={`px-4 py-2.5 border-b-2 font-bold transition-all cursor-pointer flex items-center gap-2 ${activeTab === 'settings' ? 'border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] bg-white/60 rounded-t-lg' : 'border-transparent text-zinc-600 hover:text-zinc-900'}`}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 col-span-2 sm:col-span-1 ${
+                            activeTab === 'settings' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
                     >
-                        <Settings size={15} />
-                        <span>ตั้งค่าระบบภาษี & สมุดรายชื่อ</span>
+                        <Settings size={14} />
+                        <span>TAX CONFIG</span>
                     </button>
                 </div>
 
-                {/* TAB 1: INVOICES & RECEIPTS ARCHIVE LEDGER */}
+                {/* 3. SUB-TAB VIEWPORT */}
+
+                {/* TAB 1: INVOICES ARCHIVE LEDGER */}
                 {activeTab === 'invoices' && (
                     <div className="space-y-6">
-                        {/* Control Bar */}
-                        <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-                            <div className="flex flex-wrap items-center gap-3">
-                                {/* Month Filter */}
-                                <div className="flex items-center gap-2">
-                                    <Calendar size={16} className="text-zinc-400" />
+                        {/* Control Toolbar */}
+                        <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                     <input
                                         type="month"
                                         value={monthFilter}
                                         onChange={(e) => setMonthFilter(e.target.value)}
-                                        className="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono font-bold focus:border-zinc-900 focus:outline-none bg-white"
+                                        className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                     />
                                 </div>
 
-                                {/* Status Filter */}
-                                <div className="flex border border-zinc-300 rounded-lg overflow-hidden text-xs font-mono">
+                                <div className="flex border border-[var(--color-rule)]">
                                     <button
                                         onClick={() => setStatusFilter('all')}
-                                        className={`px-3 py-1.5 transition-colors ${statusFilter === 'all' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                        className={`px-3 py-1.5 transition-colors ${statusFilter === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                     >
-                                        ทั้งหมด
+                                        ALL
                                     </button>
                                     <button
                                         onClick={() => setStatusFilter('issued')}
-                                        className={`px-3 py-1.5 transition-colors ${statusFilter === 'issued' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${statusFilter === 'issued' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                     >
-                                        ปกติ
+                                        ACTIVE
                                     </button>
                                     <button
                                         onClick={() => setStatusFilter('cancelled')}
-                                        className={`px-3 py-1.5 transition-colors ${statusFilter === 'cancelled' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${statusFilter === 'cancelled' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                     >
-                                        ยกเลิก
+                                        VOID
                                     </button>
                                 </div>
 
-                                {/* Search */}
                                 <div className="relative">
-                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" />
                                     <input
                                         type="text"
-                                        placeholder="ค้นหาเลขที่บิล / ชื่อลูกค้า / Tax ID..."
+                                        placeholder="FILTER INVOICE NO / BUYER / TAX ID..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-8 pr-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono w-52 sm:w-72 focus:border-zinc-900 focus:outline-none bg-white"
+                                        className="pl-7 pr-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs w-52 sm:w-72 focus:border-[var(--color-ink)] focus:outline-none"
                                     />
                                 </div>
                             </div>
 
                             <button
                                 onClick={fetchInvoices}
-                                className="px-3 py-1.5 border border-zinc-300 text-zinc-700 rounded-lg text-xs font-mono hover:bg-zinc-100 flex items-center gap-1.5 cursor-pointer"
+                                className="px-3 py-1.5 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] text-[var(--color-ink)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px]"
                             >
-                                <RotateCcw size={13} />
-                                <span>รีเฟรช</span>
+                                <RotateCcw size={12} />
+                                <span>RELOAD</span>
                             </button>
                         </div>
 
                         {/* Invoices List Table */}
-                        <div className="bg-white border border-[#D1D1CD] rounded-2xl overflow-hidden shadow-sm">
+                        <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse text-xs">
+                                <table className="w-full text-left border-collapse font-mono text-xs">
                                     <thead>
-                                        <tr className="bg-zinc-100 border-b border-zinc-300 font-mono text-[10px] uppercase text-zinc-700">
-                                            <th className="p-3.5 w-12 text-center">No.</th>
-                                            <th className="p-3.5 w-32">วันที่ออก</th>
-                                            <th className="p-3.5 w-36">เลขที่เอกสาร</th>
-                                            <th className="p-3.5 w-28">ประเภท</th>
-                                            <th className="p-3.5">ผู้ซื้อ / บริษัท</th>
-                                            <th className="p-3.5 w-36">Tax ID (13 หลัก)</th>
-                                            <th className="p-3.5 text-right w-32">ยอดรวมสุทธิ</th>
-                                            <th className="p-3.5 text-center w-24">สถานะ</th>
-                                            <th className="p-3.5 text-center w-36">การกระทำ</th>
+                                        <tr className="bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] text-[10px] text-[var(--color-neutral)] tracking-wider uppercase font-bold">
+                                            <th className="p-3 border-r border-[var(--color-rule)] w-12 text-center">NO.</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] w-28">DATE</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] w-36">DOCUMENT NO</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] w-28">TYPE</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] min-w-[200px]">BUYER / CORPORATE</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] w-36">TAX ID</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] text-right w-32">TOTAL (THB)</th>
+                                            <th className="p-3 border-r border-[var(--color-rule)] text-center w-24">STATUS</th>
+                                            <th className="p-3 text-center w-32">ACTIONS</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-zinc-200">
+                                    <tbody className="divide-y divide-[var(--color-rule)]">
                                         {filteredInvoices.map((inv, idx) => {
                                             const isCancelled = inv.status === 'cancelled';
-                                            const dateStr = inv.issued_at ? new Date(inv.issued_at).toLocaleDateString('th-TH') : '-';
+                                            const dateStr = inv.issued_at ? new Date(inv.issued_at).toISOString().slice(0, 10) : '-';
                                             const isVatDoc = inv.doc_type === 'tax_invoice';
 
                                             return (
-                                                <tr key={inv.id || idx} className={`hover:bg-zinc-50 transition-colors ${isCancelled ? 'bg-red-50/30' : ''}`}>
-                                                    <td className="p-3.5 text-center font-mono text-zinc-400">{idx + 1}</td>
-                                                    <td className="p-3.5 font-mono">{dateStr}</td>
-                                                    <td className="p-3.5 font-mono font-bold text-zinc-950">
+                                                <tr key={inv.id || idx} className={`hover:bg-[var(--color-paper-2)] transition-colors ${isCancelled ? 'bg-red-50/20 text-gray-400' : ''}`}>
+                                                    <td className="p-3 border-r border-[var(--color-rule)] text-center text-[var(--color-neutral)]">{idx + 1}</td>
+                                                    <td className="p-3 border-r border-[var(--color-rule)]">{dateStr}</td>
+                                                    <td className="p-3 border-r border-[var(--color-rule)] font-bold text-[var(--color-ink)]">
                                                         {inv.invoice_number}
                                                     </td>
-                                                    <td className="p-3.5 font-mono">
-                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${isVatDoc ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-zinc-100 text-zinc-800'}`}>
-                                                            {isVatDoc ? 'ใบกำกับภาษี' : 'ใบเสร็จรับเงิน'}
+                                                    <td className="p-3 border-r border-[var(--color-rule)] text-[10px]">
+                                                        <span className={`px-1.5 py-0.5 border ${isVatDoc ? 'border-amber-400 bg-amber-50 text-amber-900 font-bold' : 'border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-ink)]'}`}>
+                                                            {isVatDoc ? 'TAX INV' : 'RECEIPT'}
                                                         </span>
                                                     </td>
-                                                    <td className="p-3.5">
-                                                        <div className="font-semibold text-zinc-900">{inv.customer_name}</div>
-                                                        <div className="text-[10px] text-zinc-400 font-mono">
+                                                    <td className="p-3 border-r border-[var(--color-rule)]">
+                                                        <div className="font-sans font-bold text-xs text-[var(--color-ink)]">{inv.customer_name}</div>
+                                                        <div className="text-[10px] text-[var(--color-muted)] font-mono">
                                                             {formatBranch(inv.customer_branch_type, inv.customer_branch_code)}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3.5 font-mono">{formatTaxId(inv.customer_tax_id)}</td>
-                                                    <td className="p-3.5 text-right font-mono font-bold text-sm text-zinc-950">
+                                                    <td className="p-3 border-r border-[var(--color-rule)] font-mono text-[11px]">{formatTaxId(inv.customer_tax_id)}</td>
+                                                    <td className="p-3 border-r border-[var(--color-rule)] text-right font-black text-xs text-[var(--color-ink)]">
                                                         ฿{Number(inv.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                     </td>
-                                                    <td className="p-3.5 text-center">
+                                                    <td className="p-3 border-r border-[var(--color-rule)] text-center">
                                                         {isCancelled ? (
-                                                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-red-100 text-red-700">
-                                                                ยกเลิก
+                                                            <span className="text-red-600 font-bold text-[10px]">
+                                                                [VOID]
                                                             </span>
                                                         ) : (
-                                                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800">
-                                                                ปกติ
+                                                            <span className="text-[var(--color-emerald)] font-bold text-[10px]">
+                                                                [ACTIVE]
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td className="p-3.5 text-center">
-                                                        <div className="flex items-center justify-center gap-1.5">
+                                                    <td className="p-3 text-center">
+                                                        <div className="flex items-center justify-center gap-1">
                                                             <button
                                                                 onClick={() => setActivePrintInvoice(inv)}
-                                                                className="px-2.5 py-1 bg-zinc-900 hover:bg-black text-white rounded font-mono text-[11px] flex items-center gap-1 cursor-pointer"
-                                                                title="ดูและพิมพ์เอกสาร A4"
+                                                                className="px-2 py-1 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                                                                title="View and print A4"
                                                             >
-                                                                <Printer size={13} />
-                                                                <span>พิมพ์ A4</span>
+                                                                <Printer size={11} />
+                                                                <span>A4</span>
                                                             </button>
 
                                                             {!isCancelled && (
                                                                 <button
                                                                     onClick={() => setCancellationTarget(inv)}
-                                                                    className="p-1 text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
-                                                                    title="ยกเลิกเอกสารนี้"
+                                                                    className="p-1 text-[var(--color-neutral)] hover:text-red-600 transition-colors cursor-pointer"
+                                                                    title="Cancel this document"
                                                                 >
-                                                                    <X size={15} />
+                                                                    <X size={14} />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -448,8 +472,8 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
 
                                         {filteredInvoices.length === 0 && (
                                             <tr>
-                                                <td colSpan={9} className="p-12 text-center text-zinc-400 font-mono">
-                                                    {loading ? 'กำลังโหลดข้อมูลเอกสาร...' : 'ไม่พบรายการเอกสารในเดือนนี้'}
+                                                <td colSpan={9} className="p-12 text-center text-[var(--color-muted)] font-mono">
+                                                    {loading ? 'LOADING DOCUMENT ARCHIVE...' : 'NO INVOICE RECORDS FOUND'}
                                                 </td>
                                             </tr>
                                         )}
@@ -501,7 +525,30 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
                 )}
             </div>
 
-            {/* MODAL: CREATE / EDIT STORE EXPENSE */}
+            {/* MODALS */}
+
+            {/* 1. Tax Invoice Creation Modal */}
+            {showInvoiceModal && (
+                <TaxInvoiceModal
+                    existingInvoice={editingInvoice}
+                    initialBookingData={selectedBookingForInvoice}
+                    companySettings={companySettings}
+                    onClose={() => {
+                        setShowInvoiceModal(false);
+                        setEditingInvoice(null);
+                        setSelectedBookingForInvoice(null);
+                    }}
+                    onSaveSuccess={(savedInvoice) => {
+                        setShowInvoiceModal(false);
+                        setEditingInvoice(null);
+                        setSelectedBookingForInvoice(null);
+                        fetchInvoices();
+                        setActivePrintInvoice(savedInvoice);
+                    }}
+                />
+            )}
+
+            {/* 2. Expense / Makro Receipt Capture Modal (with Gemini AI) */}
             {showExpenseModal && (
                 <ExpenseModal
                     existingExpense={editingExpense}
@@ -512,32 +559,12 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
                     onSaveSuccess={() => {
                         setShowExpenseModal(false);
                         setEditingExpense(null);
-                    }}
-                />
-            )}
-
-            {/* MODAL: CREATE / EDIT TAX INVOICE */}
-            {showInvoiceModal && (
-                <TaxInvoiceModal
-                    booking={selectedBookingForInvoice}
-                    existingInvoice={editingInvoice}
-                    companySettings={companySettings}
-                    onClose={() => {
-                        setShowInvoiceModal(false);
-                        setEditingInvoice(null);
-                        setSelectedBookingForInvoice(null);
-                    }}
-                    onSaveSuccess={(savedRecord, printImmediately) => {
-                        setShowInvoiceModal(false);
                         fetchInvoices();
-                        if (printImmediately) {
-                            setActivePrintInvoice(savedRecord);
-                        }
                     }}
                 />
             )}
 
-            {/* MODAL: OFFICIAL A4 / THERMAL PRINT VIEW */}
+            {/* 3. A4 Official Printable Tax Invoice / Receipt View */}
             {activePrintInvoice && (
                 <TaxInvoicePrintView
                     invoice={activePrintInvoice}
@@ -546,48 +573,49 @@ export default function AdminTaxHub({ defaultTab = 'invoices' }) {
                 />
             )}
 
-            {/* MODAL: CANCEL / VOID INVOICE CONFIRMATION */}
+            {/* 4. Document Cancellation Confirmation Modal */}
             {cancellationTarget && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 font-sans text-xs">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-zinc-300 space-y-4">
-                        <div className="flex items-center gap-3 text-red-600">
-                            <AlertCircle size={24} />
-                            <div>
-                                <h3 className="font-bold text-sm text-zinc-950">
-                                    ยืนยันการยกเลิกเอกสาร #{cancellationTarget.invoice_number}
-                                </h3>
-                                <p className="text-[11px] text-zinc-500 font-mono">
-                                    ตามเกณฑ์กรมสรรพากร เอกสารที่ยกเลิกจะยังคงแสดงในสมุดรายงานภาษีแต่ไม่คิดยอดเงิน
-                                </p>
-                            </div>
+                <div className="fixed inset-0 z-[190] flex items-center justify-center bg-black/85 p-4 font-sans text-xs">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 space-y-4 shadow-2xl">
+                        <div className="border-b border-[var(--color-rule)] pb-3 flex items-center gap-2 text-red-600">
+                            <ShieldAlert size={18} />
+                            <h3 className="font-mono font-bold text-sm text-[var(--color-ink)] uppercase">
+                                CONFIRM DOCUMENT VOID // {cancellationTarget.invoice_number}
+                            </h3>
                         </div>
 
+                        <p className="text-[12px] text-[var(--color-neutral)] leading-relaxed">
+                            การยกเลิกเอกสารนี้จะถูกบันทึกประวัติการยกเลิกเพื่อส่งสรรพากร และไม่สามารถย้อนคืนได้
+                        </p>
+
                         <div>
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                ระบุเหตุผลการยกเลิก (Cancellation Reason) *
+                            <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                CANCELLATION REASON (สาเหตุการยกเลิก) *
                             </label>
-                            <textarea
+                            <input
+                                type="text"
                                 value={cancellationReason}
                                 onChange={(e) => setCancellationReason(e.target.value)}
-                                placeholder="เช่น ลูกค้าขอแก้ไขข้อมูลที่อยู่ / ยกเลิกคำสั่งซื้อ"
-                                rows={3}
-                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs focus:border-zinc-900 focus:outline-none"
+                                placeholder="เช่น ลูกค้าเปลี่ยนที่อยู่, ยกเลิกออเดอร์, พิมพ์ผิด"
+                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-medium focus:border-[var(--color-ink)] focus:outline-none"
                                 autoFocus
                             />
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2">
+                        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-rule)] font-mono text-xs">
                             <button
+                                type="button"
                                 onClick={() => setCancellationTarget(null)}
-                                className="px-4 py-2 border border-zinc-300 text-zinc-700 rounded-lg font-mono font-bold text-xs hover:bg-zinc-100 cursor-pointer"
+                                className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold cursor-pointer"
                             >
-                                ยกเลิก (Back)
+                                CANCEL
                             </button>
                             <button
-                                onClick={handleConfirmCancelInvoice}
-                                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-mono font-bold text-xs cursor-pointer shadow-md"
+                                type="button"
+                                onClick={handleConfirmCancel}
+                                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer"
                             >
-                                ยืนยันการยกเลิกเอกสาร
+                                CONFIRM VOID
                             </button>
                         </div>
                     </div>

@@ -1,19 +1,16 @@
-import React, { useState } from 'react';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     X, 
-    Upload, 
     Camera, 
-    Save, 
-    CheckCircle2, 
-    AlertCircle, 
-    Calendar,
-    DollarSign,
+    Check, 
+    Loader2, 
+    Key, 
+    ZoomIn, 
+    RotateCcw,
     Sparkles,
-    Bot,
-    Key,
-    Loader2,
-    RefreshCw,
-    Check
+    ShieldCheck,
+    FileText
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { EXPENSE_CATEGORIES, VENDOR_PRESETS } from '../../../utils/expenseConstants';
@@ -47,24 +44,42 @@ export default function ExpenseModal({
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [apiKeyInput, setApiKeyInput] = useState('');
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
+    const [imagePreviewZoom, setImagePreviewZoom] = useState(false);
+
+    const fileInputRef = useRef(null);
+
+    // Keyboard Shortcuts (Escape to close, Ctrl+Enter to save)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (imagePreviewZoom) {
+                    setImagePreviewZoom(false);
+                } else if (showApiKeyModal) {
+                    setShowApiKeyModal(false);
+                } else {
+                    onClose();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [imagePreviewZoom, showApiKeyModal, onClose]);
 
     // Handle Category change & autofill smart defaults
     const handleSelectCategory = (catId) => {
         setCategory(catId);
         const matched = EXPENSE_CATEGORIES.find(c => c.id === catId);
-        if (matched) {
-            if (!existingExpense) {
-                setTitle(matched.label.replace(/^[^\s]+\s*/, ''));
-                if (matched.defaultVendor) setVendorName(matched.defaultVendor);
-                if (matched.defaultDoc) setDocType(matched.defaultDoc);
-            }
+        if (matched && !existingExpense) {
+            setTitle(matched.label.replace(/^[^\s]+\s*/, ''));
+            if (matched.defaultVendor) setVendorName(matched.defaultVendor);
+            if (matched.defaultDoc) setDocType(matched.defaultDoc);
         }
     };
 
     // AI Scan Function
     const handleAiScan = async (imageToScan = receiptImage) => {
         if (!imageToScan) {
-            toast.warning('กรุณาถ่ายรูปหรืออัปโหลดใบเสร็จก่อนใช้ AI สแกน');
+            toast.warning('กรุณาถ่ายรูปหรืออัปโหลดใบเสร็จก่อนเริ่มสแกน');
             return;
         }
 
@@ -88,12 +103,12 @@ export default function ExpenseModal({
             if (data.confidence) setAiConfidence(Math.round(data.confidence * 100));
 
             setAiScannedSuccess(true);
-            toast.success(`✨ Gemini AI สแกนและแยกหมวดหมู่สำเร็จ! (${data.vendor_name || 'บิล'} ฿${Number(data.amount || 0).toLocaleString()})`);
+            toast.success(`Gemini AI ประมวลผลสำเร็จ: ${data.vendor_name || 'บิล'} ฿${Number(data.amount || 0).toLocaleString()}`);
         } catch (err) {
             if (err.message === 'MISSING_API_KEY') {
                 setShowApiKeyModal(true);
             } else {
-                toast.error('AI สแกนไม่สำเร็จ: ' + err.message);
+                toast.error('AI Scan Error: ' + err.message);
             }
         } finally {
             setIsAiScanning(false);
@@ -107,7 +122,7 @@ export default function ExpenseModal({
             return;
         }
         await saveGeminiApiKey(apiKeyInput.trim());
-        toast.success('บันทึก Gemini API Key เรียบร้อยแล้ว');
+        toast.success('บันทึก Gemini API Key เรียบร้อย');
         setShowApiKeyModal(false);
         if (receiptImage) {
             handleAiScan(receiptImage);
@@ -119,8 +134,8 @@ export default function ExpenseModal({
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error('ขนาดไฟล์รูปภาพเกิน 10MB กรุณาเลือกรูปขนาดเล็กลง');
+        if (file.size > 12 * 1024 * 1024) {
+            toast.error('ขนาดไฟล์เกิน 12MB กรุณาเลือกรูปขนาดเล็กลง');
             return;
         }
 
@@ -153,7 +168,7 @@ export default function ExpenseModal({
 
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
                 setReceiptImage(compressedBase64);
-                toast.success('แนบรูปใบเสร็จเรียบร้อยแล้ว');
+                toast.success('แนบภาพใบเสร็จเรียบร้อย');
 
                 // Auto Trigger AI Scan if enabled
                 if (autoScanEnabled && !existingExpense) {
@@ -173,13 +188,12 @@ export default function ExpenseModal({
             return;
         }
         if (!title.trim()) {
-            toast.error('กรุณาระบุรายการค่าใช้จ่าย');
+            toast.error('กรุณาระบุชื่อรายการค่าใช้จ่าย');
             return;
         }
 
         setSaving(true);
         try {
-            // Calculate VAT breakdown if applicable
             let vatVal = 0;
             if (vatIncluded) {
                 vatVal = parseFloat(((numAmount * 7) / 107).toFixed(2));
@@ -202,7 +216,7 @@ export default function ExpenseModal({
 
             let savedRecord = { ...payload, id: existingExpense?.id || `local_${Date.now()}` };
 
-            // 1. Save to Supabase
+            // 1. Supabase Sync
             try {
                 if (existingExpense?.id && !String(existingExpense.id).startsWith('local_')) {
                     const { data } = await supabase
@@ -221,10 +235,10 @@ export default function ExpenseModal({
                     if (data) savedRecord = data;
                 }
             } catch {
-                // Fallback to local
+                // Fallback locally
             }
 
-            // 2. Save to LocalStorage
+            // 2. LocalStorage Sync
             const localList = JSON.parse(localStorage.getItem('onhaus_store_expenses') || '[]');
             const existingIdx = localList.findIndex(e => e.id === savedRecord.id);
             if (existingIdx >= 0) {
@@ -234,7 +248,7 @@ export default function ExpenseModal({
             }
             localStorage.setItem('onhaus_store_expenses', JSON.stringify(localList));
 
-            toast.success(`บันทึกค่าใช้จ่าย ฿${numAmount.toLocaleString()} เรียบร้อยแล้ว!`);
+            toast.success(`บันทึกค่าใช้จ่าย ฿${numAmount.toLocaleString()} เรียบร้อย`);
             if (onSaveSuccess) onSaveSuccess(savedRecord);
         } catch (err) {
             toast.error('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
@@ -244,438 +258,451 @@ export default function ExpenseModal({
     };
 
     return (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto font-sans">
-            <div className="bg-[#ECECE9] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-[#D1D1CD]">
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/75 backdrop-blur-xs p-2 sm:p-4 md:p-6 overflow-y-auto font-sans">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-none shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden text-[var(--color-ink)]">
                 
-                {/* Header */}
-                <div className="bg-[#1A1A1A] text-white p-4 sm:px-6 flex items-center justify-between shrink-0">
+                {/* 1. Structural Brutalist Header */}
+                <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-3 sm:px-6 flex items-center justify-between border-b border-[var(--color-rule)] shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[oklch(52%_0.16_28)] flex items-center justify-center text-white font-mono font-bold text-sm">
-                            ฿
+                        <div className="font-mono text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-white">
+                            EXP//01
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h2 className="font-mono font-bold text-sm sm:text-base tracking-wider uppercase">
-                                    {existingExpense ? 'แก้ไขรายการค่าใช้จ่าย' : 'บันทึกค่าใช้จ่ายร้าน & บิล Makro'}
+                                <h2 className="font-mono font-bold text-sm tracking-wider uppercase">
+                                    {existingExpense ? 'EDIT EXPENSE RECORD' : 'STORE EXPENSE & RECEIPT CAPTURE'}
                                 </h2>
-                                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-mono text-[9px] font-extrabold flex items-center gap-1">
-                                    <Sparkles size={10} /> Gemini AI Auto-Scan
+                                <span className="font-mono text-[10px] text-[var(--color-muted)]">
+                                    // {isAiScanning ? 'SCANNING...' : aiScannedSuccess ? `CONFIDENCE: ${aiConfidence}%` : 'READY'}
                                 </span>
                             </div>
-                            <p className="text-[10px] text-[#A3A39E] font-mono">
-                                ถ่ายรูปบิล Makro / ค่าน้ำไฟ / ค่าน้ำมัน AI จะอ่านและแยกหมวดหมู่ให้อัตโนมัติ
-                            </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer text-white">
-                        <X size={20} />
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowApiKeyModal(true)}
+                            className="font-mono text-[10px] font-bold px-2.5 py-1 text-[var(--color-paper)]/80 hover:text-white border border-white/20 hover:border-white/40 transition-colors"
+                        >
+                            AI CONFIG
+                        </button>
+                        <button 
+                            onClick={onClose} 
+                            className="p-1 text-[var(--color-paper)]/70 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Body Form */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs bg-white">
-
-                    {/* AI OCR Active Banner / Control Ribbon */}
-                    <div className="p-3 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 rounded-xl border border-orange-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5">
-                            <div className="p-2 bg-[oklch(52%_0.16_28)] text-white rounded-lg shrink-0">
-                                <Bot size={16} />
+                {/* 2. Split Workspace: Optical Chamber (Left) + Structured Ledger (Right) */}
+                <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[var(--color-rule)]">
+                    
+                    {/* LEFT CHAMBER: Optical Scanner & Receipt Preview (5 Columns) */}
+                    <div className="lg:col-span-5 p-4 sm:p-5 bg-[var(--color-paper-2)] flex flex-col justify-between space-y-4">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                                    [01] OPTICAL ATTACHMENT
+                                </span>
+                                <label className="flex items-center gap-1.5 font-mono text-[10px] text-[var(--color-neutral)] cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoScanEnabled}
+                                        onChange={(e) => setAutoScanEnabled(e.target.checked)}
+                                        className="accent-[var(--color-accent)] w-3 h-3"
+                                    />
+                                    <span>AUTO SCAN</span>
+                                </label>
                             </div>
-                            <div>
-                                <span className="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
-                                    ระบบ Gemini Vision AI ช่วยกรอกบิลอัตโนมัติ
-                                    {aiScannedSuccess && (
-                                        <span className="text-[10px] text-emerald-700 bg-emerald-100 font-mono font-bold px-1.5 py-0.2 rounded-md inline-flex items-center gap-0.5">
-                                            <Check size={10} /> สแกนสำเร็จ {aiConfidence ? `(${aiConfidence}%)` : ''}
-                                        </span>
+
+                            {/* Scanning Viewport */}
+                            {receiptImage ? (
+                                <div className="relative border border-[var(--color-rule)] bg-black/5 aspect-[4/5] w-full flex items-center justify-center overflow-hidden group">
+                                    <img 
+                                        src={receiptImage} 
+                                        alt="Receipt Attachment" 
+                                        className="w-full h-full object-contain cursor-zoom-in"
+                                        onClick={() => setImagePreviewZoom(true)}
+                                    />
+
+                                    {/* Optical Scanning Sweep Animation */}
+                                    {isAiScanning && (
+                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent)]/30 to-transparent animate-pulse border-y-2 border-[var(--color-accent)] pointer-events-none flex items-center justify-center">
+                                            <div className="bg-black/80 text-white font-mono text-[11px] font-bold px-3 py-1 tracking-widest flex items-center gap-2">
+                                                <Loader2 size={13} className="animate-spin text-[var(--color-accent)]" />
+                                                <span>GEMINI_VISION_OCR_ACTIVE</span>
+                                            </div>
+                                        </div>
                                     )}
-                                </span>
-                                <span className="text-[10px] text-zinc-500 block">
-                                    อ่านยอดรวม, วันที่, ชื่อร้าน, เลข 13 หลัก, และแยกหมวดวัตถุดิบ/น้ำไฟ/น้ำมัน
-                                </span>
-                            </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            {receiptImage && (
-                                <button
-                                    type="button"
-                                    disabled={isAiScanning}
-                                    onClick={() => handleAiScan()}
-                                    className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                    {/* Overlay Actions */}
+                                    {!isAiScanning && (
+                                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-1 p-1 bg-black/70 backdrop-blur-xs">
+                                            <button
+                                                type="button"
+                                                onClick={() => setImagePreviewZoom(true)}
+                                                className="px-2 py-1 text-[10px] font-mono font-bold text-white hover:text-[var(--color-accent)] flex items-center gap-1 transition-colors"
+                                            >
+                                                <ZoomIn size={12} />
+                                                <span>INSPECT</span>
+                                            </button>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAiScan()}
+                                                    className="px-2.5 py-1 text-[10px] font-mono font-bold bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-dark)] flex items-center gap-1 transition-colors"
+                                                >
+                                                    <Sparkles size={11} />
+                                                    <span>RE-SCAN</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="px-2 py-1 text-[10px] font-mono font-bold text-gray-300 hover:text-white border border-white/20 transition-colors"
+                                                >
+                                                    REPLACE
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-[var(--color-rule)] hover:border-[var(--color-ink)] transition-colors aspect-[4/5] w-full flex flex-col items-center justify-center gap-3 cursor-pointer bg-[var(--color-paper)] group p-6 text-center"
                                 >
-                                    {isAiScanning ? (
-                                        <>
-                                            <Loader2 size={13} className="animate-spin" />
-                                            <span>AI กำลังอ่านบิล...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles size={13} />
-                                            <span>{aiScannedSuccess ? 'สแกนซ้ำ (Re-Scan)' : 'สแกนบิลด้วย AI'}</span>
-                                        </>
-                                    )}
-                                </button>
+                                    <div className="w-12 h-12 rounded-none border border-[var(--color-rule)] group-hover:border-[var(--color-ink)] flex items-center justify-center text-[var(--color-neutral)] group-hover:text-[var(--color-ink)] transition-all">
+                                        <Camera size={20} />
+                                    </div>
+                                    <div>
+                                        <span className="font-mono text-xs font-bold tracking-wider text-[var(--color-ink)] block uppercase">
+                                            SNAP OR DROP RECEIPT
+                                        </span>
+                                        <span className="font-mono text-[10px] text-[var(--color-muted)] mt-1 block">
+                                            MAKRO / FUEL / UTILITY / SLIP
+                                        </span>
+                                    </div>
+                                    <div className="font-mono text-[9px] text-[var(--color-accent)] uppercase tracking-wider font-bold border-t border-[var(--color-rule)] pt-2 mt-1">
+                                        + GEMINI AUTO-CATEGORIZATION
+                                    </div>
+                                </div>
                             )}
 
-                            <button
-                                type="button"
-                                onClick={() => setShowApiKeyModal(true)}
-                                className="p-1.5 bg-white hover:bg-zinc-100 text-zinc-600 border border-zinc-300 rounded-lg cursor-pointer transition-colors"
-                                title="ตั้งค่า Gemini API Key"
-                            >
-                                <Key size={14} />
-                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
                         </div>
-                    </div>
 
-                    {/* AI Pulsing Loading Indicator */}
-                    {isAiScanning && (
-                        <div className="p-4 bg-zinc-900 text-white rounded-xl flex items-center gap-3 animate-pulse border border-zinc-700 shadow-md">
-                            <Loader2 size={20} className="animate-spin text-amber-400" />
-                            <div>
-                                <strong className="text-xs font-mono font-bold text-amber-300 block">
-                                    🤖 Gemini Vision AI กำลังวิเคราะห์ใบเสร็จ...
-                                </strong>
-                                <span className="text-[10px] text-zinc-400 font-mono">
-                                    กำลังอ่านยอดเงิน, แยกหมวดหมู่สินค้า, ตรวจสอบเลขประจำตัวผู้เสียภาษี 13 หลัก
-                                </span>
+                        {/* Telemetry / Readout Strip */}
+                        <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-rule)] font-mono text-[10px] space-y-1.5">
+                            <div className="flex justify-between text-[var(--color-neutral)]">
+                                <span>TAX_COMPLIANCE:</span>
+                                <span className="font-bold text-[var(--color-ink)]">SEC 86/4 &amp; 105</span>
                             </div>
-                        </div>
-                    )}
-                    
-                    {/* Category Quick Pills */}
-                    <div>
-                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1.5">
-                            หมวดหมู่ค่าใช้จ่าย (Expense Category) * {aiScannedSuccess && <span className="text-emerald-600 font-bold">(AI เลือกให้อัตโนมัติ)</span>}
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
-                            {EXPENSE_CATEGORIES.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    type="button"
-                                    onClick={() => handleSelectCategory(cat.id)}
-                                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
-                                        category === cat.id
-                                            ? 'bg-zinc-900 text-white border-zinc-900 font-bold shadow-sm ring-2 ring-orange-400'
-                                            : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100'
-                                    }`}
-                                >
-                                    <div className="text-[11px] leading-tight truncate">{cat.label}</div>
-                                </button>
-                            ))}
+                            <div className="flex justify-between text-[var(--color-neutral)]">
+                                <span>IMAGE_COMPRESSION:</span>
+                                <span className="font-bold text-[var(--color-ink)]">CANVAS FAST JPG</span>
+                            </div>
+                            {aiScannedSuccess && (
+                                <div className="flex justify-between text-[var(--color-emerald)] font-bold pt-1 border-t border-[var(--color-rule)]">
+                                    <span>AI_CLASSIFICATION:</span>
+                                    <span>VERIFIED</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Amount & Date Input Block */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-zinc-50 p-4 rounded-xl border border-zinc-200">
-                        <div>
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                ยอดเงินที่จ่าย (บาท) *
-                            </label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-zinc-400 text-sm">฿</span>
+                    {/* RIGHT CHAMBER: Structured Input Ledger (7 Columns) */}
+                    <div className="lg:col-span-7 p-4 sm:p-6 bg-[var(--color-paper)] space-y-5">
+                        
+                        {/* Section Tag */}
+                        <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2">
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--color-neutral)]">
+                                [02] TRANSACTION ENTRY &amp; TAX ATTRIBUTES
+                            </span>
+                            {docType === 'tax_invoice' && (
+                                <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)]">
+                                    FULL TAX INVOICE (GRADE A)
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Amount & Date Hero Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div className="sm:col-span-7 border border-[var(--color-rule)] p-3 bg-[var(--color-paper-2)]">
+                                <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                    PAYABLE AMOUNT (THB) *
+                                </label>
+                                <div className="relative flex items-center">
+                                    <span className="font-mono font-black text-xl text-[var(--color-ink)] mr-2 select-none">฿</span>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        autoFocus
+                                        className="w-full bg-transparent border-none font-mono font-black text-2xl text-[var(--color-ink)] focus:outline-none placeholder:text-gray-300"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="sm:col-span-5 border border-[var(--color-rule)] p-3 bg-[var(--color-paper-2)]">
+                                <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                    PAYMENT DATE *
+                                </label>
                                 <input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="เช่น 1540.50"
-                                    autoFocus
-                                    className="w-full pl-8 pr-3 py-2 border-2 border-zinc-300 rounded-lg text-base font-mono font-black text-zinc-950 focus:border-zinc-900 focus:outline-none bg-white"
+                                    type="date"
+                                    value={expenseDate}
+                                    onChange={(e) => setExpenseDate(e.target.value)}
+                                    className="w-full bg-transparent border-none font-mono font-bold text-xs text-[var(--color-ink)] focus:outline-none pt-1"
                                 />
                             </div>
                         </div>
 
+                        {/* Category Selector Grid (Neo-Brutalist Cells) */}
                         <div>
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                วันที่ตามใบเสร็จ / วันที่จ่าย *
+                            <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-2">
+                                EXPENSE CATEGORY (AI AUTO-CLASSIFIED) *
                             </label>
-                            <input
-                                type="date"
-                                value={expenseDate}
-                                onChange={(e) => setExpenseDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono text-xs font-bold focus:border-zinc-900 focus:outline-none bg-white"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Details: Title & Vendor */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <div className="sm:col-span-2">
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                รายละเอียดรายการค่าใช้จ่าย *
-                            </label>
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="เช่น ซื้อเนื้อสัตว์ นม ผักสด Makro สาขาศรีนครินทร์"
-                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
-                            />
-                        </div>
-
-                        {/* Vendor Name */}
-                        <div>
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                ร้านค้า / ผู้รับเงิน (Vendor)
-                            </label>
-                            <input
-                                type="text"
-                                value={vendorName}
-                                onChange={(e) => setVendorName(e.target.value)}
-                                placeholder="เช่น Siam Makro, Lotus, ปตท."
-                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs focus:border-zinc-900 focus:outline-none"
-                            />
-                            {/* Quick Presets */}
-                            <div className="flex flex-wrap gap-1 mt-1.5">
-                                {VENDOR_PRESETS.slice(0, 6).map((v, i) => (
-                                    <button
-                                        key={i}
-                                        type="button"
-                                        onClick={() => setVendorName(v)}
-                                        className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-mono text-[9px] cursor-pointer"
-                                    >
-                                        +{v}
-                                    </button>
-                                ))}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 font-mono text-[11px]">
+                                {EXPENSE_CATEGORIES.map((cat, idx) => {
+                                    const isSelected = category === cat.id;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => handleSelectCategory(cat.id)}
+                                            className={`p-2 text-left border transition-all cursor-pointer flex flex-col justify-between min-h-[46px] ${
+                                                isSelected
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-bold'
+                                                    : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)]'
+                                            }`}
+                                        >
+                                            <span className="text-[8px] opacity-60">[{String(idx + 1).padStart(2, '0')}]</span>
+                                            <span className="truncate">{cat.label}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Document Proof Grade & Vendor Tax ID */}
-                        <div className="space-y-2">
+                        {/* Title & Vendor Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                            <div className="sm:col-span-2">
+                                <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                    TRANSACTION TITLE / DESCRIPTION *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="เช่น ซื้อเนื้อสัตว์ นม ผักสด Makro สาขาศรีนครินทร์"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-medium focus:border-[var(--color-ink)] focus:outline-none"
+                                />
+                            </div>
+
+                            {/* Vendor Name & Quick Presets */}
                             <div>
-                                <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                    ชนิดหลักฐานเอกสาร (Tax Proof Grade)
+                                <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                    VENDOR / PAYEE NAME
+                                </label>
+                                <input
+                                    type="text"
+                                    value={vendorName}
+                                    onChange={(e) => setVendorName(e.target.value)}
+                                    placeholder="เช่น Siam Makro, Lotus, ปตท."
+                                    className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-medium focus:border-[var(--color-ink)] focus:outline-none"
+                                />
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {VENDOR_PRESETS.slice(0, 5).map((v, i) => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => setVendorName(v)}
+                                            className="px-1.5 py-0.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-neutral)] font-mono text-[9px] hover:text-[var(--color-ink)] cursor-pointer"
+                                        >
+                                            +{v}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Proof Grade & Vendor Tax ID */}
+                            <div className="space-y-1.5">
+                                <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block">
+                                    TAX PROOF TYPE &amp; TAX ID
                                 </label>
                                 <select
                                     value={docType}
                                     onChange={(e) => setDocType(e.target.value)}
-                                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-white"
+                                    className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-medium focus:border-[var(--color-ink)] focus:outline-none"
                                 >
-                                    <option value="tax_invoice">🥇 ใบกำกับภาษีเต็มรูป (เกรด A เช่น Makro/ปั๊มน้ำมัน)</option>
-                                    <option value="cash_bill">🥈 บิลเงินสด + สลิปโอน (เกรด B)</option>
-                                    <option value="receipt_voucher">🥉 ใบสำคัญรับเงิน (เกรด C)</option>
-                                    <option value="slip_only">สลิปโอนเงินอย่างเดียว</option>
+                                    <option value="tax_invoice">GRADE A: FULL TAX INVOICE (ใบกำกับภาษีเต็มรูป)</option>
+                                    <option value="cash_bill">GRADE B: CASH BILL + SLIP (บิลเงินสด + สลิป)</option>
+                                    <option value="receipt_voucher">GRADE C: PAYMENT VOUCHER (ใบสำคัญรับเงิน)</option>
+                                    <option value="slip_only">TRANSFER SLIP ONLY (สลิปโอนเงิน)</option>
                                 </select>
-                            </div>
-
-                            <div>
                                 <input
                                     type="text"
                                     maxLength={17}
                                     value={vendorTaxId}
                                     onChange={(e) => setVendorTaxId(e.target.value)}
-                                    placeholder="เลขผู้เสียภาษี 13 หลักของผู้ขาย (ถ้ามี)"
-                                    className="w-full px-3 py-1.5 border border-zinc-200 rounded-lg font-mono text-[11px] text-zinc-700 focus:border-zinc-900 focus:outline-none bg-zinc-50"
+                                    placeholder="13-Digit Tax ID (e.g. 0105531044471)"
+                                    className="w-full px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-[10px] focus:border-[var(--color-ink)] focus:outline-none"
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    {/* Payment Method & VAT Tag */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        {/* Payment Method & VAT Toggle */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 border-t border-[var(--color-rule)]">
+                            <div>
+                                <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                    PAYMENT SETTLEMENT METHOD
+                                </label>
+                                <select
+                                    value={paymentMethod}
+                                    onChange={(e) => setPaymentMethod(e.target.value)}
+                                    className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-xs focus:border-[var(--color-ink)] focus:outline-none"
+                                >
+                                    <option value="TRANSFER">BANK TRANSFER (โอนเงิน)</option>
+                                    <option value="CASH">CASH (เงินสด)</option>
+                                    <option value="CREDIT">CORPORATE CREDIT (บัตรเครดิต)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex items-center pt-4">
+                                <label className="flex items-center gap-2 text-xs font-mono text-[var(--color-ink)] cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={vatIncluded}
+                                        onChange={(e) => setVatIncluded(e.target.checked)}
+                                        className="accent-[var(--color-accent)] w-4 h-4"
+                                    />
+                                    <span>VAT 7% INCLUDED IN TOTAL</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Notes */}
                         <div>
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                วิธีชำระเงิน
+                            <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                ITEMIZED AUDIT NOTES (EXTRACTED ITEMS)
                             </label>
-                            <select
-                                value={paymentMethod}
-                                onChange={(e) => setPaymentMethod(e.target.value)}
-                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-medium focus:border-zinc-900 focus:outline-none bg-white"
-                            >
-                                <option value="TRANSFER">โอนเงิน (Transfer)</option>
-                                <option value="CASH">เงินสด (Cash)</option>
-                                <option value="CREDIT">บัตรเครดิต (Credit Card)</option>
-                            </select>
+                            <input
+                                type="text"
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                placeholder="เช่น หมูสามชั้น 2kg, นมสด Meiji 5L, ผักสลัด"
+                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:border-[var(--color-ink)] focus:outline-none"
+                            />
                         </div>
-
-                        <div className="flex items-center pt-5">
-                            <label className="flex items-center gap-2 text-xs text-zinc-800 cursor-pointer font-medium">
-                                <input
-                                    type="checkbox"
-                                    checked={vatIncluded}
-                                    onChange={(e) => setVatIncluded(e.target.checked)}
-                                    className="accent-[oklch(52%_0.16_28)] w-4 h-4"
-                                />
-                                <span>ยอดเงินนี้รวม VAT 7% ในบิลแล้ว (เช่น Makro, ปั๊มน้ำมัน)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Receipt Image Upload Area with Gemini Trigger */}
-                    <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase">
-                                รูปถ่ายใบเสร็จ / บิล Makro / สลิปโอนเงิน (Receipt Photo)
-                            </label>
-                            <label className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-600 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={autoScanEnabled}
-                                    onChange={(e) => setAutoScanEnabled(e.target.checked)}
-                                    className="accent-[oklch(52%_0.16_28)] w-3.5 h-3.5"
-                                />
-                                <span>⚡ สแกนด้วย AI อัตโนมัติเมื่อเลือกรูป</span>
-                            </label>
-                        </div>
-
-                        {receiptImage ? (
-                            <div className="relative border-2 border-zinc-300 rounded-xl overflow-hidden bg-zinc-100 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                    <img src={receiptImage} alt="Receipt Preview" className="w-16 h-16 object-cover rounded-lg border border-zinc-300 shadow-sm" />
-                                    <div>
-                                        <span className="font-bold text-xs text-zinc-900 block">แนบรูปใบเสร็จแล้ว</span>
-                                        <span className="text-[10px] text-emerald-600 font-mono flex items-center gap-1">
-                                            <CheckCircle2 size={11} /> พร้อมใช้เป็นหลักฐานภาษี
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                                    <button
-                                        type="button"
-                                        disabled={isAiScanning}
-                                        onClick={() => handleAiScan()}
-                                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-mono font-bold text-[11px] flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
-                                    >
-                                        <Sparkles size={12} />
-                                        <span>กดสแกนด้วย Gemini AI</span>
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setReceiptImage(null);
-                                            setAiScannedSuccess(false);
-                                        }}
-                                        className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg font-bold transition-colors cursor-pointer"
-                                    >
-                                        เปลี่ยนรูป
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <label className="border-2 border-dashed border-orange-300 hover:border-orange-500 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all bg-orange-50/30 hover:bg-orange-50/60 group">
-                                <div className="p-3 bg-white group-hover:bg-[oklch(52%_0.16_28)] group-hover:text-white rounded-full shadow-sm text-zinc-700 transition-colors">
-                                    <Camera size={22} />
-                                </div>
-                                <div className="text-center">
-                                    <span className="font-bold text-xs text-zinc-900 block">
-                                        กดถ่ายรูป หรือ อัปโหลดรูปใบเสร็จ Makro / สลิปโอน
-                                    </span>
-                                    <span className="text-[10px] text-amber-700 font-mono font-semibold">
-                                        ✨ Gemini AI จะอ่านยอดเงินและแยกหมวดหมู่อัตโนมัติ
-                                    </span>
-                                </div>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    onChange={handleImageUpload}
-                                    className="hidden"
-                                />
-                            </label>
-                        )}
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                            บันทึกรายการสินค้า / รายละเอียดเพิ่มเติม (Notes)
-                        </label>
-                        <input
-                            type="text"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="เช่น หมูสามชั้น 2kg, นมสด Meiji 5L, ผักสลัด"
-                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs focus:border-zinc-900 focus:outline-none"
-                        />
                     </div>
                 </div>
 
-                {/* Footer Toolbar */}
-                <div className="p-4 bg-zinc-50 border-t border-[#D1D1CD] flex items-center justify-between shrink-0">
+                {/* 3. Brutalist Action Bar (Footer) */}
+                <div className="p-3 sm:px-6 bg-[var(--color-paper-2)] border-t border-[var(--color-rule)] flex items-center justify-between shrink-0 font-mono text-xs">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2.5 border border-zinc-300 hover:bg-zinc-200 text-zinc-700 rounded-lg font-mono font-bold text-xs transition-colors cursor-pointer"
+                        className="px-4 py-2 border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold transition-colors cursor-pointer uppercase text-[11px]"
                     >
-                        ยกเลิก
+                        CANCEL (ESC)
                     </button>
 
                     <button
                         type="button"
                         disabled={saving || isAiScanning}
                         onClick={handleSave}
-                        className="px-6 py-2.5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg font-mono font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-md disabled:opacity-50"
+                        className="px-6 py-2 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2 uppercase text-[11px]"
                     >
-                        <Save size={15} />
-                        <span>{saving ? 'กำลังบันทึก...' : 'บันทึกค่าใช้จ่าย (SAVE)'}</span>
+                        <span>{saving ? 'COMMITTING...' : 'SAVE EXPENSE RECORD'}</span>
                     </button>
                 </div>
             </div>
 
-            {/* MODAL: GEMINI API KEY SETUP */}
+            {/* FULL RECEIPT ZOOM INSPECTION MODAL */}
+            {imagePreviewZoom && receiptImage && (
+                <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/90 p-4 font-sans">
+                    <div className="relative max-w-4xl max-h-[92vh] flex flex-col border border-white/20 bg-black overflow-hidden">
+                        <div className="p-3 bg-zinc-900 text-white flex justify-between items-center font-mono text-xs border-b border-zinc-800">
+                            <span>RECEIPT OPTICAL INSPECTION // {vendorName}</span>
+                            <button onClick={() => setImagePreviewZoom(false)} className="text-white hover:text-red-400 p-1 cursor-pointer">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+                            <img src={receiptImage} alt="Zoomed Receipt" className="max-w-full max-h-[80vh] object-contain" />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* GEMINI API KEY SETUP MODAL */}
             {showApiKeyModal && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-sans text-xs">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-zinc-300 space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-orange-100 text-orange-700 rounded-xl">
-                                <Key size={20} />
+                <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/85 p-4 font-sans text-xs">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 space-y-4 shadow-2xl">
+                        <div className="border-b border-[var(--color-rule)] pb-3">
+                            <div className="font-mono text-[10px] font-bold text-[var(--color-accent)] uppercase">
+                                CONFIGURATION // AI OCR
                             </div>
-                            <div>
-                                <h3 className="font-bold text-sm text-zinc-950">
-                                    ตั้งค่า Google Gemini API Key
-                                </h3>
-                                <p className="text-[11px] text-zinc-500 font-mono">
-                                    ใช้สำหรับระบบสแกนบิลและแยกหมวดหมู่อัตโนมัติด้วย AI
-                                </p>
-                            </div>
+                            <h3 className="font-mono font-bold text-sm text-[var(--color-ink)] uppercase mt-0.5">
+                                GOOGLE GEMINI VISION API KEY
+                            </h3>
                         </div>
 
-                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
-                            💡 คุณสามารถรับ <strong>Gemini API Key ฟรี</strong> ได้ทันทีจาก Google AI Studio (ไม่มีค่าใช้จ่าย):
+                        <p className="text-[12px] text-[var(--color-neutral)] leading-relaxed">
+                            ระบบสแกนบิลใช้ Google Gemini Vision AI ซึ่งเปิดให้ใช้งานฟรี 
+                            คุณสามารถรับ API Key ได้ทันทีจาก Google AI Studio:
+                        </p>
+
+                        <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-[11px]">
                             <a
                                 href="https://aistudio.google.com/app/apikey"
                                 target="_blank"
                                 rel="noreferrer"
-                                className="font-bold text-orange-700 underline block mt-1"
+                                className="text-[var(--color-accent)] font-bold underline block"
                             >
-                                🔗 กดรับ API Key ฟรีที่ aistudio.google.com &rarr;
+                                &rarr; GET FREE GEMINI API KEY (aistudio.google.com)
                             </a>
                         </div>
 
                         <div>
-                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                วาง Gemini API Key ของคุณที่นี่:
+                            <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                PASTE YOUR GEMINI API KEY:
                             </label>
                             <input
                                 type="password"
                                 value={apiKeyInput}
                                 onChange={(e) => setApiKeyInput(e.target.value)}
                                 placeholder="AIzaSy..."
-                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none"
+                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                 autoFocus
                             />
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2">
+                        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-rule)]">
                             <button
                                 type="button"
                                 onClick={() => setShowApiKeyModal(false)}
-                                className="px-4 py-2 border border-zinc-300 text-zinc-700 rounded-lg font-mono font-bold text-xs hover:bg-zinc-100 cursor-pointer"
+                                className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-neutral)] font-mono font-bold text-xs hover:text-[var(--color-ink)] cursor-pointer"
                             >
-                                ปิด
+                                CANCEL
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSaveApiKeyAndScan}
-                                className="px-5 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-lg font-mono font-bold text-xs cursor-pointer shadow-md flex items-center gap-1.5"
+                                className="px-5 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono font-bold text-xs cursor-pointer"
                             >
-                                <Save size={14} />
-                                <span>บันทึก &amp; เริ่มสแกนบิล</span>
+                                SAVE &amp; SCAN
                             </button>
                         </div>
                     </div>

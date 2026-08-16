@@ -291,41 +291,42 @@ export default function TaxInvoiceModal({
     );
 
     return (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto font-sans">
-            <div className="bg-[#ECECE9] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden border border-[#D1D1CD]">
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/75 backdrop-blur-xs p-2 sm:p-4 md:p-6 overflow-y-auto font-sans">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-none shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col overflow-hidden text-[var(--color-ink)]">
+                
                 {/* Header */}
-                <div className="bg-[#1A1A1A] text-white p-4 sm:px-6 flex items-center justify-between shrink-0">
+                <div className="bg-[var(--color-ink)] text-[var(--color-paper)] px-4 py-3 sm:px-6 flex items-center justify-between border-b border-[var(--color-rule)] shrink-0 font-mono">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[oklch(52%_0.16_28)] flex items-center justify-center text-white font-mono font-bold text-sm">
-                            TAX
+                        <div className="text-xs font-bold px-2 py-0.5 bg-[var(--color-accent)] text-white">
+                            DOC//TAX
                         </div>
                         <div>
-                            <h2 className="font-mono font-bold text-sm sm:text-base tracking-wider uppercase">
-                                {existingInvoice ? 'แก้ไขเอกสาร / EDIT DOCUMENT' : 'ออกใบเสร็จรับเงิน & ใบกำกับภาษี / ISSUE INVOICE'}
+                            <h2 className="font-bold text-sm sm:text-base tracking-wider uppercase">
+                                {existingInvoice ? 'EDIT DOCUMENT // TAX INVOICE' : 'ISSUE RECEIPT & TAX INVOICE'}
                             </h2>
-                            <p className="text-[10px] text-[#A3A39E] font-mono">
+                            <p className="text-[10px] text-[var(--color-paper)]/70">
                                 {isCompanyVatRegistered 
-                                    ? 'สถานะ: จดทะเบียนภาษีมูลค่าเพิ่มแล้ว (VAT Registered 7%)' 
-                                    : 'สถานะ: ยังไม่จดทะเบียน VAT (ออกใบเสร็จรับเงินถูกต้องตามประมวลรัษฎากร)'}
+                                    ? '[STATUS: VAT 7% COMPLIANT (SEC 86/4)]' 
+                                    : '[STATUS: NON-VAT OFFICIAL RECEIPT (SEC 105)]'}
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer text-white">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-1 text-[var(--color-paper)]/70 hover:text-white transition-colors cursor-pointer">
+                        <X size={18} />
                     </button>
                 </div>
 
                 {/* Body Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs bg-[var(--color-paper)]">
                     
                     {/* Document Type Selector Banner */}
-                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
                         <div>
-                            <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider block">
-                                ประเภทเอกสาร (Document Type)
+                            <span className="text-[9px] font-bold text-[var(--color-neutral)] uppercase tracking-wider block">
+                                DOCUMENT TYPE CLASSIFICATION
                             </span>
-                            <span className="font-bold text-sm text-zinc-900 mt-0.5 block">
-                                {docType === 'tax_invoice' ? 'ใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูปแบบ (Tax Invoice)' : 'ใบเสร็จรับเงิน (Official Receipt)'}
+                            <span className="font-bold text-xs text-[var(--color-ink)] mt-0.5 block">
+                                {docType === 'tax_invoice' ? 'FULL TAX INVOICE / RECEIPT (ใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูป)' : 'OFFICIAL RECEIPT (ใบเสร็จรับเงิน)'}
                             </span>
                         </div>
 
@@ -333,16 +334,16 @@ export default function TaxInvoiceModal({
                             <button
                                 type="button"
                                 onClick={() => setDocType('receipt')}
-                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer ${docType === 'receipt' ? 'bg-[#1A1A1A] text-white shadow-md' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+                                className={`px-3 py-1.5 font-bold text-xs transition-all cursor-pointer border ${docType === 'receipt' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'}`}
                             >
-                                ใบเสร็จรับเงิน (Receipt)
+                                OFFICIAL RECEIPT
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setDocType('tax_invoice')}
-                                className={`px-3 py-1.5 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer ${docType === 'tax_invoice' ? 'bg-[oklch(52%_0.16_28)] text-white shadow-md' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+                                className={`px-3 py-1.5 font-bold text-xs transition-all cursor-pointer border ${docType === 'tax_invoice' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)]'}`}
                             >
-                                ใบกำกับภาษี (VAT 7%)
+                                TAX INVOICE (VAT 7%)
                             </button>
                         </div>
                     </div>
