@@ -118,9 +118,9 @@ export default function AdminTaxHub() {
 
                 const { data: bookingsData } = await supabase
                     .from('bookings')
-                    .select('id, booking_date, grand_total, total_amount, subtotal, status, payment_status, is_paid')
-                    .gte('booking_date', startOfYear)
-                    .lte('booking_date', endOfYear);
+                    .select('id, created_at, booking_time, total_amount, status, deposit_amount')
+                    .gte('created_at', startOfYear)
+                    .lte('created_at', endOfYear);
 
                 if (isMounted && bookingsData) {
                     setAllYearBookings(bookingsData);
@@ -163,11 +163,12 @@ export default function AdminTaxHub() {
         if (!allYearBookings || allYearBookings.length === 0) return 0;
         return allYearBookings
             .filter(b => {
-                const bMonth = (b.booking_date || '').slice(0, 7);
-                const isPaid = b.payment_status === 'COMPLETED' || b.payment_status === 'PAID' || b.is_paid === true || b.status === 'completed';
+                const bDate = b.booking_time || b.created_at || '';
+                const bMonth = bDate.slice(0, 7);
+                const isPaid = b.status === 'completed' || b.status === 'confirmed';
                 return bMonth === monthFilter && isPaid;
             })
-            .reduce((s, b) => s + Number(b.grand_total || b.total_amount || b.subtotal || 0), 0);
+            .reduce((s, b) => s + Number(b.total_amount || b.deposit_amount || 0), 0);
     }, [allYearBookings, monthFilter]);
 
     // Handle Document Cancellation
