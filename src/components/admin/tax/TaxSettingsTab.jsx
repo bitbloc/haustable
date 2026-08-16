@@ -29,12 +29,12 @@ export default function TaxSettingsTab({
     // Form Settings State
     const [settings, setSettings] = useState({
         tax_is_vat_registered: 'false',
-        tax_company_name: 'IN THE HAUS',
-        tax_company_name_en: 'IN THE HAUS CO., LTD.',
-        tax_id: '',
+        tax_company_name: 'ร้านในบ้าน นครพนม',
+        tax_company_name_en: 'IN THE HAUS NAKHON PHANOM',
+        tax_id: '1120100144907',
         tax_branch_type: 'head_office',
         tax_branch_code: '00000',
-        tax_address: '',
+        tax_address: '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000',
         tax_phone: '',
         tax_email: '',
         tax_vat_rate: '7.00',
