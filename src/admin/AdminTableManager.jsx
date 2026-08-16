@@ -49,7 +49,7 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
                 .from('bookings')
                 .select(`
                     id, table_id, booking_time, end_time, pax, status, staff_remark, total_amount,
-                    order_items(price, quantity)
+                    order_items(price_at_time, quantity)
                 `)
                 .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', start)
@@ -73,7 +73,7 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
                         
                         // Calculate order total
                         const items = b.order_items || []
-                        const bTotal = items.reduce((sum, i) => sum + (Number(i.price || 0) * Number(i.quantity || 1)), 0) || Number(b.total_amount || 0)
+                        const bTotal = items.reduce((sum, i) => sum + (Number(i.price_at_time || i.price || 0) * Number(i.quantity || 1)), 0) || Number(b.total_amount || 0)
                         billSum += bTotal
 
                         if (b.staff_remark?.includes('[CALL_STAFF]') || b.staff_remark?.includes('[CALL_BILL]')) {

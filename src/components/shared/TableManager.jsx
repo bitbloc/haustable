@@ -80,7 +80,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                     *,
                     profiles(display_name, phone_number),
                     order_items(
-                        id, quantity, price, status,
+                        id, quantity, price_at_time, status,
                         menu_items(name, price)
                     )
                 `)
@@ -123,7 +123,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
             // Calculate live order totals
             const orderItems = currentBooking.order_items || [];
-            const totalBill = orderItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0) || Number(currentBooking.total_amount || 0);
+            const totalBill = orderItems.reduce((sum, item) => sum + (Number(item.price_at_time || item.price || 0) * Number(item.quantity || 1)), 0) || Number(currentBooking.total_amount || 0);
             const pendingCookingCount = orderItems.filter(i => i.status === 'pending' || i.status === 'cooking').length;
 
             return {
