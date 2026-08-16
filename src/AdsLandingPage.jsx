@@ -91,28 +91,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
         };
     }, []);
 
-    const handleDirectionsClick = (e, url) => {
-        if (e && e.preventDefault) {
-            e.preventDefault();
-        }
-        
-        const callback = () => {
-            if (url) {
-                window.open(url, '_blank', 'noopener,noreferrer');
+    const handleDirectionsClick = () => {
+        try {
+            if (typeof window !== 'undefined') {
+                window.gtag = window.gtag || function() { (window.dataLayer = window.dataLayer || []).push(arguments); };
+                window.gtag('event', 'conversion', {
+                    'send_to': 'AW-11227095880/QU1qCJHHvcocEMjGv-kp',
+                    'value': 1.0,
+                    'currency': 'THB'
+                });
             }
-        };
-
-        window.gtag = window.gtag || function() { (window.dataLayer = window.dataLayer || []).push(arguments); };
-        
-        window.gtag('event', 'conversion', {
-            'send_to': 'AW-11227095880/QU1qCJHHvcocEMjGv-kp',
-            'value': 1.0,
-            'currency': 'THB',
-            'event_callback': callback
-        });
-
-        // Fail-safe fallback timeout (500ms)
-        setTimeout(callback, 500);
+        } catch (err) {
+            console.error('gtag error', err);
+        }
     };
 
     const fetchData = async () => {
@@ -258,6 +249,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
     const hours = settings.link_hours || 'เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)';
     const locationText = settings.link_location_text || 'ริมแม่น้ำโขง · นครพนม';
     const tags = (settings.link_tags || '#inthehausth, #homefood, #southernthaifood, #nakhonphanom').split(',').map(t => t.trim()).filter(Boolean);
+
+    const defaultLineUrl = "https://lin.ee/EuzwG7c";
+    const defaultIgUrl = "https://www.instagram.com/inthehaus.th/";
+    const defaultFbUrl = "https://www.facebook.com/inthehausth/";
+    const defaultMapUrl = "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9";
+
+    const lineUrl = (settings.link_url_1 && settings.link_url_1 !== 'https://lin.ee/xyz') ? settings.link_url_1 : defaultLineUrl;
+    const igUrl = (settings.link_url_2 && settings.link_url_2 !== 'https://instagram.com' && settings.link_url_2 !== 'https://www.instagram.com') ? settings.link_url_2 : defaultIgUrl;
+    const fbUrl = (settings.link_url_3 && settings.link_url_3 !== 'https://facebook.com' && settings.link_url_3 !== 'https://www.facebook.com') ? settings.link_url_3 : defaultFbUrl;
+    const mapUrl = (settings.link_url_4 && settings.link_url_4 !== 'https://maps.google.com') ? settings.link_url_4 : defaultMapUrl;
 
     // ─── DYNAMIC SEO (Title & Meta) ───
     useEffect(() => {
@@ -617,15 +618,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                 {/* ─── SECTION 3: CONNECT / LINKS ─── */}
                 {activeSection === 'connect' && (
                     <div className="space-y-4 flex-grow animate-fade-in">
+                        {/* Reservation & Contact */}
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    RESERVATION & DELIVERY
+                                    RESERVATION & CONTACT
                                 </h3>
                             </div>
                             
                             <LinkCard 
-                                href={settings?.link_url_1 || "https://lin.ee/xyz"} 
+                                href={lineUrl} 
                                 title={settings?.link_title_1 || "LINE OA // จองโต๊ะ หรือ สั่งอาหาร"} 
                                 bg="bg-[#06C755] text-white hover:bg-[#05b34c]" 
                                 wide 
@@ -639,6 +641,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                             />
                         </div>
 
+                        {/* Social Media */}
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
@@ -647,33 +650,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                             </div>
                             
                             <LinkCard 
-                                href={settings?.link_url_2 || "https://instagram.com"} 
+                                href={igUrl} 
                                 title={settings?.link_title_2 || "INSTAGRAM // @inthehaus.th"} 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
                             />
                             
                             <LinkCard 
-                                href={settings?.link_url_3 || "https://facebook.com"} 
+                                href={fbUrl} 
                                 title={settings?.link_title_3 || "FACEBOOK // IN THE HAUS"} 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
-                            />
-                        </div>
-
-                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
-                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
-                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    LOCATION
-                                </h3>
-                            </div>
-                            
-                            <LinkCard 
-                                href={settings?.link_url_4 || "https://maps.google.com"} 
-                                title={settings?.link_title_4 || "GOOGLE MAPS // นำทางมาร้าน"} 
-                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
-                                wide 
-                                onClick={(e) => handleDirectionsClick(e, settings?.link_url_4)}
                             />
                         </div>
 
@@ -718,24 +705,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                             />
                         </div>
 
-                        {/* Address Location details */}
+                        {/* Address & Navigation Map (Unified Launch Map) */}
                         <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 font-mono text-[11px] text-[var(--color-hallmark-ink)]">
                             <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider pb-2 border-b border-[var(--color-hallmark-rule)] mb-3 text-[var(--color-hallmark-ink-muted)]">
-                                [ 03.4 // OFFICE ADDRESS ]
+                                [ 03.4 // LOCATION & MAP ]
                             </h3>
                             <p className="font-[var(--font-body)] font-bold text-xs leading-relaxed">{locationText}</p>
                             <p className="mt-2 text-[var(--color-hallmark-ink-muted)] font-bold">TEL: 098-528-4217</p>
                             <p className="mt-1 text-[var(--color-hallmark-ink-muted)] font-bold font-mono">OPEN: {hours}</p>
                             
-                            <div className="mt-4 pt-3 border-t border-[var(--color-hallmark-rule)] flex justify-end">
+                            <div className="mt-4 pt-3 border-t border-[var(--color-hallmark-rule)]">
                                 <a
-                                    href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
+                                    href={mapUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    onClick={(e) => handleDirectionsClick(e, "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9")}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider hover:bg-neutral-800 transition-colors"
+                                    onClick={handleDirectionsClick}
+                                    className="w-full py-3 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] rounded-sm font-mono text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
                                 >
-                                    <Navigation size={9} /> LAUNCH MAP
+                                    <Navigation size={14} /> LAUNCH MAP // นำทางมาร้าน
                                 </a>
                             </div>
                         </div>
@@ -771,7 +758,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
             {/* ─── STICKY CONTACT BAR ─── */}
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-[440px] p-2 bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-ink)] rounded-sm shadow-md flex gap-2 pb-safe">
                 <a 
-                    href="https://lin.ee/EuzwG7c" 
+                    href={lineUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex-1 bg-[var(--color-brand)] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
@@ -779,10 +766,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                     <MessageCircle size={12} /> LINE CHAT
                 </a>
                 <a 
-                    href="https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
-                    target="_blank"
+                    href={mapUrl}
+                    target="_blank" 
                     rel="noopener noreferrer"
-                    onClick={(e) => handleDirectionsClick(e, "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9")}
+                    onClick={handleDirectionsClick}
                     className="flex-1 bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] hover:bg-neutral-200 border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
                     <Navigation size={12} /> DIRECTIONS
