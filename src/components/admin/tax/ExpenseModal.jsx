@@ -14,7 +14,13 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { EXPENSE_CATEGORIES, VENDOR_PRESETS } from '../../../utils/expenseConstants';
-import { scanReceiptWithGemini, saveGeminiApiKey } from '../../../utils/geminiOcrHelper';
+import { 
+    scanReceiptWithGemini, 
+    saveGeminiApiKey, 
+    GEMINI_SUPPORTED_MODELS, 
+    getGeminiPreferredModel, 
+    saveGeminiPreferredModel 
+} from '../../../utils/geminiOcrHelper';
 import { toast } from 'sonner';
 
 export default function ExpenseModal({ 
@@ -43,10 +49,20 @@ export default function ExpenseModal({
     const [aiConfidence, setAiConfidence] = useState(null);
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [apiKeyInput, setApiKeyInput] = useState('');
+    const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
     const [imagePreviewZoom, setImagePreviewZoom] = useState(false);
 
     const fileInputRef = useRef(null);
+
+    // Initial preferred model load
+    useEffect(() => {
+        let isMounted = true;
+        getGeminiPreferredModel().then(m => {
+            if (isMounted && m) setGeminiModel(m);
+        });
+        return () => { isMounted = false; };
+    }, []);
 
     // Keyboard Shortcuts (Escape to close, Ctrl+Enter to save)
     useEffect(() => {
@@ -87,7 +103,7 @@ export default function ExpenseModal({
         setAiScannedSuccess(false);
 
         try {
-            const data = await scanReceiptWithGemini(imageToScan);
+            const data = await scanReceiptWithGemini(imageToScan, null, geminiModel);
             
             // Auto-fill all fields
             if (data.title) setTitle(data.title);
@@ -687,6 +703,27 @@ export default function ExpenseModal({
                                 className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                 autoFocus
                             />
+                        </div>
+
+                        <div>
+                            <label className="font-mono text-[9px] font-bold uppercase tracking-wider text-[var(--color-neutral)] block mb-1">
+                                GEMINI AI MODEL:
+                            </label>
+                            <select
+                                value={geminiModel}
+                                onChange={(e) => {
+                                    setGeminiModel(e.target.value);
+                                    saveGeminiPreferredModel(e.target.value);
+                                }}
+                                className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-xs focus:border-[var(--color-ink)] focus:outline-none"
+                            >
+                                {GEMINI_SUPPORTED_MODELS.map(m => (
+                                    <option key={m.id} value={m.id}>{m.label}</option>
+                                ))}
+                            </select>
+                            <span className="font-mono text-[9px] text-[var(--color-muted)] mt-1 block">
+                                * หากโมเดลที่เลือกไม่พร้อมใช้งาน ระบบจะสลับไปยังโมเดลสำรองให้อัตโนมัติ (Fallback Cascade)
+                            </span>
                         </div>
 
                         <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-rule)]">

@@ -1,6 +1,15 @@
 // Gemini AI OCR & Thai Receipt Auto-Categorization Helper for In The Haus
 import { supabase } from '../lib/supabaseClient';
 
+export const GEMINI_SUPPORTED_MODELS = [
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (แนะนำ - เร็วและฉลาดที่สุด)' },
+    { id: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash Latest' },
+    { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash Experimental' },
+    { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
+];
+
 export async function getGeminiApiKey() {
     // 1. Try env variable
     if (import.meta.env.VITE_GEMINI_API_KEY) {
@@ -46,13 +55,32 @@ export async function saveGeminiApiKey(apiKey) {
     }
 }
 
+export async function getGeminiPreferredModel() {
+    const localModel = localStorage.getItem('onhaus_gemini_model');
+    if (localModel && localModel.trim()) return localModel.trim();
+    return 'gemini-2.0-flash';
+}
+
+export async function saveGeminiPreferredModel(modelName) {
+    if (!modelName) return;
+    localStorage.setItem('onhaus_gemini_model', modelName.trim());
+    try {
+        await supabase
+            .from('app_settings')
+            .upsert([{ key: 'gemini_model', value: modelName.trim() }]);
+    } catch {
+        // Fallback
+    }
+}
+
 /**
- * Scan receipt image using Gemini Vision AI
+ * Scan receipt image using Gemini Vision AI with Auto-Fallback Cascade
  * @param {string} base64Image - Data URL or base64 string of receipt
  * @param {string} customApiKey - Optional custom API key
+ * @param {string} preferredModel - Optional model override
  * @returns {Promise<Object>} Parsed structured receipt data
  */
-export async function scanReceiptWithGemini(base64Image, customApiKey = null) {
+export async function scanReceiptWithGemini(base64Image, customApiKey = null, preferredModel = null) {
     const apiKey = customApiKey || (await getGeminiApiKey());
     if (!apiKey) {
         throw new Error('MISSING_API_KEY');
@@ -116,41 +144,71 @@ Category Rules:
         }
     };
 
-    // Call Gemini 1.5 Flash (fallback to gemini-2.0-flash / gemini-1.5-pro if needed)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Candidate models order: Start with user selection or gemini-2.0-flash, then cascade down
+    const userChoice = preferredModel || (await getGeminiPreferredModel());
+    const candidateModels = Array.from(new Set([
+        userChoice,
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash-exp',
+        'gemini-1.5-pro'
+    ]));
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-    });
+    let lastError = null;
 
-    if (!response.ok) {
-        const errText = await response.text();
-        let errMsg = 'Gemini API Error';
+    // Try models in cascade
+    for (const model of candidateModels) {
         try {
-            const errObj = JSON.parse(errText);
-            errMsg = errObj?.error?.message || errText;
-        } catch {
-            errMsg = errText;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                let errMsg = `Model ${model} Error`;
+                try {
+                    const errObj = JSON.parse(errText);
+                    errMsg = errObj?.error?.message || errText;
+                } catch {
+                    errMsg = errText;
+                }
+
+                // If 404 (model not found), continue cascade to next model
+                if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
+                    lastError = new Error(`[${model}] ` + errMsg);
+                    continue;
+                }
+                
+                throw new Error(errMsg);
+            }
+
+            const resJson = await response.json();
+            const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!rawText) {
+                continue;
+            }
+
+            // Save the working model for future calls
+            saveGeminiPreferredModel(model);
+
+            // Clean and parse JSON
+            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+            return parsed;
+        } catch (err) {
+            lastError = err;
+            if (err.message?.includes('MISSING_API_KEY')) {
+                throw err;
+            }
+            // If it's a model not found error, loop continues
         }
-        throw new Error(errMsg);
     }
 
-    const resJson = await response.json();
-    const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-        throw new Error('ไม่สามารถอ่านข้อมูลจากภาพใบเสร็จได้ กรุณาลองใหม่อีกครั้ง');
-    }
-
-    // Clean and parse JSON
-    let parsed;
-    try {
-        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        parsed = JSON.parse(cleaned);
-    } catch (err) {
-        throw new Error('รูปแบบข้อมูลจาก AI ไม่ถูกต้อง: ' + err.message);
-    }
-
-    return parsed;
+    throw lastError || new Error('ไม่สามารถเชื่อมต่อ Gemini Vision AI ได้ กรุณาตรวจสอบ API Key');
 }

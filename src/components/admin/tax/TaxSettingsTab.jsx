@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { validateThaiTaxId, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
+import { GEMINI_SUPPORTED_MODELS } from '../../../utils/geminiOcrHelper';
 import { toast } from 'sonner';
 
 export default function TaxSettingsTab({ 
@@ -42,7 +43,8 @@ export default function TaxSettingsTab({
         tax_invoice_prefix: 'INV',
         tax_wht_prefix: 'WHT',
         tax_signature_name: 'ผู้มีอำนาจลงนาม / ผู้รับเงิน',
-        gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || ''
+        gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || '',
+        gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-2.0-flash'
     });
 
     const [saving, setSaving] = useState(false);
@@ -110,6 +112,9 @@ export default function TaxSettingsTab({
             localStorage.setItem('onhaus_tax_settings', JSON.stringify(settings));
             if (settings.gemini_api_key) {
                 localStorage.setItem('onhaus_gemini_api_key', settings.gemini_api_key.trim());
+            }
+            if (settings.gemini_model) {
+                localStorage.setItem('onhaus_gemini_model', settings.gemini_model.trim());
             }
 
             toast.success('บันทึกการตั้งค่าระบบภาษีและ Gemini AI เรียบร้อยแล้ว');
@@ -471,6 +476,24 @@ export default function TaxSettingsTab({
                         </div>
                         <span className="text-[10px] text-zinc-500 font-mono mt-1 block">
                             💡 สมัครและรับ API Key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
+                        </span>
+                    </div>
+
+                    <div>
+                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                            โมเดล Gemini AI (Default Model)
+                        </label>
+                        <select
+                            value={settings.gemini_model}
+                            onChange={(e) => handleSettingChange('gemini_model', e.target.value)}
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none bg-white"
+                        >
+                            {GEMINI_SUPPORTED_MODELS.map(m => (
+                                <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                        </select>
+                        <span className="text-[10px] text-zinc-500 font-mono mt-1 block">
+                            * หากโมเดลที่เลือกไม่พร้อมใช้งาน ระบบจะสลับไปยังโมเดลอื่นโดยอัตโนมัติ (Fallback Cascade: Gemini 2.0 Flash &rarr; 1.5 Flash Latest &rarr; 2.5 Flash)
                         </span>
                     </div>
 
