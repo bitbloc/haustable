@@ -1,4 +1,3 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react';
 import { 
     Building2, 
@@ -13,7 +12,10 @@ import {
     ShieldCheck,
     Search,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    Sparkles,
+    Bot,
+    Key
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { validateThaiTaxId, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
@@ -39,7 +41,8 @@ export default function TaxSettingsTab({
         tax_receipt_prefix: 'REC',
         tax_invoice_prefix: 'INV',
         tax_wht_prefix: 'WHT',
-        tax_signature_name: 'ผู้มีอำนาจลงนาม / ผู้รับเงิน'
+        tax_signature_name: 'ผู้มีอำนาจลงนาม / ผู้รับเงิน',
+        gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || ''
     });
 
     const [saving, setSaving] = useState(false);
@@ -105,8 +108,11 @@ export default function TaxSettingsTab({
 
             // 2. LocalStorage Sync
             localStorage.setItem('onhaus_tax_settings', JSON.stringify(settings));
+            if (settings.gemini_api_key) {
+                localStorage.setItem('onhaus_gemini_api_key', settings.gemini_api_key.trim());
+            }
 
-            toast.success('บันทึกการตั้งค่าระบบภาษีเรียบร้อยแล้ว');
+            toast.success('บันทึกการตั้งค่าระบบภาษีและ Gemini AI เรียบร้อยแล้ว');
             if (onSettingsUpdated) onSettingsUpdated(settings);
         } catch (err) {
             toast.error('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
@@ -430,6 +436,55 @@ export default function TaxSettingsTab({
                         <Save size={15} />
                         <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า (SAVE SETTINGS)'}</span>
                     </button>
+                </div>
+            </div>
+
+            {/* Google Gemini Vision AI OCR Engine Setup */}
+            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                <div className="flex items-center gap-2.5 border-b border-zinc-200 pb-3">
+                    <div className="p-1.5 bg-gradient-to-tr from-amber-500 to-orange-500 text-white rounded-lg">
+                        <Bot size={18} />
+                    </div>
+                    <div>
+                        <h3 className="font-mono font-bold text-sm text-zinc-950 uppercase tracking-wider flex items-center gap-2">
+                            Google Gemini Vision AI (ระบบ AI สแกนบิลและแยกหมวดหมู่อัตโนมัติ)
+                        </h3>
+                        <p className="text-[11px] text-zinc-500 font-mono">
+                            ใช้พลัง AI ของ Google ช่วยอ่านยอดรวม, วันที่, ชื่อร้าน, เลข 13 หลัก และแยกหมวดหมู่ Makro/ค่าน้ำไฟ/ค่าน้ำมัน ทันทีที่ถ่ายรูป
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div>
+                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                            Google Gemini API Key
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="password"
+                                value={settings.gemini_api_key}
+                                onChange={(e) => handleSettingChange('gemini_api_key', e.target.value)}
+                                placeholder="AIzaSy..."
+                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none"
+                            />
+                        </div>
+                        <span className="text-[10px] text-zinc-500 font-mono mt-1 block">
+                            💡 สมัครและรับ API Key ฟรีได้ที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">Google AI Studio (aistudio.google.com)</a>
+                        </span>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                        <button
+                            type="button"
+                            disabled={saving}
+                            onClick={handleSaveSettings}
+                            className="px-5 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                        >
+                            <Save size={14} />
+                            <span>บันทึก Gemini API Key</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
