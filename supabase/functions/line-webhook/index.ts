@@ -48,7 +48,7 @@ async function verifySignature(body: string, signature: string, secret: string) 
 async function scanReceiptImageWithGemini(
   base64Image: string,
   apiKey: string,
-  preferredModel: string = 'gemini-2.0-flash'
+  preferredModel: string = 'gemini-3.7-flash'
 ): Promise<any> {
   const systemInstruction = `
 You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
@@ -122,10 +122,13 @@ Payment Method Rules:
 
   const candidateModels = Array.from(new Set([
     preferredModel,
+    'gemini-3.7-flash',
+    'gemini-2.5-flash',
     'gemini-2.0-flash',
+    'gemini-3.7-pro',
+    'gemini-2.5-pro',
     'gemini-1.5-flash-latest',
     'gemini-1.5-flash',
-    'gemini-2.5-flash',
     'gemini-2.0-flash-exp',
     'gemini-1.5-pro'
   ]));
@@ -2203,7 +2206,7 @@ Deno.serve(async (req) => {
             geminiApiKey = keyRow?.value || ''
           }
 
-          let preferredModel = 'gemini-2.0-flash'
+          let preferredModel = 'gemini-3.7-flash'
           const { data: modelRow } = await supabaseAdmin
             .from('app_settings')
             .select('value')

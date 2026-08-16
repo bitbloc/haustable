@@ -2,10 +2,13 @@
 import { supabase } from '../lib/supabaseClient';
 
 export const GEMINI_SUPPORTED_MODELS = [
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (แนะนำ - เร็วและฉลาดที่สุด)' },
+    { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash (ล่าสุด - แนะนำ ฉลาดและแม่นยำสูงสุด)' },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (เสถียร & รวดเร็ว)' },
+    { id: 'gemini-3.7-pro', label: 'Gemini 3.7 Pro' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
     { id: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash Latest' },
     { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { id: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash Experimental' },
     { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' }
 ];
@@ -58,7 +61,7 @@ export async function saveGeminiApiKey(apiKey) {
 export async function getGeminiPreferredModel() {
     const localModel = localStorage.getItem('onhaus_gemini_model');
     if (localModel && localModel.trim()) return localModel.trim();
-    return 'gemini-2.0-flash';
+    return 'gemini-3.7-flash';
 }
 
 export async function saveGeminiPreferredModel(modelName) {
@@ -152,14 +155,17 @@ Payment Method Rules:
         }
     };
 
-    // Candidate models order: Start with user selection or gemini-2.0-flash, then cascade down
+    // Candidate models order: Start with user selection or gemini-3.7-flash, then cascade down
     const userChoice = preferredModel || (await getGeminiPreferredModel());
     const candidateModels = Array.from(new Set([
         userChoice,
+        'gemini-3.7-flash',
+        'gemini-2.5-flash',
         'gemini-2.0-flash',
+        'gemini-3.7-pro',
+        'gemini-2.5-pro',
         'gemini-1.5-flash-latest',
         'gemini-1.5-flash',
-        'gemini-2.5-flash',
         'gemini-2.0-flash-exp',
         'gemini-1.5-pro'
     ]));

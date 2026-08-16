@@ -44,7 +44,7 @@ export default function TaxSettingsTab({
         tax_wht_prefix: 'WHT',
         tax_signature_name: 'ผู้มีอำนาจลงนาม / ผู้รับเงิน',
         gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || '',
-        gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-2.0-flash'
+        gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-3.7-flash'
     });
 
     const [saving, setSaving] = useState(false);

@@ -51,7 +51,7 @@ export default function ExpenseModal({
     const [aiConfidence, setAiConfidence] = useState(null);
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [apiKeyInput, setApiKeyInput] = useState('');
-    const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
+    const [geminiModel, setGeminiModel] = useState('gemini-3.7-flash');
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
     const [imagePreviewZoom, setImagePreviewZoom] = useState(false);
     const [compareImage, setCompareImage] = useState(null);
