@@ -53,7 +53,7 @@ async function scanReceiptImageWithGemini(
   const systemInstruction = `
 You are an expert Thai Restaurant & Accounting AI Auditor for "IN THE HAUS" restaurant.
 Analyze the provided image.
-Determine if the image is a receipt, tax invoice, cash bill, payment voucher, fuel receipt, utility bill, Makro bill, supermarket bill, or bank transfer slip for an expense.
+Determine if the image is a receipt, tax invoice, cash bill, payment voucher, fuel receipt, cooking gas bill, utility bill, Makro bill, supermarket bill, or bank transfer slip for an expense.
 
 If the image is NOT a receipt/bill/slip/invoice (e.g. food photo, selfie, random picture, sticker, meme, greeting):
 Return ONLY:
@@ -65,28 +65,35 @@ If it IS a receipt, bill, tax invoice, delivery slip, or expense slip:
 Extract and return ONLY a valid JSON object matching this schema:
 {
   "is_receipt": true,
-  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์', 'ค่าน้ำมัน ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าแก้วและบรรจุภัณฑ์')",
+  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่าแก้วและบรรจุภัณฑ์')",
   "amount": 0.00, // Total payable amount (number, no commas)
   "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing, use today's date
-  "category": "raw_material", // EXACTLY ONE OF: 'raw_material' (Makro, Lotus, Big C, fresh food, beverages, ingredients), 'marketing' (Facebook, TikTok, IG, Google ads), 'fuel_logistics' (gasoline, PTT, Shell, Bangchak, Lalamove, Grab), 'utilities' (electricity, water, internet), 'rent' (store rent), 'staff_wages' (payroll, wages), 'equipment_supplies' (cups, bags, tableware), 'maintenance' (repairs, HomePro, hardware), 'software_service' (POS, music, subscriptions), 'other' (misc)
-  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ปั๊ม ปตท. (PTT)', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
+  "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
+  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
   "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
   "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
-  "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, utility bills), false otherwise
-  "payment_method": "TRANSFER", // 'TRANSFER', 'CASH', or 'CREDIT'
-  "notes": "Brief summary of purchased line items in Thai (e.g. 'หมูสามชั้น 3kg, นม 4 แกลลอน, ผักสลัด')",
+  "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, power bills), false otherwise
+  "payment_method": "TRANSFER", // DEFAULT IS ALWAYS 'TRANSFER'. Use 'CASH' only if explicitly marked as cash payment, or 'CREDIT' if marked as credit card.
+  "notes": "Brief summary of purchased line items in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
   "confidence": 0.95 // Confidence score from 0.0 to 1.0
 }
 
 Category Rules:
-- Makro, Lotus, Big C, Foodland, fresh markets, meat, vegetables, milk, coffee beans, syrups, seasoning -> 'raw_material'
-- Facebook, TikTok, Instagram, Google Ads, LINE Ads, marketing agencies -> 'marketing'
-- PTT, Shell, Bangchak, Caltex, gasoline, diesel, Lalamove, GrabExpress -> 'fuel_logistics'
-- MEA (การไฟฟ้า), PEA, MWA (การประปา), PWA, True, AIS, 3BB, TOT -> 'utilities'
-- Rent, landlord, lease -> 'rent'
-- Cups, plastic lids, straw, packaging, takeout boxes, napkins, cleaning supplies -> 'equipment_supplies'
-- Electrician, plumbing, HomePro, repairs, hardware -> 'maintenance'
-- Spotify, Canva, POS software, monthly subscriptions -> 'software_service'
+- Cooking Gas / LPG / Gas Tanks (แก๊สหุงต้ม, แก๊สครัว, ถังแก๊ส, เวิลด์แก๊ส, สยามแก๊ส, ปตท.แก๊ส, ร้านส่งแก๊ส, ค่าเติมแก๊ส) -> 'utilities'
+- Electricity / Water / Internet (MEA/PEA การไฟฟ้า, MWA/PWA การประปา, True, AIS, 3BB, NT) -> 'utilities'
+- Vehicle Fuel & Logistics (ค่าน้ำมันรถ, ดีเซล, เบนซิน, แก๊สรถยนต์, ปั๊ม ปตท., บางจาก, Shell, Caltex, Lalamove, Grab, Lineman, Flash, Kerry) -> 'fuel_logistics'
+- Fresh Food / Market / Ingredients / Ice (Makro, Lotus, Big C, CJ More, ตลาดสด, ตลาดไท, โรงน้ำแข็ง, น้ำแข็งหลอด, เนื้อสัตว์, ผักผลไม้, นม, ไข่ไก่, ซอส, เมล็ดกาแฟ, ไซรัป) -> 'raw_material'
+- Marketing & Ads (Facebook, TikTok, Instagram, Google Ads, LINE Ads, ป้ายโฆษณา) -> 'marketing'
+- Rent & Premises (ค่าเช่าร้าน, ค่าเช่าพื้นที่, ค่าเช่าที่ดิน, เงินมัดจำ) -> 'rent'
+- Staff Wages (ค่าแรง, เงินเดือน, ค่าจ้างพาร์ทไทม์, โอที) -> 'staff_wages'
+- Equipment & Packaging (แก้วกาแฟ, ฝา, หลอด, ถุงหิ้ว, ถุงขยะ, กล่องอาหาร, ทิชชู่, น้ำยาล้างจาน, อุปกรณ์ครัว) -> 'equipment_supplies'
+- Maintenance & Repairs (ช่างไฟ, ช่างประปา, ล้างแอร์, ซ่อมตู้เย็น, HomePro, ไทวัสดุ, ดูโฮม) -> 'maintenance'
+- Software & Subscriptions (Spotify, Canva, POS, ระบบรายเดือน) -> 'software_service'
+
+Payment Method Rules:
+- DEFAULT: 'TRANSFER' (Mobile banking, PromptPay QR, KPlus, SCB Easy, Krungthai NEXT, KKP, ttb, Bank Transfer slip, etc.)
+- Use 'CASH' ONLY if the bill explicitly states cash payment / จ่ายเงินสด.
+- Use 'CREDIT' ONLY if the bill explicitly states credit/debit card payment / รูดบัตร.
 `;
 
   const requestBody = {
@@ -161,10 +168,10 @@ Category Rules:
 
 function createReceiptFlexMessage(expense: any, dateFormatted: string) {
   const categoryLabels: Record<string, string> = {
-    'raw_material': '🛒 วัตถุดิบ & ของสด (MAKRO)',
+    'raw_material': '🛒 วัตถุดิบ & ของสด (MAKRO/ตลาด)',
     'marketing': '📣 ค่ายิงแอด & การตลาด',
     'fuel_logistics': '⛽ ค่าน้ำมัน & ค่าส่งของ',
-    'utilities': '⚡ ค่าน้ำ / ไฟ / เน็ต',
+    'utilities': '⚡ ค่าน้ำ / ไฟ / แก๊ส / เน็ต',
     'rent': '🏠 ค่าเช่าสถานที่',
     'staff_wages': '👥 ค่าจ้าง / เงินเดือน',
     'equipment_supplies': '📦 ของใช้ & บรรจุภัณฑ์',
