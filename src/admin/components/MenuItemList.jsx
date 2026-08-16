@@ -651,13 +651,13 @@ export default function MenuItemList() {
                 const filePath = `menu-items/${fileName}`
 
                 const { error: uploadError } = await supabase.storage
-                    .from('public')
-                    .upload(filePath, imageFile, { upsert: true })
+                    .from('public-assets')
+                    .upload(filePath, imageFile, { upsert: true, cacheControl: '15552000' })
 
                 if (uploadError) throw uploadError
 
                 const { data: publicUrlData } = supabase.storage
-                    .from('public')
+                    .from('public-assets')
                     .getPublicUrl(filePath)
 
                 imageUrl = publicUrlData.publicUrl
