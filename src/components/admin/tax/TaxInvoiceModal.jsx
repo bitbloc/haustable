@@ -12,7 +12,10 @@ import {
     Save, 
     Search, 
     Calculator,
-    CheckCircle2
+    CheckCircle2,
+    Receipt,
+    Link2,
+    Unlink
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { 
@@ -22,6 +25,8 @@ import {
     formatBranch, 
     calculateDocumentTotals 
 } from '../../../utils/thaiTaxHelper';
+import { getShortBookingId } from '../../../utils/printerHelper';
+import ReceiptPickerModal from './ReceiptPickerModal';
 import { toast } from 'sonner';
 
 export default function TaxInvoiceModal({ 
@@ -33,39 +38,60 @@ export default function TaxInvoiceModal({
 }) {
     const isCompanyVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
     
+    // Receipt Linking State
+    const [linkedBooking, setLinkedBooking] = useState(booking);
+    const [showReceiptPicker, setShowReceiptPicker] = useState(false);
+
     // Form State
     const [docType, setDocType] = useState(
         existingInvoice?.doc_type || 
         (isCompanyVatRegistered ? 'tax_invoice' : 'receipt')
     );
     const [customerType, setCustomerType] = useState(existingInvoice?.customer_type || 'company'); // 'company' | 'individual'
-    const [customerName, setCustomerName] = useState(existingInvoice?.customer_name || booking?.pickup_contact_name || booking?.guest_name || '');
+    const [customerName, setCustomerName] = useState(existingInvoice?.customer_name || booking?.pickup_contact_name || booking?.guest_name || booking?.profiles?.display_name || '');
     const [customerTaxId, setCustomerTaxId] = useState(existingInvoice?.customer_tax_id || '');
     const [customerBranchType, setCustomerBranchType] = useState(existingInvoice?.customer_branch_type || 'head_office');
     const [customerBranchCode, setCustomerBranchCode] = useState(existingInvoice?.customer_branch_code || '00000');
     const [customerAddress, setCustomerAddress] = useState(existingInvoice?.customer_address || booking?.shipping_address || '');
-    const [customerPhone, setCustomerPhone] = useState(existingInvoice?.customer_phone || booking?.pickup_contact_phone || booking?.phone_number || '');
+    const [customerPhone, setCustomerPhone] = useState(existingInvoice?.customer_phone || booking?.pickup_contact_phone || booking?.phone_number || booking?.profiles?.phone_number || '');
     const [customerEmail, setCustomerEmail] = useState(existingInvoice?.customer_email || '');
     const [saveCustomerToDirectory, setSaveCustomerToDirectory] = useState(true);
+
+    const mapBookingOrderItems = (b) => {
+        if (b?.order_items && Array.isArray(b.order_items) && b.order_items.length > 0) {
+            return b.order_items.map(item => {
+                const menuItem = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
+                return {
+                    name: item.item_name || menuItem?.name || 'รายการสินค้า',
+                    quantity: Number(item.quantity || 1),
+                    price: Number(item.price_at_time !== undefined && item.price_at_time !== null ? item.price_at_time : (item.price || menuItem?.price || 0)),
+                    selected_options: typeof item.selected_options === 'string' ? item.selected_options : ''
+                };
+            });
+        }
+        return [
+            { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: Number(b?.total_amount || 0), selected_options: '' }
+        ];
+    };
+
+    const detectBookingPaymentMethod = (b) => {
+        if (!b) return 'CASH';
+        const remark = (b.staff_remark || '').toLowerCase();
+        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) return 'CREDIT';
+        if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) return 'QR';
+        return 'CASH';
+    };
 
     // Items List
     const [items, setItems] = useState(() => {
         if (existingInvoice?.items && Array.isArray(existingInvoice.items) && existingInvoice.items.length > 0) {
             return existingInvoice.items;
         }
-        if (booking?.order_items && Array.isArray(booking.order_items) && booking.order_items.length > 0) {
-            return booking.order_items.map(item => {
-                const menuItem = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
-                return {
-                    name: item.item_name || menuItem?.name || 'รายการสินค้า',
-                    quantity: Number(item.quantity || 1),
-                    price: Number(item.price_at_time || item.price || menuItem?.price || 0),
-                    selected_options: typeof item.selected_options === 'string' ? item.selected_options : ''
-                };
-            });
+        if (booking) {
+            return mapBookingOrderItems(booking);
         }
         return [
-            { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: Number(booking?.total_amount || 0), selected_options: '' }
+            { name: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, price: 0, selected_options: '' }
         ];
     });
 
@@ -74,9 +100,44 @@ export default function TaxInvoiceModal({
         (Number(booking?.discount_amount || 0) + Number(booking?.xhaus_discount || 0))
     );
     const [whtRate, setWhtRate] = useState(existingInvoice?.wht_rate || 0); // 0, 1, 2, 3, 5
-    const [paymentMethod, setPaymentMethod] = useState(existingInvoice?.payment_method || 'CASH');
+    const [paymentMethod, setPaymentMethod] = useState(
+        existingInvoice?.payment_method || 
+        (booking ? detectBookingPaymentMethod(booking) : 'CASH')
+    );
     const [notes, setNotes] = useState(existingInvoice?.notes || '');
     const [saving, setSaving] = useState(false);
+
+    // Handler when user selects a receipt from picker
+    const handleSelectReceipt = (selectedBooking) => {
+        setLinkedBooking(selectedBooking);
+        const mappedItems = mapBookingOrderItems(selectedBooking);
+        setItems(mappedItems);
+        setDiscountAmount(Number(selectedBooking?.discount_amount || 0) + Number(selectedBooking?.xhaus_discount || 0));
+        setPaymentMethod(detectBookingPaymentMethod(selectedBooking));
+
+        // Auto-fill customer info if available
+        const bName = selectedBooking?.pickup_contact_name || selectedBooking?.guest_name || selectedBooking?.profiles?.display_name || '';
+        const bPhone = selectedBooking?.pickup_contact_phone || selectedBooking?.phone_number || selectedBooking?.profiles?.phone_number || '';
+        const bAddress = selectedBooking?.shipping_address || '';
+
+        if (bName && (!customerName || customerName === '')) setCustomerName(bName);
+        if (bPhone && (!customerPhone || customerPhone === '')) setCustomerPhone(bPhone);
+        if (bAddress && (!customerAddress || customerAddress === '')) setCustomerAddress(bAddress);
+
+        const shortId = getShortBookingId(selectedBooking);
+        const tableName = selectedBooking?.tables_layout?.table_name || (selectedBooking?.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN');
+        if (!notes) {
+            setNotes(`บิล POS #${shortId} (โต๊ะ ${tableName})`);
+        }
+
+        setShowReceiptPicker(false);
+        toast.success(`ดึงข้อมูลจากบิล #${shortId} (${mappedItems.length} รายการ) สำเร็จ!`);
+    };
+
+    const handleUnlinkReceipt = () => {
+        setLinkedBooking(null);
+        toast.info('ยกเลิกการเชื่อมโยงบิล POS แล้ว (รายการสินค้ายังคงอยู่)');
+    };
 
     // Saved Customer Directory autocomplete
     const [savedProfiles, setSavedProfiles] = useState([]);
@@ -182,7 +243,7 @@ export default function TaxInvoiceModal({
 
             const invoicePayload = {
                 invoice_number: invoiceNumber,
-                booking_id: booking?.id || existingInvoice?.booking_id || null,
+                booking_id: linkedBooking?.id || booking?.id || existingInvoice?.booking_id || null,
                 doc_type: docType,
                 customer_type: customerType,
                 customer_name: customerName.trim(),
@@ -348,6 +409,75 @@ export default function TaxInvoiceModal({
                         </div>
                     </div>
 
+                    {/* Receipt Linking Section (Dieter Rams Brutalist Container) */}
+                    {linkedBooking ? (
+                        <div className="bg-[var(--color-paper-2)] border-2 border-[var(--color-ink)] p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-[var(--color-ink)] text-[var(--color-paper)] shrink-0">
+                                    <Receipt size={18} />
+                                </div>
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-bold text-xs text-[var(--color-ink)] uppercase tracking-wide">
+                                            เชื่อมโยงกับบิล POS #{getShortBookingId(linkedBooking)}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white text-[10px] font-bold">
+                                            โต๊ะ {linkedBooking.tables_layout?.table_name || (linkedBooking.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')}
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-[var(--color-neutral)] mt-0.5">
+                                        นำเข้ารายการสินค้า {items.length} รายการ • ยอดสุทธิ ฿{Number(linkedBooking.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowReceiptPicker(true)}
+                                    className="px-3 py-1.5 bg-[var(--color-paper)] hover:bg-white text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                                >
+                                    <Receipt size={13} />
+                                    <span>เปลี่ยนบิล (CHANGE)</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleUnlinkReceipt}
+                                    className="px-3 py-1.5 bg-transparent hover:bg-red-50 text-red-600 border border-red-200 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                                    title="ยกเลิกการเชื่อมโยงแต่คงข้อมูลรายการไว้"
+                                >
+                                    <Unlink size={13} />
+                                    <span>ยกเลิกเชื่อมโยง</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-amber-50/60 border border-amber-300 p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-amber-200/80 text-amber-900 shrink-0">
+                                    <Receipt size={16} />
+                                </div>
+                                <div>
+                                    <span className="font-bold text-xs text-amber-950 block">
+                                        ดึงข้อมูลจากบิล / ใบเสร็จ POS (ไม่ต้องกรอกเอง)
+                                    </span>
+                                    <span className="text-[11px] text-amber-800 block">
+                                        เลือกจากบิลที่คิดเงินแล้ว เพื่อนำเข้ารายการสินค้า ยอดเงิน ส่วนลด และข้อมูลลูกค้าเข้าสู่หน้านี้ทันที
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowReceiptPicker(true)}
+                                className="px-3.5 py-2 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
+                            >
+                                <Receipt size={13} />
+                                <span>เลือกจากใบเสร็จ (SELECT RECEIPT)</span>
+                            </button>
+                        </div>
+                    )}
+
                     {/* Customer Info Section */}
                     <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-3">
@@ -358,49 +488,60 @@ export default function TaxInvoiceModal({
                                 </span>
                             </div>
 
-                            {/* Saved Profile Quick Picker */}
-                            <div className="relative">
+                            {/* Saved Profile & Receipt Quick Pickers */}
+                            <div className="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                                    className="px-3 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded font-mono text-[11px] font-bold flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer"
+                                    onClick={() => setShowReceiptPicker(true)}
+                                    className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded font-mono text-[11px] font-bold flex items-center gap-1.5 border border-amber-300 transition-colors cursor-pointer"
                                 >
-                                    <Search size={12} />
-                                    <span>ดึงข้อมูลลูกค้าประจำ ({savedProfiles.length})</span>
+                                    <Receipt size={12} />
+                                    <span>เลือกจากบิล POS</span>
                                 </button>
 
-                                {showProfileDropdown && (
-                                    <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-zinc-400 rounded-xl shadow-2xl p-2 z-50">
-                                        <input
-                                            type="text"
-                                            placeholder="ค้นหาชื่อบริษัท / เลขประจำตัว..."
-                                            value={searchCustomerQuery}
-                                            onChange={(e) => setSearchCustomerQuery(e.target.value)}
-                                            className="w-full px-2.5 py-1.5 border border-zinc-300 rounded text-xs mb-2 font-mono"
-                                            autoFocus
-                                        />
-                                        <div className="max-h-48 overflow-y-auto divide-y divide-zinc-100">
-                                            {filteredSavedProfiles.map((p, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    type="button"
-                                                    onClick={() => handleSelectSavedProfile(p)}
-                                                    className="w-full text-left p-2 hover:bg-zinc-100 rounded text-xs transition-colors block cursor-pointer"
-                                                >
-                                                    <div className="font-bold text-zinc-900">{p.company_name}</div>
-                                                    <div className="font-mono text-[10px] text-zinc-500">
-                                                        Tax ID: {formatTaxId(p.tax_id)} • {formatBranch(p.branch_type, p.branch_code)}
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                                        className="px-3 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded font-mono text-[11px] font-bold flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer"
+                                    >
+                                        <Search size={12} />
+                                        <span>ดึงข้อมูลลูกค้าประจำ ({savedProfiles.length})</span>
+                                    </button>
+
+                                    {showProfileDropdown && (
+                                        <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-zinc-400 rounded-xl shadow-2xl p-2 z-50">
+                                            <input
+                                                type="text"
+                                                placeholder="ค้นหาชื่อบริษัท / เลขประจำตัว..."
+                                                value={searchCustomerQuery}
+                                                onChange={(e) => setSearchCustomerQuery(e.target.value)}
+                                                className="w-full px-2.5 py-1.5 border border-zinc-300 rounded text-xs mb-2 font-mono"
+                                                autoFocus
+                                            />
+                                            <div className="max-h-48 overflow-y-auto divide-y divide-zinc-100">
+                                                {filteredSavedProfiles.map((p, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => handleSelectSavedProfile(p)}
+                                                        className="w-full text-left p-2 hover:bg-zinc-100 rounded text-xs transition-colors block cursor-pointer"
+                                                    >
+                                                        <div className="font-bold text-zinc-900">{p.company_name}</div>
+                                                        <div className="font-mono text-[10px] text-zinc-500">
+                                                            Tax ID: {formatTaxId(p.tax_id)} • {formatBranch(p.branch_type, p.branch_code)}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                                {filteredSavedProfiles.length === 0 && (
+                                                    <div className="p-3 text-center text-zinc-400 text-[11px]">
+                                                        ไม่พบบริษัทที่บันทึกไว้
                                                     </div>
-                                                </button>
-                                            ))}
-                                            {filteredSavedProfiles.length === 0 && (
-                                                <div className="p-3 text-center text-zinc-400 text-[11px]">
-                                                    ไม่พบบริษัทที่บันทึกไว้
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -558,14 +699,24 @@ export default function TaxInvoiceModal({
                             <span className="font-mono font-bold text-xs uppercase tracking-wider text-zinc-800">
                                 รายการสินค้าและบริการ (Line Items)
                             </span>
-                            <button
-                                type="button"
-                                onClick={handleAddItem}
-                                className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded font-mono text-[11px] font-bold flex items-center gap-1 border border-zinc-300 transition-colors cursor-pointer"
-                            >
-                                <Plus size={13} />
-                                <span>เพิ่มรายการ</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowReceiptPicker(true)}
+                                    className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded font-mono text-[11px] font-bold flex items-center gap-1 border border-amber-300 transition-colors cursor-pointer"
+                                >
+                                    <Receipt size={12} />
+                                    <span>ดึงจากใบเสร็จ POS</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleAddItem}
+                                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded font-mono text-[11px] font-bold flex items-center gap-1 border border-zinc-300 transition-colors cursor-pointer"
+                                >
+                                    <Plus size={13} />
+                                    <span>เพิ่มรายการ</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -768,6 +919,15 @@ export default function TaxInvoiceModal({
                     </div>
                 </div>
             </div>
+
+            {/* Sub-modal: Select from POS Receipts */}
+            {showReceiptPicker && (
+                <ReceiptPickerModal
+                    currentSelectedId={linkedBooking?.id}
+                    onSelectReceipt={handleSelectReceipt}
+                    onClose={() => setShowReceiptPicker(false)}
+                />
+            )}
         </div>
     );
 }

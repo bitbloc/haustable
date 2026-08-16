@@ -26,6 +26,7 @@ import ExpensesTab from './ExpensesTab';
 import TaxInvoiceModal from './TaxInvoiceModal';
 import TaxInvoicePrintView from './TaxInvoicePrintView';
 import ExpenseModal from './ExpenseModal';
+import ReceiptPickerModal from './ReceiptPickerModal';
 
 export default function AdminTaxHub() {
     // Navigation Sub-tab
@@ -49,6 +50,7 @@ export default function AdminTaxHub() {
 
     // Modals
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [showReceiptPicker, setShowReceiptPicker] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState(null);
     const [selectedBookingForInvoice, setSelectedBookingForInvoice] = useState(null);
     const [activePrintInvoice, setActivePrintInvoice] = useState(null);
@@ -244,6 +246,14 @@ export default function AdminTaxHub() {
                         </a>
 
                         <button
+                            onClick={() => setShowReceiptPicker(true)}
+                            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                            <Receipt size={14} />
+                            <span>+ ออกจากบิล POS</span>
+                        </button>
+
+                        <button
                             onClick={() => {
                                 setEditingExpense(null);
                                 setShowExpenseModal(true);
@@ -418,7 +428,12 @@ export default function AdminTaxHub() {
                                                     <td className="p-3 border-r border-[var(--color-rule)] text-center text-[var(--color-neutral)]">{idx + 1}</td>
                                                     <td className="p-3 border-r border-[var(--color-rule)]">{dateStr}</td>
                                                     <td className="p-3 border-r border-[var(--color-rule)] font-bold text-[var(--color-ink)]">
-                                                        {inv.invoice_number}
+                                                        <div>{inv.invoice_number}</div>
+                                                        {inv.booking_id && (
+                                                            <span className="inline-block mt-0.5 px-1.5 py-0.2 bg-[var(--color-paper-2)] text-[var(--color-neutral)] border border-[var(--color-rule)] text-[9px] font-mono font-normal">
+                                                                #POS-{String(inv.booking_id).slice(0, 4).toUpperCase()}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="p-3 border-r border-[var(--color-rule)] text-[10px]">
                                                         <span className={`px-1.5 py-0.5 border ${isVatDoc ? 'border-amber-400 bg-amber-50 text-amber-900 font-bold' : 'border-[var(--color-rule)] bg-[var(--color-paper-2)] text-[var(--color-ink)]'}`}>
@@ -534,7 +549,7 @@ export default function AdminTaxHub() {
             {showInvoiceModal && (
                 <TaxInvoiceModal
                     existingInvoice={editingInvoice}
-                    initialBookingData={selectedBookingForInvoice}
+                    booking={selectedBookingForInvoice}
                     companySettings={companySettings}
                     onClose={() => {
                         setShowInvoiceModal(false);
@@ -548,6 +563,19 @@ export default function AdminTaxHub() {
                         fetchInvoices();
                         setActivePrintInvoice(savedInvoice);
                     }}
+                />
+            )}
+
+            {/* 1.1 POS Receipt Picker Modal */}
+            {showReceiptPicker && (
+                <ReceiptPickerModal
+                    onSelectReceipt={(selectedBooking) => {
+                        setShowReceiptPicker(false);
+                        setEditingInvoice(null);
+                        setSelectedBookingForInvoice(selectedBooking);
+                        setShowInvoiceModal(true);
+                    }}
+                    onClose={() => setShowReceiptPicker(false)}
                 />
             )}
 
