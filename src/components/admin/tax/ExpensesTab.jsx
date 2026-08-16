@@ -7,11 +7,13 @@ import {
     Trash2, 
     Edit2, 
     X, 
-    RotateCcw
+    RotateCcw,
+    AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
+import { findDuplicateClusters } from '../../../utils/duplicateDetector';
 import { toast } from 'sonner';
 
 export default function ExpensesTab({ 
@@ -38,6 +40,7 @@ export default function ExpensesTab({
     });
 
     const [isAllPeriods, setIsAllPeriods] = useState(false);
+    const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
@@ -69,11 +72,28 @@ export default function ExpensesTab({
         loadExpenses();
     }, [loadExpenses]);
 
+    // Duplicate Detection across entire ledger
+    const duplicateClusters = useMemo(() => {
+        return findDuplicateClusters(expenses);
+    }, [expenses]);
+
+    const duplicateIds = useMemo(() => {
+        const set = new Set();
+        duplicateClusters.forEach(cluster => {
+            cluster.forEach(item => set.add(item.id));
+        });
+        return set;
+    }, [duplicateClusters]);
+
     // Filtered Expenses
     const filteredExpenses = useMemo(() => {
         return expenses.filter(exp => {
+            if (showOnlyDuplicates && !duplicateIds.has(exp.id)) {
+                return false;
+            }
+
             const expMonth = (exp.expense_date || '').slice(0, 7);
-            const matchesMonth = isAllPeriods || !selectedMonth || expMonth === selectedMonth;
+            const matchesMonth = isAllPeriods || showOnlyDuplicates || !selectedMonth || expMonth === selectedMonth;
 
             const matchesCategory = categoryFilter === 'all' || exp.category === categoryFilter;
 
@@ -85,7 +105,7 @@ export default function ExpensesTab({
 
             return matchesMonth && matchesCategory && matchesSearch;
         });
-    }, [expenses, selectedMonth, isAllPeriods, categoryFilter, searchQuery]);
+    }, [expenses, selectedMonth, isAllPeriods, showOnlyDuplicates, duplicateIds, categoryFilter, searchQuery]);
 
     // Monthly Aggregates
     const monthlyStats = useMemo(() => {
@@ -188,7 +208,7 @@ export default function ExpensesTab({
             `"รวม ${monthlyStats.count} รายการ"`
         ];
 
-        const periodLabel = isAllPeriods ? 'ALL_PERIODS' : selectedMonth;
+        const periodLabel = showOnlyDuplicates ? 'DUPLICATES_ONLY' : (isAllPeriods ? 'ALL_PERIODS' : selectedMonth);
         const csvLines = [
             `"รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน (Store Expenses & COGS Ledger) - ประจำงวด ${periodLabel}"`,
             headers.join(','),
@@ -314,6 +334,32 @@ export default function ExpensesTab({
                 </div>
             </div>
 
+            {/* DUPLICATE AUDIT ALERT BANNER */}
+            {duplicateClusters.size > 0 && (
+                <div className="p-4 bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 font-mono text-xs flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                        <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+                        <div>
+                            <div className="font-bold text-xs">
+                                ตรวจพบรายการที่อาจเป็นบิลซ้ำ {duplicateClusters.size} คู่ในสมุดบัญชี (DUPLICATE DETECTED)
+                            </div>
+                            <div className="text-[11px] text-amber-800 mt-0.5">
+                                พบรายการที่วันที่และยอดเงินตรงกัน เช่น บิล Makro ฿1,413.75 เพื่อความถูกต้องของภาษี แนะนำให้ตรวจสอบและลบรายการที่ซ้ำออก
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowOnlyDuplicates(!showOnlyDuplicates)}
+                            className={`px-3 py-1.5 font-bold text-xs border border-amber-600 transition-colors cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'}`}
+                        >
+                            {showOnlyDuplicates ? '✓ กำลังแสดงเฉพาะบิลซ้ำ (SHOW ALL)' : '🔍 กรองดูเฉพาะบิลซ้ำ (SHOW DUPLICATES)'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* 3. Brutalist Filter & Control Toolbar */}
             <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
                 <div className="flex flex-wrap items-center gap-2">
@@ -322,21 +368,37 @@ export default function ExpensesTab({
                     <div className="flex border border-[var(--color-rule)]">
                         <button
                             type="button"
-                            onClick={() => setIsAllPeriods(false)}
-                            className={`px-3 py-1.5 transition-colors ${!isAllPeriods ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            onClick={() => {
+                                setIsAllPeriods(false);
+                                setShowOnlyDuplicates(false);
+                            }}
+                            className={`px-3 py-1.5 transition-colors ${!isAllPeriods && !showOnlyDuplicates ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             BY MONTH
                         </button>
                         <button
                             type="button"
-                            onClick={() => setIsAllPeriods(true)}
-                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${isAllPeriods ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            onClick={() => {
+                                setIsAllPeriods(true);
+                                setShowOnlyDuplicates(false);
+                            }}
+                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${isAllPeriods && !showOnlyDuplicates ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             ALL TIME ({expenses.length})
                         </button>
+                        {duplicateClusters.size > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setShowOnlyDuplicates(true)}
+                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 ${showOnlyDuplicates ? 'bg-amber-600 text-white font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
+                            >
+                                <AlertTriangle size={11} />
+                                <span>DUPLICATES ({duplicateIds.size})</span>
+                            </button>
+                        )}
                     </div>
 
-                    {!isAllPeriods && (
+                    {!isAllPeriods && !showOnlyDuplicates && (
                         <input
                             type="month"
                             value={selectedMonth}
@@ -398,7 +460,7 @@ export default function ExpensesTab({
             </div>
 
             {/* Empty State Banner Alert if other month has records */}
-            {filteredExpenses.length === 0 && expenses.length > 0 && !isAllPeriods && (
+            {filteredExpenses.length === 0 && expenses.length > 0 && !isAllPeriods && !showOnlyDuplicates && (
                 <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 font-mono text-xs flex items-center justify-between">
                     <span>
                         ⚠️ ไม่พบรายการในงวด [{selectedMonth}] แต่พบ <strong>{expenses.length} รายการในงวดอื่น</strong>
@@ -432,20 +494,27 @@ export default function ExpensesTab({
                             {filteredExpenses.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="p-12 text-center text-[var(--color-muted)] font-mono text-xs">
-                                        {loading ? 'LOADING EXPENSE LEDGER...' : `NO EXPENSE RECORDS FOUND FOR PERIOD [${isAllPeriods ? 'ALL TIME' : selectedMonth}]`}
+                                        {loading ? 'LOADING EXPENSE LEDGER...' : `NO EXPENSE RECORDS FOUND FOR PERIOD [${showOnlyDuplicates ? 'DUPLICATES' : (isAllPeriods ? 'ALL TIME' : selectedMonth)}]`}
                                     </td>
                                 </tr>
                             ) : (
                                 filteredExpenses.map((exp) => {
                                     const catObj = EXPENSE_CATEGORIES.find(c => c.id === exp.category);
+                                    const isDuplicate = duplicateIds.has(exp.id);
+
                                     return (
-                                        <tr key={exp.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
+                                        <tr key={exp.id} className={`transition-colors ${isDuplicate ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-[var(--color-paper-2)]'}`}>
                                             <td className="p-3 border-r border-[var(--color-rule)] text-[11px] text-[var(--color-neutral)]">
                                                 {exp.expense_date}
+                                                {isDuplicate && (
+                                                    <span className="block mt-1 text-[9px] font-bold text-amber-700 bg-amber-200/80 px-1 py-0.5 border border-amber-300 w-fit">
+                                                        ⚠️ DUPLICATE
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="p-3 border-r border-[var(--color-rule)]">
-                                                <div className="font-sans font-bold text-xs text-[var(--color-ink)]">
-                                                    {exp.title}
+                                                <div className="font-sans font-bold text-xs text-[var(--color-ink)] flex items-center gap-1.5">
+                                                    <span>{exp.title}</span>
                                                 </div>
                                                 <div className="text-[10px] text-[var(--color-muted)] flex items-center gap-2 mt-0.5">
                                                     <span>{exp.vendor_name || 'ไม่ระบุผู้ขาย'}</span>

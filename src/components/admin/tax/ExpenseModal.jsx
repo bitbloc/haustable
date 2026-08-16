@@ -10,7 +10,8 @@ import {
     RotateCcw,
     Sparkles,
     ShieldCheck,
-    FileText
+    FileText,
+    AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { EXPENSE_CATEGORIES, VENDOR_PRESETS } from '../../../utils/expenseConstants';
@@ -21,6 +22,7 @@ import {
     getGeminiPreferredModel, 
     saveGeminiPreferredModel 
 } from '../../../utils/geminiOcrHelper';
+import { checkDuplicateExpense } from '../../../utils/duplicateDetector';
 import { toast } from 'sonner';
 
 export default function ExpenseModal({ 
@@ -52,17 +54,46 @@ export default function ExpenseModal({
     const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
     const [autoScanEnabled, setAutoScanEnabled] = useState(true);
     const [imagePreviewZoom, setImagePreviewZoom] = useState(false);
+    const [compareImage, setCompareImage] = useState(null);
+    const [existingExpensesList, setExistingExpensesList] = useState(() => {
+        try {
+            const local = localStorage.getItem('onhaus_store_expenses');
+            return local ? JSON.parse(local) : [];
+        } catch {
+            return [];
+        }
+    });
 
     const fileInputRef = useRef(null);
 
-    // Initial preferred model load
+    // Initial preferred model & fresh expenses load
     useEffect(() => {
         let isMounted = true;
         getGeminiPreferredModel().then(m => {
             if (isMounted && m) setGeminiModel(m);
         });
+
+        // Load fresh expenses from Supabase to ensure real-time duplicate detection
+        supabase.from('store_expenses').select('*').then(({ data }) => {
+            if (isMounted && data) {
+                setExistingExpensesList(data);
+            }
+        });
+
         return () => { isMounted = false; };
     }, []);
+
+    // Duplicate Detection Calculation
+    const duplicateCheckResult = React.useMemo(() => {
+        return checkDuplicateExpense({
+            id: existingExpense?.id,
+            amount,
+            expense_date: expenseDate,
+            vendor_name: vendorName,
+            title,
+            notes
+        }, existingExpensesList);
+    }, [existingExpense, amount, expenseDate, vendorName, title, notes, existingExpensesList]);
 
     // Keyboard Shortcuts (Escape to close, Ctrl+Enter to save)
     useEffect(() => {
@@ -206,6 +237,12 @@ export default function ExpenseModal({
         if (!title.trim()) {
             toast.error('กรุณาระบุชื่อรายการค่าใช้จ่าย');
             return;
+        }
+
+        // Duplicate Warning Confirmation
+        if (duplicateCheckResult?.isDuplicate && duplicateCheckResult.confidence === 'HIGH') {
+            const proceed = window.confirm(`⚠️ ระบบตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว:\n\n${duplicateCheckResult.reason}\n\nคุณแน่ใจหรือไม่ว่าต้องการบันทึกรายการนี้ซ้ำอีกครั้ง?`);
+            if (!proceed) return;
         }
 
         setSaving(true);
@@ -621,6 +658,38 @@ export default function ExpenseModal({
                                 className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:border-[var(--color-ink)] focus:outline-none"
                             />
                         </div>
+
+                        {/* DUPLICATE DETECTION WARNING BANNER */}
+                        {duplicateCheckResult?.isDuplicate && (
+                            <div className="p-3.5 bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 font-mono text-xs space-y-2 animate-in fade-in">
+                                <div className="flex items-center justify-between font-bold text-[11px] text-amber-900 border-b border-amber-500/20 pb-1.5">
+                                    <span className="flex items-center gap-1.5">
+                                        <AlertTriangle size={15} className="text-amber-600" />
+                                        DUPLICATE DETECTED // ตรวจพบบิลซ้ำที่เคยบันทึกไว้แล้ว
+                                    </span>
+                                    <span className="px-1.5 py-0.5 bg-amber-600 text-white text-[9px] font-bold">
+                                        {duplicateCheckResult.confidence} CONFIDENCE
+                                    </span>
+                                </div>
+                                <p className="text-[11px] leading-relaxed text-amber-900">
+                                    {duplicateCheckResult.reason}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px]">
+                                    {duplicateCheckResult.matchedRecord?.receipt_image_url && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setCompareImage(duplicateCheckResult.matchedRecord.receipt_image_url)}
+                                            className="px-2 py-1 bg-amber-200/80 hover:bg-amber-300 text-amber-900 font-bold underline cursor-pointer border border-amber-400"
+                                        >
+                                            &rarr; กดดูรูปบิลเดิมเทียบกับรูปใหม่ (COMPARE RECEIPT)
+                                        </button>
+                                    )}
+                                    <span className="text-amber-800 text-[10px]">
+                                        * หากเป็นบิลคนละใบสามารถกดยืนยันบันทึกต่อไปได้
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -657,6 +726,62 @@ export default function ExpenseModal({
                         </div>
                         <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
                             <img src={receiptImage} alt="Zoomed Receipt" className="max-w-full max-h-[80vh] object-contain" />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* DUPLICATE SIDE-BY-SIDE COMPARISON MODAL */}
+            {compareImage && (
+                <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/95 p-4 font-sans text-xs">
+                    <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col border border-zinc-700 bg-zinc-950 text-white overflow-hidden shadow-2xl">
+                        <div className="p-3.5 bg-zinc-900 flex justify-between items-center font-mono text-xs border-b border-zinc-800">
+                            <span className="font-bold flex items-center gap-2 text-amber-400">
+                                <AlertTriangle size={15} />
+                                SIDE-BY-SIDE RECEIPT COMPARISON (เปรียบเทียบบิลเดิม vs บิลใหม่)
+                            </span>
+                            <button onClick={() => setCompareImage(null)} className="text-white hover:text-red-400 p-1 cursor-pointer">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Left: Previous Saved Receipt */}
+                            <div className="border border-zinc-800 bg-black p-3 flex flex-col items-center">
+                                <span className="font-mono text-[10px] text-zinc-400 font-bold uppercase mb-2">
+                                    [1] บิลเดิมที่เคยบันทึกไว้ในระบบ (EXISTING RECORD)
+                                </span>
+                                <div className="flex-1 flex items-center justify-center w-full">
+                                    <img src={compareImage} alt="Old Receipt" className="max-w-full max-h-[60vh] object-contain" />
+                                </div>
+                            </div>
+
+                            {/* Right: Current Candidate Receipt */}
+                            <div className="border border-zinc-800 bg-black p-3 flex flex-col items-center">
+                                <span className="font-mono text-[10px] text-amber-400 font-bold uppercase mb-2">
+                                    [2] บิลใหม่ที่กำลังสแกน / กรอกอยู่ (CURRENT CANDIDATE)
+                                </span>
+                                <div className="flex-1 flex items-center justify-center w-full">
+                                    {receiptImage ? (
+                                        <img src={receiptImage} alt="New Receipt" className="max-w-full max-h-[60vh] object-contain" />
+                                    ) : (
+                                        <span className="text-zinc-600 font-mono text-xs">ไม่มีรูปภาพบิลใหม่</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center font-mono">
+                            <span className="text-zinc-400 text-[11px]">
+                                หากเป็นคนละใบเสร็จ ให้กดปิดหน้าต่างนี้แล้วกด &quot;SAVE EXPENSE RECORD&quot; ได้ตามปกติ
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setCompareImage(null)}
+                                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs cursor-pointer"
+                            >
+                                เข้าใจแล้ว / ปิดหน้าต่าง (CLOSE)
+                            </button>
                         </div>
                     </div>
                 </div>
